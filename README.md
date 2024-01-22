@@ -103,6 +103,8 @@ unicode-char = 'U+' hex-digit{4,4}
 
 ## Contributing
 
+Run the following command in a terminal to link the `mage` command to your checkout:
+
 ```
 pip3 install -e '.[dev]'
 ```
