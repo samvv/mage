@@ -2,13 +2,18 @@
 import re
 from typing import Any, NewType, Tuple, Optional
 
-from sweetener import Record
+from sweetener import Record, warn
 
 TokenType = NewType('TokenType', int)
 
+class TextPos(Record):
+    offset: int = 0
+    line: int = 1
+    column: int = 1
+
 class Token(Record):
     type: TokenType
-    span: Tuple[int, int]
+    span: Tuple[TextPos, TextPos]
     value: Optional[Any] = None
 
 TT_EOF      = TokenType(1)
@@ -84,24 +89,31 @@ ASCII_ESCAPE_CHARS = {
 
 class ScanError(RuntimeError):
 
-    def __init__(self, ch, offset):
-        super().__init__("unexpected character encountered")
+    def __init__(self, ch: str, position: TextPos) -> None:
+        super().__init__(f"{position.line}:{position.column}: unexpected character encountered")
         self.ch = ch
-        self.offset = offset
+        self.position = position
 
 class Scanner:
 
-    def __init__(self, text, text_offset=0, offset=0):
+    def __init__(self, text: str, text_offset=0, init_pos: TextPos | None = None) -> None:
+        if init_pos is None:
+            init_pos = TextPos()
         self.text = text
         self._text_offset = text_offset
-        self.offset = offset
+        self.curr_pos = init_pos
 
     def _get_char(self):
-        ch = self.text[self._text_offset] \
-                if self._text_offset < len(self.text) \
-                else EOF
+        if self._text_offset >= len(self.text):
+            return EOF
+        ch = self.text[self._text_offset] 
         self._text_offset += 1
-        self.offset += 1
+        self.curr_pos.offset += 1
+        if ch == '\n':
+            self.curr_pos.line += 1
+            self.curr_pos.column = 1
+        else:
+            self.curr_pos.column += 1
         return ch
 
     def _peek_char(self, offset=1):
@@ -139,89 +151,88 @@ class Scanner:
             c0 = self._peek_char()
 
         if c0 == EOF:
-            return Token(TT_EOF, (self.offset, self.offset))
+            return Token(TT_EOF, (self.curr_pos.clone(), self.curr_pos.clone()))
 
         if c0 == '\'':
-            start_offset = self.offset
+            start_pos = self.curr_pos.clone()
             self._get_char()
             text = ''
             escaping = False
             while True:
+                pos1 = self.curr_pos.clone()
                 c1 = self._get_char()
                 if escaping:
                     if c1 in ASCII_ESCAPE_CHARS:
                         text += ASCII_ESCAPE_CHARS[c1]
                     else:
-                        raise ScanError(c1, self.offset-1)
+                        raise ScanError(c1, pos1)
                     escaping = False
                 else:
                     if c1 == EOF:
-                        raise ScanError(EOF, self.offset)
+                        raise ScanError(EOF, pos1);
                     elif c1 == '\\':
                         escaping = True
                     elif c1 == '\'':
                         break
                     else:
                         text += c1
-            end_offset = self.offset
-            return Token(TT_STR, (start_offset, end_offset), text)
+            end_pos = self.curr_pos.clone()
+            return Token(TT_STR, (start_pos, end_pos), text)
 
         if c0 in DELIMITERS:
-            start_offset = self.offset
+            start_pos = self.curr_pos.clone()
             self._get_char()
-            end_offset = self.offset
-            return Token(DELIMITERS[c0], (start_offset, end_offset))
+            end_pos = self.curr_pos.clone()
+            return Token(DELIMITERS[c0], (start_pos, end_pos))
 
         if is_operator_part(c0):
-            start_offset = self.offset
+            start_pos = self.curr_pos.clone()
             self._get_char()
             text = c0 + self._take_while(is_operator_part)
-            end_offset = self.offset
+            end_pos = self.curr_pos.clone()
             if text not in OPERATORS:
-                raise ScanError(text, start_offset)
-            return Token(OPERATORS[text], (start_offset, end_offset))
+                raise ScanError(text, start_pos)
+            return Token(OPERATORS[text], (start_pos, end_pos))
 
         if c0 == '[':
-            start_offset = self.offset
+            start_pos = self.curr_pos.clone()
             self._get_char()
             elements = []
             while True:
                 c1 = self._get_char()
                 if c1 == EOF:
-                    raise ScanError(self.offset, c1)
+                    raise ScanError(c1, self.curr_pos.clone())
                 if c1 == ']':
                     break
                 c2 = self._get_char()
                 if c2 == EOF:
-                    raise ScanError(self.offset, c2)
+                    raise ScanError(c2, self.curr_pos.clone())
                 if c2 == ']':
                     break
                 if c2 == '-':
                     c3 = self._get_char()
                     if c3 == EOF:
-                        raise ScanError(self.offset, c3)
+                        raise ScanError(c3, self.curr_pos.clone())
                     if c3 == ']':
                         break
                     elements.append((c1, c3))
-            end_offset = self.offset
-            return Token(TT_CHARSET, (start_offset, end_offset), elements)
+            end_pos = self.curr_pos.clone()
+            return Token(TT_CHARSET, (start_pos, end_pos), elements)
 
         if c0.isdigit():
-            start_offset = self.offset
+            start_pos = self.curr_pos.clone()
             self._get_char()
             digits = c0 + self._take_while(lambda ch: ch.isdigit())
-            end_offset = self.offset
-            return Token(TT_INT, (start_offset, end_offset), int(digits))
+            end_pos = self.curr_pos.clone()
+            return Token(TT_INT, (start_pos, end_pos), int(digits))
 
-        if c0.isalpha():
-            start_offset = self.offset
+        if c0.isalpha() or c0 == '_':
+            start_pos = self.curr_pos.clone()
             self._get_char()
-            text = c0 + self._take_while(lambda ch: ch.isalnum())
-            end_offset = self.offset
+            text = c0 + self._take_while(lambda ch: ch.isalnum() or ch == '_')
+            end_pos = self.curr_pos.clone()
             if text in KEYWORDS:
-                return Token(KEYWORDS[text], (start_offset, end_offset), text)
-            return Token(TT_IDENT, (start_offset, end_offset), text)
+                return Token(KEYWORDS[text], (start_pos, end_pos), text)
+            return Token(TT_IDENT, (start_pos, end_pos), text)
 
-
-        raise ScanError(c0, self.offset)
-
+        raise ScanError(c0, self.curr_pos.clone())
