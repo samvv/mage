@@ -17,6 +17,10 @@ class LitExpr(Expr):
 class RefExpr(Expr):
     name: str
 
+class LookaheadExpr(Expr):
+    expr: Expr
+    is_negated: bool
+
 class CharSetExpr(Expr):
     elements: List[Union[str, Tuple[str, str]]]
 

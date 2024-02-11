@@ -6,8 +6,9 @@ from .scanner import *
 
 class ParseError(RuntimeError):
 
-    def __init__(self, actual, expected):
-        super().__init__(f"got an unexpected token")
+    def __init__(self, actual: Token, expected: list[TokenType]) -> None:
+        start_pos = actual.span[0]
+        super().__init__(f"{start_pos.line}:{start_pos.column}: got an unexpected token")
         self.actual = actual
         self.expected = expected
 
@@ -33,7 +34,7 @@ class Parser:
     def _expect_token(self, expected: TokenType) -> Token:
         t0 = self._peek_token()
         if t0.type != expected:
-            raise ParseError(t0, expected)
+            raise ParseError(t0, [ expected ])
         return self._get_token()
 
     def _parse_prim_expr(self) -> Expr:
@@ -55,8 +56,27 @@ class Parser:
         else:
             raise ParseError(t0, [ TT_LBRACE, TT_LPAREN, TT_IDENT, TT_STR ])
 
-    def _parse_expr_with_suffixes(self) -> Expr:
+    def _parse_expr_with_prefixes(self) -> Expr:
+        tokens = []
+        while True:
+            t0 = self._peek_token()
+            if not is_operator(t0.type):
+                break
+            if t0.type in [ TT_EXCL, TT_AMP ]:
+                self._get_token()
+                tokens.append(t0.type)
         e = self._parse_prim_expr()
+        for ty in reversed(tokens):
+            if ty == TT_EXCL:
+                e = LookaheadExpr(e, True)
+            elif ty == TT_EXCL:
+                e = LookaheadExpr(e, False)
+            else:
+                raise RuntimeError(f'unexpected token type {ty}')
+        return e
+
+    def _parse_expr_with_suffixes(self) -> Expr:
+        e = self._parse_expr_with_prefixes()
         while True:
             t1 = self._peek_token()
             if not is_operator(t1.type):
@@ -76,7 +96,7 @@ class Parser:
         while True:
             t0 = self._peek_token(1)
             t1 = self._peek_token(2)
-            if t0.type == TT_PUB or t1.type == TT_EQUAL or t0.type == TT_EOF or t0.type == TT_VBAR:
+            if t0.type == TT_PUB or t1.type == TT_EQUAL or t0.type in [ TT_EOF, TT_VBAR, TT_RPAREN ]:
                 break
             elements.append(self._parse_expr_with_suffixes())
         if len(elements) == 1:
