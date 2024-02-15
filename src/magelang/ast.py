@@ -45,15 +45,30 @@ class RepeatExpr(Expr):
     max: int | float
     expr: Expr
 
+EXTERN = 1
+PUBLIC = 2
+TOKEN  = 4
+
 class Rule(Node):
-    is_public: bool
-    is_token: bool
+    flags: int
     name: str
-    expr: Expr
+    expr: Expr | None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._references_public_rule = False
+
+    @property
+    def is_public(self) -> bool:
+        return (self.flags & PUBLIC) > 0
+
+    @property
+    def is_extern(self) -> bool:
+        return (self.flags & EXTERN) > 0
+
+    @property
+    def is_token(self) -> bool:
+        return (self.flags & TOKEN) > 0
 
 class Grammar(Node):
 
@@ -72,6 +87,9 @@ class Grammar(Node):
                 rule = self.lookup(expr.name)
                 if rule.is_public:
                     return False
+                if rule.is_extern and rule.is_token:
+                    return True
+                assert(rule.expr is not None)
                 return visit(rule.expr)
             if isinstance(expr, SeqExpr) \
                     or isinstance(expr, ChoiceExpr):
@@ -87,6 +105,9 @@ class Grammar(Node):
                     or isinstance(expr, CharSetExpr):
                 return True
             raise RuntimeError(f'unexpected node {expr}')
+        if rule.is_extern and rule.is_token:
+            return True
+        assert(rule.expr is not None)
         return rule.is_public and visit(rule.expr)
 
     def get_token_rules(self) -> Generator[Rule, None, None]:

@@ -39,6 +39,7 @@ TT_PERC     = TokenType(20)
 TT_VBAR     = TokenType(21)
 TT_CHARSET  = TokenType(22)
 TT_COLON    = TokenType(23)
+TT_EXTERN   = TokenType(24)
 
 EOF = '\uFFFF'
 
@@ -74,6 +75,7 @@ OPERATORS = {
 KEYWORDS = {
     'pub': TT_PUB,
     'token': TT_TOKEN,
+    'extern': TT_EXTERN,
     }
 
 ASCII_ESCAPE_CHARS = {
@@ -87,6 +89,33 @@ ASCII_ESCAPE_CHARS = {
     't': '\t',
     'v': '\v',
     '0': '\0',
+    }
+
+token_type_descriptions = {
+    TT_EOF: "end-of-file",
+    TT_IDENT: "an identifier",
+    TT_EQUAL: "'='",
+    TT_PUB: "'pub'",
+    TT_TOKEN: "'token'",
+    TT_INT: "an integer",
+    TT_LPAREN: "'('",
+    TT_RPAREN: "')'",
+    TT_LBRACE: "'{'",
+    TT_RBRACE: "'}'",
+    TT_LBRACKET: "'['",
+    TT_RBRACKET: "']'",
+    TT_COMMA: "','",
+    TT_SEMI: "';'",
+    TT_STR: "a piece of quoted text",
+    TT_STAR: "'*'",
+    TT_PLUS: "'+'",
+    TT_AMP: "'&'",
+    TT_EXCL: "'!'",
+    TT_PERC: "'%'",
+    TT_VBAR: "'|'",
+    TT_CHARSET: "a character range (like [a-z])",
+    TT_COLON: "':'",
+    TT_EXTERN: "'extern'",
     }
 
 class ScanError(RuntimeError):
@@ -234,7 +263,7 @@ class Scanner:
             text = c0 + self._take_while(lambda ch: ch.isalnum() or ch == '_')
             end_pos = self.curr_pos.clone()
             if text in KEYWORDS:
-                return Token(KEYWORDS[text], (start_pos, end_pos), text)
+                return Token(KEYWORDS[text], (start_pos, end_pos), None)
             return Token(TT_IDENT, (start_pos, end_pos), text)
 
         raise ScanError(c0, self.curr_pos.clone())

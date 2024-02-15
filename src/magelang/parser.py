@@ -8,7 +8,7 @@ class ParseError(RuntimeError):
 
     def __init__(self, actual: Token, expected: list[TokenType]) -> None:
         start_pos = actual.span[0]
-        super().__init__(f"{start_pos.line}:{start_pos.column}: got an unexpected token")
+        super().__init__(f"{start_pos.line}:{start_pos.column}: got an unexpected {token_type_descriptions[actual.type]}")
         self.actual = actual
         self.expected = expected
 
@@ -123,21 +123,25 @@ class Parser:
         return ChoiceExpr(elements)
 
     def parse_rule(self) -> Rule:
-        is_public = False
-        is_token = False
+        flags = 0
         t0 = self._get_token()
         if t0.type == TT_PUB:
-            is_public = True
+            flags |= PUBLIC
+            t0 = self._get_token()
+        if t0.type == TT_EXTERN:
+            flags |= EXTERN
             t0 = self._get_token()
         if t0.type == TT_TOKEN:
-            is_token = True
+            flags |= TOKEN
             t0 = self._get_token()
         if t0.type != TT_IDENT:
             raise ParseError(t0, [ TT_IDENT ])
+        if flags & EXTERN:
+            return Rule(flags, t0.value, None)
         self._expect_token(TT_EQUAL)
-        e = self.parse_expr()
+        expr = self.parse_expr()
         #self._expect_token(TT_SEMI)
-        return Rule(is_public, is_token, t0.value, e)
+        return Rule(flags, t0.value, expr)
 
     def parse_grammar(self) -> Grammar:
         elements = []

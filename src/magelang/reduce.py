@@ -100,7 +100,7 @@ def transform(grammar: Grammar) -> Grammar:
             continue
         if new_expr == EMPTY:
             new_expr = LitExpr('')
-        new_rules.append(Rule(rule.is_public, rule.is_token, rule.name, new_expr))
+        new_rules.append(Rule(rule.flags, rule.name, new_expr))
 
     return Grammar(rules=new_rules)
 
