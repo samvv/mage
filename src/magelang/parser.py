@@ -26,10 +26,10 @@ class Parser:
             return self._token_buffer.popleft()
         return self.scanner.scan()
 
-    def _peek_token(self, offset=1) -> Token:
-        while len(self._token_buffer) < offset:
+    def _peek_token(self, offset=0) -> Token:
+        while len(self._token_buffer) <= offset:
             self._token_buffer.append(self.scanner.scan())
-        return self._token_buffer[offset-1]
+        return self._token_buffer[offset]
 
     def _expect_token(self, expected: TokenType) -> Token:
         t0 = self._peek_token()
@@ -38,23 +38,30 @@ class Parser:
         return self._get_token()
 
     def _parse_prim_expr(self) -> Expr:
-        t0 = self._peek_token()
-        if t0.type == TT_CHARSET:
+        t1 = self._peek_token(1)
+        label = None
+        if t1.type == TT_COLON:
+            label = self._expect_token(TT_IDENT)
             self._get_token()
-            return CharSetExpr(t0.value)
-        elif t0.type == TT_LPAREN:
+        t2 = self._peek_token()
+        if t2.type == TT_CHARSET:
             self._get_token()
-            e = self.parse_expr()
+            expr = CharSetExpr(t2.value)
+        elif t2.type == TT_LPAREN:
+            self._get_token()
+            expr = self.parse_expr()
             self._expect_token(TT_RPAREN)
-            return e
-        elif t0.type == TT_IDENT:
+        elif t2.type == TT_IDENT:
             self._get_token()
-            return RefExpr(t0.value)
-        elif t0.type == TT_STR:
+            expr = RefExpr(t2.value)
+        elif t2.type == TT_STR:
             self._get_token()
-            return LitExpr(t0.value)
+            expr = LitExpr(t2.value)
         else:
-            raise ParseError(t0, [ TT_LBRACE, TT_LPAREN, TT_IDENT, TT_STR ])
+            raise ParseError(t2, [ TT_LBRACE, TT_LPAREN, TT_IDENT, TT_STR ])
+        if label is not None:
+            expr.label = label.value
+        return expr
 
     def _parse_expr_with_prefixes(self) -> Expr:
         tokens = []
@@ -94,9 +101,9 @@ class Parser:
     def _parse_expr_sequence(self) -> Expr:
         elements = [ self._parse_expr_with_suffixes() ]
         while True:
-            t0 = self._peek_token(1)
-            t1 = self._peek_token(2)
-            if t0.type == TT_PUB or t1.type == TT_EQUAL or t0.type in [ TT_EOF, TT_VBAR, TT_RPAREN ]:
+            t0 = self._peek_token(0)
+            t1 = self._peek_token(1)
+            if t0.type == TT_PUB or t0.type == TT_TOKEN or t1.type == TT_EQUAL or t0.type in [ TT_EOF, TT_VBAR, TT_RPAREN ]:
                 break
             elements.append(self._parse_expr_with_suffixes())
         if len(elements) == 1:

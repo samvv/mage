@@ -2,7 +2,7 @@
 import sys
 from abc import abstractmethod
 from typing import override
-from sweetener import BaseNode, IndentWriter
+from sweetener import BaseNode, IndentWriter, warn
 
 from ..ast import *
 from ..util import to_camel_case
@@ -72,6 +72,7 @@ class CXXCallExpr(CXXExpr):
     op: CXXExpr
     args: list[CXXExpr]
 
+    @override
     def emit(self, out):
         self.op.emit(out)
         out.write('(')
@@ -86,8 +87,30 @@ class CXXCallExpr(CXXExpr):
 class CXXIntExpr(CXXExpr):
     value: int
 
+    @override
     def emit(self, out):
         out.write(str(self.value))
+
+class CXXInitExpr(CXXExpr):
+    elements: list[CXXExpr]
+
+    @override
+    def emit(self, out: IndentWriter) -> None:
+        out.write('{')
+        if self.elements:
+            out.indent()
+            for i, element in enumerate(self.elements):
+                if i > 0:
+                    out.write(',')
+                out.write('\n')
+                element.emit(out)
+            out.dedent()
+            out.write('\n')
+        out.write('}')
+
+class CXXMemberExpr(CXXExpr):
+    epxr: CXXExpr
+    name: str
 
 class CXXCharExpr(CXXExpr):
     ch: str
@@ -179,10 +202,13 @@ class CXXConstructor(CXXNode):
 class CXXStmt(CXXNode):
     pass
 
+class CXXExprStmt(CXXStmt):
+    expr: CXXExpr
+
 class CXXIfStmt(CXXStmt):
     test: CXXExpr
-    then: list[CXXStmt]
-    alt: list[CXXStmt] | None = None
+    then: list['CXXStmtOrDecl']
+    alt: list['CXXStmtOrDecl'] | None = None
 
     @override
     def emit(self, out):
@@ -208,6 +234,12 @@ class CXXRetStmt(CXXStmt):
         if self.value is not None:
             self.value.emit(out)
         out.write(';\n')
+
+class CXXForStmt(CXXStmt):
+    init: 'CXXVarDecl | CXXExpr | None' = None
+    test: CXXExpr | None = None
+    post: CXXExpr | None = None
+    body: list['CXXStmtOrDecl']
 
 class CXXDecl(CXXNode):
     pass
@@ -291,8 +323,25 @@ class CXXSourceFile(CXXNode):
 
 type CXXFiles = dict[str, CXXSourceFile]
 
+
+def make_cxx_and(exps: list[CXXExpr]) -> CXXExpr:
+    out = exps[0]
+    for expr in exps[1:]:
+        out = CXXBinExpr(left=out, op='&&', right=expr)
+    return out
+
 def generate(grammar: Grammar) -> CXXFiles:
+
+    counter = 0
+    def generate_temporary(prefix='temp') -> str:
+        nonlocal counter
+        counter += 1
+        return prefix + str(counter)
+
     files = dict()
+
+    # Generating CST.hpp
+
     decls = []
     for rule in grammar.get_token_rules():
         cxx_name = to_camel_case(rule.name)
@@ -302,28 +351,73 @@ def generate(grammar: Grammar) -> CXXFiles:
         decls.append(decl)
     scan_stmts = []
     scan_decl = CXXFuncDecl(retty=CXXRefTypeExpr(name='Token'), ns=['Scanner'], name='scan', body=CXXBody(scan_stmts))
-    def visit(expr: Expr, stmts: list[CXXStmtOrDecl], rule):
+
+    def generate_predicate(expr: Expr, i: int = 0) -> CXXExpr:
+        if isinstance(expr, RefExpr):
+            rule = grammar.lookup(expr.name)
+            return generate_predicate(rule.expr, i)
         if isinstance(expr, LitExpr):
-            i = 0
-            for ch in expr.text:
-                char_name = 'c' + str(i)
-                then_stmts = []
-                stmts.append(CXXVarDecl(ty=CXXRefTypeExpr(name='auto'), name=char_name, expr=CXXCallExpr(op=CXXRefExpr(name='peekToken'), args=[ CXXIntExpr(i) ])))
-                stmts.append(CXXIfStmt(test=CXXBinExpr(op='==', left=CXXRefExpr(name=char_name), right=CXXCharExpr(ch)), then=then_stmts))
-                stmts = then_stmts
-                i += 1
-            return stmts
+            exps = []
+            for k, ch in enumerate(expr.text):
+                cxx_peek_expr = CXXBinExpr(left=CXXCallExpr(op=CXXRefExpr(name='peekChar'), args=[ CXXIntExpr(k + i) ]), op='==', right=CXXCharExpr(ch))
+                exps.append(cxx_peek_expr)
+            return make_cxx_and(exps)
         if isinstance(expr, ChoiceExpr):
             raise NotImplementedError()
+        raise RuntimeError(f'unexpected {expr}')
+
+    def visit_expr(expr: Expr, stmts: list[CXXStmtOrDecl], rule: Rule) -> list[CXXStmtOrDecl]:
+        if isinstance(expr, RefExpr):
+            rule = grammar.lookup(expr.name)
+            return visit_expr(rule.expr, stmts, rule)
+        if isinstance(expr, ChoiceExpr):
+            has_alts = len(expr.elements) > 0
+            stmts.append(CXXVarDecl(name=generate_temporary()))
+            for element in expr.elements:
+                visit_expr(element, stmts, rule)
+            return stmts
         if isinstance(expr, SeqExpr):
             for element in expr.elements:
-                stmts = visit(element, stmts, rule)
+                stmts = visit_expr(element, stmts, rule)
+            return stmts
+        if isinstance(expr, RepeatExpr):
+            if expr.max == POSINF:
+                stmts.append(CXXVarDecl(ty=CXXRefTypeExpr(name='auto'), name=generate_temporary('chars'), expr=CXXCallExpr(op=CXXRefExpr(name='fork'))))
+                loop_stmts = []
+                stmts.append(CXXForStmt(body=loop_stmts))
+                return visit_expr(expr.expr, loop_stmts, rule)
+            else:
+                raise NotImplementedError()
+        if isinstance(expr, LookaheadExpr):
+            tmp = generate_temporary()
+            stmts.append(CXXVarDecl(ty=CXXRefTypeExpr(name='auto'), name=tmp, expr=CXXCallExpr(op=CXXRefExpr(name='fork'))))
+            visit_expr(expr.expr, stmts, rule)
+            # TODO
+            # then_stmts = []
+            # stmts.append(CXXIfStmt(test=generate_predicate(expr.expr), then=then_stmts))
+            # return then_stmts
+        if isinstance(expr, LitExpr):
+            for ch in expr.text:
+                char_name = generate_temporary(prefix='c')
+                stmts.append(CXXVarDecl(ty=CXXRefTypeExpr(name='auto'), name=char_name, expr=CXXCallExpr(op=CXXMemberExpr(CXXRefExpr(name='chars'), 'getChar'), args=[])))
+                then_stmts = [
+                    CXXRetStmt(CXXInitExpr())
+                ]
+                stmts.append(CXXIfStmt(test=CXXBinExpr(left=CXXRefExpr(name=char_name), op='!=', right=CXXCharExpr(ch)), then=then_stmts))
+                # stmts.append(CXXIfStmt(test=CXXBinExpr(op='==', left=CXXRefExpr(name=char_name), right=CXXCharExpr(ch)), then=then_stmts))
+                # stmts = then_stmts
+            # for _ in range(0, len(expr.text)):
+            #     stmts.append(CXXExprStmt(CXXCallExpr(op=CXXRefExpr(name='getChar'), args=[])))
             return stmts
         raise RuntimeError(f'unexpected node {expr}')
+
     for rule in grammar.get_token_rules():
-        stmts = visit(rule.expr, scan_stmts, rule)
+        stmts = visit_expr(rule.expr, scan_stmts, rule)
         stmts.append(CXXRetStmt(value=CXXNewExpr(name=to_camel_case(rule.name))))
+
     decls.append(scan_decl)
+
     files['CST.hpp'] = CXXSourceFile(decls)
+
     return files
 

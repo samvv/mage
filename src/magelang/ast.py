@@ -1,7 +1,7 @@
 
 from functools import cache
 import math
-from typing import Generator, List, Union, Tuple
+from typing import Generator
 
 from sweetener import BaseNode
 
@@ -9,7 +9,15 @@ class Node(BaseNode):
     pass
 
 class Expr(Node):
-    pass
+
+    label: str | None = None
+    rules: list['Rule'] = []
+
+    # def __init__(self, *args, rules: list['Rule'] | None = None, **kwargs) -> None:
+    #     super().__init__(*args, **kwargs)
+    #     if rules is None:
+    #         rules = []
+    #     self.rules = rules
 
 class LitExpr(Expr):
     text: str
@@ -22,19 +30,19 @@ class LookaheadExpr(Expr):
     is_negated: bool
 
 class CharSetExpr(Expr):
-    elements: List[Union[str, Tuple[str, str]]]
+    elements: list[str | tuple[str, str]]
 
 class ChoiceExpr(Expr):
-    elements: List[Expr]
+    elements: list[Expr]
 
 class SeqExpr(Expr):
-    elements: List[Expr]
+    elements: list[Expr]
 
 POSINF = math.inf
 
 class RepeatExpr(Expr):
-    min: Union[int, float]
-    max: Union[int, float]
+    min: int | float
+    max: int | float
     expr: Expr
 
 class Rule(Node):
@@ -49,7 +57,7 @@ class Rule(Node):
 
 class Grammar(Node):
 
-    rules: List[Rule]
+    rules: list[Rule]
 
     def __init__(self, rules):
         super().__init__(rules)
@@ -73,6 +81,8 @@ class Grammar(Node):
                 return True
             if isinstance(expr, RepeatExpr):
                 return visit(expr.expr)
+            if isinstance(expr, LookaheadExpr):
+                return visit(expr.expr)
             if isinstance(expr, LitExpr) \
                     or isinstance(expr, CharSetExpr):
                 return True
@@ -84,7 +94,12 @@ class Grammar(Node):
             if self._is_token_rule(rule):
                 yield rule
 
-    def lookup(self, name):
+    def get_parse_rules(self) -> Generator[Rule, None, None]:
+        for rule in self.rules:
+            if rule.is_public and not self._is_token_rule(rule):
+                yield rule
+
+    def lookup(self, name) -> Rule:
         if name not in self._rules_by_name:
             raise RuntimeError(f"a rule named '{name}' was not found in the current grammar")
         return self._rules_by_name[name]

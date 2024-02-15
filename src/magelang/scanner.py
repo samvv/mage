@@ -38,6 +38,7 @@ TT_EXCL     = TokenType(19)
 TT_PERC     = TokenType(20)
 TT_VBAR     = TokenType(21)
 TT_CHARSET  = TokenType(22)
+TT_COLON    = TokenType(23)
 
 EOF = '\uFFFF'
 
@@ -59,6 +60,7 @@ DELIMITERS = {
     ';': TT_SEMI,
     '=': TT_EQUAL,
     '|': TT_VBAR,
+    ':': TT_COLON,
     }
 
 OPERATORS = {

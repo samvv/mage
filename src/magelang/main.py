@@ -1,19 +1,27 @@
 
 import argparse
+import importlib
+from pathlib import Path
 
-from sweetener import visualize
+from sweetener import visualize, warn
 
 from .scanner import Scanner
 from .parser import Parser
 from .prefix import transform as transform_prefix
 from .reduce import transform as transform_reduce
-from .codegen.cxx import generate as generate_cxx
+
+here = Path(__file__).parent
+
+generators = dict()
+for path in (here / 'codegen').iterdir():
+    generators[path.stem] = importlib.import_module(f'magelang.codegen.{path.stem}')
 
 def main():
 
     arg_parser = argparse.ArgumentParser()
 
     arg_parser.add_argument('file', nargs=1, help='A path to a grammar file')
+    arg_parser.add_argument('--lang', required=True, choices=generators.keys(), help='What target language to generate code for')
  
     args = arg_parser.parse_args()
 
@@ -22,11 +30,14 @@ def main():
     scanner = Scanner(text)
     parser = Parser(scanner)
     grammar = parser.parse_grammar()
-    grammar = transform_prefix(grammar)
-    grammar = transform_reduce(grammar)
+    #grammar = transform_prefix(grammar)
+    #grammar = transform_reduce(grammar)
     #visualize(grammar)
-    files = generate_cxx(grammar)
+    generator = generators[args.lang]
+    files = generator.generate_cst(grammar)
+
     for path, node in files.items():
         print(path)
-        node.print()
+        print(node)
+        #node.print()
 
