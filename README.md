@@ -34,9 +34,17 @@ inlined whenever it is referred to inside another rule.
 digits = [0-9]+
 ```
 
-### `pub rule = expr`
+### `extern <name>`
 
-Define a new node that must be parsed according the given expression.
+Defines a new parsing rule that is defined somewhere else, possibly in a different language.
+
+### `extern token <name>`
+
+Defines a new lexing rule that is defined somewhere else, possibly in a different language.
+
+### `pub <name> = <expr>`
+
+Define a new node or token that must be parsed according the given expression.
 
 You can use both inline rules and other node rules inside `expr`. When
 referring to another node, that node will become a field in the node that
@@ -44,7 +52,18 @@ referred to it. Nodes that have no fields are converted to a special token type
 that is more efficient to represent.
 
 ```
-pub float-expression
+pub var_decl = 'var' name:ident '=' type_expr
+```
+
+### `pub token <name> = <expr>`
+
+Like `pub <name> = <expr>` but forces the rule to be a token.
+
+Mage will show an error when the rule could not be converted to a token rule.
+This usually means that the rule references another rule that is `pub`.
+
+```
+pub token float-expression
   = digits? '.' digits
 ```
 
@@ -91,7 +110,11 @@ skip = (multiline-comment | whitespace)*
 
 Parse the given expression one or more times.
 
+For example, in Python, there must always be at least one statement in the body of a class or function:
 
+```
+body = stmt+
+```
 
 ### `expr{n,m}`
 
