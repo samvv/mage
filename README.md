@@ -7,7 +7,7 @@ some tabular data in a fringe format, Mage has got you covered!
 
 **⚠️ This tool is still under construction!**
 
-### Installation
+## Installation
 
 ```
 $ pip3 install --user -U magelang
