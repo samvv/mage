@@ -43,13 +43,14 @@ TT_EXTERN   = TokenType(24)
 TT_SLASH    = TokenType(25)
 TT_QUEST    = TokenType(26)
 TT_AT       = TokenType(27)
+TT_TILDE    = TokenType(28)
 
 EOF = '\uFFFF'
 
 def is_space(ch):
     return ch == ' ' or ch == '\t' or ch == '\n' or ch == '\r'
 
-_operator_regex = re.compile(r'[+*%&!?\\]')
+_operator_regex = re.compile(r'[~+*%&!?\\]')
 def is_operator_part(ch) -> bool:
     return _operator_regex.match(ch) is not None
 
@@ -76,6 +77,7 @@ _operator_to_token_type = {
     '!': TT_EXCL,
     '?': TT_QUEST,
     '\\': TT_SLASH,
+    '~': TT_TILDE,
     }
 
 _keyword_to_token_type = {
@@ -124,6 +126,7 @@ token_type_descriptions = {
     TT_EXTERN: "'extern'",
     TT_SLASH: "'$'",
     TT_QUEST: "'?'",
+    TT_TILDE: "'~'",
     }
 
 class ScanError(RuntimeError):
@@ -170,6 +173,34 @@ class Scanner:
             self._get_char()
             text += c1
         return text
+
+    def _scan_digit(self) -> int:
+        pos = self.curr_pos.clone()
+        ch = self._get_char()
+        if ch.isdigit():
+            raise ScanError(ch, pos)
+        return int(ch)
+
+    def _scan_escapable_char(self) -> tuple[str, bool]:
+        c0 = self._get_char()
+        if c0 == '\\':
+            c1 = self._get_char()
+            if c1 == 'x':
+                d0 = self._scan_digit()
+                d1 = self._scan_digit()
+                return (chr(d0 * 16 + d1), True)
+            elif c1 == 'u':
+                d0 = self._scan_digit()
+                d1 = self._scan_digit()
+                d2 = self._scan_digit()
+                d3 = self._scan_digit()
+                return (chr(d0 * 16 * 16 * 16 + d1 * 16 * 16 + d2 * 16 + d3), True)
+            elif c1 in _ascii_escape_chars:
+                return (_ascii_escape_chars[c1], True)
+            else:
+                return (c1, True)
+        else:
+            return (c0, False)
 
     def scan(self):
 
@@ -238,23 +269,27 @@ class Scanner:
             self._get_char()
             elements = []
             while True:
-                c1 = self._get_char()
+                c1, x1 = self._scan_escapable_char()
                 if c1 == EOF:
                     raise ScanError(c1, self.curr_pos.clone())
-                if c1 == ']':
+                if c1 == ']' and not x1:
                     break
-                c2 = self._get_char()
+                c2, x2 = self._scan_escapable_char()
                 if c2 == EOF:
                     raise ScanError(c2, self.curr_pos.clone())
-                if c2 == ']':
+                if c2 == ']' and not x2:
+                    elements.append(c1)
                     break
                 if c2 == '-':
-                    c3 = self._get_char()
+                    c3, x3 = self._scan_escapable_char()
                     if c3 == EOF:
                         raise ScanError(c3, self.curr_pos.clone())
-                    if c3 == ']':
+                    if c3 == ']' and not x3:
                         break
                     elements.append((c1, c3))
+                else:
+                    elements.append(c1)
+                    elements.append(c2)
             ci = False
             c4 = self._peek_char()
             if c4 == 'i':

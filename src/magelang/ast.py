@@ -27,6 +27,7 @@ class LookaheadExpr(Expr):
 class CharSetExpr(Expr):
     elements: list[str | tuple[str, str]]
     ci: bool
+    invert: bool
 
 class ChoiceExpr(Expr):
     elements: list[Expr]

@@ -48,10 +48,15 @@ class Parser:
             label = self._expect_token(TT_IDENT)
             self._get_token()
         t2 = self._peek_token()
-        if t2.type == TT_CHARSET:
+        if t2.type == TT_TILDE or t2.type == TT_CHARSET:
+            invert = False
+            while t2.type == TT_TILDE:
+                self._get_token()
+                invert = not invert
+                t2 = self._peek_token()
             self._get_token()
             elements, ci = cast(tuple[list, bool], t2.value)
-            expr = CharSetExpr(elements, ci)
+            expr = CharSetExpr(elements, ci, invert)
         elif t2.type == TT_LPAREN:
             self._get_token()
             expr = self.parse_expr()

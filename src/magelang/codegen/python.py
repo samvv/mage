@@ -56,8 +56,12 @@ def generate_cst(grammar: Grammar) -> Files:
             stmts.append(ast.Assign(targets=[ ast.Name(to_class_case(element.name), ctx=ast.Store()) ], value=ty))
             continue
         assert_never(element)
-    mod = ast.Module(body=stmts)
     return {
-        'cst.py': astor.to_source(mod),
+        'cst.py': astor.to_source(ast.Module(body=stmts)),
         }
 
+def generate_lexer(grammar: Grammar) -> Files:
+    stmts = []
+    return {
+        'lexer.py': astor.to_source(ast.Module(body=stmts))
+        }

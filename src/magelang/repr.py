@@ -290,7 +290,15 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
                 label = field.name
                 if label is None:
                     label = generate_field_name()
-            yield Field(label, ListType(field.ty))
+            if expr.max == 0:
+                return
+            elif expr.min == 0 and expr.max == 1:
+                ty = OptionType(field.ty)
+            elif expr.min == 1 and expr.max == 1:
+                ty = field.ty
+            else:
+                ty = ListType(field.ty)
+            yield Field(label, ty)
             return
         if isinstance(expr, CharSetExpr):
             label = expr.label if expr.label is not None else generate_field_name()
