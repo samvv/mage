@@ -65,7 +65,7 @@ Mage will show an error when the rule could not be converted to a token rule.
 This usually means that the rule references another rule that is `pub`.
 
 ```
-pub token float-expression
+pub token float_expression
   = digits? '.' digits
 ```
 
@@ -74,7 +74,7 @@ pub token float-expression
 First parse `expr1` and continue to parse `expr2` immediately after it.
 
 ```
-pub two-column-csv-line
+pub two_column_csv_line
   = text ',' text '\n'
 ```
 
@@ -85,9 +85,9 @@ expressions matched, the parser fails.
 
 ```
 pub declaration
-  = function-declaration
-  | let-declaration
-  | const-declaration
+  = function_declaration
+  | let_declaration
+  | const_declaration
 ```
 
 ### `expr?`
@@ -96,7 +96,7 @@ Parse or skip the given expression, depending on whether the expression can be
 parsed.
 
 ```
-pub singleton-or-pair
+pub singleton_or_pair
   = value (',' value)?
 ```
 
@@ -105,7 +105,7 @@ pub singleton-or-pair
 Parse the given expression as much as possible.
 
 ```
-skip = (multiline-comment | whitespace)*
+skip = (multiline_comment | whitespace)*
 ```
 
 ### `expr+`
@@ -128,7 +128,7 @@ not be visible in the resulting CST/AST.
 Parse the expression at least `n` times and at most `m` times.
 
 ```
-unicode-char = 'U+' hex-digit{4,4}
+unicode_char = 'U+' hex_digit{4,4}
 ```
 
 ## Contributing
