@@ -25,6 +25,19 @@ Run all tests inside the documentation of the given grammar.
 
 ## Grammar
 
+### `pub <name> = <expr>`
+
+Define a new node or token that must be parsed according the given expression.
+
+You can use both inline rules and other node rules inside `expr`. When
+referring to another node, that node will become a field in the node that
+referred to it. Nodes that have no fields are converted to a special token type
+that is more efficient to represent.
+
+```
+pub var_decl = 'var' name:ident '=' type_expr
+```
+
 ### `<name> = <expr>`
 
 Define a new inline rule that can be used inside other rules.
@@ -43,19 +56,6 @@ Defines a new parsing rule that is defined somewhere else, possibly in a differe
 ### `extern token <name>`
 
 Defines a new lexing rule that is defined somewhere else, possibly in a different language.
-
-### `pub <name> = <expr>`
-
-Define a new node or token that must be parsed according the given expression.
-
-You can use both inline rules and other node rules inside `expr`. When
-referring to another node, that node will become a field in the node that
-referred to it. Nodes that have no fields are converted to a special token type
-that is more efficient to represent.
-
-```
-pub var_decl = 'var' name:ident '=' type_expr
-```
 
 ### `pub token <name> = <expr>`
 
