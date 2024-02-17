@@ -201,16 +201,6 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
 
     literal_to_name = dict()
 
-#     def get_type(expr: Expr) -> Type:
-#         if isinstance(expr, LitExpr):
-#             return TokenType()
-#         if isinstance(expr, RefExpr):
-#             rule = grammar.lookup(expr.name)
-#             if not rule.is_public:
-#                 return get_type(rule.expr)
-#             return NodeType(expr.name)
-#         raise RuntimeError(f'unexpected {expr}')
-
     def str_to_name(text: str) -> str | None:
         if text[0].isalpha() and all(ch.isalnum() for ch in text[1:]):
             return f'{text}_keyword'
@@ -218,7 +208,7 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
             return '_'.join(names[ch] for ch in text)
 
 
-    def is_variant_rule(rule: Rule) -> bool:
+    def is_variant(rule: Rule) -> bool:
         def visit(expr: Expr) -> bool:
             if isinstance(expr, RefExpr):
                 rule = grammar.lookup(expr.name)
@@ -332,30 +322,32 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
             return
         raise RuntimeError(f'unexpected {expr}')
 
-    def get_literals(expr: Expr):
+    specs = []
+
+    def collect_literals(expr: Expr):
         if isinstance(expr, LitExpr):
             name = str_to_name(expr.text)
             if name is None:
                 name = generate_token_name()
             if expr.text not in literal_to_name:
+                specs.append(TokenSpec(name))
                 literal_to_name[expr.text] = name
             return
-        for_each_expr(expr, get_literals)
+        for_each_expr(expr, collect_literals)
 
     for rule in grammar.rules:
         if rule.expr is not None:
-            get_literals(rule.expr)
+            collect_literals(rule.expr)
 
-    specs = []
     for rule in grammar.rules:
-        if rule.is_extern or grammar.is_fragment(rule):
+        if rule.is_extern or grammar.is_fragment(rule) or rule.has_decorator('skip'):
             continue
         # only Rule(is_extern=True) can have an empty expression
         assert(rule.expr is not None)
         if grammar.is_token_rule(rule):
             specs.append(TokenSpec(rule.name))
             continue
-        if is_variant_rule(rule):
+        if is_variant(rule):
             specs.append(VariantSpec(rule.name, list(get_variant_members(rule.expr))))
             continue
         field_counter = 0

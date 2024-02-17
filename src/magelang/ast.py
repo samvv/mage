@@ -26,6 +26,7 @@ class LookaheadExpr(Expr):
 
 class CharSetExpr(Expr):
     elements: list[str | tuple[str, str]]
+    ci: bool
 
 class ChoiceExpr(Expr):
     elements: list[Expr]
@@ -47,11 +48,16 @@ class RepeatExpr(Expr):
     max: int | float
     expr: Expr
 
+class Decorator(Node):
+    name: str
+    args: list[str | int]
+
 EXTERN = 1
 PUBLIC = 2
-TOKEN  = 4
+FORCE_TOKEN  = 4
 
 class Rule(Node):
+    decorators: list[Decorator]
     flags: int
     name: str
     expr: Expr | None
@@ -70,7 +76,13 @@ class Rule(Node):
 
     @property
     def is_token(self) -> bool:
-        return (self.flags & TOKEN) > 0
+        return (self.flags & FORCE_TOKEN) > 0
+
+    def has_decorator(self, name: str) -> bool:
+        for decorator in self.decorators:
+            if decorator.name == name:
+                return True
+        return False
 
 class Grammar(Node):
 

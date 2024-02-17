@@ -1,5 +1,6 @@
 
 from collections import deque
+from typing import cast
 
 from .ast import *
 from .scanner import *
@@ -49,7 +50,8 @@ class Parser:
         t2 = self._peek_token()
         if t2.type == TT_CHARSET:
             self._get_token()
-            expr = CharSetExpr(t2.value)
+            elements, ci = cast(tuple[list, bool], t2.value)
+            expr = CharSetExpr(elements, ci)
         elif t2.type == TT_LPAREN:
             self._get_token()
             expr = self.parse_expr()
@@ -147,6 +149,14 @@ class Parser:
         return ChoiceExpr(elements)
 
     def parse_rule(self) -> Rule:
+        decorators = []
+        while True:
+            t0 = self._peek_token()
+            if t0.type != TT_AT:
+                break
+            self._get_token()
+            name = self._expect_token(TT_IDENT).value
+            decorators.append(Decorator(name))
         flags = 0
         t0 = self._get_token()
         if t0.type == TT_PUB:
@@ -156,16 +166,15 @@ class Parser:
             flags |= EXTERN
             t0 = self._get_token()
         if t0.type == TT_TOKEN:
-            flags |= TOKEN
+            flags |= FORCE_TOKEN
             t0 = self._get_token()
         if t0.type != TT_IDENT:
             raise ParseError(t0, [ TT_IDENT ])
         if flags & EXTERN:
-            return Rule(flags, t0.value, None)
+            return Rule(decorators, flags, t0.value, None)
         self._expect_token(TT_EQUAL)
         expr = self.parse_expr()
-        #self._expect_token(TT_SEMI)
-        return Rule(flags, t0.value, expr)
+        return Rule(decorators, flags, t0.value, expr)
 
     def parse_grammar(self) -> Grammar:
         elements = []

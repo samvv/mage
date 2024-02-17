@@ -42,6 +42,7 @@ TT_COLON    = TokenType(23)
 TT_EXTERN   = TokenType(24)
 TT_SLASH    = TokenType(25)
 TT_QUEST    = TokenType(26)
+TT_AT       = TokenType(27)
 
 EOF = '\uFFFF'
 
@@ -64,6 +65,7 @@ _delimiter_to_token_type = {
     '=': TT_EQUAL,
     '|': TT_VBAR,
     ':': TT_COLON,
+    '@': TT_AT,
     }
 
 _operator_to_token_type = {
@@ -253,8 +255,13 @@ class Scanner:
                     if c3 == ']':
                         break
                     elements.append((c1, c3))
+            ci = False
+            c4 = self._peek_char()
+            if c4 == 'i':
+                self._get_char()
+                ci = True
             end_pos = self.curr_pos.clone()
-            return Token(TT_CHARSET, (start_pos, end_pos), elements)
+            return Token(TT_CHARSET, (start_pos, end_pos), (elements, ci))
 
         if c0.isdigit():
             start_pos = self.curr_pos.clone()
