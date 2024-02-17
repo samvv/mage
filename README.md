@@ -25,7 +25,7 @@ Run all tests inside the documentation of the given grammar.
 
 ## Grammar
 
-### `rule = expr`
+### `<name> = <expr>`
 
 Define a new inline rule that can be used inside other rules.
 
