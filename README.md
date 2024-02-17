@@ -118,6 +118,11 @@ For example, in Python, there must always be at least one statement in the body 
 body = stmt+
 ```
 
+### `\expr`
+
+Escape an expression by making it hidden. The expression will be parsed, but
+not be visible in the resulting CST/AST.
+
 ### `expr{n,m}`
 
 Parse the expression at least `n` times and at most `m` times.

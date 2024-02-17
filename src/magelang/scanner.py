@@ -40,17 +40,19 @@ TT_VBAR     = TokenType(21)
 TT_CHARSET  = TokenType(22)
 TT_COLON    = TokenType(23)
 TT_EXTERN   = TokenType(24)
+TT_SLASH    = TokenType(25)
+TT_QUEST    = TokenType(26)
 
 EOF = '\uFFFF'
 
 def is_space(ch):
     return ch == ' ' or ch == '\t' or ch == '\n' or ch == '\r'
 
-OPERATOR_REGEX = re.compile('[+*%&!]')
-def is_operator_part(ch):
-    return OPERATOR_REGEX.match(ch)
+_operator_regex = re.compile(r'[+*%&!?\\]')
+def is_operator_part(ch) -> bool:
+    return _operator_regex.match(ch) is not None
 
-DELIMITERS = {
+_delimiter_to_token_type = {
     '(': TT_LPAREN,
     ')': TT_RPAREN,
     #'[': TT_LBRACKET,
@@ -64,21 +66,23 @@ DELIMITERS = {
     ':': TT_COLON,
     }
 
-OPERATORS = {
+_operator_to_token_type = {
     '+': TT_PLUS,
     '*': TT_STAR,
     '%': TT_PERC,
     '&': TT_AMP,
     '!': TT_EXCL,
+    '?': TT_QUEST,
+    '\\': TT_SLASH,
     }
 
-KEYWORDS = {
+_keyword_to_token_type = {
     'pub': TT_PUB,
     'token': TT_TOKEN,
     'extern': TT_EXTERN,
     }
 
-ASCII_ESCAPE_CHARS = {
+_ascii_escape_chars = {
     '\'': '\'',
     '\\': '\\',
     'a': '\a',
@@ -116,12 +120,14 @@ token_type_descriptions = {
     TT_CHARSET: "a character range (like [a-z])",
     TT_COLON: "':'",
     TT_EXTERN: "'extern'",
+    TT_SLASH: "'$'",
+    TT_QUEST: "'?'",
     }
 
 class ScanError(RuntimeError):
 
     def __init__(self, ch: str, position: TextPos) -> None:
-        super().__init__(f"{position.line}:{position.column}: unexpected character encountered")
+        super().__init__(f"{position.line}:{position.column}: unexpected character {repr(ch)} encountered")
         self.ch = ch
         self.position = position
 
@@ -193,8 +199,8 @@ class Scanner:
                 pos1 = self.curr_pos.clone()
                 c1 = self._get_char()
                 if escaping:
-                    if c1 in ASCII_ESCAPE_CHARS:
-                        text += ASCII_ESCAPE_CHARS[c1]
+                    if c1 in _ascii_escape_chars:
+                        text += _ascii_escape_chars[c1]
                     else:
                         raise ScanError(c1, pos1)
                     escaping = False
@@ -210,20 +216,20 @@ class Scanner:
             end_pos = self.curr_pos.clone()
             return Token(TT_STR, (start_pos, end_pos), text)
 
-        if c0 in DELIMITERS:
+        if c0 in _delimiter_to_token_type:
             start_pos = self.curr_pos.clone()
             self._get_char()
             end_pos = self.curr_pos.clone()
-            return Token(DELIMITERS[c0], (start_pos, end_pos))
+            return Token(_delimiter_to_token_type[c0], (start_pos, end_pos))
 
         if is_operator_part(c0):
             start_pos = self.curr_pos.clone()
             self._get_char()
             text = c0 + self._take_while(is_operator_part)
             end_pos = self.curr_pos.clone()
-            if text not in OPERATORS:
+            if text not in _operator_to_token_type:
                 raise ScanError(text, start_pos)
-            return Token(OPERATORS[text], (start_pos, end_pos))
+            return Token(_operator_to_token_type[text], (start_pos, end_pos))
 
         if c0 == '[':
             start_pos = self.curr_pos.clone()
@@ -262,8 +268,8 @@ class Scanner:
             self._get_char()
             text = c0 + self._take_while(lambda ch: ch.isalnum() or ch == '_')
             end_pos = self.curr_pos.clone()
-            if text in KEYWORDS:
-                return Token(KEYWORDS[text], (start_pos, end_pos), None)
+            if text in _keyword_to_token_type:
+                return Token(_keyword_to_token_type[text], (start_pos, end_pos), None)
             return Token(TT_IDENT, (start_pos, end_pos), text)
 
         raise ScanError(c0, self.curr_pos.clone())

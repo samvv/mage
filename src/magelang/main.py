@@ -7,6 +7,7 @@ from sweetener import visualize, warn
 
 from .scanner import Scanner
 from .parser import Parser
+from .repr import grammar_to_nodespec
 from .prefix import transform as transform_prefix
 from .reduce import transform as transform_reduce
 

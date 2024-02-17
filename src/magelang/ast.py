@@ -1,23 +1,18 @@
 
 from functools import cache
 import math
-from typing import Generator
+from typing import Callable, Generator, TypeVar
 
-from sweetener import BaseNode
+from sweetener import BaseNode, warn, write_excerpt
+
+from .util import nonnull
 
 class Node(BaseNode):
     pass
 
 class Expr(Node):
-
     label: str | None = None
     rules: list['Rule'] = []
-
-    # def __init__(self, *args, rules: list['Rule'] | None = None, **kwargs) -> None:
-    #     super().__init__(*args, **kwargs)
-    #     if rules is None:
-    #         rules = []
-    #     self.rules = rules
 
 class LitExpr(Expr):
     text: str
@@ -37,6 +32,13 @@ class ChoiceExpr(Expr):
 
 class SeqExpr(Expr):
     elements: list[Expr]
+
+class ListExpr(Expr):
+    element: Expr
+    separator: Expr
+
+class HideExpr(Expr):
+    expr: Expr
 
 POSINF = math.inf
 
@@ -80,44 +82,53 @@ class Grammar(Node):
         for rule in rules:
             self._rules_by_name[rule.name] = rule
 
-    @cache
-    def _is_token_rule(self, rule: Rule) -> bool:
-        def visit(expr: Expr) -> bool:
-            if isinstance(expr, RefExpr):
-                rule = self.lookup(expr.name)
-                if rule.is_public:
-                    return False
-                if rule.is_extern and rule.is_token:
+    def is_fragment(self, rule: Rule) -> bool:
+        return not rule.is_public #and (rule.is_extern or not self._references_pub_rule(nonnull(rule.expr)))
+
+    def _references_pub_rule(self, expr: Expr) -> bool:
+        if isinstance(expr, RefExpr):
+            rule = self.lookup(expr.name)
+            if rule.is_public:
+                return True
+            if rule.is_extern:
+                return False
+            assert(rule.expr is not None)
+            return self._references_pub_rule(rule.expr)
+        if isinstance(expr, SeqExpr) \
+                or isinstance(expr, ChoiceExpr):
+            for element in expr.elements:
+                if self._references_pub_rule(element):
                     return True
-                assert(rule.expr is not None)
-                return visit(rule.expr)
-            if isinstance(expr, SeqExpr) \
-                    or isinstance(expr, ChoiceExpr):
-                for element in expr.elements:
-                    if not visit(element):
-                        return False
-                return True
-            if isinstance(expr, RepeatExpr):
-                return visit(expr.expr)
-            if isinstance(expr, LookaheadExpr):
-                return visit(expr.expr)
-            if isinstance(expr, LitExpr) \
-                    or isinstance(expr, CharSetExpr):
-                return True
-            raise RuntimeError(f'unexpected node {expr}')
-        if rule.is_extern and rule.is_token:
-            return True
+            return False
+        if isinstance(expr, RepeatExpr):
+            return self._references_pub_rule(expr.expr)
+        if isinstance(expr, LookaheadExpr):
+            return self._references_pub_rule(expr.expr)
+        if isinstance(expr, LitExpr) \
+                or isinstance(expr, CharSetExpr):
+            return False
+        raise RuntimeError(f'unexpected node {expr}')
+
+    @cache
+    def is_token_rule(self, rule: Rule) -> bool:
+        if rule.is_extern:
+            return rule.is_token
         assert(rule.expr is not None)
-        return rule.is_public and visit(rule.expr)
+        return rule.is_public and not self._references_pub_rule(rule.expr)
+
+    def is_parse_rule(self, rule: Rule) -> bool:
+        if rule.is_extern:
+            return not rule.is_token
+        return rule.is_public and not self.is_token_rule(rule)
 
     def get_token_rules(self) -> Generator[Rule, None, None]:
         for rule in self.rules:
-            if self._is_token_rule(rule):
+            if self.is_token_rule(rule):
                 yield rule
 
     def get_parse_rules(self) -> Generator[Rule, None, None]:
         for rule in self.rules:
-            if rule.is_public and not self._is_token_rule(rule):
+            if self.is_parse_rule(rule):
                 yield rule
 
     def lookup(self, name) -> Rule:
@@ -125,3 +136,18 @@ class Grammar(Node):
             raise RuntimeError(f"a rule named '{name}' was not found in the current grammar")
         return self._rules_by_name[name]
 
+def for_each_expr(node: Expr, proc: Callable[[Expr], None]) -> None:
+    if isinstance(node, LitExpr) or isinstance(node, CharSetExpr) or isinstance(node, RefExpr):
+        return
+    if isinstance(node, RepeatExpr) or isinstance(node, LookaheadExpr) or isinstance(node, HideExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, ListExpr):
+        proc(node.element)
+        proc(node.separator)
+        return
+    if isinstance(node, ChoiceExpr) or isinstance(node, SeqExpr):
+        for element in node.elements:
+            proc(element)
+        return
+    raise RuntimeError(f'unexpected {node}')

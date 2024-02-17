@@ -12,8 +12,11 @@ class ParseError(RuntimeError):
         self.actual = actual
         self.expected = expected
 
-def is_operator(tt):
-    return tt in [ TT_PLUS, TT_STAR, TT_AMP, TT_EXCL, TT_PERC ]
+def is_prefix_operator(tt: TokenType) -> bool:
+    return tt in [ TT_EXCL, TT_AMP, TT_SLASH ]
+
+def is_suffix_operator(tt: TokenType) -> bool:
+    return tt in [ TT_PLUS, TT_STAR, TT_QUEST ]
 
 class Parser:
 
@@ -63,47 +66,68 @@ class Parser:
             expr.label = label.value
         return expr
 
+    def _parse_maybe_list_expr(self) -> Expr:
+        element = self._parse_prim_expr()
+        t0 = self._peek_token()
+        if t0.type == TT_PERC:
+            self._get_token()
+            separator = self._parse_prim_expr()
+            return ListExpr(element, separator)
+        return element
+
     def _parse_expr_with_prefixes(self) -> Expr:
         tokens = []
         while True:
             t0 = self._peek_token()
-            if not is_operator(t0.type):
+            if not is_prefix_operator(t0.type):
                 break
-            if t0.type in [ TT_EXCL, TT_AMP ]:
-                self._get_token()
-                tokens.append(t0.type)
-        e = self._parse_prim_expr()
+            self._get_token()
+            tokens.append(t0.type)
+        expr = self._parse_maybe_list_expr()
         for ty in reversed(tokens):
             if ty == TT_EXCL:
-                e = LookaheadExpr(e, True)
+                expr = LookaheadExpr(expr, True)
             elif ty == TT_EXCL:
-                e = LookaheadExpr(e, False)
+                expr = LookaheadExpr(expr, False)
+            elif ty == TT_SLASH:
+                expr = HideExpr(expr)
             else:
-                raise RuntimeError(f'unexpected token type {ty}')
-        return e
+                raise RuntimeError(f'unexpected token type {token_type_descriptions[ty]}')
+        return expr
 
     def _parse_expr_with_suffixes(self) -> Expr:
-        e = self._parse_expr_with_prefixes()
+        t0 = self._peek_token(0)
+        t1 = self._peek_token(1)
+        label = None
+        if t0.type == TT_IDENT and t1.type == TT_COLON:
+            label = t0.value
+            self._get_token()
+            self._get_token()
+        expr = self._parse_expr_with_prefixes()
         while True:
             t1 = self._peek_token()
-            if not is_operator(t1.type):
+            if not is_suffix_operator(t1.type):
                 break
             if t1.type == TT_PLUS:
                 self._get_token()
-                e = RepeatExpr(1, POSINF, e)
+                expr = RepeatExpr(1, POSINF, expr)
             elif t1.type == TT_STAR:
                 self._get_token()
-                e = RepeatExpr(0, POSINF, e)
+                expr = RepeatExpr(0, POSINF, expr)
+            elif t1.type == TT_QUEST:
+                self._get_token()
+                expr = RepeatExpr(0, 1, expr)
             else:
                 raise ParseError(t1, [ TT_PLUS, TT_STAR ])
-        return e
+        expr.label = label
+        return expr
 
     def _parse_expr_sequence(self) -> Expr:
         elements = [ self._parse_expr_with_suffixes() ]
         while True:
             t0 = self._peek_token(0)
             t1 = self._peek_token(1)
-            if t0.type == TT_PUB or t0.type == TT_TOKEN or t1.type == TT_EQUAL or t0.type in [ TT_EOF, TT_VBAR, TT_RPAREN ]:
+            if t0.type in [ TT_PUB, TT_EXTERN, TT_TOKEN ] or t1.type == TT_EQUAL or t0.type in [ TT_EOF, TT_VBAR, TT_RPAREN ]:
                 break
             elements.append(self._parse_expr_with_suffixes())
         if len(elements) == 1:
