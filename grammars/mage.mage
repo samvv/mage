@@ -1,0 +1,53 @@
+
+@skip
+pub whitespace = [\n\r\t ]+
+
+pub token ident
+  = [a-z_]i [a-z0-9_]i*
+
+pub token integer
+  = [0-9]+
+
+pub token char
+  = ~[\]]
+
+pub expr
+  = ref_expr
+  | list_expr
+  | some_expr
+  | many_expr
+  | lookahead_expr
+  | choice_expr
+  | seq_expr
+
+pub ref_expr
+  = ident
+
+pub char_set_expr
+  = '~'* '[' elements:(char | char '-' char)* ']' 'i'?
+
+pub seq_expr
+  = expr expr
+
+pub choice_expr
+  = expr '|' expr
+
+pub repeat_expr
+  = expr '{' min:integer ',' max:integer '}'
+
+pub some_expr
+  = expr '+'
+
+pub many_expr
+  = expr '*'
+
+pub lookahead_expr
+  = '&' expr
+
+pub list_expr
+  = element:expr '%' separator:expr
+
+# Rules
+
+pub rule
+  = 'pub'? 'extern'? 'token'? name:ident '=' expr
