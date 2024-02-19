@@ -1,0 +1,38 @@
+
+from typing import NewType
+
+class TextPos:
+
+    def __init__(self, offset: int, line: int, column: int) -> None:
+        self.offset = offset
+        self.line = line
+        self.column = column
+
+TokenType = NewType('TokenType', int)
+
+class Token:
+
+    def __init__(self, type: TokenType) -> None:
+        self.type = type
+
+class Node:
+
+    def __init__(self) -> None:
+        pass
+
+class Span:
+
+    def __init__(self, start_offset: int, end_offset: int) -> None:
+        self.start_offset = start_offset
+        self.end_offset = end_offset
+
+    def __len__(self) -> int:
+        return self.end_offset - self.start_offset
+
+class Token(Node):
+
+    def __init__(self, span: Span) -> None:
+        super().__init__()
+
+{{cst(grammar)}}
+

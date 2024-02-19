@@ -1,0 +1,12 @@
+
+from .cst import *
+
+class Lexer:
+
+    def __init__(self, text: str, start_offset = 0, start_line = 1, start_column = 1) -> None:
+        self._text = text
+        self._curr_pos = TextPos(start_offset, start_line, start_column)
+
+    def lex(self) -> Token:
+        {{lexer_logic(grammar)}}
+

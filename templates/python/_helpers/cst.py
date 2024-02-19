@@ -1,17 +1,12 @@
-
-import ast
 from typing import assert_never
+import ast
 import astor
-
-from ..ast import Grammar
-from ..repr import *
-
-type Files = dict[str, str]
+from magelang.repr import *
 
 def to_camel_case(snake_str: str) -> str:
     return "".join(x.capitalize() for x in snake_str.lower().split("_"))
 
-def generate_cst(grammar: Grammar) -> Files:
+def generate_cst(grammar: Grammar) -> str:
 
     to_class_case = to_camel_case
 
@@ -56,12 +51,4 @@ def generate_cst(grammar: Grammar) -> Files:
             stmts.append(ast.Assign(targets=[ ast.Name(to_class_case(element.name), ctx=ast.Store()) ], value=ty))
             continue
         assert_never(element)
-    return {
-        'cst.py': astor.to_source(ast.Module(body=stmts)),
-        }
-
-def generate_lexer(grammar: Grammar) -> Files:
-    stmts = []
-    return {
-        'lexer.py': astor.to_source(ast.Module(body=stmts))
-        }
+    return astor.to_source(ast.Module(body=stmts))

@@ -138,7 +138,7 @@ class ScanError(RuntimeError):
 
 class Scanner:
 
-    def __init__(self, text: str, text_offset=0, init_pos: TextPos | None = None) -> None:
+    def __init__(self, text: str, text_offset=0, init_pos: TextPos | None = None, filename: str | None = None) -> None:
         if init_pos is None:
             init_pos = TextPos()
         self.text = text
