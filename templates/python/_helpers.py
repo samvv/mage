@@ -52,3 +52,10 @@ def generate_cst(grammar: Grammar) -> str:
             continue
         assert_never(element)
     return astor.to_source(ast.Module(body=stmts))
+
+def generate_lexer_logic(grammar: Grammar) -> str:
+    stmts = []
+    for rule in grammar.rules:
+        if not rule.is_token:
+            continue
+    return astor.to_source(ast.Module(body=stmts))
