@@ -10,3 +10,6 @@ __pycache__/
 
 # local development files
 Makefile
+
+# default output directory for Mage
+output/
