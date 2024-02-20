@@ -18,6 +18,7 @@ class NodeType(Type):
 
 class TokenType(Type):
     name: str
+    is_singleton: bool
 
 class OptionType(Type):
     element_type: Type
@@ -207,7 +208,6 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
         elif len(text) <= 4:
             return '_'.join(names[ch] for ch in text)
 
-
     def is_variant(rule: Rule) -> bool:
         def visit(expr: Expr) -> bool:
             if isinstance(expr, RefExpr):
@@ -264,7 +264,7 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
             rule = grammar.lookup(expr.name)
             label = rule.name if expr.label is None else expr.label
             if rule.is_extern:
-                yield Field(label, TokenType(rule.name) if rule.is_token else NodeType(rule.name))
+                yield Field(label, TokenType(rule.name, False) if rule.is_token else NodeType(rule.name))
                 return
             if not rule.is_public:
                 assert(rule.expr is not None)
@@ -279,7 +279,7 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
                 label = str_to_name(expr.text)
                 if label is None:
                     label = generate_field_name()
-            yield Field(label, TokenType(literal_to_name[expr.text]))
+            yield Field(label, TokenType(literal_to_name[expr.text], True))
             return
         if isinstance(expr, RepeatExpr):
             fields = list(get_node_members(expr.expr, False))
