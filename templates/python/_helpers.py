@@ -135,14 +135,34 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
         counter += 1
         return prefix + str(i)
 
-    def gen_init_body(ty: Type, field_name: str, in_name: str, out_name: str) -> Generator[ast.stmt, None, None]:
+    def get_list_element(ty: Type) -> Type:
+        if isinstance(ty, ListType):
+            return ty.element_type
+        if isinstance(ty, UnionType):
+            for element in flatten_union(ty):
+                if isinstance(element, ListType):
+                    return element.element_type
+        raise RuntimeError(f'unexpected {ty}')
+
+    def get_tuple_element(ty: Type, i: int) -> Type:
+        if isinstance(ty, TupleType):
+            return ty.element_types[i]
+        if isinstance(ty, UnionType):
+            for element in flatten_union(ty):
+                if isinstance(element, TupleType):
+                    return element.element_types[i]
+        raise RuntimeError(f'unexpected {ty}')
+
+    def gen_init_body(ty: Type, field_name: str, field_ty: Type, in_name: str, out_name: str) -> Generator[ast.stmt, None, None]:
         if isinstance(ty, NodeType) or isinstance(ty, TokenType):
             #assert(ty == orig_ty)
             yield ast.Assign(targets=[ ast.Name(out_name) ], value=ast.Name(in_name, ctx=ast.Load()))
             return
         if isinstance(ty, NoneType):
-            yield ast.Assign(targets=[ ast.Name(out_name) ], value=ast.Name('None'))
-            # yield ast.Assign(targets=[ ast.Name(out_name) ], value=gen_default_constructor(orig_ty))
+            if is_optional(field_ty):
+                yield ast.Assign(targets=[ ast.Name(out_name) ], value=ast.Name('None'))
+            else:
+                yield ast.Assign(targets=[ ast.Name(out_name) ], value=gen_default_constructor(field_ty))
             return
         if isinstance(ty, ListType):
             # out_name = list()
@@ -152,7 +172,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             yield ast.Assign(targets=[ ast.Name(out_name) ], value=ast.Call(func=ast.Name('list'), args=[], keywords=[]))
             element_name = f'{in_name}_element'
             new_element_name = f'{out_name}_element'
-            for_body = list(gen_init_body(ty.element_type, field_name, element_name, new_element_name))
+            for_body = list(gen_init_body(ty.element_type, field_name, get_list_element(field_ty), element_name, new_element_name))
             for_body.append(ast.Expr(ast.Call(func=ast.Attribute(value=ast.Name(out_name), attr='append'), args=[ ast.Name(new_element_name) ], keywords=[])))
             yield ast.For(target=ast.Name(element_name), iter=ast.Name(in_name), body=for_body, orelse=None)
             return
@@ -167,16 +187,16 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 new_element_name = f'{out_name}_{i}'
                 new_elements.append(ast.Name(new_element_name))
                 yield ast.Assign(targets=[ ast.Name(element_name) ], value=ast.Subscript(value=ast.Name(in_name), slice=ast.Constant(i)))
-                yield from gen_init_body(element_type, field_name, element_name, new_element_name)
+                yield from gen_init_body(element_type, field_name, get_tuple_element(field_ty, i), element_name, new_element_name)
             yield ast.Assign(targets=[ ast.Name(out_name) ], value=ast.Tuple(elts=new_elements))
             return
         if isinstance(ty, UnionType):
             if not ty.types:
-                yield ast.Raise(exc=ast.Call(func=ast.Name('ValueError', ctx=ast.Load()), args=[ ast.Constant(value=f"the field '{in_name}' received an unrecognised value'") ], keywords=[]))
+                yield ast.Raise(exc=ast.Call(func=ast.Name('ValueError', ctx=ast.Load()), args=[ ast.Constant(value=f"the field '{field_name}' received an unrecognised value'") ], keywords=[]))
                 return
             ty0 = ty.types[0]
-            if_body = list(gen_init_body(ty0, field_name, in_name, out_name))
-            if_orelse = list(gen_init_body(UnionType(ty.types[1:]), field_name, in_name, out_name))
+            if_body = list(gen_init_body(ty0, field_name, field_ty, in_name, out_name))
+            if_orelse = list(gen_init_body(UnionType(ty.types[1:]), field_name, field_ty, in_name, out_name))
             yield ast.If(test=gen_shallow_test(ty0, ast.Name(in_name)), body=if_body, orelse=if_orelse)
             return
         raise RuntimeError(f'unexpected {ty}')
@@ -192,13 +212,13 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             for field in element.members:
                 param_type = gen_coerce_type(field.ty)
                 tmp = f'{field.name}__coerced'
-                init_body.extend(gen_init_body(param_type, field.name, field.name, tmp))
+                init_body.extend(gen_init_body(param_type, field.name, field.ty, field.name, tmp))
                 field_ty = astor.to_source(gen_type(param_type)).strip()
                 params.append(ast.arg(arg=field.name, annotation=ast.Constant(field_ty)))
                 if not is_optional(field.ty) and is_optional(param_type):
-                    init_body.append(ast.If(test=ast.Compare(left=ast.Name(tmp), ops=[ ast.IsNot() ], comparators=[ ast.Name('None') ]), body=[
-                        ast.Assign(targets=[ ast.Name(tmp) ], value=gen_default_constructor(field.ty))
-                    ], orelse=[]))
+                    # init_body.append(ast.If(test=ast.Compare(left=ast.Name(tmp), ops=[ ast.IsNot() ], comparators=[ ast.Name('None') ]), body=[
+                    #     ast.Assign(targets=[ ast.Name(tmp) ], value=gen_default_constructor(field.ty))
+                    # ], orelse=[]))
                     params_defaults.append(ast.Name('None'))
                 else:
                     params_defaults.append(None)
