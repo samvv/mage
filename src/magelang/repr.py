@@ -17,7 +17,7 @@ class NodeType(Type):
 
 class TokenType(Type):
     name: str
-    is_singleton: bool
+    is_static: bool
 
 class TupleType(Type):
     element_types: list[Type]

@@ -43,7 +43,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             yield NoneType()
             return
         if isinstance(ty, TokenType):
-            if ty.is_singleton:
+            if ty.is_static:
                 yield NoneType()
             yield ty
             return
