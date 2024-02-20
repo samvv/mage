@@ -2,6 +2,8 @@
 
 any_byte = [\x00-\xFF]
 
+any_char = [\x00-\x7F]
+
 eof = !any_byte
 
 extern token indent
@@ -24,15 +26,93 @@ token eos
 pub token ident
   = [a-zA-Z_] [a-zA-Z_0-9]*
 
+pub token integer
+   = [0-9]+
+
+pub token float
+   = [0-9]* '.' [0-9]+
+
+pub char = any_char
+
+pub token string
+   = '"' char* '"'
+   | '\'' char* '\''
+
+# Patterns
+
+pub pattern
+  = named_pattern
+  | attr_pattern
+  | subscript_pattern
+  | starred_pattern
+  | list_pattern
+  | tuple_pattern
+
+pub named_pattern
+  = name:ident
+
+pub attr_pattern
+  = pattern '.' name:ident
+
+pub subscript_pattern
+  = pattern '[' slice:pattern ']'
+
+pub starred_pattern
+  = '*' expr
+
+pub list_pattern
+  = '[' (pattern % ',') ']'
+
+pub tuple_pattern
+  = '(' (pattern % ',') ')'
+
 # Expressions
 
 pub expr
-  = ref_expr
-  | call_expr
+  = call_expr
   | bin_expr
+  | named_expr
+  | attr_expr
+  | subscript_expr
+  | starred_expr
+  | list_expr
+  | tuple_expr
+
+pub const_expr
+   = string
+   | float
+   | integer
+
+pub named_expr
+  = name:ident
+
+pub attr_expr
+  = expr '.' name:ident
+
+pub subscript_expr
+  = expr '[' slice:expr ']'
+
+pub starred_expr
+  = '*' expr
+
+pub list_expr
+  = '[' (expr % ',') ']'
+
+pub tuple_expr
+  = '(' (expr % ',') ')'
+
+pub arg
+  = pos_arg
+  | keyword_arg
+
+pub pos_arg
+  = expr
+
+pub keyword_arg
+  = name:ident '=' expr
 
 pub call_expr
-  = operator:expr '(' args:(expr % ',') ')'
+  = operator:expr '(' args:(arg % ',')  ')'
 
 pub op
   = '+'
@@ -42,9 +122,6 @@ pub op
 
 pub bin_expr
   = left:expr op right:expr
-
-pub ref_expr
-  = ident
 
 # Statements
 
@@ -58,11 +135,35 @@ pub ret_stmt
 pub expr_stmt
   = expr \eos
 
-# Declarations
+pub assign_stmt
+  = pattern annotation:(':' expr)? '=' expr
+
+pub delete_stmt
+  = 'del' pattern
+
+pub type_alias_stmt
+  = 'type' name:ident type_params:('[' (expr % ',') ']')? '=' expr
 
 pub block_class_def
-  = 'class' name:ident ':' \indent body:(stmt \eolf)* \dedent
+  = 'class' name:ident ':' 
 
 pub inline_class_def
-  = 'class' name:ident ('(' expr ')') ':' stmt
+  = 'class' name:ident ('(' expr ')') ':' (stmt | \indent body:(stmt \eolf)* \dedent)
+
+pub param
+  = pos_param
+  | rest_pos_param
+  | rest_keyword_param
+
+pub pos_param
+  = name:ident annotation:(':' expr)? default:('=' expr)?
+
+pub rest_pos_param
+  = '*' name:ident
+
+pub rest_keyword_param
+  = '**' name:ident
+
+pub func_def
+  = 'async'? 'def' name:ident '(' (param % ',') ')' return_type:('->' expr)? ':' (stmt | \indent body:(stmt \eolf)* \dedent)
 
