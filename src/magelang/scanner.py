@@ -16,6 +16,9 @@ class Token(Record):
     span: Tuple[TextPos, TextPos]
     value: Optional[Any] = None
 
+def _is_hex_digit(ch: str) -> bool:
+    return ch in [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C' 'D', 'E', 'F', 'a', 'b', 'c', 'd', 'e', 'f' ]
+
 TT_EOF      = TokenType(1)
 TT_IDENT    = TokenType(2)
 TT_EQUAL    = TokenType(3)
@@ -174,26 +177,26 @@ class Scanner:
             text += c1
         return text
 
-    def _scan_digit(self) -> int:
+    def _scan_hex_digit(self) -> int:
         pos = self.curr_pos.clone()
         ch = self._get_char()
-        if ch.isdigit():
+        if not _is_hex_digit(ch):
             raise ScanError(ch, pos)
-        return int(ch)
+        return int(ch, 16)
 
     def _scan_escapable_char(self) -> tuple[str, bool]:
         c0 = self._get_char()
         if c0 == '\\':
             c1 = self._get_char()
             if c1 == 'x':
-                d0 = self._scan_digit()
-                d1 = self._scan_digit()
+                d0 = self._scan_hex_digit()
+                d1 = self._scan_hex_digit()
                 return (chr(d0 * 16 + d1), True)
             elif c1 == 'u':
-                d0 = self._scan_digit()
-                d1 = self._scan_digit()
-                d2 = self._scan_digit()
-                d3 = self._scan_digit()
+                d0 = self._scan_hex_digit()
+                d1 = self._scan_hex_digit()
+                d2 = self._scan_hex_digit()
+                d3 = self._scan_hex_digit()
                 return (chr(d0 * 16 * 16 * 16 + d1 * 16 * 16 + d2 * 16 + d3), True)
             elif c1 in _ascii_escape_chars:
                 return (_ascii_escape_chars[c1], True)
