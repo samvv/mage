@@ -1,0 +1,68 @@
+# Should be part of standard library
+
+any_byte = [\x00-\xFF]
+
+eof = !any_byte
+
+extern token indent
+
+# Helper utilities
+
+token skip = [\s]+
+
+token eol = '\r\n' | '\n'
+
+token eolf = eol | eof
+
+token eos
+  = __ ';'
+  | _ line_comment? eol
+  | __ eof
+
+# First tokens
+
+pub token ident
+  = [a-zA-Z_] [a-zA-Z_0-9]*
+
+# Expressions
+
+pub expr
+  = ref_expr
+  | call_expr
+  | bin_expr
+
+pub call_expr
+  = operator:expr '(' args:(expr % ',') ')'
+
+pub op
+  = '+'
+  | '-'
+  | '*'
+  | '/'
+
+pub bin_expr
+  = left:expr op right:expr
+
+pub ref_expr
+  = ident
+
+# Statements
+
+pub stmt
+  = ret_stmt
+  | expr_stmt
+
+pub ret_stmt
+  = 'return' expr \eos
+
+pub expr_stmt
+  = expr \eos
+
+# Declarations
+
+pub block_class_def
+  = 'class' name:ident ':' \indent body:(stmt \eolf)* \dedent
+
+pub inline_class_def
+  = 'class' name:ident ('(' expr ')') ':' stmt
+
