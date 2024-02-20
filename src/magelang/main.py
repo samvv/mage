@@ -4,6 +4,7 @@ from pathlib import Path
 
 import templaty
 
+from .ast import *
 from .scanner import Scanner
 from .parser import Parser
 from .repr import grammar_to_nodespec
@@ -18,6 +19,21 @@ templates_dir = project_dir / 'templates'
 # for path in (project_dir / 'templates').iterdir():
 #     generators[path.stem] = importlib.import_module(f'magelang.codegen.{path.stem}')
 
+def add_prefix(grammar: Grammar, prefix: str) -> Grammar:
+
+    def transform(name: str) -> str:
+        return prefix + name
+
+    def rewrite(expr: Expr) -> Expr | None:
+        if isinstance(expr, RefExpr):
+            return RefExpr(name=transform(expr.name), rules=expr.rules)
+
+    def visit_rule(rule: Rule) -> Rule:
+        expr = rewrite_each_expr(rule.expr, rewrite) if rule.expr is not None else None
+        return Rule(flags=rule.flags, name=transform(rule.name), expr=expr)
+
+    return Grammar(rules=list(visit_rule(rule) for rule in grammar.rules))
+
 def main():
 
     template_names = []
@@ -30,20 +46,24 @@ def main():
     arg_parser.add_argument('file', nargs=1, help='A path to a grammar file')
     arg_parser.add_argument('template', choices=template_names, help='The name of the template to use')
     arg_parser.add_argument('--out-dir', default='output', help='Where to place the generated files')
+    arg_parser.add_argument('--prefix', default='', help='Prefix all rules in the grammar with this value')
  
     args = arg_parser.parse_args()
 
     file = args.file[0]
     dest_dir = Path(args.out_dir)
+    prefix = args.prefix
 
     with open(file, 'r') as f:
         text = f.read()
     scanner = Scanner(text, filename=file)
     parser = Parser(scanner)
     grammar = parser.parse_grammar()
+    if prefix:
+        grammar = add_prefix(grammar, prefix + '_')
     #grammar = transform_prefix(grammar)
     #grammar = transform_reduce(grammar)
-    #visualize(grammar)
+    #visualize(grammar, format='png')
 
     ctx = {
         'grammar': grammar,
