@@ -16,9 +16,9 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
     def gen_type(ty: Type) -> ast.expr:
         if isinstance(ty, NodeType):
-            return ast.Name(to_class_case(ty.name), ctx=ast.Load())
+            return ast.Name(to_class_case(ty.name))
         if isinstance(ty, TokenType):
-            return ast.Name(to_class_case(ty.name), ctx=ast.Load())
+            return ast.Name(to_class_case(ty.name))
         if  isinstance(ty, AnyTokenType):
             return ast.Name('Token', ctx=ast.Load())
         if isinstance(ty, ListType):
@@ -94,6 +94,15 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             return ast.Call(func=ast.Name('list'), args=[], keywords=[])
         raise RuntimeError(f'unexpected {ty}')
 
+    def make_or(iter: Iterator[ast.expr]) -> ast.expr:
+        try:
+            out = next(iter)
+        except StopIteration:
+            return ast.Name('False')
+        for expr in iter:
+            out = ast.BoolOp(op=ast.Or(), values=[ out, expr ])
+        return out
+
     def make_and(iter: Iterator[ast.expr]) -> ast.expr:
         try:
             out = next(iter)
@@ -103,7 +112,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             out = ast.BoolOp(op=ast.And(), values=[ out, expr ])
         return out
 
-    def gen_test(ty: Type, target: ast.expr) -> ast.expr:
+    def gen_shallow_test(ty: Type, target: ast.expr) -> ast.expr:
         if isinstance(ty, NodeType):
             return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name(to_class_case(ty.name)) ], keywords=[])
         if isinstance(ty, TokenType):
@@ -111,7 +120,12 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
         if isinstance(ty, NoneType):
             return ast.Compare(left=target, ops=[ ast.Is() ], comparators=[ ast.Name('None') ])
         if isinstance(ty, TupleType):
-            return make_and(gen_test(element, ast.Slice(target, ast.Constant(i))) for i, element in enumerate(ty.element_types))
+            return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name('tuple') ], keywords=[])
+            #return ast.BoolOp(left=test, op=ast.And(), values=[ make_and(gen_test(element, ast.Subscript(target, ast.Constant(i))) for i, element in enumerate(ty.element_types)) ])
+        if isinstance(ty, ListType):
+            return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name('list') ], keywords=[])
+        if isinstance(ty, UnionType):
+            return make_or(gen_shallow_test(element, target) for element in ty.types)
         raise RuntimeError(f'unexpected {ty}')
 
     counter = 0
@@ -136,8 +150,8 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             #     ...
             #     out_name.append(new_element_name)
             yield ast.Assign(targets=[ ast.Name(out_name) ], value=ast.Call(func=ast.Name('list'), args=[], keywords=[]))
-            element_name = 'element'
-            new_element_name = 'new_element'
+            element_name = f'{in_name}_element'
+            new_element_name = f'{out_name}_element'
             for_body = list(gen_init_body(ty.element_type, field_name, element_name, new_element_name))
             for_body.append(ast.Expr(ast.Call(func=ast.Attribute(value=ast.Name(out_name), attr='append'), args=[ ast.Name(new_element_name) ], keywords=[])))
             yield ast.For(target=ast.Name(element_name), iter=ast.Name(in_name), body=for_body, orelse=None)
@@ -149,9 +163,9 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             # out_name = (new_element_0, new_element_1, ...)
             new_elements = []
             for i, element_type in enumerate(ty.element_types):
-                new_element_name = f'new_element_{i}'
+                element_name = f'{in_name}_{i}'
+                new_element_name = f'{out_name}_{i}'
                 new_elements.append(ast.Name(new_element_name))
-                element_name = f'element_{i}'
                 yield ast.Assign(targets=[ ast.Name(element_name) ], value=ast.Subscript(value=ast.Name(in_name), slice=ast.Constant(i)))
                 yield from gen_init_body(element_type, field_name, element_name, new_element_name)
             yield ast.Assign(targets=[ ast.Name(out_name) ], value=ast.Tuple(elts=new_elements))
@@ -163,7 +177,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             ty0 = ty.types[0]
             if_body = list(gen_init_body(ty0, field_name, in_name, out_name))
             if_orelse = list(gen_init_body(UnionType(ty.types[1:]), field_name, in_name, out_name))
-            yield ast.If(test=gen_test(ty0, ast.Name(in_name)), body=if_body, orelse=if_orelse)
+            yield ast.If(test=gen_shallow_test(ty0, ast.Name(in_name)), body=if_body, orelse=if_orelse)
             return
         raise RuntimeError(f'unexpected {ty}')
 
@@ -179,12 +193,15 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 param_type = gen_coerce_type(field.ty)
                 tmp = f'{field.name}__coerced'
                 init_body.extend(gen_init_body(param_type, field.name, field.name, tmp))
-                params.append(ast.arg(arg=field.name, annotation=gen_type(param_type)))
+                field_ty = astor.to_source(gen_type(param_type)).strip()
+                params.append(ast.arg(arg=field.name, annotation=ast.Constant(field_ty)))
                 if not is_optional(field.ty) and is_optional(param_type):
                     init_body.append(ast.If(test=ast.Compare(left=ast.Name(tmp), ops=[ ast.IsNot() ], comparators=[ ast.Name('None') ]), body=[
                         ast.Assign(targets=[ ast.Name(tmp) ], value=gen_default_constructor(field.ty))
                     ], orelse=[]))
                     params_defaults.append(ast.Name('None'))
+                else:
+                    params_defaults.append(None)
                 init_body.append(ast.Assign(targets=[ ast.Attribute(value=ast.Name('self', ctx=ast.Store()), attr=field.name) ], value=ast.Name(tmp, ctx=ast.Load())))
             args = ast.arguments(args=[ ast.arg('self') ], kwonlyargs=params, defaults=[], kw_defaults=params_defaults)
             body.append(ast.FunctionDef(name='__init__', args=args, body=init_body, returns=ast.Name('None', ctx=ast.Load()), decorator_list=[]))
@@ -198,10 +215,12 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             stmts.append(ast.ClassDef(name=to_class_case(element.name), bases=[ ast.Name('Token') ], body=body, decorator_list=[]))
             continue
         if isinstance(element, VariantSpec):
-            ty = ast.Name(to_class_case(element.members[0]))
-            for name in element.members[1:]:
-                ty = ast.BinOp(left=ty, op=ast.BitOr(), right=ast.Name(to_class_case(name)), ctx=ast.Load())
-            stmts.append(ast.Assign(targets=[ ast.Name(to_class_case(element.name), ctx=ast.Store()) ], value=ty))
+            # ty = ast.Name(to_class_case(element.members[0]))
+            # for name in element.members[1:]:
+            #     ty = ast.BinOp(left=ty, op=ast.BitOr(), right=ast.Name(to_class_case(name)), ctx=ast.Load())
+            assert(len(element.members) > 0)
+            text = ' | '.join(to_class_case(name) for name in element.members)
+            stmts.append(ast.Assign(targets=[ ast.Name(to_class_case(element.name)) ],  value=ast.Constant(text), type_comment='TypeAlias'))
             continue
         assert_never(element)
     return astor.to_source(ast.Module(body=stmts))

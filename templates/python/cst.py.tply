@@ -1,5 +1,5 @@
 
-from typing import NewType
+from typing import TypeAlias
 
 class TextPos:
 

@@ -113,9 +113,10 @@ class Grammar(Node):
                 if self._references_pub_rule(element):
                     return True
             return False
-        if isinstance(expr, RepeatExpr):
-            return self._references_pub_rule(expr.expr)
-        if isinstance(expr, LookaheadExpr):
+        if isinstance(expr, ListExpr):
+            return self._references_pub_rule(expr.element) \
+                or self._references_pub_rule(expr.separator)
+        if isinstance(expr, RepeatExpr) or isinstance(expr, LookaheadExpr):
             return self._references_pub_rule(expr.expr)
         if isinstance(expr, LitExpr) \
                 or isinstance(expr, CharSetExpr):
