@@ -149,6 +149,63 @@ class Grammar(Node):
             raise RuntimeError(f"a rule named '{name}' was not found in the current grammar")
         return self._rules_by_name[name]
 
+def rewrite_each_expr(expr: Expr, proc: Callable[[Expr], Expr | None]) -> Expr:
+
+    def visit(expr: Expr) -> Expr:
+
+        updated = proc(expr)
+        if updated is not None:
+            return updated
+
+        if isinstance(expr, LitExpr) or isinstance(expr, CharSetExpr) or isinstance(expr, RefExpr):
+            return expr
+        if isinstance(expr, RepeatExpr):
+            new_expr = visit(expr.expr)
+            if new_expr == expr.expr:
+                return expr
+            return RepeatExpr(min=expr.min, max=expr.max, expr=new_expr, rules=expr.rules, label=expr.label)
+        if isinstance(expr, LookaheadExpr):
+            new_expr = visit(expr.expr)
+            if new_expr == expr.expr:
+                return expr
+            return LookaheadExpr(expr=new_expr, is_negated=expr.is_negated, rules=expr.rules, label=expr.label)
+        if isinstance(expr, HideExpr):
+            new_expr = visit(expr.expr)
+            if new_expr == expr.expr:
+                return expr
+            return HideExpr(expr=new_expr, rules=expr.rules, label=expr.label)
+        if isinstance(expr, ListExpr):
+            new_element = visit(expr.element)
+            new_separator = visit(expr.separator)
+            if new_element == expr.element and new_separator == expr.separator:
+                return expr
+            return ListExpr(element=new_element, separator=new_separator, rules=expr.rules, label=expr.label)
+        if isinstance(expr, ChoiceExpr):
+            new_elements = []
+            changed = False
+            for element in expr.elements:
+                new_element = visit(element)
+                if new_element != element:
+                    changed = True
+                new_elements.append(new_element)
+            if not changed:
+                return expr
+            return ChoiceExpr(elements=new_elements, rules=expr.rules, label=expr.label)
+        if isinstance(expr, SeqExpr):
+            new_elements = []
+            changed = False
+            for element in expr.elements:
+                new_element = visit(element)
+                if new_element != element:
+                    changed = True
+                new_elements.append(new_element)
+            if not changed:
+                return expr
+            return SeqExpr(elements=new_elements, rules=expr.rules, label=expr.label)
+        raise RuntimeError(f'unexpected {expr}')
+
+    return visit(expr)
+
 def for_each_expr(node: Expr, proc: Callable[[Expr], None]) -> None:
     if isinstance(node, LitExpr) or isinstance(node, CharSetExpr) or isinstance(node, RefExpr):
         return
