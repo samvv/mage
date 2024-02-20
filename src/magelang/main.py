@@ -59,13 +59,14 @@ def main():
     scanner = Scanner(text, filename=file)
     parser = Parser(scanner)
     grammar = parser.parse_grammar()
-    if prefix:
-        grammar = add_prefix(grammar, prefix + '_')
+    # if prefix:
+    #     grammar = add_prefix(grammar, prefix + '_')
     #grammar = transform_prefix(grammar)
     #grammar = transform_reduce(grammar)
     #visualize(grammar, format='png')
 
     ctx = {
+        'prefix': prefix + '_' if prefix else '',
         'grammar': grammar,
     }
 

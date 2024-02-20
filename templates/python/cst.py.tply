@@ -8,18 +8,6 @@ class TextPos:
         self.line = line
         self.column = column
 
-TokenType = NewType('TokenType', int)
-
-class Token:
-
-    def __init__(self, type: TokenType) -> None:
-        self.type = type
-
-class Node:
-
-    def __init__(self) -> None:
-        pass
-
 class Span:
 
     def __init__(self, start_offset: int, end_offset: int) -> None:
@@ -29,10 +17,15 @@ class Span:
     def __len__(self) -> int:
         return self.end_offset - self.start_offset
 
-class Token(Node):
+class Token:
 
-    def __init__(self, span: Span) -> None:
-        super().__init__()
+    def __init__(self, span: Span | None = None) -> None:
+        self.span = span
 
-{{cst(grammar)}}
+class Node:
+
+    def __init__(self) -> None:
+        pass
+
+{{cst(grammar, prefix)}}
 

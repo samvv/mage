@@ -19,9 +19,6 @@ class TokenType(Type):
     name: str
     is_singleton: bool
 
-class OptionType(Type):
-    element_type: Type
-
 class TupleType(Type):
     element_types: list[Type]
 
@@ -53,6 +50,13 @@ class VariantSpec(SpecBase):
     members: list[str]
 
 Spec = TokenSpec | NodeSpec | VariantSpec
+
+def flatten_union(ty: Type) -> Generator[Type, None, None]:
+    if isinstance(ty, UnionType):
+        for element in ty.types:
+            yield from flatten_union(element)
+    else:
+        yield ty
 
 names = {
     '\x00': 'null',
@@ -201,6 +205,9 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
 
     literal_to_name = dict()
 
+    def make_optional(ty: Type) -> Type:
+        return UnionType([ ty, NoneType() ])
+
     def str_to_name(text: str) -> str | None:
         if text[0].isalpha() and all(ch.isalnum() for ch in text[1:]):
             return f'{text}_keyword'
@@ -257,7 +264,7 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
             label = expr.label
             if label is None:
                 label = generate_field_name()
-            yield Field(label, ListType(TupleType([ element_fields[0].ty, OptionType(separator_fields[0].ty) ])))
+            yield Field(label, ListType(TupleType([ element_fields[0].ty, make_optional(separator_fields[0].ty) ])))
             return
         if isinstance(expr, RefExpr):
             rule = grammar.lookup(expr.name)
@@ -292,7 +299,7 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
             if expr.max == 0:
                 return
             elif expr.min == 0 and expr.max == 1:
-                ty = OptionType(field.ty)
+                ty = make_optional(field.ty)
             elif expr.min == 1 and expr.max == 1:
                 ty = field.ty
             else:
