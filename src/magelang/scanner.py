@@ -47,13 +47,14 @@ TT_SLASH    = TokenType(25)
 TT_QUEST    = TokenType(26)
 TT_AT       = TokenType(27)
 TT_TILDE    = TokenType(28)
+TT_RARROW   = TokenType(29)
 
 EOF = '\uFFFF'
 
 def is_space(ch):
     return ch == ' ' or ch == '\t' or ch == '\n' or ch == '\r'
 
-_operator_regex = re.compile(r'[~+*%&!?\\]')
+_operator_regex = re.compile(r'[<>~+\-*%&!?\\]')
 def is_operator_part(ch) -> bool:
     return _operator_regex.match(ch) is not None
 
@@ -81,6 +82,7 @@ _operator_to_token_type = {
     '?': TT_QUEST,
     '\\': TT_SLASH,
     '~': TT_TILDE,
+    '->': TT_RARROW,
     }
 
 _keyword_to_token_type = {
@@ -131,6 +133,7 @@ token_type_descriptions = {
     TT_QUEST: "'?'",
     TT_AT: "'@'",
     TT_TILDE: "'~'",
+    TT_RARROW: "'->'",
     }
 
 class ScanError(RuntimeError):

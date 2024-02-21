@@ -57,10 +57,13 @@ EXTERN = 1
 PUBLIC = 2
 FORCE_TOKEN  = 4
 
+string_kind = 'String'
+
 class Rule(Node):
     decorators: list[Decorator]
     flags: int
     name: str
+    type_name: str | None
     expr: Expr | None
 
     def __init__(self, *args, **kwargs):

@@ -175,11 +175,16 @@ class Parser:
             t0 = self._get_token()
         if t0.type != TT_IDENT:
             raise ParseError(t0, [ TT_IDENT ])
+        t3 = self._peek_token()
+        type_name = string_kind
+        if t3.type == TT_RARROW:
+            self._get_token()
+            type_name = self._expect_token(TT_IDENT).value
         if flags & EXTERN:
-            return Rule(decorators, flags, t0.value, None)
+            return Rule(decorators, flags, t0.value, type_name,  None)
         self._expect_token(TT_EQUAL)
         expr = self.parse_expr()
-        return Rule(decorators, flags, t0.value, expr)
+        return Rule(decorators, flags, t0.value, type_name, expr)
 
     def parse_grammar(self) -> Grammar:
         elements = []
