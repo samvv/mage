@@ -8,7 +8,7 @@ def to_camel_case(snake_str: str) -> str:
 
 def generate_cst(grammar: Grammar, prefix='') -> str:
 
-    spec = grammar_to_nodespec(grammar)
+    specs = grammar_to_specs(grammar)
 
     def namespace(name: str) -> str:
         return prefix + name if prefix else name
@@ -45,7 +45,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             yield NoneType()
             return
         if isinstance(ty, TokenType):
-            if ty.is_static:
+            if specs.is_static(ty.name):
                 yield NoneType()
             yield ty
             return
@@ -114,11 +114,17 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             out = ast.BoolOp(op=ast.And(), values=[ out, expr ])
         return out
 
+    def gen_instance_check(name: str, target: ast.expr) -> ast.expr:
+        spec = specs.lookup(name)
+        if isinstance(spec, VariantSpec):
+            return ast.Call(func=ast.Name(f'is_{namespace(name)}'), args=[ target ], keywords=[])
+        if isinstance(spec, NodeSpec) or isinstance(spec, TokenSpec):
+            return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name(to_class_case(name)) ], keywords=[])
+        raise RuntimeError(f'unexpected {spec}')
+
     def gen_shallow_test(ty: Type, target: ast.expr) -> ast.expr:
         if isinstance(ty, NodeType):
-            if isinstance(spec[ty.name], VariantSpec):
-                return ast.Call(func=ast.Name(f'is_{namespace(ty.name)}'), args=[ target ], keywords=[])
-            return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name(to_class_case(ty.name)) ], keywords=[])
+            return gen_instance_check(ty.name, target)
         if isinstance(ty, TokenType):
             return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name(to_class_case(ty.name)) ], keywords=[])
         if isinstance(ty, NoneType):
@@ -206,13 +212,13 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
         raise RuntimeError(f'unexpected {ty}')
 
     stmts = []
-    for element in spec.values():
-        if isinstance(element, NodeSpec):
+    for spec in specs:
+        if isinstance(spec, NodeSpec):
             body = []
             params = []
             params_defaults = []
             init_body = []
-            for field in element.members:
+            for field in spec.members:
                 param_type = gen_coerce_type(field.ty)
                 tmp = f'{field.name}__coerced'
                 init_body.extend(gen_init_body(param_type, field.name, field.ty, field.name, tmp))
@@ -230,28 +236,29 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             body.append(ast.FunctionDef(name='__init__', args=args, body=init_body, returns=ast.Name('None', ctx=ast.Load()), decorator_list=[]))
             #ctx for field in element.members:
             #     body.append(ast.AnnAssign(target=ast.Name(field.name), annotation=gen_type(field.ty), simple=True))
-            stmts.append(ast.ClassDef(name=to_class_case(element.name), body=body, bases=[ ast.Name('Node', ctx=ast.Store()) ], decorator_list=[]))
+            stmts.append(ast.ClassDef(name=to_class_case(spec.name), body=body, bases=[ ast.Name('Node', ctx=ast.Store()) ], decorator_list=[]))
             continue
-        if isinstance(element, TokenSpec):
+        if isinstance(spec, TokenSpec):
             body = []
             body.append(ast.Pass())
-            stmts.append(ast.ClassDef(name=to_class_case(element.name), bases=[ ast.Name('Token') ], body=body, decorator_list=[]))
+            stmts.append(ast.ClassDef(name=to_class_case(spec.name), bases=[ ast.Name('Token') ], body=body, decorator_list=[]))
             continue
-        if isinstance(element, VariantSpec):
+        if isinstance(spec, VariantSpec):
             # ty = ast.Name(to_class_case(element.members[0]))
             # for name in element.members[1:]:
             #     ty = ast.BinOp(left=ty, op=ast.BitOr(), right=ast.Name(to_class_case(name)), ctx=ast.Load())
-            cls_name = to_class_case(element.name)
-            assert(len(element.members) > 0)
-            text = ' | '.join(to_class_case(name) for name in element.members)
+            cls_name = to_class_case(spec.name)
+            assert(len(spec.members) > 0)
+            text = ' | '.join(to_class_case(name) for name in spec.members)
             stmts.append(ast.Assign(targets=[ ast.Name(cls_name) ],  value=ast.Constant(text), type_comment='TypeAlias'))
             pred_body = [
-                ast.Return(make_or(ast.Call(func=ast.Name('isinstance'), args=[ ast.Name('value'), ast.Name(to_class_case(name)) ], keywords=[]) for name in element.members))
+                ast.Return(make_or(gen_instance_check(name, ast.Name('value')) for name in spec.members))
             ]
             args = ast.arguments(args=[ ast.arg(arg='value', annotation=ast.Name('Any')) ], defaults=[])
-            stmts.append(ast.FunctionDef(name=f'is_{namespace(element.name)}', args=args, returns=ast.Subscript(ast.Name('TypeGuard'), ast.Name(cls_name)), body=pred_body, decorator_list=[]))
+            stmts.append(ast.FunctionDef(name=f'is_{namespace(spec.name)}', args=args, returns=ast.Subscript(ast.Name('TypeGuard'), ast.Name(cls_name)), body=pred_body, decorator_list=[]))
             continue
-        assert_never(element)
+        assert_never(spec)
+
     return astor.to_source(ast.Module(body=stmts))
 
 def generate_lexer_logic(grammar: Grammar) -> str:

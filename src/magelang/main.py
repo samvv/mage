@@ -7,7 +7,7 @@ import templaty
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser
-from .repr import grammar_to_nodespec
+from .repr import grammar_to_specs
 from .prefix import transform as transform_prefix
 from .reduce import transform as transform_reduce
 

@@ -1,4 +1,5 @@
 
+from collections.abc import Iterator
 import json
 from pathlib import Path
 from sweetener import Record
@@ -19,7 +20,6 @@ class NodeType(Type):
 
 class TokenType(Type):
     name: str
-    is_static: bool
 
 class TupleType(Type):
     element_types: list[Type]
@@ -42,6 +42,8 @@ class SpecBase(Record):
 
 class TokenSpec(SpecBase):
     name: str
+    field_type: str | None
+    is_static: bool
 
 class NodeSpec(SpecBase):
     name: str
@@ -51,9 +53,35 @@ class VariantSpec(SpecBase):
     name: str
     members: list[str]
 
+builtin_types = {
+    'String',
+    'Integer',
+}
+
 Spec = TokenSpec | NodeSpec | VariantSpec
 
-Specs = dict[str, Spec]
+class Specs:
+
+    def __init__(self) -> None:
+        self.mapping = dict[str, Spec]()
+
+    def is_static(self, name: str) -> bool:
+        spec = self.mapping.get(name)
+        assert(isinstance(spec, TokenSpec))
+        return spec.is_static
+
+    def add(self, spec: Spec) -> None:
+        assert(spec.name not in self.mapping)
+        self.mapping[spec.name] = spec
+
+    def lookup(self, name: str) -> Spec:
+        spec = self.mapping.get(name)
+        if spec is None:
+            raise RuntimeError(f"could not find a CST specification for '{name}'")
+        return spec
+
+    def __iter__(self) -> Iterator[Spec]:
+        return iter(self.mapping.values())
 
 def flatten_union(ty: Type) -> Generator[Type, None, None]:
     if isinstance(ty, UnionType):
@@ -62,7 +90,7 @@ def flatten_union(ty: Type) -> Generator[Type, None, None]:
     else:
         yield ty
 
-def grammar_to_nodespec(grammar: Grammar) -> Specs:
+def grammar_to_specs(grammar: Grammar) -> Specs:
 
     with open(Path(__file__).parent / 'names.json', 'r') as f:
         names = json.load(f)
@@ -148,7 +176,7 @@ def grammar_to_nodespec(grammar: Grammar) -> Specs:
             rule = grammar.lookup(expr.name)
             label = rule.name if expr.label is None else expr.label
             if rule.is_extern:
-                yield Field(label, TokenType(rule.name, False) if rule.is_token else NodeType(rule.name))
+                yield Field(label, TokenType(rule.name) if rule.is_token else NodeType(rule.name))
                 return
             if not rule.is_public:
                 assert(rule.expr is not None)
@@ -163,7 +191,7 @@ def grammar_to_nodespec(grammar: Grammar) -> Specs:
                 label = str_to_name(expr.text)
                 if label is None:
                     label = generate_field_name()
-            yield Field(label, TokenType(literal_to_name[expr.text], True))
+            yield Field(label, TokenType(literal_to_name[expr.text]))
             return
         if isinstance(expr, RepeatExpr):
             fields = list(get_node_members(expr.expr, False))
@@ -214,6 +242,32 @@ def grammar_to_nodespec(grammar: Grammar) -> Specs:
             return
         raise RuntimeError(f'unexpected {expr}')
 
+    def is_static(expr: Expr):
+        if isinstance(expr, RefExpr):
+            rule = grammar.lookup(expr.name)
+            if rule.is_extern:
+                return False
+            assert(rule.expr is not None)
+            return is_static(rule.expr)
+        if isinstance(expr, LitExpr):
+            return True
+        if isinstance(expr, CharSetExpr):
+            # FIXME should I check whether the range contains only one char?
+            return False
+        if isinstance(expr, SeqExpr):
+            return all(is_static(element) for element in expr.elements)
+        if isinstance(expr, ChoiceExpr):
+            # FIXME should I check whether the choices are actually different?
+            return False
+        if isinstance(expr, RepeatExpr):
+            if expr.min != expr.max:
+                return False
+            return is_static(expr.expr)
+        if isinstance(expr, LookaheadExpr):
+            # Lookahead has no effect on what (non-)static characters are generated
+            return True
+        raise RuntimeError(f'unexpected {expr}')
+
     specs = Specs()
 
     def collect_literals(expr: Expr):
@@ -222,7 +276,7 @@ def grammar_to_nodespec(grammar: Grammar) -> Specs:
             if name is None:
                 name = generate_token_name()
             if expr.text not in literal_to_name:
-                specs[name] = TokenSpec(name)
+                specs.add(TokenSpec(name, string_kind, True))
                 literal_to_name[expr.text] = name
             return
         for_each_expr(expr, collect_literals)
@@ -237,15 +291,15 @@ def grammar_to_nodespec(grammar: Grammar) -> Specs:
         # only Rule(is_extern=True) can have an empty expression
         assert(rule.expr is not None)
         if grammar.is_token_rule(rule):
-            specs[rule.name] = TokenSpec(rule.name)
+            specs.add(TokenSpec(rule.name, rule.type_name, is_static(rule.expr) if rule.expr is not None else False))
             continue
         if is_variant(rule):
-            specs[rule.name] = VariantSpec(rule.name, list(get_variant_members(rule.expr)))
+            specs.add(VariantSpec(rule.name, list(get_variant_members(rule.expr))))
             continue
         field_counter = 0
         assert(rule.expr is not None)
         members = list(get_node_members(rule.expr, True))
-        specs[rule.name] = NodeSpec(rule.name, members)
+        specs.add(NodeSpec(rule.name, members))
 
     return specs
 
