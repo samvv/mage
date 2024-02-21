@@ -215,7 +215,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 init_body.extend(gen_init_body(param_type, field.name, field.ty, field.name, tmp))
                 field_ty = astor.to_source(gen_type(param_type)).strip()
                 params.append(ast.arg(arg=field.name, annotation=ast.Constant(field_ty)))
-                if not is_optional(field.ty) and is_optional(param_type):
+                if is_optional(param_type):
                     # init_body.append(ast.If(test=ast.Compare(left=ast.Name(tmp), ops=[ ast.IsNot() ], comparators=[ ast.Name('None') ]), body=[
                     #     ast.Assign(targets=[ ast.Name(tmp) ], value=gen_default_constructor(field.ty))
                     # ], orelse=[]))
