@@ -134,7 +134,7 @@ class Parser:
         while True:
             t0 = self._peek_token(0)
             t1 = self._peek_token(1)
-            if t0.type in [ TT_PUB, TT_EXTERN, TT_TOKEN ] or t1.type == TT_EQUAL or t0.type in [ TT_EOF, TT_VBAR, TT_RPAREN ]:
+            if t0.type in [ TT_PUB, TT_EXTERN, TT_TOKEN, TT_AT ] or t1.type == TT_EQUAL or t0.type in [ TT_EOF, TT_VBAR, TT_RPAREN ]:
                 break
             elements.append(self._parse_expr_with_suffixes())
         if len(elements) == 1:
