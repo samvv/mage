@@ -129,6 +129,7 @@ token_type_descriptions = {
     TT_EXTERN: "'extern'",
     TT_SLASH: "'$'",
     TT_QUEST: "'?'",
+    TT_AT: "'@'",
     TT_TILDE: "'~'",
     }
 
