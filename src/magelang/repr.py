@@ -53,6 +53,8 @@ class VariantSpec(SpecBase):
 
 Spec = TokenSpec | NodeSpec | VariantSpec
 
+Specs = dict[str, Spec]
+
 def flatten_union(ty: Type) -> Generator[Type, None, None]:
     if isinstance(ty, UnionType):
         for element in ty.types:
@@ -60,7 +62,7 @@ def flatten_union(ty: Type) -> Generator[Type, None, None]:
     else:
         yield ty
 
-def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
+def grammar_to_nodespec(grammar: Grammar) -> Specs:
 
     with open(Path(__file__).parent / 'names.json', 'r') as f:
         names = json.load(f)
@@ -212,7 +214,7 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
             return
         raise RuntimeError(f'unexpected {expr}')
 
-    specs = []
+    specs = Specs()
 
     def collect_literals(expr: Expr):
         if isinstance(expr, LitExpr):
@@ -220,7 +222,7 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
             if name is None:
                 name = generate_token_name()
             if expr.text not in literal_to_name:
-                specs.append(TokenSpec(name))
+                specs[name] = TokenSpec(name)
                 literal_to_name[expr.text] = name
             return
         for_each_expr(expr, collect_literals)
@@ -235,15 +237,15 @@ def grammar_to_nodespec(grammar: Grammar) -> list[Spec]:
         # only Rule(is_extern=True) can have an empty expression
         assert(rule.expr is not None)
         if grammar.is_token_rule(rule):
-            specs.append(TokenSpec(rule.name))
+            specs[rule.name] = TokenSpec(rule.name)
             continue
         if is_variant(rule):
-            specs.append(VariantSpec(rule.name, list(get_variant_members(rule.expr))))
+            specs[rule.name] = VariantSpec(rule.name, list(get_variant_members(rule.expr)))
             continue
         field_counter = 0
         assert(rule.expr is not None)
         members = list(get_node_members(rule.expr, True))
-        specs.append(NodeSpec(rule.name, members))
+        specs[rule.name] = NodeSpec(rule.name, members)
 
     return specs
 

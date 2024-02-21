@@ -8,6 +8,8 @@ def to_camel_case(snake_str: str) -> str:
 
 def generate_cst(grammar: Grammar, prefix='') -> str:
 
+    spec = grammar_to_nodespec(grammar)
+
     def namespace(name: str) -> str:
         return prefix + name if prefix else name
 
@@ -114,6 +116,8 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
     def gen_shallow_test(ty: Type, target: ast.expr) -> ast.expr:
         if isinstance(ty, NodeType):
+            if isinstance(spec[ty.name], VariantSpec):
+                return ast.Call(func=ast.Name(f'is_{namespace(ty.name)}'), args=[ target ], keywords=[])
             return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name(to_class_case(ty.name)) ], keywords=[])
         if isinstance(ty, TokenType):
             return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name(to_class_case(ty.name)) ], keywords=[])
@@ -201,9 +205,8 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             return
         raise RuntimeError(f'unexpected {ty}')
 
-    spec = grammar_to_nodespec(grammar)
     stmts = []
-    for element in spec:
+    for element in spec.values():
         if isinstance(element, NodeSpec):
             body = []
             params = []
@@ -238,9 +241,15 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             # ty = ast.Name(to_class_case(element.members[0]))
             # for name in element.members[1:]:
             #     ty = ast.BinOp(left=ty, op=ast.BitOr(), right=ast.Name(to_class_case(name)), ctx=ast.Load())
+            cls_name = to_class_case(element.name)
             assert(len(element.members) > 0)
             text = ' | '.join(to_class_case(name) for name in element.members)
-            stmts.append(ast.Assign(targets=[ ast.Name(to_class_case(element.name)) ],  value=ast.Constant(text), type_comment='TypeAlias'))
+            stmts.append(ast.Assign(targets=[ ast.Name(cls_name) ],  value=ast.Constant(text), type_comment='TypeAlias'))
+            pred_body = [
+                ast.Return(make_or(ast.Call(func=ast.Name('isinstance'), args=[ ast.Name('value'), ast.Name(to_class_case(name)) ], keywords=[]) for name in element.members))
+            ]
+            args = ast.arguments(args=[ ast.arg(arg='value', annotation=ast.Name('Any')) ], defaults=[])
+            stmts.append(ast.FunctionDef(name=f'is_{namespace(element.name)}', args=args, returns=ast.Subscript(ast.Name('TypeGuard'), ast.Name(cls_name)), body=pred_body, decorator_list=[]))
             continue
         assert_never(element)
     return astor.to_source(ast.Module(body=stmts))
