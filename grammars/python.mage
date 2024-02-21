@@ -10,6 +10,7 @@ extern token indent
 
 # Helper utilities
 
+@skip
 token skip = [\s]+
 
 token eol = '\r\n' | '\n'
@@ -23,6 +24,7 @@ token eos
 
 # First tokens
 
+@keyword
 pub token ident
   = [a-zA-Z_] [a-zA-Z_0-9]*
 
@@ -37,6 +39,11 @@ pub char = any_char
 pub token string
    = '"' char* '"'
    | '\'' char* '\''
+
+# General syntax
+
+pub slice
+   = lower:expr ':' upper:expr
 
 # Patterns
 
@@ -55,7 +62,7 @@ pub attr_pattern
   = pattern '.' name:ident
 
 pub subscript_pattern
-  = pattern '[' slice:pattern ']'
+  = pattern '[' slices:((pattern | slice) % ',') ']'
 
 pub starred_pattern
   = '*' expr
@@ -69,19 +76,24 @@ pub tuple_pattern
 # Expressions
 
 pub expr
-  = call_expr
-  | bin_expr
-  | named_expr
-  | attr_expr
-  | subscript_expr
-  | starred_expr
+  = attr_expr
+  | call_expr
+  | infix_expr
   | list_expr
+  | named_expr
+  | nest_expr
+  | prefix_expr
+  | starred_expr
+  | subscript_expr
   | tuple_expr
 
 pub const_expr
    = string
    | float
    | integer
+
+pub nest_expr
+  = '(' expr ')'
 
 pub named_expr
   = name:ident
@@ -90,7 +102,7 @@ pub attr_expr
   = expr '.' name:ident
 
 pub subscript_expr
-  = expr '[' slice:expr ']'
+  = expr '[' slices:((expr | slice) % ',') ']'
 
 pub starred_expr
   = '*' expr
@@ -114,14 +126,43 @@ pub keyword_arg
 pub call_expr
   = operator:expr '(' args:(arg % ',')  ')'
 
-pub op
+pub prefix_op
+  = 'not'
+  | '+'
+  | '-'
+  | '~'
+
+pub prefix_expr
+  = prefix_op expr
+
+pub infix_op
   = '+'
   | '-'
   | '*'
   | '/'
+  | '//'
+  | '%'
+  | '<<'
+  | '>>'
+  | '|'
+  | '^'
+  | '&'
+  | '@'
+  | 'or'
+  | 'and'
+  | '=='
+  | '!='
+  | '<'
+  | '<='
+  | '>'
+  | '>='
+  | 'is'
+  | 'is' 'not'
+  | 'in'
+  | 'not' 'in'
 
-pub bin_expr
-  = left:expr op right:expr
+pub infix_expr
+  = left:expr infix_op right:expr
 
 # Statements
 
@@ -141,14 +182,14 @@ pub assign_stmt
 pub delete_stmt
   = 'del' pattern
 
+pub raise_stmt
+  = 'raise' expr cause:('form' expr)?
+
 pub type_alias_stmt
   = 'type' name:ident type_params:('[' (expr % ',') ']')? '=' expr
 
-pub block_class_def
-  = 'class' name:ident ':' 
-
-pub inline_class_def
-  = 'class' name:ident ('(' expr ')') ':' (stmt | \indent body:(stmt \eolf)* \dedent)
+pub class_def
+  = 'class' name:ident ('(' expr ')') ':' body:(stmt | \indent body:(stmt \eolf)* \dedent)
 
 pub param
   = pos_param
@@ -165,5 +206,5 @@ pub rest_keyword_param
   = '**' name:ident
 
 pub func_def
-  = 'async'? 'def' name:ident '(' (param % ',') ')' return_type:('->' expr)? ':' (stmt | \indent body:(stmt \eolf)* \dedent)
+  = 'async'? 'def' name:ident '(' (param % ',') ')' return_type:('->' expr)? ':' body:(stmt | \indent (stmt \eolf)* \dedent)
 
