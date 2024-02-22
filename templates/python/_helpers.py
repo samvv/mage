@@ -171,7 +171,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
     def gen_init_body(field_name: str, field_type: Type, in_name: str, assign: Callable[[ast.expr], ast.stmt], stmts: list[ast.stmt]) -> Type:
 
-        def visit(ty: Type, in_name: str, assign: Callable[[ast.expr], ast.stmt], stmts: list[ast.stmt]) -> Type:
+        def visit(ty: Type, in_name: str, assign: Callable[[ast.expr], ast.stmt], stmts: list[ast.stmt], has_none: bool) -> Type:
 
             if isinstance(ty, NodeType):
                 #assert(ty == orig_ty)
@@ -200,8 +200,12 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 assert(isinstance(spec, TokenSpec))
                 cases = []
                 if spec.is_static:
-                    coerced_types.append(NoneType())
-                    # TODO generate if in_value is None: ...
+                    if not has_none:
+                        coerced_types.append(NoneType())
+                        cases.append((
+                            ast.Compare(ast.Name(in_name), [ ast.Is() ], [ ast.Name('None') ]),
+                            [ assign(ast.Call(ast.Name(to_class_case(ty.name)), args=[ ast.Name(in_name) ], keywords=[])) ]
+                        ))
                 else:
                     coerced_types.append(ExternType(spec.field_type))
                     # out_name = Token(in_name)
@@ -225,7 +229,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 new_element_name = f'new_{in_name}_element'
                 for_body = []
                 new_assign = lambda value, name=new_element_name: ast.Assign(targets=[ ast.Name(name) ], value=value)
-                element_type = visit(ty.element_type, element_name, new_assign, for_body)
+                element_type = visit(ty.element_type, element_name, new_assign, for_body, False)
                 for_body.append(ast.Expr(ast.Call(func=ast.Attribute(value=ast.Name(new_elements_name), attr='append'), args=[ ast.Name(new_element_name) ], keywords=[])))
                 stmts.append(ast.For(target=ast.Name(element_name), iter=ast.Name(in_name), body=for_body, orelse=None))
                 stmts.append(assign(ast.Name(new_elements_name)))
@@ -250,7 +254,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
                     stmts.append(ast.Assign(targets=[ ast.Name(element_name) ], value=ast.Subscript(value=ast.Name(in_name), slice=ast.Constant(i))))
 
-                    new_element_types.append(visit(element_type, element_name, new_assign, stmts))
+                    new_element_types.append(visit(element_type, element_name, new_assign, stmts, False))
 
                 stmts.append(assign(ast.Tuple(elts=new_elements)))
 
@@ -260,26 +264,31 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
                 coerced_types = []
                 cases = []
+
+                for element_type in ty.types:
+                    if isinstance(element_type, NoneType):
+                        has_none = True
+                        break
+
                 for element_type in ty.types:
                     body = [] 
-                    coerced_types.append(visit(element_type, in_name, assign, body))
+                    coerced_types.append(visit(element_type, in_name, assign, body, has_none))
                     cases.append((
                         gen_shallow_test(element_type, ast.Name(in_name)),
                         body
                     ))
 
                 # TODO ensure duplicate types are eliminated
-                if len(ty.types) == 1:
-                    cases.append((
-                        None,
-                        [ assign(gen_default_constructor(ty.types[0])) ]
-                    ))
-                else:
-                    cases.append((
-                        None,
-                        [ ast.Raise(exc=ast.Call(func=ast.Name('ValueError', ctx=ast.Load()), args=[ ast.Constant(value=f"the field '{field_name}' received an unrecognised value'") ], keywords=[])) ]
-                    ))
-
+                # if len(ty.types) == 1:
+                #     cases.append((
+                #         None,
+                #         [ assign(gen_default_constructor(ty.types[0])) ]
+                #     ))
+                # else:
+                cases.append((
+                    None,
+                    [ ast.Raise(exc=ast.Call(func=ast.Name('ValueError', ctx=ast.Load()), args=[ ast.Constant(value=f"the field '{field_name}' received an unrecognised value'") ], keywords=[])) ]
+                ))
 
                 stmts.extend(make_cond(cases))
 
@@ -296,7 +305,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
             raise RuntimeError(f'unexpected {ty}')
 
-        return visit(field_type, in_name, assign, stmts)
+        return visit(field_type, in_name, assign, stmts, False)
 
     stmts = []
 
@@ -311,10 +320,10 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
             for field in spec.members:
 
-                param_type = get_coerce_type(field.ty)
+                # param_type = get_coerce_type(field.ty)
                 # tmp = f'{field.name}__coerced'
 
-                assign = lambda value, field=field: ast.Assign(targets=[ ast.Attribute(value=ast.Name('self'), attr=field.name) ], value=value)
+                assign = lambda value, field=field: ast.AnnAssign(ast.Attribute(value=ast.Name('self'), attr=field.name), gen_type(field.ty), value)
                 param_type = gen_init_body(field.name, field.ty, field.name, assign, init_body)
 
                 field_ty = astor.to_source(gen_type(param_type)).strip()
