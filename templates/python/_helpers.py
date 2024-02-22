@@ -142,7 +142,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
         if type_name == 'Float32':
             warn('No exact representation for Float32 was found, so we are falling back to 64-bit Python float type')
             return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name('float') ], keywords=[])
-        if type_name == 'Float64':
+        if type_name == 'Float' or type_name == 'Float64':
             return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name('float') ], keywords=[])
         raise RuntimeError(f"unexpected rule type '{type_name}'")
 
@@ -154,7 +154,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
         if type_name == 'Float32':
             warn('No exact representation for Float32 was found, so we are falling back to 64-bit Python float type')
             return ast.Name('float')
-        if type_name == 'Float64':
+        if type_name == 'Float' or type_name == 'Float64':
             return ast.Name('float')
         raise RuntimeError(f"unexpected rule type '{type_name}'")
 
