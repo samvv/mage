@@ -228,39 +228,75 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 # for element in in_name:
                 #     ...
                 #     out_name.append(new_element_name)
+                coercable_types = []
+                cases = []
+                orelse = []
+                for_body = []
+
                 new_elements_name = f'new_{in_name}'
-                stmts.append(ast.Assign(targets=[ ast.Name(new_elements_name) ], value=ast.Name(ast.Call(func=ast.Name('list'), args=[], keywords=[]))))
                 element_name = f'{in_name}_element'
                 new_element_name = f'new_{in_name}_element'
-                for_body = []
-                new_assign = lambda value, name=new_element_name: ast.Assign(targets=[ ast.Name(name) ], value=value)
-                element_type, element_coercable = visit(ty.element_type, element_name, new_assign, for_body, False)
+
+                if not has_none:
+                    coercable_types.append(NoneType())
+                    cases.append((
+                        ast.Compare(left=ast.Name(in_name), ops=[ ast.Is() ], comparators=[ ast.Name('None') ]),
+                        [ assign(ast.Call(func=ast.Name('list'), args=[], keywords=[])) ]
+                    ))
+
+                orelse.append(ast.Assign(targets=[ ast.Name(new_elements_name) ], value=ast.Name(ast.Call(func=ast.Name('list'), args=[], keywords=[]))))
+
+                element_assign = lambda value, name=new_element_name: ast.Assign(targets=[ ast.Name(name) ], value=value)
+                element_type, element_coercable = visit(ty.element_type, element_name, element_assign, for_body, False)
+
+                coercable_types.append(ListType(element_type))
+
                 for_body.append(ast.Expr(ast.Call(func=ast.Attribute(value=ast.Name(new_elements_name), attr='append'), args=[ ast.Name(new_element_name) ], keywords=[])))
-                stmts.append(ast.For(target=ast.Name(element_name), iter=ast.Name(in_name), body=for_body, orelse=None))
-                stmts.append(assign(ast.Name(new_elements_name)))
-                return ListType(element_type), element_coercable
+                orelse.append(ast.For(target=ast.Name(element_name), iter=ast.Name(in_name), body=for_body, orelse=None))
+
+                orelse.append(assign(ast.Name(new_elements_name)))
+
+                cases.append((
+                    None,
+                    orelse
+                ))
+
+                stmts.extend(make_cond(cases))
+
+                return UnionType(coercable_types), True
 
             if isinstance(ty, TupleType):
+
                 # element_0 = field[0]
                 # new_element_0 = ...
                 # ...
                 # out_name = (new_element_0, new_element_1, ...)
 
                 coercable = False
+                coerced_types = []
                 new_elements = []
                 new_element_types = []
+                required_count = 0
+
+                for element_type in ty.element_types:
+                    if not is_optional(element_type):
+                        required_count += 1
+
+                if required_count <= 1:
+                    coercable = True
+                    # TODO
 
                 for i, element_type in enumerate(ty.element_types):
 
                     element_name = f'{in_name}_{i}'
                     new_element_name = f'new_{in_name}_{i}'
-                    new_assign = lambda value, name=new_element_name: ast.Assign(targets=[ ast.Name(name) ], value=value)
+                    element_assign = lambda value, name=new_element_name: ast.Assign(targets=[ ast.Name(name) ], value=value)
 
                     new_elements.append(ast.Name(new_element_name))
 
                     stmts.append(ast.Assign(targets=[ ast.Name(element_name) ], value=ast.Subscript(value=ast.Name(in_name), slice=ast.Constant(i))))
 
-                    new_element_type, element_coercable = visit(element_type, element_name, new_assign, stmts, False)
+                    new_element_type, element_coercable = visit(element_type, element_name, element_assign, stmts, False)
 
                     if element_coercable:
                         coercable = True
@@ -268,12 +304,13 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                     new_element_types.append(new_element_type)
 
                 stmts.append(assign(ast.Tuple(elts=new_elements)))
+                coerced_types.append(TupleType(new_element_types))
 
-                return TupleType(new_element_types), coercable
+                return UnionType(coerced_types), coercable
 
             if isinstance(ty, UnionType):
 
-                any_coercable = False
+                coercable = False
                 coerced_types = []
                 cases = []
 
@@ -284,17 +321,17 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
                 for element_type in ty.types:
                     body = [] 
-                    new_type, coercable = visit(element_type, in_name, assign, body, has_none)
-                    if coercable:
-                        any_coercable = True
+                    new_type, element_coercable = visit(element_type, in_name, assign, body, has_none)
+                    if element_coercable:
+                        coercable = True
                     coerced_types.append(new_type)
                     cases.append((
-                        gen_shallow_test(element_type, ast.Name(in_name)),
+                        gen_shallow_test(new_type, ast.Name(in_name)),
                         body
                     ))
 
                 # TODO ensure duplicate types are eliminated
-                # if len(ty.types) == 1:
+                # if len(not_none) == 1 and is_default_constructible(not_none[0]):
                 #     cases.append((
                 #         None,
                 #         [ assign(gen_default_constructor(ty.types[0])) ]
@@ -305,7 +342,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                     [ ast.Raise(exc=ast.Call(func=ast.Name('ValueError', ctx=ast.Load()), args=[ ast.Constant(value=f"the field '{field_name}' received an unrecognised value'") ], keywords=[])) ]
                 ))
 
-                if any_coercable:
+                if coercable:
                     stmts.extend(make_cond(cases))
                 else:
                     stmts.append(assign(ast.Name(in_name)))
@@ -318,7 +355,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 # new_rest = visit(UnionType(ty_n), in_name, out_name, if_orelse)
                 # stmts.append(ast.If(test=gen_shallow_test(ty_0, ast.Name(in_name)), body=if_body, orelse=if_orelse))
 
-                return UnionType(coerced_types), any_coercable
+                return UnionType(coerced_types), coercable
 
             raise RuntimeError(f'unexpected {ty}')
 
