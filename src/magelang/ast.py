@@ -57,7 +57,7 @@ EXTERN = 1
 PUBLIC = 2
 FORCE_TOKEN  = 4
 
-string_kind = 'String'
+string_rule_type = 'String'
 
 class Rule(Node):
     decorators: list[Decorator]

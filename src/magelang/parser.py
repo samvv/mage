@@ -176,7 +176,7 @@ class Parser:
         if t0.type != TT_IDENT:
             raise ParseError(t0, [ TT_IDENT ])
         t3 = self._peek_token()
-        type_name = string_kind
+        type_name = string_rule_type
         if t3.type == TT_RARROW:
             self._get_token()
             type_name = self._expect_token(TT_IDENT).value

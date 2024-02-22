@@ -32,6 +32,8 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             for element in ty.types[1:]:
                 out = ast.BinOp(left=out, op=ast.BitOr(), right=gen_type(element), ctx=ast.Load())
             return out
+        if isinstance(ty, ExternType):
+            return rule_type_to_py_type(ty.name)
         if isinstance(ty, NoneType):
             return ast.Name('None', ctx=ast.Load())
         raise RuntimeError(f'unexpected {ty}')
@@ -42,29 +44,38 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 yield from yield_coerce_options(element)
             return
         if isinstance(ty, NoneType):
-            yield NoneType()
+            yield ty
             return
         if isinstance(ty, TokenType):
-            if specs.is_static(ty.name):
+            spec = specs.lookup(ty.name)
+            assert(isinstance(spec, TokenSpec))
+            if spec.is_static:
                 yield NoneType()
+            else:
+                yield ExternType(spec.field_type)
             yield ty
             return
         if isinstance(ty, NodeType):
             yield ty
-            # TODO yield first field if there is only one non-singleton field
+            spec = specs.lookup(ty.name)
+            if isinstance(spec, NodeSpec):
+                if len(spec.members) == 1:
+                    # FIXME there is no actual coercion logic generated in the code below
+                    # TODO maybe yield_coerce_options on this
+                    yield spec.members[0].ty
             return
         if isinstance(ty, ListType):
-            yield ListType(gen_coerce_type(ty.element_type))
+            yield ListType(get_coerce_type(ty.element_type))
             return
         if isinstance(ty, TupleType):
-            yield TupleType(list(gen_coerce_type(element_ty) for element_ty in ty.element_types))
+            yield TupleType(list(get_coerce_type(element_ty) for element_ty in ty.element_types))
             return
         if isinstance(ty, AnyTokenType) or isinstance(ty, AnyNodeType):
             yield ty
             return
         raise RuntimeError(f'unexpected {ty}')
 
-    def gen_coerce_type(ty: Type) -> Type:
+    def get_coerce_type(ty: Type) -> Type:
         candidates = list(yield_coerce_options(ty))
         elements = []
         has_none = False
@@ -114,6 +125,14 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             out = ast.BoolOp(op=ast.And(), values=[ out, expr ])
         return out
 
+    def make_bitor(it: list[ast.expr] | Iterator[ast.expr]) -> ast.expr:
+        if isinstance(it, list):
+            it = iter(it)
+        out = next(it)
+        for element in it:
+            out = ast.BinOp(left=out, op=ast.BitOr(), right=element, ctx=ast.Load())
+        return out
+
     def gen_instance_check(name: str, target: ast.expr) -> ast.expr:
         spec = specs.lookup(name)
         if isinstance(spec, VariantSpec):
@@ -136,6 +155,8 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name('list') ], keywords=[])
         if isinstance(ty, UnionType):
             return make_or(gen_shallow_test(element, target) for element in ty.types)
+        if isinstance(ty, ExternType):
+            return gen_rule_type_test(ty.name, target)
         raise RuntimeError(f'unexpected {ty}')
 
     counter = 0
@@ -149,9 +170,12 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
         if isinstance(ty, ListType):
             return ty.element_type
         if isinstance(ty, UnionType):
+            list_types = []
             for element in flatten_union(ty):
                 if isinstance(element, ListType):
-                    return element.element_type
+                    list_types.append(element.element_type)
+            assert(len(list_types) == 1)
+            return list_types[0]
         raise RuntimeError(f'unexpected {ty}')
 
     def get_tuple_element(ty: Type, i: int) -> Type:
@@ -163,65 +187,189 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                     return element.element_types[i]
         raise RuntimeError(f'unexpected {ty}')
 
-    def gen_init_body(ty: Type, field_name: str, field_ty: Type, in_name: str, out_name: str) -> Generator[ast.stmt, None, None]:
-        if isinstance(ty, NodeType) or isinstance(ty, TokenType):
-            #assert(ty == orig_ty)
-            yield ast.Assign(targets=[ ast.Name(out_name) ], value=ast.Name(in_name, ctx=ast.Load()))
-            return
-        if isinstance(ty, NoneType):
-            if is_optional(field_ty):
-                yield ast.Assign(targets=[ ast.Name(out_name) ], value=ast.Name('None'))
-            else:
-                yield ast.Assign(targets=[ ast.Name(out_name) ], value=gen_default_constructor(field_ty))
-            return
-        if isinstance(ty, ListType):
-            # out_name = list()
-            # for element in in_name:
-            #     ...
-            #     out_name.append(new_element_name)
-            yield ast.Assign(targets=[ ast.Name(out_name) ], value=ast.Call(func=ast.Name('list'), args=[], keywords=[]))
-            element_name = f'{in_name}_element'
-            new_element_name = f'{out_name}_element'
-            for_body = list(gen_init_body(ty.element_type, field_name, get_list_element(field_ty), element_name, new_element_name))
-            for_body.append(ast.Expr(ast.Call(func=ast.Attribute(value=ast.Name(out_name), attr='append'), args=[ ast.Name(new_element_name) ], keywords=[])))
-            yield ast.For(target=ast.Name(element_name), iter=ast.Name(in_name), body=for_body, orelse=None)
-            return
-        if isinstance(ty, TupleType):
-            # element_0 = field[0]
-            # new_element_0 = ...
-            # ...
-            # out_name = (new_element_0, new_element_1, ...)
-            new_elements = []
-            for i, element_type in enumerate(ty.element_types):
-                element_name = f'{in_name}_{i}'
-                new_element_name = f'{out_name}_{i}'
-                new_elements.append(ast.Name(new_element_name))
-                yield ast.Assign(targets=[ ast.Name(element_name) ], value=ast.Subscript(value=ast.Name(in_name), slice=ast.Constant(i)))
-                yield from gen_init_body(element_type, field_name, get_tuple_element(field_ty, i), element_name, new_element_name)
-            yield ast.Assign(targets=[ ast.Name(out_name) ], value=ast.Tuple(elts=new_elements))
-            return
-        if isinstance(ty, UnionType):
-            if not ty.types:
-                yield ast.Raise(exc=ast.Call(func=ast.Name('ValueError', ctx=ast.Load()), args=[ ast.Constant(value=f"the field '{field_name}' received an unrecognised value'") ], keywords=[]))
-                return
-            ty0 = ty.types[0]
-            if_body = list(gen_init_body(ty0, field_name, field_ty, in_name, out_name))
-            if_orelse = list(gen_init_body(UnionType(ty.types[1:]), field_name, field_ty, in_name, out_name))
-            yield ast.If(test=gen_shallow_test(ty0, ast.Name(in_name)), body=if_body, orelse=if_orelse)
-            return
-        raise RuntimeError(f'unexpected {ty}')
+    def gen_rule_type_test(type_name: str, target: ast.expr) -> ast.expr:
+        if type_name == 'String':
+            return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name('str') ], keywords=[])
+        if type_name == 'Integer':
+            return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name('int') ], keywords=[])
+        if type_name == 'Float32':
+            warn('No exact representation for Float32 was found, so we are falling back to 64-bit Python float type')
+            return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name('float') ], keywords=[])
+        if type_name == 'Float64':
+            return ast.Call(func=ast.Name('isinstance'), args=[ target, ast.Name('float') ], keywords=[])
+        raise RuntimeError(f"unexpected rule type '{type_name}'")
+
+    def rule_type_to_py_type(type_name: str) -> ast.expr:
+        if type_name == 'String':
+            return ast.Name('str')
+        if type_name == 'Integer':
+            return ast.Name('int')
+        if type_name == 'Float32':
+            warn('No exact representation for Float32 was found, so we are falling back to 64-bit Python float type')
+            return ast.Name('float')
+        if type_name == 'Float64':
+            return ast.Name('float')
+        raise RuntimeError(f"unexpected rule type '{type_name}'")
+
+    def make_cond(cases: list[tuple[ast.expr | None, list[ast.stmt]]]) -> list[ast.stmt]:
+        if len(cases) == 0:
+            return []
+        if len(cases) == 1 and cases[0][0] is None:
+            return cases[0][1]
+        else:
+            c_0 = cases[0]
+            test = c_0[0]
+            assert(test is not None)
+            return [ ast.If(test=test, body=c_0[1], orelse=make_cond(cases[1:])) ]
+
+    def gen_init_body(field_name: str, field_type: Type, in_name: str, assign: Callable[[ast.expr], ast.stmt], stmts: list[ast.stmt]) -> Type:
+
+        def visit(ty: Type, in_name: str, assign: Callable[[ast.expr], ast.stmt], stmts: list[ast.stmt]) -> Type:
+
+            if isinstance(ty, NodeType):
+                #assert(ty == orig_ty)
+                coerced_types = []
+                coerced_types.append(ty)
+                stmts.append(assign(ast.Name(in_name, ctx=ast.Load())))
+                spec = specs.lookup(ty.name)
+                # spec can also be a VariantSpec so we need to exec isinstance
+                if isinstance(spec, NodeSpec) and len(spec.members) == 1:
+                    # TODO maybe also coerce spec.members[0].ty?
+                    first_ty = spec.members[0].ty
+                    if_body = []
+                    if_body.append(assign(ast.Call(ast.Name(to_class_case(ty.name)), args=[ ast.Name(in_name) ], keywords=[])))
+                    stmts.append(ast.If(test=gen_shallow_test(first_ty, ast.Name(in_name)), body=if_body))
+                    coerced_types.append(first_ty)
+                return UnionType(coerced_types)
+
+            if isinstance(ty, NoneType):
+                stmts.append(assign(ast.Name('None')))
+                return ty
+
+            if isinstance(ty, TokenType):
+                coerced_types = []
+                coerced_types.append(ty)
+                spec = specs.lookup(ty.name)
+                assert(isinstance(spec, TokenSpec))
+                cases = []
+                if spec.is_static:
+                    coerced_types.append(NoneType())
+                    # TODO generate if in_value is None: ...
+                else:
+                    coerced_types.append(ExternType(spec.field_type))
+                    # out_name = Token(in_name)
+                    cases.append((
+                        gen_rule_type_test(spec.field_type, ast.Name(in_name)),
+                        [ assign(ast.Call(ast.Name(to_class_case(ty.name)), args=[ ast.Name(in_name) ], keywords=[])) ]
+                    ))
+                # out_name = in_name
+                cases.append((None, [ assign(ast.Name(in_name)) ]))
+                stmts.extend(make_cond(cases))
+                return UnionType(coerced_types)
+
+            if isinstance(ty, ListType):
+                # out_name = list()
+                # for element in in_name:
+                #     ...
+                #     out_name.append(new_element_name)
+                new_elements_name = f'new_{in_name}'
+                stmts.append(ast.Assign(targets=[ ast.Name(new_elements_name) ], value=ast.Name(ast.Call(func=ast.Name('list'), args=[], keywords=[]))))
+                element_name = f'{in_name}_element'
+                new_element_name = f'new_{in_name}_element'
+                for_body = []
+                new_assign = lambda value, name=new_element_name: ast.Assign(targets=[ ast.Name(name) ], value=value)
+                element_type = visit(ty.element_type, element_name, new_assign, for_body)
+                for_body.append(ast.Expr(ast.Call(func=ast.Attribute(value=ast.Name(new_elements_name), attr='append'), args=[ ast.Name(new_element_name) ], keywords=[])))
+                stmts.append(ast.For(target=ast.Name(element_name), iter=ast.Name(in_name), body=for_body, orelse=None))
+                stmts.append(assign(ast.Name(new_elements_name)))
+                return ListType(element_type)
+
+            if isinstance(ty, TupleType):
+                # element_0 = field[0]
+                # new_element_0 = ...
+                # ...
+                # out_name = (new_element_0, new_element_1, ...)
+
+                new_elements = []
+                new_element_types = []
+
+                for i, element_type in enumerate(ty.element_types):
+
+                    element_name = f'{in_name}_{i}'
+                    new_element_name = f'new_{in_name}_{i}'
+                    new_assign = lambda value, name=new_element_name: ast.Assign(targets=[ ast.Name(name) ], value=value)
+
+                    new_elements.append(ast.Name(new_element_name))
+
+                    stmts.append(ast.Assign(targets=[ ast.Name(element_name) ], value=ast.Subscript(value=ast.Name(in_name), slice=ast.Constant(i))))
+
+                    new_element_types.append(visit(element_type, element_name, new_assign, stmts))
+
+                stmts.append(assign(ast.Tuple(elts=new_elements)))
+
+                return TupleType(new_element_types)
+
+            if isinstance(ty, UnionType):
+
+                coerced_types = []
+                cases = []
+                for element_type in ty.types:
+                    body = [] 
+                    coerced_types.append(visit(element_type, in_name, assign, body))
+                    cases.append((
+                        gen_shallow_test(element_type, ast.Name(in_name)),
+                        body
+                    ))
+
+                # TODO ensure duplicate types are eliminated
+                if len(ty.types) == 1:
+                    cases.append((
+                        None,
+                        [ assign(gen_default_constructor(ty.types[0])) ]
+                    ))
+                else:
+                    cases.append((
+                        None,
+                        [ ast.Raise(exc=ast.Call(func=ast.Name('ValueError', ctx=ast.Load()), args=[ ast.Constant(value=f"the field '{field_name}' received an unrecognised value'") ], keywords=[])) ]
+                    ))
+
+
+                stmts.extend(make_cond(cases))
+
+                # ty_0 = ty.types[0]
+                # ty_n = ty.types[1:]
+                # if_body = []
+                # new_ty_0 = visit(ty_0, in_name, out_name, if_body)
+                # if_orelse = []
+                # new_rest = visit(UnionType(ty_n), in_name, out_name, if_orelse)
+                # stmts.append(ast.If(test=gen_shallow_test(ty_0, ast.Name(in_name)), body=if_body, orelse=if_orelse))
+
+
+                return UnionType(coerced_types)
+
+            raise RuntimeError(f'unexpected {ty}')
+
+        return visit(field_type, in_name, assign, stmts)
 
     stmts = []
+
     for spec in specs:
+
         if isinstance(spec, NodeSpec):
+
             body = []
             params = []
             params_defaults = []
             init_body = []
+
             for field in spec.members:
-                param_type = gen_coerce_type(field.ty)
-                tmp = f'{field.name}__coerced'
-                init_body.extend(gen_init_body(param_type, field.name, field.ty, field.name, tmp))
+
+                param_type = get_coerce_type(field.ty)
+                # tmp = f'{field.name}__coerced'
+
+                assign = lambda value, field=field: ast.Assign(targets=[ ast.Attribute(value=ast.Name('self'), attr=field.name) ], value=value)
+                param_type = gen_init_body(field.name, field.ty, field.name, assign, init_body)
+
                 field_ty = astor.to_source(gen_type(param_type)).strip()
                 params.append(ast.arg(arg=field.name, annotation=ast.Constant(field_ty)))
                 if is_optional(param_type):
@@ -231,32 +379,74 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                     params_defaults.append(ast.Name('None'))
                 else:
                     params_defaults.append(None)
-                init_body.append(ast.Assign(targets=[ ast.Attribute(value=ast.Name('self', ctx=ast.Store()), attr=field.name) ], value=ast.Name(tmp, ctx=ast.Load())))
+
             args = ast.arguments(args=[ ast.arg('self') ], kwonlyargs=params, defaults=[], kw_defaults=params_defaults)
             body.append(ast.FunctionDef(name='__init__', args=args, body=init_body, returns=ast.Name('None', ctx=ast.Load()), decorator_list=[]))
-            #ctx for field in element.members:
+
+            #for field in element.members:
             #     body.append(ast.AnnAssign(target=ast.Name(field.name), annotation=gen_type(field.ty), simple=True))
+
             stmts.append(ast.ClassDef(name=to_class_case(spec.name), body=body, bases=[ ast.Name('Node', ctx=ast.Store()) ], decorator_list=[]))
+
             continue
+
         if isinstance(spec, TokenSpec):
+
             body = []
-            body.append(ast.Pass())
+
+            if spec.is_static:
+
+                body.append(ast.Pass())
+
+            else:
+
+                init_body = []
+
+                init_body.append(ast.Expr(ast.Call(ast.Attribute(ast.Call(ast.Name('super'), args=[], keywords=[]), '__init__'), args=[], keywords=[ ast.keyword('span', ast.Name('span')) ])))
+
+                args = [ ast.arg('self') ]
+                defaults: list[ast.expr | None] = [ None ]
+
+                args.append(ast.arg('value', make_bitor([ rule_type_to_py_type(spec.field_type), ast.Name('None') ])))
+                defaults.append(ast.Name('None'))
+
+                args.append(ast.arg('span', make_bitor([ ast.Name('Span'), ast.Name('None') ])))
+                defaults.append(ast.Name('None'))
+
+                arguments = ast.arguments(args=args, defaults=defaults)
+
+                init_body.append(ast.Assign([ ast.Attribute(ast.Name('self'), 'value') ], ast.Name('value')))
+
+                body.append(ast.FunctionDef(name='__init__', args=arguments, body=init_body, decorator_list=[]))
+
             stmts.append(ast.ClassDef(name=to_class_case(spec.name), bases=[ ast.Name('Token') ], body=body, decorator_list=[]))
+
             continue
+
         if isinstance(spec, VariantSpec):
             # ty = ast.Name(to_class_case(element.members[0]))
             # for name in element.members[1:]:
             #     ty = ast.BinOp(left=ty, op=ast.BitOr(), right=ast.Name(to_class_case(name)), ctx=ast.Load())
+
             cls_name = to_class_case(spec.name)
+
             assert(len(spec.members) > 0)
             text = ' | '.join(to_class_case(name) for name in spec.members)
-            stmts.append(ast.Assign(targets=[ ast.Name(cls_name) ],  value=ast.Constant(text), type_comment='TypeAlias'))
-            pred_body = [
-                ast.Return(make_or(gen_instance_check(name, ast.Name('value')) for name in spec.members))
-            ]
+            stmts.append(ast.AnnAssign(target=ast.Name(cls_name),  value=ast.Constant(text), annotation=ast.Name('TypeAlias'), simple=True))
+
             args = ast.arguments(args=[ ast.arg(arg='value', annotation=ast.Name('Any')) ], defaults=[])
-            stmts.append(ast.FunctionDef(name=f'is_{namespace(spec.name)}', args=args, returns=ast.Subscript(ast.Name('TypeGuard'), ast.Name(cls_name)), body=pred_body, decorator_list=[]))
+            stmts.append(ast.FunctionDef(
+                name=f'is_{namespace(spec.name)}',
+                args=args,
+                returns=ast.Subscript(ast.Name('TypeGuard'), ast.Name(cls_name)),
+                body=[
+                    ast.Return(make_or(gen_instance_check(name, ast.Name('value')) for name in spec.members))
+                ],
+                decorator_list=[]
+            ))
+
             continue
+
         assert_never(spec)
 
     return astor.to_source(ast.Module(body=stmts))

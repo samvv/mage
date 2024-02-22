@@ -10,16 +10,40 @@ class Type(Record):
     pass
 
 class AnyTokenType(Type):
+    """
+    Matches any token. Isn't used that often anymore.
+    """
     pass
 
 class AnyNodeType(Type):
+    """
+    Matches any node. Isn't used that often anymore.
+    """
     pass
 
+class ExternType(Type):
+    """
+    A type that is directly representing the Foo part in a `pub foo -> Foo = bar` 
+    """
+    name: str
+
 class NodeType(Type):
+    """
+    Matches the type of a certain CST node.
+    """
     name: str
 
 class TokenType(Type):
+    """
+    Matches the type of a certain token.
+    """
     name: str
+
+class NeverType(Type):
+    """
+    Represents a type that never matches. Mostly useful to close off a union type when generating types.
+    """
+    pass
 
 class TupleType(Type):
     element_types: list[Type]
@@ -34,6 +58,9 @@ class NoneType(Type):
     pass
 
 class Field(Record):
+    """
+    Not a type, but represents exactly one field of a data structure/CST node. 
+    """
     name: str
     ty: Type
 
@@ -42,7 +69,7 @@ class SpecBase(Record):
 
 class TokenSpec(SpecBase):
     name: str
-    field_type: str | None
+    field_type: str
     is_static: bool
 
 class NodeSpec(SpecBase):
@@ -182,8 +209,7 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
                 assert(rule.expr is not None)
                 yield from get_node_members(rule.expr, toplevel)
                 return
-            # TODO yield TokenType if rule is a token rule
-            yield Field(label, NodeType(expr.name))
+            yield Field(label, TokenType(expr.name) if grammar.is_token_rule(rule) else NodeType(expr.name) )
             return
         if isinstance(expr, LitExpr):
             label = expr.label
@@ -235,6 +261,10 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         if isinstance(expr, ChoiceExpr):
             label = expr.label if expr.label is not None else generate_field_name()
             fields = list(field for element in expr.elements for field in get_node_members(element, False))
+            # FIXME can't we just return an empty union type and normalize it?
+            if len(fields) == 0:
+                yield Field(label, NeverType())
+                return
             if len(fields) == 1:
                 yield fields[0]
                 return
@@ -276,7 +306,7 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
             if name is None:
                 name = generate_token_name()
             if expr.text not in literal_to_name:
-                specs.add(TokenSpec(name, string_kind, True))
+                specs.add(TokenSpec(name, string_rule_type, True))
                 literal_to_name[expr.text] = name
             return
         for_each_expr(expr, collect_literals)
