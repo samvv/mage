@@ -171,7 +171,10 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
     def gen_init_body(field_name: str, field_type: Type, in_name: str, assign: Callable[[ast.expr], ast.stmt], stmts: list[ast.stmt]) -> Type:
 
-        def visit(ty: Type, in_name: str, assign: Callable[[ast.expr], ast.stmt], stmts: list[ast.stmt], has_none: bool) -> Type:
+        def visit(ty: Type, in_name: str, assign: Callable[[ast.expr], ast.stmt], stmts: list[ast.stmt], has_none: bool) -> tuple[Type, bool]:
+            """
+            This function returns a new type and a boolean indicating whether any coercions have been added.
+            """
 
             if isinstance(ty, NodeType):
                 #assert(ty == orig_ty)
@@ -179,19 +182,21 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 coerced_types.append(ty)
                 stmts.append(assign(ast.Name(in_name, ctx=ast.Load())))
                 spec = specs.lookup(ty.name)
-                # spec can also be a VariantSpec so we need to exec isinstance
+                coercable = False
+                # spec can also be a VariantSpec so we need to run isinstance
                 if isinstance(spec, NodeSpec) and len(spec.members) == 1:
                     # TODO maybe also coerce spec.members[0].ty?
+                    coercable = True
                     first_ty = spec.members[0].ty
                     if_body = []
                     if_body.append(assign(ast.Call(ast.Name(to_class_case(ty.name)), args=[ ast.Name(in_name) ], keywords=[])))
                     stmts.append(ast.If(test=gen_shallow_test(first_ty, ast.Name(in_name)), body=if_body))
                     coerced_types.append(first_ty)
-                return UnionType(coerced_types)
+                return UnionType(coerced_types), coercable
 
             if isinstance(ty, NoneType):
                 stmts.append(assign(ast.Name('None')))
-                return ty
+                return ty, False
 
             if isinstance(ty, TokenType):
                 coerced_types = []
@@ -216,7 +221,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 # out_name = in_name
                 cases.append((None, [ assign(ast.Name(in_name)) ]))
                 stmts.extend(make_cond(cases))
-                return UnionType(coerced_types)
+                return UnionType(coerced_types), True 
 
             if isinstance(ty, ListType):
                 # out_name = list()
@@ -229,11 +234,11 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 new_element_name = f'new_{in_name}_element'
                 for_body = []
                 new_assign = lambda value, name=new_element_name: ast.Assign(targets=[ ast.Name(name) ], value=value)
-                element_type = visit(ty.element_type, element_name, new_assign, for_body, False)
+                element_type, element_coercable = visit(ty.element_type, element_name, new_assign, for_body, False)
                 for_body.append(ast.Expr(ast.Call(func=ast.Attribute(value=ast.Name(new_elements_name), attr='append'), args=[ ast.Name(new_element_name) ], keywords=[])))
                 stmts.append(ast.For(target=ast.Name(element_name), iter=ast.Name(in_name), body=for_body, orelse=None))
                 stmts.append(assign(ast.Name(new_elements_name)))
-                return ListType(element_type)
+                return ListType(element_type), element_coercable
 
             if isinstance(ty, TupleType):
                 # element_0 = field[0]
@@ -241,6 +246,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 # ...
                 # out_name = (new_element_0, new_element_1, ...)
 
+                coercable = False
                 new_elements = []
                 new_element_types = []
 
@@ -254,14 +260,20 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
                     stmts.append(ast.Assign(targets=[ ast.Name(element_name) ], value=ast.Subscript(value=ast.Name(in_name), slice=ast.Constant(i))))
 
-                    new_element_types.append(visit(element_type, element_name, new_assign, stmts, False))
+                    new_element_type, element_coercable = visit(element_type, element_name, new_assign, stmts, False)
+
+                    if element_coercable:
+                        coercable = True
+
+                    new_element_types.append(new_element_type)
 
                 stmts.append(assign(ast.Tuple(elts=new_elements)))
 
-                return TupleType(new_element_types)
+                return TupleType(new_element_types), coercable
 
             if isinstance(ty, UnionType):
 
+                any_coercable = False
                 coerced_types = []
                 cases = []
 
@@ -272,7 +284,10 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
                 for element_type in ty.types:
                     body = [] 
-                    coerced_types.append(visit(element_type, in_name, assign, body, has_none))
+                    new_type, coercable = visit(element_type, in_name, assign, body, has_none)
+                    if coercable:
+                        any_coercable = True
+                    coerced_types.append(new_type)
                     cases.append((
                         gen_shallow_test(element_type, ast.Name(in_name)),
                         body
@@ -290,7 +305,10 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                     [ ast.Raise(exc=ast.Call(func=ast.Name('ValueError', ctx=ast.Load()), args=[ ast.Constant(value=f"the field '{field_name}' received an unrecognised value'") ], keywords=[])) ]
                 ))
 
-                stmts.extend(make_cond(cases))
+                if any_coercable:
+                    stmts.extend(make_cond(cases))
+                else:
+                    stmts.append(assign(ast.Name(in_name)))
 
                 # ty_0 = ty.types[0]
                 # ty_n = ty.types[1:]
@@ -300,12 +318,12 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 # new_rest = visit(UnionType(ty_n), in_name, out_name, if_orelse)
                 # stmts.append(ast.If(test=gen_shallow_test(ty_0, ast.Name(in_name)), body=if_body, orelse=if_orelse))
 
-
-                return UnionType(coerced_types)
+                return UnionType(coerced_types), any_coercable
 
             raise RuntimeError(f'unexpected {ty}')
 
-        return visit(field_type, in_name, assign, stmts, False)
+        ty, _ = visit(field_type, in_name, assign, stmts, False)
+        return ty
 
     stmts = []
 
