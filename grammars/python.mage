@@ -69,10 +69,10 @@ pub starred_pattern
   = '*' expr
 
 pub list_pattern
-  = '[' (pattern % ',') ']'
+  = '[' elements:(pattern % ',') ']'
 
 pub tuple_pattern
-  = '(' (pattern % ',') ')'
+  = '(' elements:(pattern % ',') ')'
 
 # Expressions
 
@@ -109,10 +109,10 @@ pub starred_expr
   = '*' expr
 
 pub list_expr
-  = '[' (expr % ',') ']'
+  = '[' elements:(expr % ',') ']'
 
 pub tuple_expr
-  = '(' (expr % ',') ')'
+  = '(' elements:(expr % ',') ')'
 
 pub arg
   = pos_arg
