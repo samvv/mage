@@ -180,6 +180,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 #assert(ty == orig_ty)
                 coerced_types = []
                 coerced_types.append(ty)
+                # FIXME this should probably be behind an if-statemnet
                 stmts.append(assign(ast.Name(in_name, ctx=ast.Load())))
                 spec = specs.lookup(ty.name)
                 coercable = False
@@ -209,7 +210,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                         coerced_types.append(NoneType())
                         cases.append((
                             ast.Compare(ast.Name(in_name), [ ast.Is() ], [ ast.Name('None') ]),
-                            [ assign(ast.Call(ast.Name(to_class_case(ty.name)), args=[ ast.Name(in_name) ], keywords=[])) ]
+                            [ assign(ast.Call(ast.Name(to_class_case(ty.name)), args=[], keywords=[])) ]
                         ))
                 else:
                     coerced_types.append(ExternType(spec.field_type))
@@ -274,17 +275,35 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
                 coercable = False
                 coerced_types = []
-                new_elements = []
-                new_element_types = []
-                required_count = 0
+                cases = []
+                required = []
 
                 for element_type in ty.element_types:
+                    # TODO might be posssible to use is_default_constructible
                     if not is_optional(element_type):
-                        required_count += 1
+                        required.append(element_type)
 
-                if required_count <= 1:
+                if len(required) == 1:
+
+                    case_body = []
+
+                    first_type = required[0]
+
                     coercable = True
-                    # TODO
+                    def first_assign(value):
+                        assert(isinstance(ty, TupleType)) # Needed to keep Pyright happy
+                        return assign(ast.Tuple(list(value if ty == first_type else ast.Name('None') for ty in ty.element_types)))
+                    new_first_type, _ = visit(first_type, in_name, first_assign, case_body, False)
+                    coerced_types.append(new_first_type)
+                    cases.append((
+                        gen_shallow_test(first_type, ast.Name(in_name)),
+                        #ast.Compare(left=ast.Name(in_name), ops=[ ast.Is() ], comparators=[ ast.Name('None') ]),
+                        case_body
+                    ))
+
+                orelse = []
+                new_elements = []
+                new_element_types = []
 
                 for i, element_type in enumerate(ty.element_types):
 
@@ -294,17 +313,21 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
 
                     new_elements.append(ast.Name(new_element_name))
 
-                    stmts.append(ast.Assign(targets=[ ast.Name(element_name) ], value=ast.Subscript(value=ast.Name(in_name), slice=ast.Constant(i))))
+                    orelse.append(ast.Assign(targets=[ ast.Name(element_name) ], value=ast.Subscript(value=ast.Name(in_name), slice=ast.Constant(i))))
 
-                    new_element_type, element_coercable = visit(element_type, element_name, element_assign, stmts, False)
+                    new_element_type, element_coercable = visit(element_type, element_name, element_assign, orelse, False)
 
                     if element_coercable:
                         coercable = True
 
                     new_element_types.append(new_element_type)
 
-                stmts.append(assign(ast.Tuple(elts=new_elements)))
+
+                orelse.append(assign(ast.Tuple(elts=new_elements)))
+                cases.append((None, orelse))
                 coerced_types.append(TupleType(new_element_types))
+
+                stmts.extend(make_cond(cases))
 
                 return UnionType(coerced_types), coercable
 
