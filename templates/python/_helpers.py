@@ -38,59 +38,6 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             return ast.Name('None', ctx=ast.Load())
         raise RuntimeError(f'unexpected {ty}')
 
-    def yield_coerce_options(ty: Type) -> Generator[Type, None, None]:
-        if isinstance(ty, UnionType):
-            for element in ty.types:
-                yield from yield_coerce_options(element)
-            return
-        if isinstance(ty, NoneType):
-            yield ty
-            return
-        if isinstance(ty, TokenType):
-            spec = specs.lookup(ty.name)
-            assert(isinstance(spec, TokenSpec))
-            if spec.is_static:
-                yield NoneType()
-            else:
-                yield ExternType(spec.field_type)
-            yield ty
-            return
-        if isinstance(ty, NodeType):
-            yield ty
-            spec = specs.lookup(ty.name)
-            if isinstance(spec, NodeSpec):
-                if len(spec.members) == 1:
-                    # FIXME there is no actual coercion logic generated in the code below
-                    # TODO maybe yield_coerce_options on this
-                    yield spec.members[0].ty
-            return
-        if isinstance(ty, ListType):
-            yield ListType(get_coerce_type(ty.element_type))
-            return
-        if isinstance(ty, TupleType):
-            yield TupleType(list(get_coerce_type(element_ty) for element_ty in ty.element_types))
-            return
-        if isinstance(ty, AnyTokenType) or isinstance(ty, AnyNodeType):
-            yield ty
-            return
-        raise RuntimeError(f'unexpected {ty}')
-
-    def get_coerce_type(ty: Type) -> Type:
-        candidates = list(yield_coerce_options(ty))
-        elements = []
-        has_none = False
-        for candidate in candidates:
-            for element in flatten_union(candidate):
-                if isinstance(element, NoneType):
-                    has_none = True
-                    continue
-                elements.append(element)
-        if has_none:
-            elements.append(NoneType())
-        if len(elements) == 1:
-            return elements[0]
-        return UnionType(elements)
-
     def is_optional(ty: Type) -> bool:
         # if isinstance(ty, NoneType):
         #     return True
