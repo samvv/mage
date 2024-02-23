@@ -165,6 +165,21 @@ Parse the expression at least `n` times and at most `m` times.
 unicode_char = 'U+' hex_digit{4,4}
 ```
 
+## FAQ
+
+### Assigning a list of nodes to another node gives an error in Python. How do I solve this?
+
+This is probably due to [this feature](https://mypy.readthedocs.io/en/stable/common_issues.html#invariance-vs-covariance)
+in the Python type checker, which prevents subclasses from being assigned to a more general type.
+
+For small lists, we recommend making a copy of the list, like so:
+
+```py
+defn = PyFuncDef(body=list([ ... ]))
+```
+
+See also [this issue](https://github.com/microsoft/pyright/issues/130) in the Pyright repository.
+
 ## Contributing
 
 Run the following command in a terminal to link the `mage` command to your checkout:
