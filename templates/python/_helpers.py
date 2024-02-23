@@ -62,7 +62,11 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
             assert(isinstance(spec, TokenSpec))
             return spec.is_static
         if isinstance(ty, UnionType):
-            return any(is_default_constructible(ty, allow_empty_lists) for ty in ty.types)
+            counter = 0
+            for element_type in ty.types:
+                if is_default_constructible(element_type, allow_empty_lists):
+                    counter += 1
+            return counter == 1
         raise RuntimeError(f'unexpected {ty}')
 
     def gen_default_constructor(ty: Type) -> ast.expr:
@@ -73,6 +77,8 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
         if isinstance(ty, ListType):
             return ast.Call(func=ast.Name('list'), args=[], keywords=[])
         if isinstance(ty, UnionType):
+            # This assumes we already detected that there is exactly one
+            # default-constrcuctible member in the union type
             for ty in ty.types:
                 if is_default_constructible(ty):
                     return gen_default_constructor(ty)
