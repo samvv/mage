@@ -171,6 +171,7 @@ pub stmt
   | expr_stmt
   | assign_stmt
   | if_stmt
+  | for_stmt
   | raise_stmt
   | delete_stmt
   | type_alias_stmt
@@ -205,11 +206,15 @@ pub delete_stmt
 pub raise_stmt
   = 'raise' expr cause:('form' expr)?
 
+pub for_stmt
+  = 'for' pattern 'in' expr ':' body
+
 pub type_alias_stmt
   = 'type' name:ident type_params:('[' (expr % ',') ']')? '=' expr
 
+# TODO add keyworded bases
 pub class_def
-  = 'class' name:ident ('(' expr ')') ':' body
+  = 'class' name:ident bases:('(' (ident % ',') ')')? ':' body
 
 pub param
   = pos_param
