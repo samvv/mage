@@ -21,6 +21,15 @@ Here is the status of the various languages supported by Mage:
 | Lexer  | Create a fully functioning lexer from a grammar | ⏳ |
 | Parser | Create a fully functioning parser from a grammmar | ⏳ |
 
+**C++**
+
+| Name   | Description | Status |
+|--------|-------------|--------|
+| CST    | Create a parse tree from a grammar | ⏳ |
+| AST    | Create an AST that is derived from a CST | ⏳ |
+| Lexer  | Create a fully functioning lexer from a grammar | ⏳ |
+| Parser | Create a fully functioning parser from a grammmar | ⏳ |
+
 [1]: https://github.com/samvv/mage/blob/main/src/magelang/lang/python/cst.py
 
 ## Installation
