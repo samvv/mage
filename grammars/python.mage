@@ -79,6 +79,7 @@ pub tuple_pattern
 pub expr
   = attr_expr
   | call_expr
+  | const_expr
   | infix_expr
   | list_expr
   | named_expr
@@ -89,9 +90,7 @@ pub expr
   | tuple_expr
 
 pub const_expr
-   = string
-   | float
-   | integer
+   = literal:(string | float | integer)
 
 pub nest_expr
   = '(' expr ')'
@@ -170,6 +169,11 @@ pub infix_expr
 pub stmt
   = ret_stmt
   | expr_stmt
+  | assign_stmt
+  | if_stmt
+  | raise_stmt
+  | delete_stmt
+  | type_alias_stmt
 
 pub ret_stmt
   = 'return' expr \eos
@@ -179,6 +183,21 @@ pub expr_stmt
 
 pub assign_stmt
   = pattern annotation:(':' expr)? '=' expr
+
+body
+  = stmt | \indent body:(stmt \eolf)* \dedent
+
+pub if_case
+   = 'if' test:expr ':' body
+
+pub elif_case
+   = 'elif' test:expr ':' body
+
+pub else_case
+   = 'else' ':' body
+
+pub if_stmt
+  = first:if_case alternatives:elif_case* last:else_case?
 
 pub delete_stmt
   = 'del' pattern
@@ -190,7 +209,7 @@ pub type_alias_stmt
   = 'type' name:ident type_params:('[' (expr % ',') ']')? '=' expr
 
 pub class_def
-  = 'class' name:ident ('(' expr ')') ':' body:(stmt | \indent body:(stmt \eolf)* \dedent)
+  = 'class' name:ident ('(' expr ')') ':' body
 
 pub param
   = pos_param
@@ -207,5 +226,5 @@ pub rest_keyword_param
   = '**' name:ident
 
 pub func_def
-  = 'async'? 'def' name:ident '(' params:(param % ',') ')' return_type:('->' expr)? ':' body:(stmt | \indent (stmt \eolf)* \dedent)
+  = 'async'? 'def' name:ident '(' params:(param % ',') ')' return_type:('->' expr)? ':' body
 
