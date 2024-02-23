@@ -305,6 +305,8 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 new_elements = []
                 new_element_types = []
 
+                orelse.append(ast.Expr(ast.Call(ast.Name('assert'), args=[ gen_shallow_test(ty, ast.Name(in_name)) ], keywords=[])))
+
                 for i, element_type in enumerate(ty.element_types):
 
                     element_name = f'{in_name}_{i}'
