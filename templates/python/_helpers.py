@@ -47,11 +47,35 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                     return True
         return False
 
+    def is_default_constructible(ty: Type, allow_empty_lists=True) -> bool:
+        if isinstance(ty, ListType):
+            return allow_empty_lists
+        if isinstance(ty, NoneType):
+            return True
+        if isinstance(ty, NodeType):
+            spec = specs.lookup(ty.name)
+            if not isinstance(spec, NodeSpec):
+                return False
+            return all(is_default_constructible(field.ty, allow_empty_lists) for field in spec.members)
+        if isinstance(ty, TokenType):
+            spec = specs.lookup(ty.name)
+            assert(isinstance(spec, TokenSpec))
+            return spec.is_static
+        if isinstance(ty, UnionType):
+            return any(is_default_constructible(ty, allow_empty_lists) for ty in ty.types)
+        raise RuntimeError(f'unexpected {ty}')
+
     def gen_default_constructor(ty: Type) -> ast.expr:
+        if isinstance(ty, NoneType):
+            return ast.Name('None')
         if isinstance(ty, NodeType) or isinstance(ty, TokenType):
             return ast.Call(func=ast.Name(to_class_case(ty.name)), args=[], keywords=[])
         if isinstance(ty, ListType):
             return ast.Call(func=ast.Name('list'), args=[], keywords=[])
+        if isinstance(ty, UnionType):
+            for ty in ty.types:
+                if is_default_constructible(ty):
+                    return gen_default_constructor(ty)
         raise RuntimeError(f'unexpected {ty}')
 
     def make_or(iter: Iterator[ast.expr]) -> ast.expr:
@@ -279,8 +303,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                 required = []
 
                 for element_type in ty.element_types:
-                    # TODO might be posssible to use is_default_constructible
-                    if not is_optional(element_type):
+                    if not is_default_constructible(element_type, allow_empty_lists=False):
                         required.append(element_type)
 
                 if len(required) == 1:
@@ -292,7 +315,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                     coercable = True
                     def first_assign(value):
                         assert(isinstance(ty, TupleType)) # Needed to keep Pyright happy
-                        return assign(ast.Tuple(list(value if ty == first_type else ast.Name('None') for ty in ty.element_types)))
+                        return assign(ast.Tuple(list(value if ty == first_type else gen_default_constructor(ty) for ty in ty.element_types)))
                     new_first_type, _ = visit(first_type, in_name, first_assign, case_body, False)
                     coerced_types.append(new_first_type)
                     cases.append((
