@@ -49,9 +49,9 @@ Generate a parser for the given grammar in a language that you specify.
 mage generate foo.mage python --prefix foo --out-dir src/foolang
 ```
 
-### `mage test <filename..>`
+### 🚧 `mage test <filename..>`
 
-**🚧 This command is under construction.**
+**This command is under construction.**
 
 Run all tests inside the documentation of the given grammar.
 
