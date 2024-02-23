@@ -37,7 +37,7 @@ Generate a parser for the given grammar in a language that you specify.
 
 **Example**
 ```
-mage generate foo.mage python --prefix foo
+mage generate foo.mage python --prefix foo --out-dir src/foolang
 ```
 
 ### `mage test <filename..>`
