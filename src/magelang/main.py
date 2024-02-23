@@ -1,6 +1,8 @@
 
 import argparse
+from os import path
 from pathlib import Path
+from sweetener.logging import error
 
 import templaty
 
@@ -34,21 +36,7 @@ def add_prefix(grammar: Grammar, prefix: str) -> Grammar:
 
     return Grammar(rules=list(visit_rule(rule) for rule in grammar.rules))
 
-def main():
-
-    template_names = []
-    for path in templates_dir.iterdir():
-        if path.is_dir() and not str(path).startswith('_'):
-            template_names.append(path.name)
-
-    arg_parser = argparse.ArgumentParser()
-
-    arg_parser.add_argument('file', nargs=1, help='A path to a grammar file')
-    arg_parser.add_argument('template', choices=template_names, help='The name of the template to use')
-    arg_parser.add_argument('--out-dir', default='output', help='Where to place the generated files')
-    arg_parser.add_argument('--prefix', default='', help='Prefix all rules in the grammar with this value')
- 
-    args = arg_parser.parse_args()
+def _do_generate(args) -> int:
 
     file = args.file[0]
     dest_dir = Path(args.out_dir)
@@ -71,3 +59,33 @@ def main():
     }
 
     templaty.execute_dir(templates_dir / args.template, dest_dir=dest_dir, ctx=ctx)
+
+    return 0
+
+def main() -> int:
+
+    template_names = []
+    for path in templates_dir.iterdir():
+        if path.is_dir() and not str(path).startswith('_'):
+            template_names.append(path.name)
+
+    arg_parser = argparse.ArgumentParser()
+
+    subparsers = arg_parser.add_subparsers()
+
+    generate_parser = subparsers.add_parser('generate', help='Generate programming code from a grammar')
+
+    generate_parser.add_argument('file', nargs=1, help='A path to a grammar file')
+    generate_parser.add_argument('template', choices=template_names, help='The name of the template to use')
+    generate_parser.add_argument('--out-dir', default='output', help='Where to place the generated files')
+    generate_parser.add_argument('--prefix', default='', help='Prefix all rules in the grammar with this value')
+    generate_parser.set_defaults(func=_do_generate)
+
+    args = arg_parser.parse_args()
+
+    if 'func' not in args:
+        error('You must provide a subcommand.')
+        return 1
+
+    return args.func(args)
+
