@@ -184,30 +184,30 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
             return
         assert(False)
 
-    def get_node_members(expr: Expr, toplevel: bool) -> Generator[Field, None, None]:
+    def get_node_members(expr: Expr, toplevel: bool, label: str | None) -> Generator[Field, None, None]:
         if isinstance(expr, HideExpr):
             return
         if isinstance(expr, ListExpr):
-            element_fields = list(get_node_members(expr.element, False))
-            separator_fields = list(get_node_members(expr.separator, False))
+            element_fields = list(get_node_members(expr.element, False, None))
+            separator_fields = list(get_node_members(expr.separator, False, None))
             if not element_fields and not separator_fields:
                 return
             assert(len(element_fields) == 1)
             assert(len(separator_fields) == 1)
-            label = expr.label
             if label is None:
-                label = generate_field_name()
+                label = expr.label if expr.label is not None else generate_field_name()
             yield Field(label, ListType(TupleType([ element_fields[0].ty, make_optional(separator_fields[0].ty) ])))
             return
         if isinstance(expr, RefExpr):
             rule = grammar.lookup(expr.name)
-            label = rule.name if expr.label is None else expr.label
+            if label is None:
+                label = expr.label if expr.label is not None else rule.name
             if rule.is_extern:
                 yield Field(label, TokenType(rule.name) if rule.is_token else NodeType(rule.name))
                 return
             if not rule.is_public:
                 assert(rule.expr is not None)
-                yield from get_node_members(rule.expr, toplevel)
+                yield from get_node_members(rule.expr, toplevel, label)
                 return
             yield Field(label, TokenType(expr.name) if grammar.is_token_rule(rule) else NodeType(expr.name) )
             return
@@ -220,14 +220,15 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
             yield Field(label, TokenType(literal_to_name[expr.text]))
             return
         if isinstance(expr, RepeatExpr):
-            fields = list(get_node_members(expr.expr, False))
+            fields = list(get_node_members(expr.expr, False, None))
             assert(len(fields) == 1)
             field = fields[0]
-            label = expr.label
             if label is None:
-                label = field.name
+                label = expr.label
                 if label is None:
-                    label = generate_field_name()
+                    label = field.name
+                    if label is None:
+                        label = generate_field_name()
             if expr.max == 0:
                 return
             elif expr.min == 0 and expr.max == 1:
@@ -239,18 +240,20 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
             yield Field(label, ty)
             return
         if isinstance(expr, CharSetExpr):
-            label = expr.label if expr.label is not None else generate_field_name()
+            if label is None:
+                label = expr.label if expr.label is not None else generate_field_name()
             yield Field(label, AnyTokenType())
             return
         if isinstance(expr, SeqExpr):
             if toplevel:
                 for element in expr.elements:
-                    yield from get_node_members(element, True)
+                    yield from get_node_members(element, True, None)
             else:
-                label = expr.label if expr.label is not None else generate_field_name()
+                if label is None:
+                    label = expr.label if expr.label is not None else generate_field_name()
                 types = []
                 for element in expr.elements:
-                    for field in get_node_members(element, False):
+                    for field in get_node_members(element, False, None):
                         types.append(field.ty)
                 if not types:
                     return
@@ -259,9 +262,10 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         if isinstance(expr, LookaheadExpr):
             return
         if isinstance(expr, ChoiceExpr):
-            label = expr.label if expr.label is not None else generate_field_name()
-            fields = list(field for element in expr.elements for field in get_node_members(element, False))
-            # FIXME can't we just return an empty union type and normalize it?
+            if label is None:
+                label = expr.label if expr.label is not None else generate_field_name()
+            fields = list(field for element in expr.elements for field in get_node_members(element, False, None))
+            # FIXME can't we just return an empty union type and normalize it afterwards?
             if len(fields) == 0:
                 yield Field(label, NeverType())
                 return
@@ -328,7 +332,7 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
             continue
         field_counter = 0
         assert(rule.expr is not None)
-        members = list(get_node_members(rule.expr, True))
+        members = list(get_node_members(rule.expr, True, None))
         specs.add(NodeSpec(rule.name, members))
 
     return specs
