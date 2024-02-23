@@ -183,6 +183,18 @@ class PyReturnKeyword(Token):
     pass
 
 
+class PyIfKeyword(Token):
+    pass
+
+
+class PyElifKeyword(Token):
+    pass
+
+
+class PyElseKeyword(Token):
+    pass
+
+
 class PyDelKeyword(Token):
     pass
 
@@ -432,43 +444,43 @@ class PyTuplePattern(Node):
 
 
 PyExpr: TypeAlias = (
-    'PyAttrExpr | PyCallExpr | PyInfixExpr | PyListExpr | PyNamedExpr | PyNestExpr | PyPrefixExpr | PyStarredExpr | PySubscriptExpr | PyTupleExpr'
+    'PyAttrExpr | PyCallExpr | PyConstExpr | PyInfixExpr | PyListExpr | PyNamedExpr | PyNestExpr | PyPrefixExpr | PyStarredExpr | PySubscriptExpr | PyTupleExpr'
     )
 
 
 def is_py_expr(value: Any) ->TypeGuard[PyExpr]:
-    return ((((((((isinstance(value, PyAttrExpr) or isinstance(value,
-        PyCallExpr)) or isinstance(value, PyInfixExpr)) or isinstance(value,
-        PyListExpr)) or isinstance(value, PyNamedExpr)) or isinstance(value,
-        PyNestExpr)) or isinstance(value, PyPrefixExpr)) or isinstance(
-        value, PyStarredExpr)) or isinstance(value, PySubscriptExpr)
-        ) or isinstance(value, PyTupleExpr)
+    return (((((((((isinstance(value, PyAttrExpr) or isinstance(value,
+        PyCallExpr)) or isinstance(value, PyConstExpr)) or isinstance(value,
+        PyInfixExpr)) or isinstance(value, PyListExpr)) or isinstance(value,
+        PyNamedExpr)) or isinstance(value, PyNestExpr)) or isinstance(value,
+        PyPrefixExpr)) or isinstance(value, PyStarredExpr)) or isinstance(
+        value, PySubscriptExpr)) or isinstance(value, PyTupleExpr)
 
 
 class PyConstExpr(Node):
 
-    def __init__(self, *, field_0:
+    def __init__(self, *, literal:
         '(PyString | str | (PyFloat | float) | (PyInteger | int))') ->None:
-        if isinstance(field_0, PyString) or isinstance(field_0, str):
-            if isinstance(field_0, str):
-                self.field_0: PyString | PyFloat | PyInteger = PyString(field_0
+        if isinstance(literal, PyString) or isinstance(literal, str):
+            if isinstance(literal, str):
+                self.literal: PyString | PyFloat | PyInteger = PyString(literal
                     )
             else:
-                self.field_0: PyString | PyFloat | PyInteger = field_0
-        elif isinstance(field_0, PyFloat) or isinstance(field_0, float):
-            if isinstance(field_0, float):
-                self.field_0: PyString | PyFloat | PyInteger = PyFloat(field_0)
+                self.literal: PyString | PyFloat | PyInteger = literal
+        elif isinstance(literal, PyFloat) or isinstance(literal, float):
+            if isinstance(literal, float):
+                self.literal: PyString | PyFloat | PyInteger = PyFloat(literal)
             else:
-                self.field_0: PyString | PyFloat | PyInteger = field_0
-        elif isinstance(field_0, PyInteger) or isinstance(field_0, int):
-            if isinstance(field_0, int):
-                self.field_0: PyString | PyFloat | PyInteger = PyInteger(
-                    field_0)
+                self.literal: PyString | PyFloat | PyInteger = literal
+        elif isinstance(literal, PyInteger) or isinstance(literal, int):
+            if isinstance(literal, int):
+                self.literal: PyString | PyFloat | PyInteger = PyInteger(
+                    literal)
             else:
-                self.field_0: PyString | PyFloat | PyInteger = field_0
+                self.literal: PyString | PyFloat | PyInteger = literal
         else:
             raise ValueError(
-                "the field 'field_0' received an unrecognised value'")
+                "the field 'literal' received an unrecognised value'")
 
 
 class PyNestExpr(Node):
@@ -747,11 +759,16 @@ class PyInfixExpr(Node):
         self.right: PyExpr = right
 
 
-PyStmt: TypeAlias = 'PyRetStmt | PyExprStmt'
+PyStmt: TypeAlias = (
+    'PyRetStmt | PyExprStmt | PyAssignStmt | PyIfStmt | PyRaiseStmt | PyDeleteStmt | PyTypeAliasStmt'
+    )
 
 
 def is_py_stmt(value: Any) ->TypeGuard[PyStmt]:
-    return isinstance(value, PyRetStmt) or isinstance(value, PyExprStmt)
+    return (((((isinstance(value, PyRetStmt) or isinstance(value,
+        PyExprStmt)) or isinstance(value, PyAssignStmt)) or isinstance(
+        value, PyIfStmt)) or isinstance(value, PyRaiseStmt)) or isinstance(
+        value, PyDeleteStmt)) or isinstance(value, PyTypeAliasStmt)
 
 
 class PyRetStmt(Node):
@@ -798,6 +815,112 @@ class PyAssignStmt(Node):
         else:
             self.equals: PyEquals = equals
         self.expr: PyExpr = expr
+
+
+class PyIfCase(Node):
+
+    def __init__(self, *, if_keyword: '(PyIfKeyword | None)'=None, test:
+        'PyExpr', colon: '(PyColon | None)'=None, body:
+        '(PyStmt | (None | list[PyStmt]))'=None) ->None:
+        if if_keyword is None:
+            self.if_keyword: PyIfKeyword = PyIfKeyword()
+        else:
+            self.if_keyword: PyIfKeyword = if_keyword
+        self.test: PyExpr = test
+        if colon is None:
+            self.colon: PyColon = PyColon()
+        else:
+            self.colon: PyColon = colon
+        if is_py_stmt(body):
+            self.body: PyStmt | list[PyStmt] = body
+        elif body is None or isinstance(body, list):
+            if body is None:
+                self.body: PyStmt | list[PyStmt] = list()
+            else:
+                new_body = list()
+                for body_element in body:
+                    new_body_element = body_element
+                    new_body.append(new_body_element)
+                self.body: PyStmt | list[PyStmt] = new_body
+        else:
+            raise ValueError("the field 'body' received an unrecognised value'"
+                )
+
+
+class PyElifCase(Node):
+
+    def __init__(self, *, elif_keyword: '(PyElifKeyword | None)'=None, test:
+        'PyExpr', colon: '(PyColon | None)'=None, body:
+        '(PyStmt | (None | list[PyStmt]))'=None) ->None:
+        if elif_keyword is None:
+            self.elif_keyword: PyElifKeyword = PyElifKeyword()
+        else:
+            self.elif_keyword: PyElifKeyword = elif_keyword
+        self.test: PyExpr = test
+        if colon is None:
+            self.colon: PyColon = PyColon()
+        else:
+            self.colon: PyColon = colon
+        if is_py_stmt(body):
+            self.body: PyStmt | list[PyStmt] = body
+        elif body is None or isinstance(body, list):
+            if body is None:
+                self.body: PyStmt | list[PyStmt] = list()
+            else:
+                new_body = list()
+                for body_element in body:
+                    new_body_element = body_element
+                    new_body.append(new_body_element)
+                self.body: PyStmt | list[PyStmt] = new_body
+        else:
+            raise ValueError("the field 'body' received an unrecognised value'"
+                )
+
+
+class PyElseCase(Node):
+
+    def __init__(self, *, else_keyword: '(PyElseKeyword | None)'=None,
+        colon: '(PyColon | None)'=None, body:
+        '(PyStmt | (None | list[PyStmt]))'=None) ->None:
+        if else_keyword is None:
+            self.else_keyword: PyElseKeyword = PyElseKeyword()
+        else:
+            self.else_keyword: PyElseKeyword = else_keyword
+        if colon is None:
+            self.colon: PyColon = PyColon()
+        else:
+            self.colon: PyColon = colon
+        if is_py_stmt(body):
+            self.body: PyStmt | list[PyStmt] = body
+        elif body is None or isinstance(body, list):
+            if body is None:
+                self.body: PyStmt | list[PyStmt] = list()
+            else:
+                new_body = list()
+                for body_element in body:
+                    new_body_element = body_element
+                    new_body.append(new_body_element)
+                self.body: PyStmt | list[PyStmt] = new_body
+        else:
+            raise ValueError("the field 'body' received an unrecognised value'"
+                )
+
+
+class PyIfStmt(Node):
+
+    def __init__(self, *, first: 'PyIfCase', alternatives:
+        '(None | list[PyElifCase])'=None, last: '(PyElseCase | None)'=None
+        ) ->None:
+        self.first: PyIfCase = first
+        if alternatives is None:
+            self.alternatives: list[PyElifCase] = list()
+        else:
+            new_alternatives = list()
+            for alternatives_element in alternatives:
+                new_alternatives_element = alternatives_element
+                new_alternatives.append(new_alternatives_element)
+            self.alternatives: list[PyElifCase] = new_alternatives
+        self.last: PyElseCase | None = last
 
 
 class PyDeleteStmt(Node):
