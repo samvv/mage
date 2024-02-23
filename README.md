@@ -5,7 +5,23 @@ Mage is tool for performing text analysis. It does so by generating a _lexer_,
 _parser_ and _parse tree_ for you. Whether it is a piece of programming code or
 some tabular data in a fringe format, Mage has got you covered!
 
-**⚠️ This tool is still under construction!**
+ - 🚀 Full support for Python typings. Avoid runtime errors while building your language!
+ - ➕ Add your own languages through the use of a powerful template engine!
+
+👀 Mage is written in itself. Check out the [generated code][1] of our Python generator!
+
+Here is the status of the various languages supported by Mage:
+
+**Python**
+
+| Name   | Description | Status |
+|--------|-------------|--------|
+| CST    | Create a parse tree from a grammar | ✅ |
+| AST    | Create an AST that is derived from a CST | ⏳ |
+| Lexer  | Create a fully functioning lexer from a grammar | ⏳ |
+| Parser | Create a fully functioning parser from a grammmar | ⏳ |
+
+[1]: https://github.com/samvv/mage/blob/main/src/magelang/lang/python/cst.py
 
 ## Installation
 
@@ -19,7 +35,14 @@ $ pip3 install --user -U magelang
 
 Generate a parser for the given grammar in a language that you specify.
 
+**Example**
+```
+mage generate foo.mage python --prefix foo
+```
+
 ### `mage test <filename..>`
+
+**🚧 This command is under construction.**
 
 Run all tests inside the documentation of the given grammar.
 
