@@ -167,7 +167,7 @@ unicode_char = 'U+' hex_digit{4,4}
 
 ## FAQ
 
-### Assigning a list of nodes to another node gives an error in Python. How do I solve this?
+### How do I assign a list of nodes to another node in Python without type errors?
 
 This is probably due to [this feature](https://mypy.readthedocs.io/en/stable/common_issues.html#invariance-vs-covariance)
 in the Python type checker, which prevents subclasses from being assigned to a more general type.
