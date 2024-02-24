@@ -11,13 +11,13 @@ extern token indent
 # Helper utilities
 
 @skip
-token skip = [\s]+
+skip = [\s]+
 
-token eol = '\r\n' | '\n'
+eol = '\r\n' | '\n'
 
-token eolf = eol | eof
+eolf = eol | eof
 
-token eos
+eos
   = __ ';'
   | _ line_comment? eol
   | __ eof
@@ -126,7 +126,8 @@ pub keyword_arg
 pub call_expr
   = operator:expr '(' args:(arg % ',')  ')'
 
-pub prefix_op
+# TODO should not be a token
+pub token prefix_op
   = 'not'
   | '+'
   | '-'
@@ -135,7 +136,8 @@ pub prefix_op
 pub prefix_expr
   = prefix_op expr
 
-pub infix_op
+# TODO should not be a token
+pub token infix_op
   = '+'
   | '-'
   | '*'
@@ -177,6 +179,7 @@ pub stmt
   | type_alias_stmt
   | class_def
   | func_def
+  | pass_stmt
 
 pub ret_stmt
   = 'return' expr \eos
@@ -186,6 +189,9 @@ pub expr_stmt
 
 pub assign_stmt
   = pattern annotation:(':' expr)? '=' expr
+
+pub pass_stmt
+  = 'pass'
 
 body
   = stmt | \indent body:(stmt \eolf)* \dedent

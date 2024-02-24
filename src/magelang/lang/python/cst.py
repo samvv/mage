@@ -183,6 +183,10 @@ class PyReturnKeyword(Token):
     pass
 
 
+class PyPassKeyword(Token):
+    pass
+
+
 class PyIfKeyword(Token):
     pass
 
@@ -732,17 +736,17 @@ class PyInfixExpr(Node):
 
 
 PyStmt: TypeAlias = (
-    'PyRetStmt | PyExprStmt | PyAssignStmt | PyIfStmt | PyForStmt | PyRaiseStmt | PyDeleteStmt | PyTypeAliasStmt | PyClassDef | PyFuncDef'
+    'PyRetStmt | PyExprStmt | PyAssignStmt | PyIfStmt | PyForStmt | PyRaiseStmt | PyDeleteStmt | PyTypeAliasStmt | PyClassDef | PyFuncDef | PyPassStmt'
     )
 
 
 def is_py_stmt(value: Any) ->TypeGuard[PyStmt]:
-    return ((((((((isinstance(value, PyRetStmt) or isinstance(value,
+    return (((((((((isinstance(value, PyRetStmt) or isinstance(value,
         PyExprStmt)) or isinstance(value, PyAssignStmt)) or isinstance(
         value, PyIfStmt)) or isinstance(value, PyForStmt)) or isinstance(
         value, PyRaiseStmt)) or isinstance(value, PyDeleteStmt)) or
-        isinstance(value, PyTypeAliasStmt)) or isinstance(value, PyClassDef)
-        ) or isinstance(value, PyFuncDef)
+        isinstance(value, PyTypeAliasStmt)) or isinstance(value, PyClassDef
+        )) or isinstance(value, PyFuncDef)) or isinstance(value, PyPassStmt)
 
 
 class PyRetStmt(Node):
@@ -793,6 +797,15 @@ class PyAssignStmt(Node):
         else:
             self.equals: PyEquals = equals
         self.expr: PyExpr = expr
+
+
+class PyPassStmt(Node):
+
+    def __init__(self, *, pass_keyword: '(PyPassKeyword | None)'=None) ->None:
+        if pass_keyword is None:
+            self.pass_keyword: PyPassKeyword = PyPassKeyword()
+        else:
+            self.pass_keyword: PyPassKeyword = pass_keyword
 
 
 class PyIfCase(Node):
