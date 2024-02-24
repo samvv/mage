@@ -221,7 +221,7 @@ def generate_cst(grammar: Grammar, prefix='') -> str:
                     first_ty = spec.members[0].ty
                     if_body = []
                     if_body.append(assign(ast.Call(ast.Name(to_class_case(ty.name)), args=[ ast.Name(in_name) ], keywords=[])))
-                    stmts.append(ast.If(test=gen_shallow_test(first_ty, ast.Name(in_name)), body=if_body))
+                    stmts.append(ast.If(test=gen_shallow_test(first_ty, ast.Name(in_name)), body=if_body, orelse=[]))
                     coerced_types.append(first_ty)
                 return UnionType(coerced_types), coercable
 
