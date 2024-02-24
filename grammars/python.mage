@@ -187,6 +187,7 @@ pub ret_stmt
 pub expr_stmt
   = expr \eos
 
+# TODO make '= expr' optional 
 pub assign_stmt
   = pattern annotation:(':' expr)? '=' expr
 
@@ -228,6 +229,7 @@ pub param
   = named_param
   | rest_pos_param
   | rest_keyword_param
+  | sep_param
 
 pub named_param
   = pattern annotation:(':' expr)? default:('=' expr)?
@@ -237,6 +239,9 @@ pub rest_pos_param
 
 pub rest_keyword_param
   = '**' name:ident
+
+pub sep_param
+  = '*'
 
 pub func_def
   = 'async'? 'def' name:ident '(' params:(param % ',') ')' return_type:('->' expr)? ':' body
