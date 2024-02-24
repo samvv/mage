@@ -162,7 +162,7 @@ pub infix_op
   | 'not' 'in'
 
 pub infix_expr
-  = left:expr infix_op right:expr
+  = left:expr op:infix_op right:expr
 
 # Statements
 
@@ -175,6 +175,8 @@ pub stmt
   | raise_stmt
   | delete_stmt
   | type_alias_stmt
+  | class_def
+  | func_def
 
 pub ret_stmt
   = 'return' expr \eos
@@ -217,12 +219,12 @@ pub class_def
   = 'class' name:ident bases:('(' (ident % ',') ')')? ':' body
 
 pub param
-  = pos_param
+  = named_param
   | rest_pos_param
   | rest_keyword_param
 
-pub pos_param
-  = name:ident annotation:(':' expr)? default:('=' expr)?
+pub named_param
+  = pattern annotation:(':' expr)? default:('=' expr)?
 
 pub rest_pos_param
   = '*' name:ident
@@ -232,4 +234,9 @@ pub rest_keyword_param
 
 pub func_def
   = 'async'? 'def' name:ident '(' params:(param % ',') ')' return_type:('->' expr)? ':' body
+
+# Toplevel expressions
+
+pub module
+  = stmts:(stmt \eolf)*
 

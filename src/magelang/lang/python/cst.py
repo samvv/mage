@@ -721,27 +721,28 @@ class PyInfixOp(Token):
 
 class PyInfixExpr(Node):
 
-    def __init__(self, *, left: 'PyExpr', infix_op: '(PyInfixOp | str)',
-        right: 'PyExpr') ->None:
+    def __init__(self, *, left: 'PyExpr', op: '(PyInfixOp | str)', right:
+        'PyExpr') ->None:
         self.left: PyExpr = left
-        if isinstance(infix_op, str):
-            self.infix_op: PyInfixOp = PyInfixOp(infix_op)
+        if isinstance(op, str):
+            self.op: PyInfixOp = PyInfixOp(op)
         else:
-            self.infix_op: PyInfixOp = infix_op
+            self.op: PyInfixOp = op
         self.right: PyExpr = right
 
 
 PyStmt: TypeAlias = (
-    'PyRetStmt | PyExprStmt | PyAssignStmt | PyIfStmt | PyForStmt | PyRaiseStmt | PyDeleteStmt | PyTypeAliasStmt'
+    'PyRetStmt | PyExprStmt | PyAssignStmt | PyIfStmt | PyForStmt | PyRaiseStmt | PyDeleteStmt | PyTypeAliasStmt | PyClassDef | PyFuncDef'
     )
 
 
 def is_py_stmt(value: Any) ->TypeGuard[PyStmt]:
-    return ((((((isinstance(value, PyRetStmt) or isinstance(value,
+    return ((((((((isinstance(value, PyRetStmt) or isinstance(value,
         PyExprStmt)) or isinstance(value, PyAssignStmt)) or isinstance(
         value, PyIfStmt)) or isinstance(value, PyForStmt)) or isinstance(
-        value, PyRaiseStmt)) or isinstance(value, PyDeleteStmt)) or isinstance(
-        value, PyTypeAliasStmt)
+        value, PyRaiseStmt)) or isinstance(value, PyDeleteStmt)) or
+        isinstance(value, PyTypeAliasStmt)) or isinstance(value, PyClassDef)
+        ) or isinstance(value, PyFuncDef)
 
 
 class PyRetStmt(Node):
@@ -1189,23 +1190,20 @@ class PyClassDef(Node):
                 )
 
 
-PyParam: TypeAlias = 'PyPosParam | PyRestPosParam | PyRestKeywordParam'
+PyParam: TypeAlias = 'PyNamedParam | PyRestPosParam | PyRestKeywordParam'
 
 
 def is_py_param(value: Any) ->TypeGuard[PyParam]:
-    return (isinstance(value, PyPosParam) or isinstance(value, PyRestPosParam)
-        ) or isinstance(value, PyRestKeywordParam)
+    return (isinstance(value, PyNamedParam) or isinstance(value,
+        PyRestPosParam)) or isinstance(value, PyRestKeywordParam)
 
 
-class PyPosParam(Node):
+class PyNamedParam(Node):
 
-    def __init__(self, *, name: '(PyIdent | str)', annotation:
+    def __init__(self, *, pattern: 'PyPattern', annotation:
         '(PyExpr | tuple[PyColon | None, PyExpr] | None)'=None, default:
         '(PyExpr | tuple[PyEquals | None, PyExpr] | None)'=None) ->None:
-        if isinstance(name, str):
-            self.name: PyIdent = PyIdent(name)
-        else:
-            self.name: PyIdent = name
+        self.pattern: PyPattern = pattern
         if is_py_expr(annotation) or isinstance(annotation, tuple):
             if is_py_expr(annotation):
                 self.annotation: tuple[PyColon, PyExpr] | None = (PyColon(),
@@ -1366,5 +1364,18 @@ class PyFuncDef(Node):
         else:
             raise ValueError("the field 'body' received an unrecognised value'"
                 )
+
+
+class PyModule(Node):
+
+    def __init__(self, *, stmts: '(None | list[PyStmt])'=None) ->None:
+        if stmts is None:
+            self.stmts: list[PyStmt] = list()
+        else:
+            new_stmts = list()
+            for stmts_element in stmts:
+                new_stmts_element = stmts_element
+                new_stmts.append(new_stmts_element)
+            self.stmts: list[PyStmt] = new_stmts
 
 
