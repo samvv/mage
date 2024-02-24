@@ -128,10 +128,11 @@ class Grammar(Node):
 
     @cache
     def is_token_rule(self, rule: Rule) -> bool:
-        if rule.is_extern:
-            return rule.is_token
-        assert(rule.expr is not None)
-        return rule.is_public and not self._references_pub_rule(rule.expr)
+        return rule.is_token
+        # if rule.is_extern:
+        #     return rule.is_token
+        # assert(rule.expr is not None)
+        # return rule.is_public and not self._references_pub_rule(rule.expr)
 
     def is_parse_rule(self, rule: Rule) -> bool:
         if rule.is_extern:
