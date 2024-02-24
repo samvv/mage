@@ -92,8 +92,6 @@ def generate_cst(grammar: Grammar, prefix: str='') -> str:
             assert(isinstance(spec, TokenSpec))
             return spec.is_static
         if isinstance(ty, UnionType):
-            return any(is_default_constructible(ty, allow_empty_lists) for ty in ty.types)
-        if isinstance(ty, UnionType):
             counter = 0
             for element_type in ty.types:
                 if is_default_constructible(element_type, allow_empty_lists):
@@ -319,7 +317,6 @@ def generate_cst(grammar: Grammar, prefix: str='') -> str:
                 required: list[Type] = []
 
                 for element_type in ty.element_types:
-                    # TODO might be posssible to use is_default_constructible
                     if not is_default_constructible(element_type, allow_empty_lists=False):
                         required.append(element_type)
 
