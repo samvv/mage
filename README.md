@@ -51,7 +51,7 @@ mage generate foo.mage python --prefix foo --out-dir src/foolang
 
 ### 🚧 `mage test <filename..>`
 
-> ![WARNING]
+> [!WARNING]
 >
 > This command is under construction.
 
@@ -159,7 +159,7 @@ not be visible in the resulting CST/AST.
 
 ### 🚧 `expr{n,m}`
 
-> ![WARNING]
+> [!WARNING]
 >
 > This command is under construction.
 
