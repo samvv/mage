@@ -51,7 +51,9 @@ mage generate foo.mage python --prefix foo --out-dir src/foolang
 
 ### 🚧 `mage test <filename..>`
 
-**This command is under construction.**
+> ![WARNING]
+>
+> This command is under construction.
 
 Run all tests inside the documentation of the given grammar.
 
@@ -157,7 +159,9 @@ not be visible in the resulting CST/AST.
 
 ### 🚧 `expr{n,m}`
 
-**This command is under construction.**
+> ![WARNING]
+>
+> This command is under construction.
 
 Parse the expression at least `n` times and at most `m` times.
 
