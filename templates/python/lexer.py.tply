@@ -1,6 +1,4 @@
-{!
-from magelang.lang.python.emitter import emit
-!}
+
 from .cst import *
 
 class Lexer:
@@ -10,13 +8,5 @@ class Lexer:
         self._curr_pos = TextPos(start_offset, start_line, start_column)
 
     def lex(self) -> Token:
-        {% for rule in grammar.rules %}
-            {!
-            stmts: list[PyStmt] = []
-            for rule in grammar.rules:
-                if not rule.is_token:
-                    continue
-            write(emit(PyModule(stmts=stmts)))
-            !}
-        {% endfor %}
+        {{lexer_logic(grammar)}}
 
