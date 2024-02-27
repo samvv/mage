@@ -51,6 +51,8 @@ def cst(grammar: Grammar, prefix: str='') -> str:
             return PyNamedExpr(name=to_class_case(ty.name))
         if  isinstance(ty, AnyTokenType):
             return PyNamedExpr(name='Token')
+        if  isinstance(ty, AnyNodeType):
+            return PyNamedExpr(name='Node')
         if isinstance(ty, ListType):
             return PySubscriptExpr(expr=PyNamedExpr(name='list'), slices=[ (gen_type(ty.element_type), None) ])
         if isinstance(ty, TupleType):
@@ -460,7 +462,7 @@ def cst(grammar: Grammar, prefix: str='') -> str:
             #for field in element.members:
             #     body.append(ast.AnnAssign(target=PyNamedExpr(name=field.name), annotation=gen_type(field.ty), simple=True))
 
-            stmts.append(PyClassDef(name=to_class_case(spec.name), bases=[ ('Node', None) ], body=body))
+            stmts.append(PyClassDef(name=to_class_case(spec.name), bases=[ ('BaseNode', None) ], body=body))
 
             continue
 
@@ -491,7 +493,7 @@ def cst(grammar: Grammar, prefix: str='') -> str:
 
                 body.append(PyFuncDef(name='__init__', params=list_comma(params), body=init_body))
 
-            stmts.append(PyClassDef(name=to_class_case(spec.name), bases=[ ('Token', None) ], body=body))
+            stmts.append(PyClassDef(name=to_class_case(spec.name), bases=[ ('BaseToken', None) ], body=body))
 
             continue
 
@@ -520,6 +522,17 @@ def cst(grammar: Grammar, prefix: str='') -> str:
             continue
 
         assert_never(spec)
+
+    node_names: list[str] = []
+    token_names: list[str] = []
+    for spec in specs:
+        if isinstance(spec, TokenSpec):
+            token_names.append(spec.name)
+        elif isinstance(spec, NodeSpec):
+            node_names.append(spec.name)
+
+    stmts.append(PyAssignStmt(pattern=PyNamedPattern(name='Token'), expr=make_bitor(PyNamedExpr(name=to_class_case(name)) for name in token_names)))
+    stmts.append(PyAssignStmt(pattern=PyNamedPattern(name='Node'), expr=make_bitor(PyNamedExpr(name=to_class_case(name)) for name in node_names)))
 
     return emit(PyModule(stmts=stmts))
 

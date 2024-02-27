@@ -17,12 +17,12 @@ class Span:
     def __len__(self) -> int:
         return self.end_offset - self.start_offset
 
-class Token:
+class BaseToken:
 
     def __init__(self, span: Span | None = None) -> None:
         self.span = span
 
-class Node:
+class BaseNode:
 
     def __init__(self) -> None:
         pass

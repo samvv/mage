@@ -1382,5 +1382,7 @@ class PyModule(Node):
 
 
 
+Node = PyCarriageReturnLineFeed | PyLineFeed | PySemicolon | PyZero | PyDot | PyDoubleQuote | PySingleQuote | PyColon | PyOpenBracket | PyComma | PyCloseBracket | PyAsterisk | PyOpenParen | PyCloseParen | PyEquals | PyNotKeyword | PyPlus | PyHyphen | PyTilde | PySlash | PySlashSlash | PyPercenct | PyLessThanLessThan | PyGreaterThanGreaterThan | PyVerticalBar | PyCaret | PyAmpersand | PyAtSign | PyOrKeyword | PyAndKeyword | PyEqualsEquals | PyExclamationMarkEquals | PyLessThan | PyLessThanEquals | PyGreaterThan | PyGreaterThanEquals | PyIsKeyword | PyInKeyword | PyReturnKeyword | PyPassKeyword | PyIfKeyword | PyElifKeyword | PyElseKeyword | PyDelKeyword | PyRaiseKeyword | PyFormKeyword | PyForKeyword | PyTypeKeyword | PyClassKeyword | PyAsteriskAsterisk | PyAsyncKeyword | PyDefKeyword | PyHyphenGreaterThan | PyIdent | PyInteger | PyFloat | PyString | PySlice | PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern | PyConstExpr | PyNestExpr | PyNamedExpr | PyAttrExpr | PySubscriptExpr | PyStarredExpr | PyListExpr | PyTupleExpr | PyKeywordArg | PyCallExpr | PyPrefixOp | PyPrefixExpr | PyInfixOp | PyInfixExpr | PyRetStmt | PyExprStmt | PyAssignStmt | PyPassStmt | PyIfCase | PyElifCase | PyElseCase | PyIfStmt | PyDeleteStmt | PyRaiseStmt | PyForStmt | PyTypeAliasStmt | PyClassDef | PyNamedParam | PyRestPosParam | PyRestKeywordParam | PySepParam | PyFuncDef | PyModule
+
 
 
