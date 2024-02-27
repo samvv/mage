@@ -34,7 +34,7 @@ def list_comma(it: Iterator[T] | Sequence[T]) -> list[tuple[T, PyComma | None]]:
         prev = curr
     return out
 
-def generate_cst(grammar: Grammar, prefix: str='') -> str:
+def cst(grammar: Grammar, prefix: str='') -> str:
 
     specs = grammar_to_specs(grammar)
 
@@ -523,7 +523,7 @@ def generate_cst(grammar: Grammar, prefix: str='') -> str:
 
     return emit(PyModule(stmts=stmts))
 
-def generate_lexer_logic(grammar: Grammar) -> str:
+def lexer_logic(grammar: Grammar) -> str:
     stmts: list[PyStmt] = []
     for rule in grammar.rules:
         if not rule.is_token:
