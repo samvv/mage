@@ -58,7 +58,7 @@ def _do_generate(args) -> int:
         'grammar': grammar,
     }
 
-    templaty.execute_dir(templates_dir / args.template, dest_dir=dest_dir, ctx=ctx)
+    templaty.execute_dir(templates_dir / args.template, dest_dir=dest_dir, ctx=ctx, force=args.force)
 
     return 0
 
@@ -77,6 +77,7 @@ def main() -> int:
 
     generate_parser.add_argument('file', nargs=1, help='A path to a grammar file')
     generate_parser.add_argument('template', choices=template_names, help='The name of the template to use')
+    generate_parser.add_argument('--force', action='store_true', help='Always overwrite files that already exist')
     generate_parser.add_argument('--out-dir', default='output', help='Where to place the generated files')
     generate_parser.add_argument('--prefix', default='', help='Prefix all rules in the grammar with this value')
     generate_parser.set_defaults(func=_do_generate)
