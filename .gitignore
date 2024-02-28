@@ -13,3 +13,6 @@ Makefile
 
 # default output directory for Mage
 output/
+
+# for uploading to PyPI
+dist/
