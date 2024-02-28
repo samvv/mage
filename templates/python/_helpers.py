@@ -33,6 +33,49 @@ def list_comma(it: Iterator[T] | Sequence[T]) -> list[tuple[T, PyComma | None]]:
         prev = curr
     return out
 
+def make_cond(cases: list[Case]) -> list[PyStmt]:
+    if len(cases) == 0:
+        return []
+    test, body = cases[0]
+    if len(cases) == 1 and test is None:
+        return body
+    assert(test is not None)
+    first = PyIfCase(test=test, body=body)
+    alternatives: list[PyElifCase] = []
+    last = None
+    for test, body in cases[1:]:
+        if test is None:
+            last = PyElseCase(body=body)
+            break
+        alternatives.append(PyElifCase(test=test, body=body))
+    return [ PyIfStmt(first=first, alternatives=alternatives, last=last) ]
+
+def make_or(iter: Iterator[PyExpr]) -> PyExpr:
+    try:
+        out = next(iter)
+    except StopIteration:
+        return PyNamedExpr(name='False')
+    for expr in iter:
+        out = PyInfixExpr(left=out, op='or', right=expr)
+    return out
+
+def make_and(iter: Iterator[PyExpr]) -> PyExpr:
+    try:
+        out = next(iter)
+    except StopIteration:
+        return PyNamedExpr(name='True')
+    for expr in iter:
+        out = PyInfixExpr(left=out, op='and', right=expr)
+    return out
+
+def make_bitor(it: list[PyExpr] | Iterator[PyExpr]) -> PyExpr:
+    if isinstance(it, list):
+        it = iter(it)
+    out = next(it)
+    for element in it:
+        out = PyInfixExpr(left=out, op='|', right=element)
+    return out
+
 def cst(grammar: Grammar, prefix: str='') -> str:
 
     specs = grammar_to_specs(grammar)
@@ -115,32 +158,6 @@ def cst(grammar: Grammar, prefix: str='') -> str:
                     return gen_default_constructor(ty)
         raise RuntimeError(f'unexpected {ty}')
 
-    def make_or(iter: Iterator[PyExpr]) -> PyExpr:
-        try:
-            out = next(iter)
-        except StopIteration:
-            return PyNamedExpr(name='False')
-        for expr in iter:
-            out = PyInfixExpr(left=out, op='or', right=expr)
-        return out
-
-    def make_and(iter: Iterator[PyExpr]) -> PyExpr:
-        try:
-            out = next(iter)
-        except StopIteration:
-            return PyNamedExpr(name='True')
-        for expr in iter:
-            out = PyInfixExpr(left=out, op='and', right=expr)
-        return out
-
-    def make_bitor(it: list[PyExpr] | Iterator[PyExpr]) -> PyExpr:
-        if isinstance(it, list):
-            it = iter(it)
-        out = next(it)
-        for element in it:
-            out = PyInfixExpr(left=out, op='|', right=element)
-        return out
-
     def gen_instance_check(name: str, target: PyExpr) -> PyExpr:
         spec = specs.lookup(name)
         if isinstance(spec, VariantSpec):
@@ -190,23 +207,6 @@ def cst(grammar: Grammar, prefix: str='') -> str:
         if type_name == 'Float' or type_name == 'Float64':
             return PyNamedExpr(name='float')
         raise RuntimeError(f"unexpected rule type '{type_name}'")
-
-    def make_cond(cases: list[Case]) -> list[PyStmt]:
-        if len(cases) == 0:
-            return []
-        test, body = cases[0]
-        if len(cases) == 1 and test is None:
-            return body
-        assert(test is not None)
-        first = PyIfCase(test=test, body=body)
-        alternatives: list[PyElifCase] = []
-        last = None
-        for test, body in cases[1:]:
-            if test is None:
-                last = PyElseCase(body=body)
-                break
-            alternatives.append(PyElifCase(test=test, body=body))
-        return [ PyIfStmt(first=first, alternatives=alternatives, last=last) ]
 
     def gen_init_body(field_name: str, field_type: Type, in_name: str, assign: Callable[[PyExpr], PyStmt], stmts: list[PyStmt]) -> Type:
 
