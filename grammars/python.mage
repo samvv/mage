@@ -169,17 +169,19 @@ pub infix_expr
 # Statements
 
 pub stmt
-  = ret_stmt
-  | expr_stmt
-  | assign_stmt
-  | if_stmt
-  | for_stmt
-  | raise_stmt
-  | delete_stmt
-  | type_alias_stmt
+  = assign_stmt
   | class_def
+  | delete_stmt
+  | expr_stmt
+  | for_stmt
   | func_def
+  | if_stmt
   | pass_stmt
+  | raise_stmt
+  | ret_stmt
+  | try_stmt
+  | type_alias_stmt
+  | while_stmt
 
 pub ret_stmt
   = 'return' expr \eos
@@ -216,10 +218,19 @@ pub raise_stmt
   = 'raise' expr cause:('form' expr)?
 
 pub for_stmt
-  = 'for' pattern 'in' expr ':' body
+  = 'for' pattern 'in' expr ':' body else_clause:('else' body)?
+
+pub while_stmt
+  = 'while' expr ':' body else_clause:('else' body)?
 
 pub type_alias_stmt
   = 'type' name:ident type_params:('[' (expr % ',') ']')? '=' expr
+
+pub except_handler
+  = 'except' expr binder:('as' ident)? body
+
+pub try_stmt
+  = 'try' ':' body handlers:except_handler* else_clause:('else' body)? finally_clause:('finally' body)?
 
 # TODO add keyworded bases
 pub class_def
