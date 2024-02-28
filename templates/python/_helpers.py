@@ -1,4 +1,3 @@
-# pyright: strict
 
 # FIXME Node and Token should have a common base
 # Generate a union type with all nodes/tokens
