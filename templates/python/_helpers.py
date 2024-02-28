@@ -329,13 +329,15 @@ def cst(grammar: Grammar, prefix: str='') -> str:
                     first_type = required[0]
 
                     coercable = True
+
                     def first_assign(value: PyExpr):
                         assert(isinstance(ty, TupleType)) # Needed to keep Pyright happy
                         return assign(PyTupleExpr(elements=list_comma(value if el_ty == first_type else gen_default_constructor(el_ty) for el_ty in ty.element_types)))
+
                     new_first_type, _ = visit(first_type, in_name, first_assign, case_body, False)
                     coerced_types.append(new_first_type)
                     cases.append((
-                        gen_shallow_test(first_type, PyNamedExpr(name=in_name)),
+                        gen_shallow_test(new_first_type, PyNamedExpr(name=in_name)),
                         #ast.Compare(left=PyNamedExpr(name=in_name), ops=[ ast.Is() ], comparators=[ PyNamedExpr(name='None') ]),
                         case_body
                     ))
