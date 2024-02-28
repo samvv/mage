@@ -17,257 +17,277 @@ class Span:
     def __len__(self) -> int:
         return self.end_offset - self.start_offset
 
-class Token:
+class BaseToken:
 
     def __init__(self, span: Span | None = None) -> None:
         self.span = span
 
-class Node:
+class BaseNode:
 
     def __init__(self) -> None:
         pass
 
-class PyCarriageReturnLineFeed(Token):
+class PyCarriageReturnLineFeed(BaseToken):
     pass
 
 
-class PyLineFeed(Token):
+class PyLineFeed(BaseToken):
     pass
 
 
-class PySemicolon(Token):
+class PySemicolon(BaseToken):
     pass
 
 
-class PyZero(Token):
+class PyZero(BaseToken):
     pass
 
 
-class PyDot(Token):
+class PyDot(BaseToken):
     pass
 
 
-class PyDoubleQuote(Token):
+class PyDoubleQuote(BaseToken):
     pass
 
 
-class PySingleQuote(Token):
+class PySingleQuote(BaseToken):
     pass
 
 
-class PyColon(Token):
+class PyColon(BaseToken):
     pass
 
 
-class PyOpenBracket(Token):
+class PyOpenBracket(BaseToken):
     pass
 
 
-class PyComma(Token):
+class PyComma(BaseToken):
     pass
 
 
-class PyCloseBracket(Token):
+class PyCloseBracket(BaseToken):
     pass
 
 
-class PyAsterisk(Token):
+class PyAsterisk(BaseToken):
     pass
 
 
-class PyOpenParen(Token):
+class PyOpenParen(BaseToken):
     pass
 
 
-class PyCloseParen(Token):
+class PyCloseParen(BaseToken):
     pass
 
 
-class PyEquals(Token):
+class PyEquals(BaseToken):
     pass
 
 
-class PyNotKeyword(Token):
+class PyNotKeyword(BaseToken):
     pass
 
 
-class PyPlus(Token):
+class PyPlus(BaseToken):
     pass
 
 
-class PyHyphen(Token):
+class PyHyphen(BaseToken):
     pass
 
 
-class PyTilde(Token):
+class PyTilde(BaseToken):
     pass
 
 
-class PySlash(Token):
+class PySlash(BaseToken):
     pass
 
 
-class PySlashSlash(Token):
+class PySlashSlash(BaseToken):
     pass
 
 
-class PyPercenct(Token):
+class PyPercenct(BaseToken):
     pass
 
 
-class PyLessThanLessThan(Token):
+class PyLessThanLessThan(BaseToken):
     pass
 
 
-class PyGreaterThanGreaterThan(Token):
+class PyGreaterThanGreaterThan(BaseToken):
     pass
 
 
-class PyVerticalBar(Token):
+class PyVerticalBar(BaseToken):
     pass
 
 
-class PyCaret(Token):
+class PyCaret(BaseToken):
     pass
 
 
-class PyAmpersand(Token):
+class PyAmpersand(BaseToken):
     pass
 
 
-class PyAtSign(Token):
+class PyAtSign(BaseToken):
     pass
 
 
-class PyOrKeyword(Token):
+class PyOrKeyword(BaseToken):
     pass
 
 
-class PyAndKeyword(Token):
+class PyAndKeyword(BaseToken):
     pass
 
 
-class PyEqualsEquals(Token):
+class PyEqualsEquals(BaseToken):
     pass
 
 
-class PyExclamationMarkEquals(Token):
+class PyExclamationMarkEquals(BaseToken):
     pass
 
 
-class PyLessThan(Token):
+class PyLessThan(BaseToken):
     pass
 
 
-class PyLessThanEquals(Token):
+class PyLessThanEquals(BaseToken):
     pass
 
 
-class PyGreaterThan(Token):
+class PyGreaterThan(BaseToken):
     pass
 
 
-class PyGreaterThanEquals(Token):
+class PyGreaterThanEquals(BaseToken):
     pass
 
 
-class PyIsKeyword(Token):
+class PyIsKeyword(BaseToken):
     pass
 
 
-class PyInKeyword(Token):
+class PyInKeyword(BaseToken):
     pass
 
 
-class PyReturnKeyword(Token):
+class PyReturnKeyword(BaseToken):
     pass
 
 
-class PyPassKeyword(Token):
+class PyPassKeyword(BaseToken):
     pass
 
 
-class PyIfKeyword(Token):
+class PyIfKeyword(BaseToken):
     pass
 
 
-class PyElifKeyword(Token):
+class PyElifKeyword(BaseToken):
     pass
 
 
-class PyElseKeyword(Token):
+class PyElseKeyword(BaseToken):
     pass
 
 
-class PyDelKeyword(Token):
+class PyDelKeyword(BaseToken):
     pass
 
 
-class PyRaiseKeyword(Token):
+class PyRaiseKeyword(BaseToken):
     pass
 
 
-class PyFormKeyword(Token):
+class PyFormKeyword(BaseToken):
     pass
 
 
-class PyForKeyword(Token):
+class PyForKeyword(BaseToken):
     pass
 
 
-class PyTypeKeyword(Token):
+class PyWhileKeyword(BaseToken):
     pass
 
 
-class PyClassKeyword(Token):
+class PyTypeKeyword(BaseToken):
     pass
 
 
-class PyAsteriskAsterisk(Token):
+class PyExceptKeyword(BaseToken):
     pass
 
 
-class PyAsyncKeyword(Token):
+class PyAsKeyword(BaseToken):
     pass
 
 
-class PyDefKeyword(Token):
+class PyTryKeyword(BaseToken):
     pass
 
 
-class PyHyphenGreaterThan(Token):
+class PyFinallyKeyword(BaseToken):
     pass
 
 
-class PyIdent(Token):
+class PyClassKeyword(BaseToken):
+    pass
+
+
+class PyAsteriskAsterisk(BaseToken):
+    pass
+
+
+class PyAsyncKeyword(BaseToken):
+    pass
+
+
+class PyDefKeyword(BaseToken):
+    pass
+
+
+class PyHyphenGreaterThan(BaseToken):
+    pass
+
+
+class PyIdent(BaseToken):
     def __init__(self, value: str | None = None, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
 
-class PyInteger(Token):
+class PyInteger(BaseToken):
     def __init__(self, value: int | None = None, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
 
-class PyFloat(Token):
+class PyFloat(BaseToken):
     def __init__(self, value: float | None = None, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
 
-class PyString(Token):
+class PyString(BaseToken):
     def __init__(self, value: str | None = None, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
 
-class PySlice(Node):
+class PySlice(BaseNode):
     def __init__(self, *, lower: 'PyExpr', colon: 'PyColon | None' = None, upper: 'PyExpr') -> None:
         self.lower: PyExpr = lower
         if colon is None:
@@ -285,7 +305,7 @@ def is_py_pattern(value: Any) -> TypeGuard[PyPattern]:
     return isinstance(value,PyNamedPattern) or isinstance(value,PyAttrPattern) or isinstance(value,PySubscriptPattern) or isinstance(value,PyStarredPattern) or isinstance(value,PyListPattern) or isinstance(value,PyTuplePattern)
 
 
-class PyNamedPattern(Node):
+class PyNamedPattern(BaseNode):
     def __init__(self, *, name: 'PyIdent | str') -> None:
         if isinstance(name,str):
             self.name: PyIdent = PyIdent(name)
@@ -295,7 +315,7 @@ class PyNamedPattern(Node):
 
 
 
-class PyAttrPattern(Node):
+class PyAttrPattern(BaseNode):
     def __init__(self, *, pattern: 'PyPattern', dot: 'PyDot | None' = None, name: 'PyIdent | str') -> None:
         self.pattern: PyPattern = pattern
         if dot is None:
@@ -311,7 +331,7 @@ class PyAttrPattern(Node):
 
 
 
-class PySubscriptPattern(Node):
+class PySubscriptPattern(BaseNode):
     def __init__(self, *, pattern: 'PyPattern', open_bracket: 'PyOpenBracket | None' = None, slices: 'None | list[tuple[(PyPattern | PySlice, PyComma | None)]]' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         self.pattern: PyPattern = pattern
         if open_bracket is None:
@@ -348,7 +368,7 @@ class PySubscriptPattern(Node):
 
 
 
-class PyStarredPattern(Node):
+class PyStarredPattern(BaseNode):
     def __init__(self, *, asterisk: 'PyAsterisk | None' = None, expr: 'PyExpr') -> None:
         if asterisk is None:
             self.asterisk: PyAsterisk = PyAsterisk()
@@ -359,7 +379,7 @@ class PyStarredPattern(Node):
 
 
 
-class PyListPattern(Node):
+class PyListPattern(BaseNode):
     def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'None | list[tuple[(PyPattern, PyComma | None)]]' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         if open_bracket is None:
             self.open_bracket: PyOpenBracket = PyOpenBracket()
@@ -395,7 +415,7 @@ class PyListPattern(Node):
 
 
 
-class PyTuplePattern(Node):
+class PyTuplePattern(BaseNode):
     def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'None | list[tuple[(PyPattern, PyComma | None)]]' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         if open_paren is None:
             self.open_paren: PyOpenParen = PyOpenParen()
@@ -437,7 +457,7 @@ def is_py_expr(value: Any) -> TypeGuard[PyExpr]:
     return isinstance(value,PyAttrExpr) or isinstance(value,PyCallExpr) or isinstance(value,PyConstExpr) or isinstance(value,PyInfixExpr) or isinstance(value,PyListExpr) or isinstance(value,PyNamedExpr) or isinstance(value,PyNestExpr) or isinstance(value,PyPrefixExpr) or isinstance(value,PyStarredExpr) or isinstance(value,PySubscriptExpr) or isinstance(value,PyTupleExpr)
 
 
-class PyConstExpr(Node):
+class PyConstExpr(BaseNode):
     def __init__(self, *, literal: 'PyString | str | PyFloat | float | PyInteger | int') -> None:
         if isinstance(literal,PyString) or isinstance(literal,str):
             if isinstance(literal,str):
@@ -463,7 +483,7 @@ class PyConstExpr(Node):
 
 
 
-class PyNestExpr(Node):
+class PyNestExpr(BaseNode):
     def __init__(self, *, open_paren: 'PyOpenParen | None' = None, expr: 'PyExpr', close_paren: 'PyCloseParen | None' = None) -> None:
         if open_paren is None:
             self.open_paren: PyOpenParen = PyOpenParen()
@@ -479,7 +499,7 @@ class PyNestExpr(Node):
 
 
 
-class PyNamedExpr(Node):
+class PyNamedExpr(BaseNode):
     def __init__(self, *, name: 'PyIdent | str') -> None:
         if isinstance(name,str):
             self.name: PyIdent = PyIdent(name)
@@ -489,7 +509,7 @@ class PyNamedExpr(Node):
 
 
 
-class PyAttrExpr(Node):
+class PyAttrExpr(BaseNode):
     def __init__(self, *, expr: 'PyExpr', dot: 'PyDot | None' = None, name: 'PyIdent | str') -> None:
         self.expr: PyExpr = expr
         if dot is None:
@@ -505,7 +525,7 @@ class PyAttrExpr(Node):
 
 
 
-class PySubscriptExpr(Node):
+class PySubscriptExpr(BaseNode):
     def __init__(self, *, expr: 'PyExpr', open_bracket: 'PyOpenBracket | None' = None, slices: 'None | list[tuple[(PyExpr | PySlice, PyComma | None)]]' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         self.expr: PyExpr = expr
         if open_bracket is None:
@@ -542,7 +562,7 @@ class PySubscriptExpr(Node):
 
 
 
-class PyStarredExpr(Node):
+class PyStarredExpr(BaseNode):
     def __init__(self, *, asterisk: 'PyAsterisk | None' = None, expr: 'PyExpr') -> None:
         if asterisk is None:
             self.asterisk: PyAsterisk = PyAsterisk()
@@ -553,7 +573,7 @@ class PyStarredExpr(Node):
 
 
 
-class PyListExpr(Node):
+class PyListExpr(BaseNode):
     def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'None | list[tuple[(PyExpr, PyComma | None)]]' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         if open_bracket is None:
             self.open_bracket: PyOpenBracket = PyOpenBracket()
@@ -589,7 +609,7 @@ class PyListExpr(Node):
 
 
 
-class PyTupleExpr(Node):
+class PyTupleExpr(BaseNode):
     def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'None | list[tuple[(PyExpr, PyComma | None)]]' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         if open_paren is None:
             self.open_paren: PyOpenParen = PyOpenParen()
@@ -637,7 +657,7 @@ def is_py_pos_arg(value: Any) -> TypeGuard[PyPosArg]:
     return is_py_expr(value)
 
 
-class PyKeywordArg(Node):
+class PyKeywordArg(BaseNode):
     def __init__(self, *, name: 'PyIdent | str', equals: 'PyEquals | None' = None, expr: 'PyExpr') -> None:
         if isinstance(name,str):
             self.name: PyIdent = PyIdent(name)
@@ -653,7 +673,7 @@ class PyKeywordArg(Node):
 
 
 
-class PyCallExpr(Node):
+class PyCallExpr(BaseNode):
     def __init__(self, *, operator: 'PyExpr', open_paren: 'PyOpenParen | None' = None, args: 'None | list[tuple[(PyArg, PyComma | None)]]' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         self.operator: PyExpr = operator
         if open_paren is None:
@@ -690,14 +710,14 @@ class PyCallExpr(Node):
 
 
 
-class PyPrefixOp(Token):
+class PyPrefixOp(BaseToken):
     def __init__(self, value: str | None = None, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
 
-class PyPrefixExpr(Node):
+class PyPrefixExpr(BaseNode):
     def __init__(self, *, prefix_op: 'PyPrefixOp | str', expr: 'PyExpr') -> None:
         if isinstance(prefix_op,str):
             self.prefix_op: PyPrefixOp = PyPrefixOp(prefix_op)
@@ -708,14 +728,14 @@ class PyPrefixExpr(Node):
 
 
 
-class PyInfixOp(Token):
+class PyInfixOp(BaseToken):
     def __init__(self, value: str | None = None, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
 
-class PyInfixExpr(Node):
+class PyInfixExpr(BaseNode):
     def __init__(self, *, left: 'PyExpr', op: 'PyInfixOp | str', right: 'PyExpr') -> None:
         self.left: PyExpr = left
         if isinstance(op,str):
@@ -727,13 +747,13 @@ class PyInfixExpr(Node):
 
 
 
-PyStmt: TypeAlias = 'PyRetStmt | PyExprStmt | PyAssignStmt | PyIfStmt | PyForStmt | PyRaiseStmt | PyDeleteStmt | PyTypeAliasStmt | PyClassDef | PyFuncDef | PyPassStmt'
+PyStmt: TypeAlias = 'PyAssignStmt | PyClassDef | PyDeleteStmt | PyExprStmt | PyForStmt | PyFuncDef | PyIfStmt | PyPassStmt | PyRaiseStmt | PyRetStmt | PyTryStmt | PyTypeAliasStmt | PyWhileStmt'
 
 def is_py_stmt(value: Any) -> TypeGuard[PyStmt]:
-    return isinstance(value,PyRetStmt) or isinstance(value,PyExprStmt) or isinstance(value,PyAssignStmt) or isinstance(value,PyIfStmt) or isinstance(value,PyForStmt) or isinstance(value,PyRaiseStmt) or isinstance(value,PyDeleteStmt) or isinstance(value,PyTypeAliasStmt) or isinstance(value,PyClassDef) or isinstance(value,PyFuncDef) or isinstance(value,PyPassStmt)
+    return isinstance(value,PyAssignStmt) or isinstance(value,PyClassDef) or isinstance(value,PyDeleteStmt) or isinstance(value,PyExprStmt) or isinstance(value,PyForStmt) or isinstance(value,PyFuncDef) or isinstance(value,PyIfStmt) or isinstance(value,PyPassStmt) or isinstance(value,PyRaiseStmt) or isinstance(value,PyRetStmt) or isinstance(value,PyTryStmt) or isinstance(value,PyTypeAliasStmt) or isinstance(value,PyWhileStmt)
 
 
-class PyRetStmt(Node):
+class PyRetStmt(BaseNode):
     def __init__(self, *, return_keyword: 'PyReturnKeyword | None' = None, expr: 'PyExpr') -> None:
         if return_keyword is None:
             self.return_keyword: PyReturnKeyword = PyReturnKeyword()
@@ -744,13 +764,13 @@ class PyRetStmt(Node):
 
 
 
-class PyExprStmt(Node):
+class PyExprStmt(BaseNode):
     def __init__(self, *, expr: 'PyExpr') -> None:
         self.expr: PyExpr = expr
 
 
 
-class PyAssignStmt(Node):
+class PyAssignStmt(BaseNode):
     def __init__(self, *, pattern: 'PyPattern', annotation: 'PyExpr | tuple[(PyColon | None, PyExpr)] | None' = None, equals: 'PyEquals | None' = None, expr: 'PyExpr') -> None:
         self.pattern: PyPattern = pattern
         if is_py_expr(annotation) or isinstance(annotation,tuple):
@@ -782,7 +802,7 @@ class PyAssignStmt(Node):
 
 
 
-class PyPassStmt(Node):
+class PyPassStmt(BaseNode):
     def __init__(self, *, pass_keyword: 'PyPassKeyword | None' = None) -> None:
         if pass_keyword is None:
             self.pass_keyword: PyPassKeyword = PyPassKeyword()
@@ -792,7 +812,7 @@ class PyPassStmt(Node):
 
 
 
-class PyIfCase(Node):
+class PyIfCase(BaseNode):
     def __init__(self, *, if_keyword: 'PyIfKeyword | None' = None, test: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
         if if_keyword is None:
             self.if_keyword: PyIfKeyword = PyIfKeyword()
@@ -824,7 +844,7 @@ class PyIfCase(Node):
 
 
 
-class PyElifCase(Node):
+class PyElifCase(BaseNode):
     def __init__(self, *, elif_keyword: 'PyElifKeyword | None' = None, test: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
         if elif_keyword is None:
             self.elif_keyword: PyElifKeyword = PyElifKeyword()
@@ -856,7 +876,7 @@ class PyElifCase(Node):
 
 
 
-class PyElseCase(Node):
+class PyElseCase(BaseNode):
     def __init__(self, *, else_keyword: 'PyElseKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
         if else_keyword is None:
             self.else_keyword: PyElseKeyword = PyElseKeyword()
@@ -887,7 +907,7 @@ class PyElseCase(Node):
 
 
 
-class PyIfStmt(Node):
+class PyIfStmt(BaseNode):
     def __init__(self, *, first: 'PyIfCase', alternatives: 'None | list[PyElifCase]' = None, last: 'PyElseCase | None' = None) -> None:
         self.first: PyIfCase = first
         if alternatives is None:
@@ -904,7 +924,7 @@ class PyIfStmt(Node):
 
 
 
-class PyDeleteStmt(Node):
+class PyDeleteStmt(BaseNode):
     def __init__(self, *, del_keyword: 'PyDelKeyword | None' = None, pattern: 'PyPattern') -> None:
         if del_keyword is None:
             self.del_keyword: PyDelKeyword = PyDelKeyword()
@@ -915,7 +935,7 @@ class PyDeleteStmt(Node):
 
 
 
-class PyRaiseStmt(Node):
+class PyRaiseStmt(BaseNode):
     def __init__(self, *, raise_keyword: 'PyRaiseKeyword | None' = None, expr: 'PyExpr', cause: 'PyExpr | tuple[(PyFormKeyword | None, PyExpr)] | None' = None) -> None:
         if raise_keyword is None:
             self.raise_keyword: PyRaiseKeyword = PyRaiseKeyword()
@@ -946,8 +966,8 @@ class PyRaiseStmt(Node):
 
 
 
-class PyForStmt(Node):
-    def __init__(self, *, for_keyword: 'PyForKeyword | None' = None, pattern: 'PyPattern', in_keyword: 'PyInKeyword | None' = None, expr: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
+class PyForStmt(BaseNode):
+    def __init__(self, *, for_keyword: 'PyForKeyword | None' = None, pattern: 'PyPattern', in_keyword: 'PyInKeyword | None' = None, expr: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None, else_clause: 'PyStmt | None | list[PyStmt] | tuple[(PyElseKeyword | None, PyStmt | None | list[PyStmt])] | None' = None) -> None:
         if for_keyword is None:
             self.for_keyword: PyForKeyword = PyForKeyword()
         else:
@@ -981,10 +1001,142 @@ class PyForStmt(Node):
         else:
             raise ValueError("the field 'body' received an unrecognised value'")
 
+        if is_py_stmt(else_clause) or else_clause is None or isinstance(else_clause,list) or isinstance(else_clause,tuple):
+            if is_py_stmt(else_clause) or else_clause is None or isinstance(else_clause,list):
+                if is_py_stmt(else_clause):
+                    self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), else_clause)
+                elif else_clause is None or isinstance(else_clause,list):
+                    if else_clause is None:
+                        self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), list())
+                    else:
+                        new_else_clause = list()
+                        for else_clause_element in else_clause:
+                            new_else_clause_element = else_clause_element
+                            new_else_clause.append(new_else_clause_element)
+
+                        self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), new_else_clause)
+
+                else:
+                    raise ValueError("the field 'else_clause' received an unrecognised value'")
+
+            else:
+                assert(isinstance(else_clause,tuple))
+                else_clause_0 = else_clause[0]
+                if else_clause_0 is None:
+                    new_else_clause_0 = PyElseKeyword()
+                else:
+                    new_else_clause_0 = else_clause_0
+
+                else_clause_1 = else_clause[1]
+                if is_py_stmt(else_clause_1):
+                    new_else_clause_1 = else_clause_1
+                elif else_clause_1 is None or isinstance(else_clause_1,list):
+                    if else_clause_1 is None:
+                        new_else_clause_1 = list()
+                    else:
+                        new_else_clause_1 = list()
+                        for else_clause_1_element in else_clause_1:
+                            new_else_clause_1_element = else_clause_1_element
+                            new_else_clause_1.append(new_else_clause_1_element)
+
+                        new_else_clause_1 = new_else_clause_1
+
+                else:
+                    raise ValueError("the field 'else_clause' received an unrecognised value'")
+
+                self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = (new_else_clause_0, new_else_clause_1)
+
+        elif else_clause is None:
+            self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = None
+        else:
+            raise ValueError("the field 'else_clause' received an unrecognised value'")
 
 
 
-class PyTypeAliasStmt(Node):
+
+class PyWhileStmt(BaseNode):
+    def __init__(self, *, while_keyword: 'PyWhileKeyword | None' = None, expr: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None, else_clause: 'PyStmt | None | list[PyStmt] | tuple[(PyElseKeyword | None, PyStmt | None | list[PyStmt])] | None' = None) -> None:
+        if while_keyword is None:
+            self.while_keyword: PyWhileKeyword = PyWhileKeyword()
+        else:
+            self.while_keyword: PyWhileKeyword = while_keyword
+
+        self.expr: PyExpr = expr
+        if colon is None:
+            self.colon: PyColon = PyColon()
+        else:
+            self.colon: PyColon = colon
+
+        if is_py_stmt(body):
+            self.body: PyStmt | list[PyStmt] = body
+        elif body is None or isinstance(body,list):
+            if body is None:
+                self.body: PyStmt | list[PyStmt] = list()
+            else:
+                new_body = list()
+                for body_element in body:
+                    new_body_element = body_element
+                    new_body.append(new_body_element)
+
+                self.body: PyStmt | list[PyStmt] = new_body
+
+        else:
+            raise ValueError("the field 'body' received an unrecognised value'")
+
+        if is_py_stmt(else_clause) or else_clause is None or isinstance(else_clause,list) or isinstance(else_clause,tuple):
+            if is_py_stmt(else_clause) or else_clause is None or isinstance(else_clause,list):
+                if is_py_stmt(else_clause):
+                    self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), else_clause)
+                elif else_clause is None or isinstance(else_clause,list):
+                    if else_clause is None:
+                        self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), list())
+                    else:
+                        new_else_clause = list()
+                        for else_clause_element in else_clause:
+                            new_else_clause_element = else_clause_element
+                            new_else_clause.append(new_else_clause_element)
+
+                        self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), new_else_clause)
+
+                else:
+                    raise ValueError("the field 'else_clause' received an unrecognised value'")
+
+            else:
+                assert(isinstance(else_clause,tuple))
+                else_clause_0 = else_clause[0]
+                if else_clause_0 is None:
+                    new_else_clause_0 = PyElseKeyword()
+                else:
+                    new_else_clause_0 = else_clause_0
+
+                else_clause_1 = else_clause[1]
+                if is_py_stmt(else_clause_1):
+                    new_else_clause_1 = else_clause_1
+                elif else_clause_1 is None or isinstance(else_clause_1,list):
+                    if else_clause_1 is None:
+                        new_else_clause_1 = list()
+                    else:
+                        new_else_clause_1 = list()
+                        for else_clause_1_element in else_clause_1:
+                            new_else_clause_1_element = else_clause_1_element
+                            new_else_clause_1.append(new_else_clause_1_element)
+
+                        new_else_clause_1 = new_else_clause_1
+
+                else:
+                    raise ValueError("the field 'else_clause' received an unrecognised value'")
+
+                self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = (new_else_clause_0, new_else_clause_1)
+
+        elif else_clause is None:
+            self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = None
+        else:
+            raise ValueError("the field 'else_clause' received an unrecognised value'")
+
+
+
+
+class PyTypeAliasStmt(BaseNode):
     def __init__(self, *, type_keyword: 'PyTypeKeyword | None' = None, name: 'PyIdent | str', type_params: 'None | list[tuple[(PyExpr, PyComma | None)]] | tuple[(PyOpenBracket | None, None | list[tuple[(PyExpr, PyComma | None)]], PyCloseBracket | None)] | None' = None, equals: 'PyEquals | None' = None, expr: 'PyExpr') -> None:
         if type_keyword is None:
             self.type_keyword: PyTypeKeyword = PyTypeKeyword()
@@ -997,7 +1149,7 @@ class PyTypeAliasStmt(Node):
             self.name: PyIdent = name
 
         if type_params is None or isinstance(type_params,list) or isinstance(type_params,tuple):
-            if isinstance(type_params,list):
+            if type_params is None or isinstance(type_params,list):
                 if type_params is None:
                     self.type_params: tuple[(PyOpenBracket, list[tuple[(PyExpr, PyComma | None)]], PyCloseBracket)] | None = (PyOpenBracket(), list(), PyCloseBracket())
                 else:
@@ -1071,7 +1223,203 @@ class PyTypeAliasStmt(Node):
 
 
 
-class PyClassDef(Node):
+class PyExceptHandler(BaseNode):
+    def __init__(self, *, except_keyword: 'PyExceptKeyword | None' = None, expr: 'PyExpr', binder: 'PyIdent | str | tuple[(PyAsKeyword | None, PyIdent | str)] | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
+        if except_keyword is None:
+            self.except_keyword: PyExceptKeyword = PyExceptKeyword()
+        else:
+            self.except_keyword: PyExceptKeyword = except_keyword
+
+        self.expr: PyExpr = expr
+        if isinstance(binder,PyIdent) or isinstance(binder,str) or isinstance(binder,tuple):
+            if isinstance(binder,PyIdent) or isinstance(binder,str):
+                if isinstance(binder,str):
+                    self.binder: tuple[(PyAsKeyword, PyIdent)] | None = (PyAsKeyword(), PyIdent(binder))
+                else:
+                    self.binder: tuple[(PyAsKeyword, PyIdent)] | None = (PyAsKeyword(), binder)
+
+            else:
+                assert(isinstance(binder,tuple))
+                binder_0 = binder[0]
+                if binder_0 is None:
+                    new_binder_0 = PyAsKeyword()
+                else:
+                    new_binder_0 = binder_0
+
+                binder_1 = binder[1]
+                if isinstance(binder_1,str):
+                    new_binder_1 = PyIdent(binder_1)
+                else:
+                    new_binder_1 = binder_1
+
+                self.binder: tuple[(PyAsKeyword, PyIdent)] | None = (new_binder_0, new_binder_1)
+
+        elif binder is None:
+            self.binder: tuple[(PyAsKeyword, PyIdent)] | None = None
+        else:
+            raise ValueError("the field 'binder' received an unrecognised value'")
+
+        if is_py_stmt(body):
+            self.body: PyStmt | list[PyStmt] = body
+        elif body is None or isinstance(body,list):
+            if body is None:
+                self.body: PyStmt | list[PyStmt] = list()
+            else:
+                new_body = list()
+                for body_element in body:
+                    new_body_element = body_element
+                    new_body.append(new_body_element)
+
+                self.body: PyStmt | list[PyStmt] = new_body
+
+        else:
+            raise ValueError("the field 'body' received an unrecognised value'")
+
+
+
+
+class PyTryStmt(BaseNode):
+    def __init__(self, *, try_keyword: 'PyTryKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None, handlers: 'None | list[PyExceptHandler]' = None, else_clause: 'PyStmt | None | list[PyStmt] | tuple[(PyElseKeyword | None, PyStmt | None | list[PyStmt])] | None' = None, finally_clause: 'PyStmt | None | list[PyStmt] | tuple[(PyFinallyKeyword | None, PyStmt | None | list[PyStmt])] | None' = None) -> None:
+        if try_keyword is None:
+            self.try_keyword: PyTryKeyword = PyTryKeyword()
+        else:
+            self.try_keyword: PyTryKeyword = try_keyword
+
+        if colon is None:
+            self.colon: PyColon = PyColon()
+        else:
+            self.colon: PyColon = colon
+
+        if is_py_stmt(body):
+            self.body: PyStmt | list[PyStmt] = body
+        elif body is None or isinstance(body,list):
+            if body is None:
+                self.body: PyStmt | list[PyStmt] = list()
+            else:
+                new_body = list()
+                for body_element in body:
+                    new_body_element = body_element
+                    new_body.append(new_body_element)
+
+                self.body: PyStmt | list[PyStmt] = new_body
+
+        else:
+            raise ValueError("the field 'body' received an unrecognised value'")
+
+        if handlers is None:
+            self.handlers: list[PyExceptHandler] = list()
+        else:
+            new_handlers = list()
+            for handlers_element in handlers:
+                new_handlers_element = handlers_element
+                new_handlers.append(new_handlers_element)
+
+            self.handlers: list[PyExceptHandler] = new_handlers
+
+        if is_py_stmt(else_clause) or else_clause is None or isinstance(else_clause,list) or isinstance(else_clause,tuple):
+            if is_py_stmt(else_clause) or else_clause is None or isinstance(else_clause,list):
+                if is_py_stmt(else_clause):
+                    self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), else_clause)
+                elif else_clause is None or isinstance(else_clause,list):
+                    if else_clause is None:
+                        self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), list())
+                    else:
+                        new_else_clause = list()
+                        for else_clause_element in else_clause:
+                            new_else_clause_element = else_clause_element
+                            new_else_clause.append(new_else_clause_element)
+
+                        self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), new_else_clause)
+
+                else:
+                    raise ValueError("the field 'else_clause' received an unrecognised value'")
+
+            else:
+                assert(isinstance(else_clause,tuple))
+                else_clause_0 = else_clause[0]
+                if else_clause_0 is None:
+                    new_else_clause_0 = PyElseKeyword()
+                else:
+                    new_else_clause_0 = else_clause_0
+
+                else_clause_1 = else_clause[1]
+                if is_py_stmt(else_clause_1):
+                    new_else_clause_1 = else_clause_1
+                elif else_clause_1 is None or isinstance(else_clause_1,list):
+                    if else_clause_1 is None:
+                        new_else_clause_1 = list()
+                    else:
+                        new_else_clause_1 = list()
+                        for else_clause_1_element in else_clause_1:
+                            new_else_clause_1_element = else_clause_1_element
+                            new_else_clause_1.append(new_else_clause_1_element)
+
+                        new_else_clause_1 = new_else_clause_1
+
+                else:
+                    raise ValueError("the field 'else_clause' received an unrecognised value'")
+
+                self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = (new_else_clause_0, new_else_clause_1)
+
+        elif else_clause is None:
+            self.else_clause: tuple[(PyElseKeyword, PyStmt | list[PyStmt])] | None = None
+        else:
+            raise ValueError("the field 'else_clause' received an unrecognised value'")
+
+        if is_py_stmt(finally_clause) or finally_clause is None or isinstance(finally_clause,list) or isinstance(finally_clause,tuple):
+            if is_py_stmt(finally_clause) or finally_clause is None or isinstance(finally_clause,list):
+                if is_py_stmt(finally_clause):
+                    self.finally_clause: tuple[(PyFinallyKeyword, PyStmt | list[PyStmt])] | None = (PyFinallyKeyword(), finally_clause)
+                elif finally_clause is None or isinstance(finally_clause,list):
+                    if finally_clause is None:
+                        self.finally_clause: tuple[(PyFinallyKeyword, PyStmt | list[PyStmt])] | None = (PyFinallyKeyword(), list())
+                    else:
+                        new_finally_clause = list()
+                        for finally_clause_element in finally_clause:
+                            new_finally_clause_element = finally_clause_element
+                            new_finally_clause.append(new_finally_clause_element)
+
+                        self.finally_clause: tuple[(PyFinallyKeyword, PyStmt | list[PyStmt])] | None = (PyFinallyKeyword(), new_finally_clause)
+
+                else:
+                    raise ValueError("the field 'finally_clause' received an unrecognised value'")
+
+            else:
+                assert(isinstance(finally_clause,tuple))
+                finally_clause_0 = finally_clause[0]
+                if finally_clause_0 is None:
+                    new_finally_clause_0 = PyFinallyKeyword()
+                else:
+                    new_finally_clause_0 = finally_clause_0
+
+                finally_clause_1 = finally_clause[1]
+                if is_py_stmt(finally_clause_1):
+                    new_finally_clause_1 = finally_clause_1
+                elif finally_clause_1 is None or isinstance(finally_clause_1,list):
+                    if finally_clause_1 is None:
+                        new_finally_clause_1 = list()
+                    else:
+                        new_finally_clause_1 = list()
+                        for finally_clause_1_element in finally_clause_1:
+                            new_finally_clause_1_element = finally_clause_1_element
+                            new_finally_clause_1.append(new_finally_clause_1_element)
+
+                        new_finally_clause_1 = new_finally_clause_1
+
+                else:
+                    raise ValueError("the field 'finally_clause' received an unrecognised value'")
+
+                self.finally_clause: tuple[(PyFinallyKeyword, PyStmt | list[PyStmt])] | None = (new_finally_clause_0, new_finally_clause_1)
+
+        elif finally_clause is None:
+            self.finally_clause: tuple[(PyFinallyKeyword, PyStmt | list[PyStmt])] | None = None
+        else:
+            raise ValueError("the field 'finally_clause' received an unrecognised value'")
+
+
+
+
+class PyClassDef(BaseNode):
     def __init__(self, *, class_keyword: 'PyClassKeyword | None' = None, name: 'PyIdent | str', bases: 'None | list[tuple[(PyIdent | str, PyComma | None)]] | tuple[(PyOpenParen | None, None | list[tuple[(PyIdent | str, PyComma | None)]], PyCloseParen | None)] | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
         if class_keyword is None:
             self.class_keyword: PyClassKeyword = PyClassKeyword()
@@ -1084,7 +1432,7 @@ class PyClassDef(Node):
             self.name: PyIdent = name
 
         if bases is None or isinstance(bases,list) or isinstance(bases,tuple):
-            if isinstance(bases,list):
+            if bases is None or isinstance(bases,list):
                 if bases is None:
                     self.bases: tuple[(PyOpenParen, list[tuple[(PyIdent, PyComma | None)]], PyCloseParen)] | None = (PyOpenParen(), list(), PyCloseParen())
                 else:
@@ -1187,7 +1535,7 @@ def is_py_param(value: Any) -> TypeGuard[PyParam]:
     return isinstance(value,PyNamedParam) or isinstance(value,PyRestPosParam) or isinstance(value,PyRestKeywordParam) or isinstance(value,PySepParam)
 
 
-class PyNamedParam(Node):
+class PyNamedParam(BaseNode):
     def __init__(self, *, pattern: 'PyPattern', annotation: 'PyExpr | tuple[(PyColon | None, PyExpr)] | None' = None, default: 'PyExpr | tuple[(PyEquals | None, PyExpr)] | None' = None) -> None:
         self.pattern: PyPattern = pattern
         if is_py_expr(annotation) or isinstance(annotation,tuple):
@@ -1233,7 +1581,7 @@ class PyNamedParam(Node):
 
 
 
-class PyRestPosParam(Node):
+class PyRestPosParam(BaseNode):
     def __init__(self, *, asterisk: 'PyAsterisk | None' = None, name: 'PyIdent | str') -> None:
         if asterisk is None:
             self.asterisk: PyAsterisk = PyAsterisk()
@@ -1248,7 +1596,7 @@ class PyRestPosParam(Node):
 
 
 
-class PyRestKeywordParam(Node):
+class PyRestKeywordParam(BaseNode):
     def __init__(self, *, asterisk_asterisk: 'PyAsteriskAsterisk | None' = None, name: 'PyIdent | str') -> None:
         if asterisk_asterisk is None:
             self.asterisk_asterisk: PyAsteriskAsterisk = PyAsteriskAsterisk()
@@ -1263,7 +1611,7 @@ class PyRestKeywordParam(Node):
 
 
 
-class PySepParam(Node):
+class PySepParam(BaseNode):
     def __init__(self, *, asterisk: 'PyAsterisk | None' = None) -> None:
         if asterisk is None:
             self.asterisk: PyAsterisk = PyAsterisk()
@@ -1273,7 +1621,7 @@ class PySepParam(Node):
 
 
 
-class PyFuncDef(Node):
+class PyFuncDef(BaseNode):
     def __init__(self, *, async_keyword: 'PyAsyncKeyword | None' = None, def_keyword: 'PyDefKeyword | None' = None, name: 'PyIdent | str', open_paren: 'PyOpenParen | None' = None, params: 'None | list[tuple[(PyParam, PyComma | None)]]' = None, close_paren: 'PyCloseParen | None' = None, return_type: 'PyExpr | tuple[(PyHyphenGreaterThan | None, PyExpr)] | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
         if isinstance(async_keyword,PyAsyncKeyword):
             self.async_keyword: PyAsyncKeyword | None = async_keyword
@@ -1367,7 +1715,7 @@ class PyFuncDef(Node):
 
 
 
-class PyModule(Node):
+class PyModule(BaseNode):
     def __init__(self, *, stmts: 'None | list[PyStmt]' = None) -> None:
         if stmts is None:
             self.stmts: list[PyStmt] = list()
@@ -1382,7 +1730,9 @@ class PyModule(Node):
 
 
 
-Node = PyCarriageReturnLineFeed | PyLineFeed | PySemicolon | PyZero | PyDot | PyDoubleQuote | PySingleQuote | PyColon | PyOpenBracket | PyComma | PyCloseBracket | PyAsterisk | PyOpenParen | PyCloseParen | PyEquals | PyNotKeyword | PyPlus | PyHyphen | PyTilde | PySlash | PySlashSlash | PyPercenct | PyLessThanLessThan | PyGreaterThanGreaterThan | PyVerticalBar | PyCaret | PyAmpersand | PyAtSign | PyOrKeyword | PyAndKeyword | PyEqualsEquals | PyExclamationMarkEquals | PyLessThan | PyLessThanEquals | PyGreaterThan | PyGreaterThanEquals | PyIsKeyword | PyInKeyword | PyReturnKeyword | PyPassKeyword | PyIfKeyword | PyElifKeyword | PyElseKeyword | PyDelKeyword | PyRaiseKeyword | PyFormKeyword | PyForKeyword | PyTypeKeyword | PyClassKeyword | PyAsteriskAsterisk | PyAsyncKeyword | PyDefKeyword | PyHyphenGreaterThan | PyIdent | PyInteger | PyFloat | PyString | PySlice | PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern | PyConstExpr | PyNestExpr | PyNamedExpr | PyAttrExpr | PySubscriptExpr | PyStarredExpr | PyListExpr | PyTupleExpr | PyKeywordArg | PyCallExpr | PyPrefixOp | PyPrefixExpr | PyInfixOp | PyInfixExpr | PyRetStmt | PyExprStmt | PyAssignStmt | PyPassStmt | PyIfCase | PyElifCase | PyElseCase | PyIfStmt | PyDeleteStmt | PyRaiseStmt | PyForStmt | PyTypeAliasStmt | PyClassDef | PyNamedParam | PyRestPosParam | PyRestKeywordParam | PySepParam | PyFuncDef | PyModule
+Token = PyCarriageReturnLineFeed | PyLineFeed | PySemicolon | PyZero | PyDot | PyDoubleQuote | PySingleQuote | PyColon | PyOpenBracket | PyComma | PyCloseBracket | PyAsterisk | PyOpenParen | PyCloseParen | PyEquals | PyNotKeyword | PyPlus | PyHyphen | PyTilde | PySlash | PySlashSlash | PyPercenct | PyLessThanLessThan | PyGreaterThanGreaterThan | PyVerticalBar | PyCaret | PyAmpersand | PyAtSign | PyOrKeyword | PyAndKeyword | PyEqualsEquals | PyExclamationMarkEquals | PyLessThan | PyLessThanEquals | PyGreaterThan | PyGreaterThanEquals | PyIsKeyword | PyInKeyword | PyReturnKeyword | PyPassKeyword | PyIfKeyword | PyElifKeyword | PyElseKeyword | PyDelKeyword | PyRaiseKeyword | PyFormKeyword | PyForKeyword | PyWhileKeyword | PyTypeKeyword | PyExceptKeyword | PyAsKeyword | PyTryKeyword | PyFinallyKeyword | PyClassKeyword | PyAsteriskAsterisk | PyAsyncKeyword | PyDefKeyword | PyHyphenGreaterThan | PyIdent | PyInteger | PyFloat | PyString | PyPrefixOp | PyInfixOp
+
+Node = PySlice | PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern | PyConstExpr | PyNestExpr | PyNamedExpr | PyAttrExpr | PySubscriptExpr | PyStarredExpr | PyListExpr | PyTupleExpr | PyKeywordArg | PyCallExpr | PyPrefixExpr | PyInfixExpr | PyRetStmt | PyExprStmt | PyAssignStmt | PyPassStmt | PyIfCase | PyElifCase | PyElseCase | PyIfStmt | PyDeleteStmt | PyRaiseStmt | PyForStmt | PyWhileStmt | PyTypeAliasStmt | PyExceptHandler | PyTryStmt | PyClassDef | PyNamedParam | PyRestPosParam | PyRestKeywordParam | PySepParam | PyFuncDef | PyModule
 
 
 
