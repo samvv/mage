@@ -24,8 +24,10 @@ class LookaheadExpr(Expr):
     expr: Expr
     is_negated: bool
 
+type CharSetElement = str | tuple[str, str]
+
 class CharSetExpr(Expr):
-    elements: list[str | tuple[str, str]]
+    elements: list[CharSetElement]
     ci: bool
     invert: bool
 
