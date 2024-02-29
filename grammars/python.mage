@@ -170,7 +170,9 @@ pub infix_expr
 
 pub stmt
   = assign_stmt
+  | break_stmt
   | class_def
+  | continue_stmt
   | delete_stmt
   | expr_stmt
   | for_stmt
@@ -218,10 +220,17 @@ pub raise_stmt
   = 'raise' expr cause:('form' expr)?
 
 pub for_stmt
-  = 'for' pattern 'in' expr ':' body else_clause:('else' body)?
+  = 'for' pattern 'in' expr ':' body else_clause:('else' ':' body)?
 
+# TODO expr should be test:expr
 pub while_stmt
-  = 'while' expr ':' body else_clause:('else' body)?
+  = 'while' expr ':' body else_clause:('else' ':' body)?
+
+pub break_stmt
+  = 'break'
+
+pub continue_stmt
+  = 'continue'
 
 pub type_alias_stmt
   = 'type' name:ident type_params:('[' (expr % ',') ']')? '=' expr
@@ -230,7 +239,7 @@ pub except_handler
   = 'except' expr binder:('as' ident)? body
 
 pub try_stmt
-  = 'try' ':' body handlers:except_handler* else_clause:('else' body)? finally_clause:('finally' body)?
+  = 'try' ':' body handlers:except_handler* else_clause:('else' ':' body)? finally_clause:('finally' ':' body)?
 
 # TODO add keyworded bases
 pub class_def
