@@ -1,5 +1,5 @@
 
-from typing import TypeAlias, TypeGuard, Any
+from typing import TypeAlias, TypeGuard, Any, Callable
 
 class TextPos:
 
@@ -17,15 +17,16 @@ class Span:
     def __len__(self) -> int:
         return self.end_offset - self.start_offset
 
-class BaseToken:
+class _BaseToken:
 
     def __init__(self, span: Span | None = None) -> None:
         self.span = span
 
-class BaseNode:
+class _BaseNode:
 
     def __init__(self) -> None:
         pass
 
-{{cst(grammar, prefix)}}
+{{cst()}}
 
+{{visitor()}}

@@ -1,15 +1,17 @@
 
 from io import StringIO
-from sweetener import IndentWriter, lt, warn
+from sweetener import IndentWriter
+
 from .cst import *
 
-def emit(node: Node) -> str:
+def emit(node: PyNode) -> str:
 
     string = StringIO()
     out = IndentWriter(string, indentation='    ')
 
     def visit_body(body: 'PyStmt | list[PyStmt]') -> None:
         if is_py_stmt(body):
+            out.write(' ')
             visit(body)
         else:
             assert(isinstance(body, list))
@@ -20,7 +22,7 @@ def emit(node: Node) -> str:
                 out.write('\n')
             out.dedent()
 
-    def visit(node: Node | Token) -> None:
+    def visit(node: PySyntax) -> None:
 
         if isinstance(node, PyIdent):
             if node.value is not None:
@@ -98,6 +100,10 @@ def emit(node: Node) -> str:
             out.write('else')
             return
 
+        if isinstance(node, PyWhileKeyword):
+            out.write('while')
+            return
+
         if isinstance(node, PyDefKeyword):
             out.write('def')
             return
@@ -142,6 +148,17 @@ def emit(node: Node) -> str:
             visit(node.name)
             return
 
+        if isinstance(node, PyListExpr):
+            visit(node.open_bracket)
+            for element in node.elements:
+                expr, comma = element
+                visit(expr)
+                if comma is not None:
+                    visit(comma)
+                    out.write(' ')
+            visit(node.close_bracket)
+            return
+
         if isinstance(node, PyConstExpr):
             visit(node.literal)
             return
@@ -175,6 +192,7 @@ def emit(node: Node) -> str:
                 visit(arg)
                 if comma is not None:
                     visit(comma)
+                    out.write(' ')
             visit(node.close_paren)
             return
 
@@ -231,8 +249,9 @@ def emit(node: Node) -> str:
 
         if isinstance(node, PyRetStmt):
             visit(node.return_keyword)
-            out.write(' ')
-            visit(node.expr)
+            if node.expr is not None:
+                out.write(' ')
+                visit(node.expr)
             return
 
         if isinstance(node, PyIfCase):
@@ -261,6 +280,19 @@ def emit(node: Node) -> str:
             visit(node.expr)
             visit(node.colon)
             visit_body(node.body)
+            return
+
+        if isinstance(node, PyWhileStmt):
+            visit(node.while_keyword)
+            out.write(' ')
+            visit(node.expr)
+            visit(node.colon)
+            visit_body(node.body)
+            if node.else_clause is not None:
+                else_keyword, colon, body = node.else_clause
+                visit(else_keyword)
+                visit(colon)
+                visit_body(body)
             return
 
         if isinstance(node, PyElseCase):

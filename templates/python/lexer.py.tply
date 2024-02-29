@@ -1,12 +1,32 @@
 
 from .cst import *
 
+EOF = '\uFFFF'
+
+class ScanError(RuntimeError):
+    pass
+
 class Lexer:
 
     def __init__(self, text: str, start_offset = 0, start_line = 1, start_column = 1) -> None:
         self._text = text
-        self._curr_pos = TextPos(start_offset, start_line, start_column)
+        self._curr_offset = start_offset
+        self._curr_pos = LineColumn(start_line, start_column)
+
+    def _get_char(self) -> str:
+        ch = self._text[self._curr_offset]
+        if ch == EOF:
+            return EOF
+        self._curr_offset += 1
+        {% if enable_linecol %}
+        if ch == '\n':
+            self._curr_pos.line += 1
+            self._curr_pos.column = 1
+        else:
+            self._curr_pos.column += 1
+        {% endif %}
+        return ch
 
     def lex(self) -> Token:
-        {{lexer_logic(grammar)}}
+        {{lexer_logic()}}
 
