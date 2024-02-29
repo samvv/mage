@@ -186,7 +186,7 @@ pub stmt
   | while_stmt
 
 pub ret_stmt
-  = 'return' expr \eos
+  = 'return' expr?
 
 pub expr_stmt
   = expr \eos
