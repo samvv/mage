@@ -41,6 +41,8 @@ def _do_generate(args) -> int:
     file = args.file[0]
     dest_dir = Path(args.out_dir)
     prefix = args.prefix
+    template_name = args.template
+    enable_linecol = True
 
     with open(file, 'r') as f:
         text = f.read()
@@ -56,9 +58,14 @@ def _do_generate(args) -> int:
     ctx = {
         'prefix': prefix + '_' if prefix else '',
         'grammar': grammar,
+        'enable_linecol': enable_linecol,
     }
 
-    templaty.execute_dir(templates_dir / args.template, dest_dir=dest_dir, ctx=ctx, force=args.force)
+    indentation = None
+    if template_name == 'python':
+        indentation = '    '
+
+    templaty.execute_dir(templates_dir / template_name, dest_dir=dest_dir, ctx=ctx, force=args.force, indentation=indentation)
 
     return 0
 
