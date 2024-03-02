@@ -7,15 +7,21 @@ any_char = [\x00-\x7F]
 eof = !any_byte
 
 extern token indent
+extern token dedent
 
 # Helper utilities
 
 @skip
-skip = [\s]+
+__ = ([\n\r\t ] | '\\' eolf)*
+
+_ = [\t ]*
 
 eol = '\r\n' | '\n'
 
 eolf = eol | eof
+
+line_comment
+  = '#' (!eolf any_char)*
 
 eos
   = __ ';'
@@ -189,7 +195,7 @@ pub ret_stmt
   = 'return' expr?
 
 pub expr_stmt
-  = expr \eos
+  = expr
 
 # TODO make '= expr' optional 
 pub assign_stmt
@@ -198,8 +204,9 @@ pub assign_stmt
 pub pass_stmt
   = 'pass'
 
+@noskip
 body
-  = stmt | \indent body:(stmt \eolf)* \dedent
+  = stmt | \indent body:(stmt \eos)* \dedent
 
 pub if_case
    = 'if' test:expr ':' body
