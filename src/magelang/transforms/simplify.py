@@ -1,11 +1,7 @@
 
-from sweetener import warn
-from .ast import *
+from ..ast import *
 
-FAIL = 1
-EMPTY = 2
-
-def transform(grammar: Grammar) -> Grammar:
+def simplify(grammar: Grammar) -> Grammar:
 
     def make_fail() -> Expr:
         return ChoiceExpr([])
@@ -94,12 +90,12 @@ def transform(grammar: Grammar) -> Grammar:
 
     new_rules = []
     for rule in grammar.rules:
+        if rule.is_extern:
+            new_rules.append(rule)
+            continue
+        assert(rule.expr is not None)
         # FIXME not sure why this call to flatten is necessary for good output
         new_expr = flatten(visit(rule.expr))
-        if new_expr == FAIL:
-            continue
-        if new_expr == EMPTY:
-            new_expr = LitExpr('')
         new_rules.append(Rule(rule.flags, rule.name, new_expr))
 
     return Grammar(rules=new_rules)

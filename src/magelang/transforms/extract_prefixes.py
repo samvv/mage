@@ -1,7 +1,7 @@
 
 from typing import assert_never, cast
 
-from .ast import *
+from ..ast import *
 
 type Edge = str
 
@@ -23,9 +23,8 @@ class Prefix:
 
 Prefixes = dict[Edge, Prefix];
 
-
 # FIXME make this transform target all ChoiceExpr
-def transform(grammar: Grammar) -> Grammar:
+def extract_prefixes(grammar: Grammar) -> Grammar:
 
     global_prefixes = Prefixes()
 

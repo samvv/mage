@@ -60,6 +60,12 @@ PUBLIC = 2
 FORCE_TOKEN  = 4
 
 string_rule_type = 'String'
+integer_rule_type = 'Integer'
+
+builtin_types = {
+    string_rule_type,
+    integer_rule_type,
+}
 
 class Rule(Node):
     decorators: list[Decorator]
@@ -156,7 +162,7 @@ class Grammar(Node):
             raise RuntimeError(f"a rule named '{name}' was not found in the current grammar")
         return self._rules_by_name[name]
 
-def rewrite_each_expr(expr: Expr, proc: Callable[[Expr], Expr | None]) -> Expr:
+def rewrite_expr(expr: Expr, proc: Callable[[Expr], Expr | None]) -> Expr:
 
     def visit(expr: Expr) -> Expr:
 

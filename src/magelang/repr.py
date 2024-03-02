@@ -1,5 +1,5 @@
 
-from collections.abc import Iterator
+from typing import Iterator
 import json
 from pathlib import Path
 from sweetener import Record
@@ -80,11 +80,6 @@ class VariantSpec(SpecBase):
     name: str
     members: list[str]
 
-builtin_types = {
-    'String',
-    'Integer',
-}
-
 Spec = TokenSpec | NodeSpec | VariantSpec
 
 class Specs:
@@ -119,9 +114,6 @@ def flatten_union(ty: Type) -> Generator[Type, None, None]:
 
 def grammar_to_specs(grammar: Grammar) -> Specs:
 
-    with open(Path(__file__).parent / 'names.json', 'r') as f:
-        names = json.load(f)
-
     field_counter = 0
     def generate_field_name() -> str:
         nonlocal field_counter
@@ -129,23 +121,8 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         field_counter += 1
         return name
 
-    token_counter = 0
-    def generate_token_name() -> str:
-        nonlocal token_counter
-        name = f'token_{token_counter}'
-        token_counter += 1
-        return name
-
-    literal_to_name = dict()
-
     def make_optional(ty: Type) -> Type:
         return UnionType([ ty, NoneType() ])
-
-    def str_to_name(text: str) -> str | None:
-        if text[0].isalpha() and all(ch.isalnum() for ch in text[1:]):
-            return f'{text}_keyword'
-        elif len(text) <= 4:
-            return '_'.join(names[ch] for ch in text)
 
     def is_variant(rule: Rule) -> bool:
         def visit(expr: Expr) -> bool:
@@ -212,13 +189,7 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
             yield Field(label, TokenType(expr.name) if grammar.is_token_rule(rule) else NodeType(expr.name) )
             return
         if isinstance(expr, LitExpr):
-            label = expr.label
-            if label is None:
-                label = str_to_name(expr.text)
-                if label is None:
-                    label = generate_field_name()
-            yield Field(label, TokenType(literal_to_name[expr.text]))
-            return
+            assert(False) # literals should already have been eliminated
         if isinstance(expr, RepeatExpr):
             fields = list(get_node_members(expr.expr, False, None))
             assert(len(fields) == 1)
@@ -303,21 +274,6 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         raise RuntimeError(f'unexpected {expr}')
 
     specs = Specs()
-
-    def collect_literals(expr: Expr):
-        if isinstance(expr, LitExpr):
-            name = str_to_name(expr.text)
-            if name is None:
-                name = generate_token_name()
-            if expr.text not in literal_to_name:
-                specs.add(TokenSpec(name, string_rule_type, True))
-                literal_to_name[expr.text] = name
-            return
-        for_each_expr(expr, collect_literals)
-
-    for rule in grammar.rules:
-        if rule.expr is not None:
-            collect_literals(rule.expr)
 
     for rule in grammar.rules:
         if rule.is_extern or grammar.is_fragment(rule) or rule.has_decorator('skip'):

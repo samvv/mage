@@ -3,38 +3,18 @@ import argparse
 from os import path
 from pathlib import Path
 from sweetener.logging import error
+from sweetener.visual import visualize
 
 import templaty
 
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser
-from .repr import grammar_to_specs
-from .prefix import transform as transform_prefix
-from .reduce import transform as transform_reduce
+from .transforms import extract_literals, inline
 
 project_dir = Path(__file__).parent.parent.parent
 modules_dir = Path(__file__).parent
 templates_dir = project_dir / 'templates'
-
-# generators = dict()
-# for path in (project_dir / 'templates').iterdir():
-#     generators[path.stem] = importlib.import_module(f'magelang.codegen.{path.stem}')
-
-def add_prefix(grammar: Grammar, prefix: str) -> Grammar:
-
-    def transform(name: str) -> str:
-        return prefix + name
-
-    def rewrite(expr: Expr) -> Expr | None:
-        if isinstance(expr, RefExpr):
-            return RefExpr(name=transform(expr.name), rules=expr.rules)
-
-    def visit_rule(rule: Rule) -> Rule:
-        expr = rewrite_each_expr(rule.expr, rewrite) if rule.expr is not None else None
-        return Rule(flags=rule.flags, name=transform(rule.name), expr=expr)
-
-    return Grammar(rules=list(visit_rule(rule) for rule in grammar.rules))
 
 def _do_generate(args) -> int:
 
@@ -49,10 +29,10 @@ def _do_generate(args) -> int:
     scanner = Scanner(text, filename=file)
     parser = Parser(scanner)
     grammar = parser.parse_grammar()
-    # if prefix:
-    #     grammar = add_prefix(grammar, prefix + '_')
     #grammar = transform_prefix(grammar)
     #grammar = transform_reduce(grammar)
+    grammar = inline(grammar)
+    grammar = extract_literals(grammar)
     #visualize(grammar, format='png')
 
     ctx = {
