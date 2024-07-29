@@ -1,8 +1,8 @@
 
 from typing import Iterator
-import json
-from pathlib import Path
 from sweetener import Record
+
+from magelang.util import nonnull
 
 from .ast import *
 
@@ -105,6 +105,73 @@ class Specs:
     def __iter__(self) -> Iterator[Spec]:
         return iter(self.mapping.values())
 
+def make_optional(ty: Type) -> Type:
+    return UnionType([ ty, NoneType() ])
+
+def make_unit() -> Type:
+    return TupleType([])
+
+def is_unit(ty: Type) -> bool:
+    return isinstance(ty, TupleType) and len(ty.element_types) == 0
+
+def infer_type(grammar: Grammar, expr: Expr) -> Type:
+
+    if isinstance(expr, HideExpr):
+        return make_unit()
+
+    if isinstance(expr, ListExpr):
+        element_field = infer_type(grammar, expr.element)
+        separator_field = infer_type(grammar, expr.separator)
+        return ListType(TupleType([ element_field, make_optional(separator_field) ]))
+
+    if isinstance(expr, RefExpr):
+        rule = grammar.lookup(expr.name)
+        if rule.is_extern:
+            return TokenType(rule.name) if rule.is_token else NodeType(rule.name)
+        if not rule.is_public:
+            return infer_type(grammar, nonnull(rule.expr))
+        return TokenType(expr.name) if grammar.is_token_rule(rule) else NodeType(expr.name)
+
+    if isinstance(expr, LitExpr) or isinstance(expr, CharSetExpr):
+        assert(False) # literals should already have been eliminated
+
+    if isinstance(expr, RepeatExpr):
+        element_type = infer_type(grammar, expr.expr)
+        if expr.max == 0:
+            return make_unit()
+        elif expr.min == 0 and expr.max == 1:
+            ty = make_optional(element_type)
+        elif expr.min == 1 and expr.max == 1:
+            ty = element_type
+        else:
+            ty = ListType(element_type)
+        return ty
+
+    if isinstance(expr, SeqExpr):
+        types = []
+        for element in expr.elements:
+            ty = infer_type(grammar, element)
+            if is_unit(ty):
+                continue
+            types.append(ty)
+        if len(types) == 1:
+            return types[0]
+        return TupleType(types)
+
+    if isinstance(expr, LookaheadExpr):
+        return make_unit()
+
+    if isinstance(expr, ChoiceExpr):
+        types = list(infer_type(grammar, element) for element in expr.elements)
+        # FIXME can't we just return an empty union type and normalize it afterwards?
+        if len(types) == 0:
+            return NeverType()
+        if len(types) == 1:
+            return types[0]
+        return UnionType(types)
+
+    raise RuntimeError(f'unexpected {expr}')
+
 def flatten_union(ty: Type) -> Generator[Type, None, None]:
     if isinstance(ty, UnionType):
         for element in ty.types:
@@ -120,30 +187,6 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         name = f'field_{field_counter}'
         field_counter += 1
         return name
-
-    def make_optional(ty: Type) -> Type:
-        return UnionType([ ty, NoneType() ])
-
-    def is_variant(rule: Rule) -> bool:
-        def visit(expr: Expr) -> bool:
-            if isinstance(expr, RefExpr):
-                rule = grammar.lookup(expr.name)
-                if grammar.is_parse_rule(rule):
-                    return True
-                # FIXME What to do with Rule(is_extern=True, is_public=False) ?
-                assert(rule.expr is not None)
-                return visit(rule.expr)
-            if isinstance(expr, ChoiceExpr):
-                for element in expr.elements:
-                    if not visit(element):
-                        return False
-                return True
-            return False
-        if rule.is_extern:
-            return False
-        # only Rule(is_extern=True) can not hold an expression
-        assert(rule.expr is not None)
-        return visit(rule.expr)
 
     def get_variant_members(expr: Expr) -> Generator[str, None, None]:
         if isinstance(expr, RefExpr):
@@ -161,117 +204,43 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
             return
         assert(False)
 
-    def get_node_members(expr: Expr, toplevel: bool, label: str | None) -> Generator[Field, None, None]:
-        if isinstance(expr, HideExpr):
-            return
-        if isinstance(expr, ListExpr):
-            element_fields = list(get_node_members(expr.element, False, None))
-            separator_fields = list(get_node_members(expr.separator, False, None))
-            if not element_fields and not separator_fields:
-                return
-            assert(len(element_fields) == 1)
-            assert(len(separator_fields) == 1)
-            if label is None:
-                label = expr.label if expr.label is not None else generate_field_name()
-            yield Field(label, ListType(TupleType([ element_fields[0].ty, make_optional(separator_fields[0].ty) ])))
-            return
+    def plural(name: str) -> str:
+        return name if name.endswith('s') else f'{name}s'
+
+    def get_field_name(expr: Expr) -> str:
         if isinstance(expr, RefExpr):
-            rule = grammar.lookup(expr.name)
-            if label is None:
-                label = expr.label if expr.label is not None else rule.name
-            if rule.is_extern:
-                yield Field(label, TokenType(rule.name) if rule.is_token else NodeType(rule.name))
-                return
-            if not rule.is_public:
-                assert(rule.expr is not None)
-                yield from get_node_members(rule.expr, toplevel, label)
-                return
-            yield Field(label, TokenType(expr.name) if grammar.is_token_rule(rule) else NodeType(expr.name) )
-            return
-        if isinstance(expr, LitExpr):
-            assert(False) # literals should already have been eliminated
+            return expr.label if expr.label is not None else expr.name
         if isinstance(expr, RepeatExpr):
-            fields = list(get_node_members(expr.expr, False, None))
-            assert(len(fields) == 1)
-            field = fields[0]
-            if label is None:
-                label = expr.label
-                if label is None:
-                    label = field.name
-                    if label is None:
-                        label = generate_field_name()
-            if expr.max == 0:
-                return
-            elif expr.min == 0 and expr.max == 1:
-                ty = make_optional(field.ty)
-            elif expr.min == 1 and expr.max == 1:
-                ty = field.ty
-            else:
-                ty = ListType(field.ty)
-            yield Field(label, ty)
-            return
-        if isinstance(expr, CharSetExpr):
-            if label is None:
-                label = expr.label if expr.label is not None else generate_field_name()
-            yield Field(label, AnyTokenType())
-            return
-        if isinstance(expr, SeqExpr):
-            if toplevel:
-                for element in expr.elements:
-                    yield from get_node_members(element, True, None)
-            else:
-                if label is None:
-                    label = expr.label if expr.label is not None else generate_field_name()
-                types = []
-                for element in expr.elements:
-                    for field in get_node_members(element, False, None):
-                        types.append(field.ty)
-                if not types:
-                    return
-                yield Field(label, TupleType(types) if len(types) > 1 else types[0])
-            return
-        if isinstance(expr, LookaheadExpr):
-            return
-        if isinstance(expr, ChoiceExpr):
-            if label is None:
-                label = expr.label if expr.label is not None else generate_field_name()
-            fields = list(field for element in expr.elements for field in get_node_members(element, False, None))
-            # FIXME can't we just return an empty union type and normalize it afterwards?
-            if len(fields) == 0:
-                yield Field(label, NeverType())
-                return
-            if len(fields) == 1:
-                yield fields[0]
-                return
-            yield Field(label, UnionType(list(field.ty for field in fields)))
-            return
+            if expr.label is not None:
+                return expr.label
+            element_label = get_field_name(expr.expr)
+            if element_label is not None:
+                if expr.max > 1:
+                    return plural(element_label)
+                return element_label
+            return generate_field_name()
+        if isinstance(expr, ListExpr) or isinstance(expr, CharSetExpr) or isinstance(expr, ChoiceExpr):
+            return expr.label if expr.label is not None else generate_field_name()
         raise RuntimeError(f'unexpected {expr}')
 
-    def is_static(expr: Expr):
-        if isinstance(expr, RefExpr):
-            rule = grammar.lookup(expr.name)
-            if rule.is_extern:
-                return False
-            assert(rule.expr is not None)
-            return is_static(rule.expr)
-        if isinstance(expr, LitExpr):
-            return True
-        if isinstance(expr, CharSetExpr):
-            # FIXME should I check whether the range contains only one char?
-            return False
+    def get_node_members(expr: Expr) -> Generator[Field, None, None]:
+
+        if isinstance(expr, HideExpr) or isinstance(expr, LookaheadExpr):
+            return
+
         if isinstance(expr, SeqExpr):
-            return all(is_static(element) for element in expr.elements)
-        if isinstance(expr, ChoiceExpr):
-            # FIXME should I check whether the choices are actually different?
-            return False
-        if isinstance(expr, RepeatExpr):
-            if expr.min != expr.max:
-                return False
-            return is_static(expr.expr)
-        if isinstance(expr, LookaheadExpr):
-            # Lookahead has no effect on what (non-)static characters are generated
-            return True
-        raise RuntimeError(f'unexpected {expr}')
+            for element in expr.elements:
+                yield from get_node_members(element)
+            return
+
+        if isinstance(expr, LitExpr) or isinstance(expr, CharSetExpr):
+            assert(False) # literals should already have been eliminated
+
+        field_name = get_field_name(expr)
+        field_type = infer_type(grammar, expr)
+        expr.field_name = field_name
+        expr.field_type = field_type
+        yield  Field(field_name, field_type)
 
     specs = Specs()
 
@@ -281,14 +250,14 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         # only Rule(is_extern=True) can have an empty expression
         assert(rule.expr is not None)
         if grammar.is_token_rule(rule):
-            specs.add(TokenSpec(rule.name, rule.type_name, is_static(rule.expr) if rule.expr is not None else False))
+            specs.add(TokenSpec(rule.name, rule.type_name, grammar.is_static_token(rule.expr) if rule.expr is not None else False))
             continue
-        if is_variant(rule):
+        if grammar.is_variant(rule):
             specs.add(VariantSpec(rule.name, list(get_variant_members(rule.expr))))
             continue
         field_counter = 0
         assert(rule.expr is not None)
-        members = list(get_node_members(rule.expr, True, None))
+        members = list(get_node_members(rule.expr))
         specs.add(NodeSpec(rule.name, members))
 
     return specs

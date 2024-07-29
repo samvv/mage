@@ -1,18 +1,27 @@
 
 from functools import cache
 import math
-from typing import Callable, Generator, TypeVar
+from typing import TYPE_CHECKING, Callable, Generator
 
-from sweetener import BaseNode, warn, write_excerpt
+from sweetener import BaseNode
 
-from .util import nonnull
+if TYPE_CHECKING:
+    from .repr import Type
 
 class Node(BaseNode):
     pass
 
 class Expr(Node):
+
     label: str | None = None
-    rules: list['Rule'] = []
+
+    def __init__(self, *args, rules: list['Rule'] | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if rules is None:
+            rules = []
+        self.rules: list['Rule'] = rules
+        self.field_name: str | None = None
+        self.field_type: Type | None = None
 
 class LitExpr(Expr):
     text: str
@@ -142,10 +151,60 @@ class Grammar(Node):
         # assert(rule.expr is not None)
         # return rule.is_public and not self._references_pub_rule(rule.expr)
 
+    def is_static_token(self, expr: Expr):
+        if isinstance(expr, RefExpr):
+            rule = self.lookup(expr.name)
+            if rule.is_extern:
+                return False
+            assert(rule.expr is not None)
+            return self.is_static_token(rule.expr)
+        if isinstance(expr, LitExpr):
+            return True
+        if isinstance(expr, CharSetExpr):
+            # FIXME should I check whether the range contains only one char?
+            return False
+        if isinstance(expr, SeqExpr):
+            return all(self.is_static_token(element) for element in expr.elements)
+        if isinstance(expr, ChoiceExpr):
+            # FIXME should I check whether the choices are actually different?
+            return False
+        if isinstance(expr, RepeatExpr):
+            if expr.min != expr.max:
+                return False
+            return self.is_static_token(expr.expr)
+        if isinstance(expr, LookaheadExpr):
+            # Lookahead has no effect on what (non-)static characters are generated
+            return True
+        raise RuntimeError(f'unexpected {expr}')
+
     def is_parse_rule(self, rule: Rule) -> bool:
         if rule.is_extern:
             return not rule.is_token
         return rule.is_public and not self.is_token_rule(rule)
+
+    def is_variant(self, rule: Rule) -> bool:
+        count = 0
+        def visit(expr: Expr) -> bool:
+            nonlocal count
+            if isinstance(expr, RefExpr):
+                rule = self.lookup(expr.name)
+                if self.is_parse_rule(rule):
+                    count += 1
+                    return True
+                # FIXME What to do with Rule(is_extern=True, is_public=False) ?
+                assert(rule.expr is not None)
+                return visit(rule.expr)
+            if isinstance(expr, ChoiceExpr):
+                for element in expr.elements:
+                    if not visit(element):
+                        return False
+                return True
+            return False
+        if rule.is_extern:
+            return False
+        # only Rule(is_extern=True) can not hold an expression
+        assert(rule.expr is not None)
+        return visit(rule.expr) and count > 1
 
     def get_token_rules(self) -> Generator[Rule, None, None]:
         for rule in self.rules:
