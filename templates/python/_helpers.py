@@ -253,7 +253,7 @@ def cst() -> str:
                 return ty, False
 
             if isinstance(ty, TokenType):
-                coerced_types = []
+                coerced_types: list[Type] = []
                 coerced_types.append(ty)
                 spec = specs.lookup(ty.name)
                 assert(isinstance(spec, TokenSpec))
@@ -483,7 +483,7 @@ def cst() -> str:
 
         if isinstance(spec, TokenSpec):
 
-            body = []
+            body: list[PyStmt] = []
 
             if spec.is_static:
 
@@ -491,7 +491,7 @@ def cst() -> str:
 
             else:
 
-                init_body = []
+                init_body: list[PyStmt] = []
 
                 init_body.append(PyExprStmt(expr=PyCallExpr(operator=PyAttrExpr(expr=PyCallExpr(operator=PyNamedExpr(name='super')), name='__init__'), args=[ (PyKeywordArg(name='span', expr=PyNamedExpr(name='span')), None) ])))
 
@@ -523,7 +523,7 @@ def cst() -> str:
             py_type = PyConstExpr(literal=emit(make_union(PyNamedExpr(name=to_class_name(name)) for name in spec.members)))
             stmts.append(PyAssignStmt(pattern=PyNamedPattern(name=cls_name), annotation=PyNamedExpr(name='TypeAlias'), expr=py_type))
 
-            params = []
+            params: list[PyParam] = []
             params.append(PyNamedParam(pattern=PyNamedPattern(name='value'), annotation=PyNamedExpr(name='Any')))
             stmts.append(PyFuncDef(
                 name=f'is_{namespace(spec.name)}',
@@ -678,12 +678,12 @@ def lexer_logic() -> str:
             )
         assert_never(element)
 
-    stmts = []
+    stmts: list[PyStmt] = []
     i = 0
 
     def visit(expr: Expr, rule_name: str) -> list[PyStmt]:
         nonlocal i
-        out = []
+        out: list[PyStmt] = []
         if isinstance(expr, LitExpr):
             for ch in expr.text:
                 ch_name = f'c_{i}'
@@ -697,12 +697,12 @@ def lexer_logic() -> str:
                 )]))
             return out
         if isinstance(expr, SeqExpr):
-            out = []
+            out: list[PyStmt] = []
             for element in expr.elements:
                 out.extend(visit(element, rule_name))
             return out
         if isinstance(expr, CharSetExpr):
-            out = []
+            out: list[PyStmt] = []
             ch_name = f'c_{i}'
             i += 1
             out.append(PyAssignStmt(pattern=PyNamedPattern(name=ch_name), expr=PyCallExpr(operator=PyAttrExpr(expr=PyNamedExpr(name='self'), name='_get_char'))))
@@ -715,7 +715,7 @@ def lexer_logic() -> str:
             return out
         if isinstance(expr, RepeatExpr):
             if expr.max == POSINF:
-                out = []
+                out: list[PyStmt] = []
                 min_body = visit(expr.expr, rule_name)
                 out.append(PyForStmt(
                     pattern=PyNamedPattern(name='_'),
@@ -727,7 +727,7 @@ def lexer_logic() -> str:
                 ]))
                 return out 
             else:
-                out = []
+                out: list[PyStmt] = []
                 min_body = visit(expr.expr, rule_name)
                 out.append(PyForStmt(
                     pattern=PyNamedPattern(name='_'),
@@ -742,7 +742,7 @@ def lexer_logic() -> str:
                     ]
                 ))
         if isinstance(expr, ChoiceExpr):
-            out = []
+            out: list[PyStmt] = []
             # TODO
             return out
         raise RuntimeError(f'unexpected {expr}')
