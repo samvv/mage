@@ -335,7 +335,7 @@ def cst() -> str:
                     if not is_default_constructible(element_type, allow_empty_lists=False):
                         required.append(element_type)
 
-                if len(required) == 1 and not has_none:
+                if len(required) == 1:
 
                     case_body: list[PyStmt] = []
 
@@ -347,7 +347,7 @@ def cst() -> str:
                         assert(isinstance(ty, TupleType)) # Needed to keep Pyright happy
                         return assign(PyTupleExpr(elements=list_comma(value if el_ty == first_type else gen_default_constructor(el_ty) for el_ty in ty.element_types)))
 
-                    new_first_type, _ = visit(first_type, in_name, first_assign, case_body, False)
+                    new_first_type, _ = visit(first_type, in_name, first_assign, case_body, has_none)
                     coerced_types.append(new_first_type)
                     cases.append((
                         gen_shallow_test(new_first_type, PyNamedExpr(name=in_name)),
