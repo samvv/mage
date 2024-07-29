@@ -188,7 +188,7 @@ def cst() -> str:
             return True
         if isinstance(ty, NodeType):
             spec = specs.lookup(ty.name)
-            if not isinstance(spec, NodeSpec):
+            if not isinstance(spec, NodeSpec): # if it's a VariantSpec
                 return False
             return all(is_default_constructible(field.ty, allow_empty_lists) for field in spec.members)
         if isinstance(ty, TokenType):
