@@ -1,7 +1,8 @@
 
 from typing import Iterator
-from sweetener import Record
+from sweetener import Record, warn
 
+from magelang.eval import accepts
 from magelang.util import nonnull
 
 from .ast import *
@@ -102,6 +103,11 @@ class Specs:
             raise RuntimeError(f"could not find a CST specification for '{name}'")
         return spec
 
+    def get_nodes(self) -> Iterator[NodeSpec]:
+        for spec in self:
+            if isinstance(spec, NodeSpec):
+                yield spec
+
     def __iter__(self) -> Iterator[Spec]:
         return iter(self.mapping.values())
 
@@ -174,10 +180,21 @@ def infer_type(grammar: Grammar, expr: Expr) -> Type:
 
 def flatten_union(ty: Type) -> Generator[Type, None, None]:
     if isinstance(ty, UnionType):
-        for element in ty.types:
-            yield from flatten_union(element)
+        for ty in ty.types:
+            yield from flatten_union(ty)
     else:
         yield ty
+
+def simplify_type(ty: Type) -> Type:
+    if isinstance(ty, UnionType):
+        new_tys = list(flatten_union(ty))
+        if len(new_tys) == 0:
+            return NeverType()
+        if len(new_tys) == 1:
+            return new_tys[0]
+        return UnionType(new_tys)
+    else:
+        return ty
 
 def grammar_to_specs(grammar: Grammar) -> Specs:
 
@@ -237,10 +254,10 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
             assert(False) # literals should already have been eliminated
 
         field_name = get_field_name(expr)
-        field_type = infer_type(grammar, expr)
+        field_type = simplify_type(infer_type(grammar, expr))
         expr.field_name = field_name
         expr.field_type = field_type
-        yield  Field(field_name, field_type)
+        yield Field(field_name, field_type)
 
     specs = Specs()
 
@@ -259,6 +276,22 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         assert(rule.expr is not None)
         members = list(get_node_members(rule.expr))
         specs.add(NodeSpec(rule.name, members))
+
+    kw_rules = []
+
+    def visit(expr: Expr, rule: Rule) -> None:
+        if isinstance(expr, LitExpr):
+            match = False
+            for rule in kw_rules:
+                assert(rule.expr is not None)
+                if accepts(rule.expr, expr.text, grammar):
+                    match = True
+            if match:
+                specs.add(TokenSpec(rule.name, unit_rule_name, True))
+
+    for rule in grammar.rules:
+        if rule.expr is not None:
+            for_each_expr(rule.expr, lambda expr: visit(expr, rule))
 
     return specs
 

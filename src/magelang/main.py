@@ -1,6 +1,5 @@
 
 import argparse
-from os import path
 from pathlib import Path
 from sweetener.logging import error
 from sweetener.visual import visualize

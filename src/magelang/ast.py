@@ -11,7 +11,9 @@ if TYPE_CHECKING:
 class Node(BaseNode):
     pass
 
-class Expr(Node):
+type Expr = LitExpr | RefExpr | CharSetExpr | LookaheadExpr | ChoiceExpr | SeqExpr | HideExpr | ListExpr
+
+class ExprBase(Node):
 
     label: str | None = None
 
@@ -23,40 +25,40 @@ class Expr(Node):
         self.field_name: str | None = None
         self.field_type: Type | None = None
 
-class LitExpr(Expr):
+class LitExpr(ExprBase):
     text: str
 
-class RefExpr(Expr):
+class RefExpr(ExprBase):
     name: str
 
-class LookaheadExpr(Expr):
+class LookaheadExpr(ExprBase):
     expr: Expr
     is_negated: bool
 
 type CharSetElement = str | tuple[str, str]
 
-class CharSetExpr(Expr):
+class CharSetExpr(ExprBase):
     elements: list[CharSetElement]
     ci: bool
     invert: bool
 
-class ChoiceExpr(Expr):
+class ChoiceExpr(ExprBase):
     elements: list[Expr]
 
-class SeqExpr(Expr):
+class SeqExpr(ExprBase):
     elements: list[Expr]
 
-class ListExpr(Expr):
+class ListExpr(ExprBase):
     element: Expr
     separator: Expr
 
-class HideExpr(Expr):
+class HideExpr(ExprBase):
     expr: Expr
 
 POSINF = math.inf
 
-class RepeatExpr(Expr):
-    min: int | float
+class RepeatExpr(ExprBase):
+    min: int
     max: int | float
     expr: Expr
 
@@ -68,10 +70,12 @@ EXTERN = 1
 PUBLIC = 2
 FORCE_TOKEN  = 4
 
+unit_rule_name = 'void'
 string_rule_type = 'String'
 integer_rule_type = 'Integer'
 
 builtin_types = {
+    unit_rule_name,
     string_rule_type,
     integer_rule_type,
 }
