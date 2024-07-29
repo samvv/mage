@@ -5,7 +5,7 @@
 from typing import Iterator, Sequence, assert_never, TypeVar, cast
 
 import templaty
-from sweetener import is_iterator
+from sweetener import is_iterator, warn
 from magelang.repr import *
 from magelang.util import NameGenerator
 from magelang.lang.python.cst import *
