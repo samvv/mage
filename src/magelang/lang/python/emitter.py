@@ -184,6 +184,12 @@ def emit(node: PyNode) -> str:
             visit(node.expr)
             return
 
+        if isinstance(node, PyNestExpr):
+            out.write('(')
+            visit(node.expr)
+            out.write(')')
+            return
+
         if isinstance(node, PyCallExpr):
             visit(node.operator)
             visit(node.open_paren)
@@ -249,6 +255,17 @@ def emit(node: PyNode) -> str:
             visit(node.op)
             out.write(' ')
             visit(node.right)
+            return
+
+        if isinstance(node, PyBreakStmt):
+            out.write('break')
+            out.write('\n')
+            return
+
+        if isinstance(node, PyRaiseStmt):
+            out.write('raise ');
+            visit(node.expr)
+            out.write('\n')
             return
 
         if isinstance(node, PyExprStmt):
