@@ -195,6 +195,8 @@ def cst() -> str:
             spec = specs.lookup(ty.name)
             assert(isinstance(spec, TokenSpec))
             return spec.is_static
+        if isinstance(ty, TupleType):
+            return all(is_default_constructible(element) for element in ty.element_types)
         if isinstance(ty, UnionType):
             counter = 0
             for element_type in ty.types:
@@ -210,6 +212,8 @@ def cst() -> str:
             return PyCallExpr(operator=PyNamedExpr(name=to_class_name(ty.name)))
         if isinstance(ty, ListType):
             return PyCallExpr(operator=PyNamedExpr(name='list'))
+        if isinstance(ty, TupleType):
+            return PyTupleExpr(elements=list_comma(gen_default_constructor(element_type) for element_type in ty.element_types))
         if isinstance(ty, UnionType):
             # This assumes we already detected that there is exactly one
             # default-constrcuctible member in the union type
