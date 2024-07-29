@@ -19,7 +19,6 @@ def emit(node: PyNode) -> str:
             out.indent()
             for stmt in body:
                 visit(stmt)
-                out.write('\n')
             out.dedent()
 
     def visit(node: PySyntax) -> None:
@@ -216,6 +215,15 @@ def emit(node: PyNode) -> str:
             visit(node.name)
             return
 
+        if isinstance(node, PyTuplePattern):
+            out.write('(')
+            for element, comma in node.elements:
+                visit(element)
+                if comma is not None:
+                    visit(comma)
+            out.write(')')
+            return
+
         if isinstance(node, PyNamedParam):
             visit(node.pattern)
             if node.annotation is not None:
@@ -245,6 +253,7 @@ def emit(node: PyNode) -> str:
 
         if isinstance(node, PyExprStmt):
             visit(node.expr)
+            out.write('\n')
             return
 
         if isinstance(node, PyRetStmt):
@@ -252,6 +261,7 @@ def emit(node: PyNode) -> str:
             if node.expr is not None:
                 out.write(' ')
                 visit(node.expr)
+            out.write('\n')
             return
 
         if isinstance(node, PyIfCase):
@@ -270,6 +280,12 @@ def emit(node: PyNode) -> str:
             visit_body(node.body)
             return
 
+        if isinstance(node, PyElseCase):
+            visit(node.else_keyword)
+            visit(node.colon)
+            visit_body(node.body)
+            return
+
         if isinstance(node, PyForStmt):
             visit(node.for_keyword)
             out.write(' ')
@@ -280,6 +296,7 @@ def emit(node: PyNode) -> str:
             visit(node.expr)
             visit(node.colon)
             visit_body(node.body)
+            out.write('\n')
             return
 
         if isinstance(node, PyWhileStmt):
@@ -293,12 +310,7 @@ def emit(node: PyNode) -> str:
                 visit(else_keyword)
                 visit(colon)
                 visit_body(body)
-            return
-
-        if isinstance(node, PyElseCase):
-            visit(node.else_keyword)
-            visit(node.colon)
-            visit_body(node.body)
+            out.write('\n')
             return
 
         if isinstance(node, PyIfStmt):
@@ -320,10 +332,12 @@ def emit(node: PyNode) -> str:
             visit(node.equals)
             out.write(' ')
             visit(node.expr)
+            out.write('\n')
             return
 
         if isinstance(node, PyPassStmt):
             visit(node.pass_keyword)
+            out.write('\n')
             return
 
         if isinstance(node, PyRaiseStmt):
@@ -336,6 +350,7 @@ def emit(node: PyNode) -> str:
                 visit(from_keyword)
                 out.write(' ')
                 visit(expr)
+            out.write('\n')
             return
 
         if isinstance(node, PyFuncDef):
@@ -389,3 +404,4 @@ def emit(node: PyNode) -> str:
     visit(node)
 
     return string.getvalue()
+
