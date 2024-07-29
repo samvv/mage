@@ -196,7 +196,7 @@ def cst() -> str:
             assert(isinstance(spec, TokenSpec))
             return spec.is_static
         if isinstance(ty, TupleType):
-            return all(is_default_constructible(element) for element in ty.element_types)
+            return all(is_default_constructible(element, False) for element in ty.element_types)
         if isinstance(ty, UnionType):
             counter = 0
             for element_type in ty.types:
@@ -335,7 +335,7 @@ def cst() -> str:
                     if not is_default_constructible(element_type, allow_empty_lists=False):
                         required.append(element_type)
 
-                if len(required) == 1:
+                if len(required) == 1 and not has_none:
 
                     case_body: list[PyStmt] = []
 
