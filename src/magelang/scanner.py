@@ -2,7 +2,7 @@
 import re
 from typing import Any, NewType, Tuple, Optional
 
-from sweetener import Record, warn
+from sweetener import Record
 
 TokenType = NewType('TokenType', int)
 
