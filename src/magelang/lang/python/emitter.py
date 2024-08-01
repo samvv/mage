@@ -190,6 +190,10 @@ def emit(node: PyNode) -> str:
             out.write(')')
             return
 
+        if isinstance(node, PyPosArg):
+            visit(node.expr)
+            return
+
         if isinstance(node, PyCallExpr):
             visit(node.operator)
             visit(node.open_paren)
