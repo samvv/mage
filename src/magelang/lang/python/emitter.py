@@ -123,6 +123,10 @@ def emit(node: PyNode) -> str:
             out.write('return')
             return
 
+        if isinstance(node, PyFinallyKeyword):
+            out.write('finally')
+            return
+
         if isinstance(node, PyPassKeyword):
             out.write('pass')
             return
