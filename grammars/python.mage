@@ -243,7 +243,7 @@ pub type_alias_stmt
   = 'type' name:ident type_params:('[' (expr % ',') ']')? '=' expr
 
 pub except_handler
-  = 'except' expr binder:('as' ident)? body
+  = 'except' expr binder:('as' ident)? ':' body
 
 pub try_stmt
   = 'try' ':' body handlers:except_handler* else_clause:('else' ':' body)? finally_clause:('finally' ':' body)?
