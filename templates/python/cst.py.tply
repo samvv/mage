@@ -1,5 +1,5 @@
 
-from typing import TypeAlias, TypeGuard, Any, Callable
+from typing import TypeGuard, Iterable, Iterator, TypeAlias, TypeGuard, Any, Callable, TypeVar, Never
 
 class TextPos:
 
@@ -17,15 +17,53 @@ class Span:
     def __len__(self) -> int:
         return self.end_offset - self.start_offset
 
-class _BaseToken:
+class _BaseSyntax:
+    pass
+
+class _BaseToken(_BaseSyntax):
 
     def __init__(self, span: Span | None = None) -> None:
+        super().__init__()
         self.span = span
 
-class _BaseNode:
+class _BaseNode(_BaseSyntax):
 
     def __init__(self) -> None:
+        super().__init__()
         pass
+
+def {{is_token_name}}(value: Any) -> TypeGuard['{{token_class_name}}']:
+    return isinstance(value, _BaseToken)
+
+def {{is_node_name}}(value: Any) -> TypeGuard['{{node_class_name}}']:
+    return isinstance(value, _BaseNode)
+
+def {{is_syntax_name}}(value: Any) -> TypeGuard['{{syntax_class_name}}']:
+    return isinstance(value, _BaseSyntax)
+
+T = TypeVar('T', bound='{{syntax_class_name}}')
+P = TypeVar('P')
+
+class Punctuated[T, P]:
+
+    def __init__(self, elements: Iterable[tuple[T, P | None]] | None = None) -> None:
+        self.elements = []
+        if elements is not None:
+          for element, sep  in elements:
+              self.append(element, sep)
+
+    def append(self, element: T, separator: P | None = None) -> None:
+        if separator is None:
+            assert(self.last is None)
+            self.last = element
+        else:
+            self.elements.append((element, separator))
+
+    def __iter__(self) -> Iterator[tuple[T, P | None]]:
+        for item in self.elements:
+            yield item
+        if self.last is not None:
+            yield self.last, None
 
 {{cst()}}
 

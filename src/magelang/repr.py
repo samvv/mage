@@ -1,6 +1,6 @@
 
 from typing import Iterator
-from sweetener import Record, warn
+from sweetener import Record
 
 from magelang.eval import accepts
 from magelang.util import nonnull
@@ -8,18 +8,6 @@ from magelang.util import nonnull
 from .ast import *
 
 class Type(Record):
-    pass
-
-class AnyTokenType(Type):
-    """
-    Matches any token. Isn't used that often anymore.
-    """
-    pass
-
-class AnyNodeType(Type):
-    """
-    Matches any node. Isn't used that often anymore.
-    """
     pass
 
 class ExternType(Type):
@@ -47,15 +35,36 @@ class NeverType(Type):
     pass
 
 class TupleType(Type):
+    """
+    A type that allows values to contain a specific sequence of types.
+    """
     element_types: list[Type]
 
 class ListType(Type):
+    """
+    A type that allows multiple values of the same underlying type.
+    """
     element_type: Type
 
+class PunctType(Type):
+    """
+    A type that is like a list but where values are seperated by another type.
+    """
+    element_type: Type
+    separator_type: Type
+
 class UnionType(Type):
+    """
+    A type where any of the member types are valid.
+    """
     types: list[Type]
 
 class NoneType(Type):
+    """
+    A type that indicates that the value is empty.
+
+    This type is usually created in conjunction with a union type.
+    """
     pass
 
 class Field(Record):
@@ -128,7 +137,7 @@ def infer_type(grammar: Grammar, expr: Expr) -> Type:
     if isinstance(expr, ListExpr):
         element_field = infer_type(grammar, expr.element)
         separator_field = infer_type(grammar, expr.separator)
-        return ListType(TupleType([ element_field, make_optional(separator_field) ]))
+        return PunctType(element_field, separator_field)
 
     if isinstance(expr, RefExpr):
         rule = grammar.lookup(expr.name)
@@ -187,12 +196,22 @@ def flatten_union(ty: Type) -> Generator[Type, None, None]:
 
 def simplify_type(ty: Type) -> Type:
     if isinstance(ty, UnionType):
-        new_tys = list(flatten_union(ty))
-        if len(new_tys) == 0:
+        types = []
+        has_none = False
+        for ty in flatten_union(ty):
+            if isinstance(ty, NeverType):
+                continue
+            if  isinstance(ty, NoneType):
+                has_none = True
+                continue
+            types.append(ty)
+        if has_none:
+            types.append(NoneType())
+        if len(types) == 0:
             return NeverType()
-        if len(new_tys) == 1:
-            return new_tys[0]
-        return UnionType(new_tys)
+        if len(types) == 1:
+            return types[0]
+        return UnionType(types)
     else:
         return ty
 
