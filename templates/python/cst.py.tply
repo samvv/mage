@@ -41,25 +41,26 @@ def {{is_node_name}}(value: Any) -> TypeGuard['{{node_class_name}}']:
 def {{is_syntax_name}}(value: Any) -> TypeGuard['{{syntax_class_name}}']:
     return isinstance(value, _BaseSyntax)
 
-T = TypeVar('T', bound='{{syntax_class_name}}')
-P = TypeVar('P')
+_T = TypeVar('_T')
+_P = TypeVar('_P')
 
-class Punctuated[T, P]:
+class Punctuated[_T, _P]:
 
-    def __init__(self, elements: Iterable[tuple[T, P | None]] | None = None) -> None:
+    def __init__(self, elements: Iterable[tuple[_T, _P | None]] | None = None) -> None:
         self.elements = []
+        self.last = None
         if elements is not None:
           for element, sep  in elements:
               self.append(element, sep)
 
-    def append(self, element: T, separator: P | None = None) -> None:
+    def append(self, element: _T, separator: _P | None = None) -> None:
         if separator is None:
             assert(self.last is None)
             self.last = element
         else:
             self.elements.append((element, separator))
 
-    def __iter__(self) -> Iterator[tuple[T, P | None]]:
+    def __iter__(self) -> Iterator[tuple[_T, _P | None]]:
         for item in self.elements:
             yield item
         if self.last is not None:
