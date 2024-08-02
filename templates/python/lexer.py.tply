@@ -29,6 +29,6 @@ class Lexer:
         {% endif %}
         return ch
 
-    def lex(self) -> Token:
+    def lex(self) -> {{token_class_name}}:
         {{lexer_logic()}}
 
