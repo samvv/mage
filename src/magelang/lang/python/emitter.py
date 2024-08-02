@@ -354,8 +354,7 @@ def emit(node: PyNode) -> str:
                 visit(handler.except_keyword)
                 out.write(' ')
                 visit(handler.expr)
-                # visit(handler.colon)
-                out.write(':') # FIXME
+                visit(handler.colon)
                 visit_body(handler.body)
             if node.else_clause is not None:
                 else_keyword, colon, body = node.else_clause
