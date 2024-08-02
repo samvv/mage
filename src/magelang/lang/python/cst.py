@@ -1,5 +1,5 @@
 
-from typing import TypeAlias, TypeGuard, Any, Callable
+from typing import TypeGuard, Iterable, Iterator, TypeAlias, TypeGuard, Any, Callable, TypeVar, Never
 
 class TextPos:
 
@@ -17,15 +17,54 @@ class Span:
     def __len__(self) -> int:
         return self.end_offset - self.start_offset
 
-class _BaseToken:
+class _BaseSyntax:
+    pass
+
+class _BaseToken(_BaseSyntax):
 
     def __init__(self, span: Span | None = None) -> None:
+        super().__init__()
         self.span = span
 
-class _BaseNode:
+class _BaseNode(_BaseSyntax):
 
     def __init__(self) -> None:
+        super().__init__()
         pass
+
+def is_py_token(value: Any) -> TypeGuard['PyToken']:
+    return isinstance(value, _BaseToken)
+
+def is_py_node(value: Any) -> TypeGuard['PyNode']:
+    return isinstance(value, _BaseNode)
+
+def is_py_syntax(value: Any) -> TypeGuard['PySyntax']:
+    return isinstance(value, _BaseSyntax)
+
+_T = TypeVar('_T')
+_P = TypeVar('_P')
+
+class Punctuated[_T, _P]:
+
+    def __init__(self, elements: Iterable[tuple[_T, _P | None]] | None = None) -> None:
+        self.elements = []
+        self.last = None
+        if elements is not None:
+          for element, sep  in elements:
+              self.append(element, sep)
+
+    def append(self, element: _T, separator: _P | None = None) -> None:
+        if separator is None:
+            assert(self.last is None)
+            self.last = element
+        else:
+            self.elements.append((element, separator))
+
+    def __iter__(self) -> Iterator[tuple[_T, _P | None]]:
+        for item in self.elements:
+            yield item
+        if self.last is not None:
+            yield self.last, None
 
 class PyIdent(_BaseToken):
     def __init__(self, value: str | None = None, span: Span | None = None):
@@ -60,8 +99,10 @@ class PySlice(_BaseNode):
         self.lower: PyExpr = lower
         if colon is None:
             self.colon: PyColon = PyColon()
-        else:
+        elif isinstance(colon, PyColon):
             self.colon: PyColon = colon
+        else:
+            raise ValueError("the field 'colon' received an unrecognised value'")
         self.upper: PyExpr = upper
 
 
@@ -73,11 +114,13 @@ def is_py_pattern(value: Any) -> TypeGuard[PyPattern]:
 
 
 class PyNamedPattern(_BaseNode):
-    def __init__(self, *, name: 'PyIdent | str') -> None:
+    def __init__(self, *, name: 'str | PyIdent') -> None:
         if isinstance(name, str):
             self.name: PyIdent = PyIdent(name)
-        else:
+        elif isinstance(name, PyIdent):
             self.name: PyIdent = name
+        else:
+            raise ValueError("the field 'name' received an unrecognised value'")
 
 
 class PyDot(_BaseToken):
@@ -85,16 +128,20 @@ class PyDot(_BaseToken):
 
 
 class PyAttrPattern(_BaseNode):
-    def __init__(self, *, pattern: 'PyPattern', dot: 'PyDot | None' = None, name: 'PyIdent | str') -> None:
+    def __init__(self, *, pattern: 'PyPattern', dot: 'PyDot | None' = None, name: 'str | PyIdent') -> None:
         self.pattern: PyPattern = pattern
         if dot is None:
             self.dot: PyDot = PyDot()
-        else:
+        elif isinstance(dot, PyDot):
             self.dot: PyDot = dot
+        else:
+            raise ValueError("the field 'dot' received an unrecognised value'")
         if isinstance(name, str):
             self.name: PyIdent = PyIdent(name)
-        else:
+        elif isinstance(name, PyIdent):
             self.name: PyIdent = name
+        else:
+            raise ValueError("the field 'name' received an unrecognised value'")
 
 
 class PyOpenBracket(_BaseToken):
@@ -110,35 +157,70 @@ class PyCloseBracket(_BaseToken):
 
 
 class PySubscriptPattern(_BaseNode):
-    def __init__(self, *, pattern: 'PyPattern', open_bracket: 'PyOpenBracket | None' = None, slices: 'None | list[tuple[(PyPattern | PySlice, PyComma | None)]]' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+    def __init__(self, *, pattern: 'PyPattern', open_bracket: 'PyOpenBracket | None' = None, slices: 'list[PyPattern | PySlice] | list[tuple[PyPattern | PySlice,PyComma | None | None]] | Punctuated[PyPattern | PySlice,PyComma | None] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         self.pattern: PyPattern = pattern
         if open_bracket is None:
             self.open_bracket: PyOpenBracket = PyOpenBracket()
-        else:
+        elif isinstance(open_bracket, PyOpenBracket):
             self.open_bracket: PyOpenBracket = open_bracket
-        if slices is None:
-            self.slices: list[tuple[(PyPattern | PySlice, PyComma | None)]] = list()
         else:
-            new_slices = list()
-            for slices_element in slices:
-                assert(isinstance(slices_element, tuple))
-                slices_element_0 = slices_element[0]
-                new_slices_element_0 = slices_element_0
-                slices_element_1 = slices_element[1]
-                if isinstance(slices_element_1, PyComma):
-                    new_slices_element_1 = slices_element_1
-                elif slices_element_1 is None:
-                    new_slices_element_1 = None
-                else:
-                    raise ValueError("the field 'slices' received an unrecognised value'")
-                new_slices_element = (new_slices_element_0, new_slices_element_1)
-                new_slices.append(new_slices_element)
+            raise ValueError("the field 'open_bracket' received an unrecognised value'")
+        if slices is None:
+            self.slices: Punctuated[PyPattern | PySlice,PyComma] = Punctuated()
+        elif isinstance(slices, list) or isinstance(slices, list) or isinstance(slices, Punctuated):
+            new_slices = Punctuated()
+            slices_iter = iter(slices)
+            try:
+                first_slices_element = next(slices_iter)
+                while True:
+                    try:
+                        second_slices_element = next(slices_iter)
+                        if isinstance(first_slices_element, tuple):
+                            slices_value = first_slices_element[0]
+                            slices_separator = first_slices_element[1]
+                        else:
+                            slices_value = first_slices_element
+                            slices_separator = None
+                        if is_py_pattern(slices_value):
+                            new_slices_value = slices_value
+                        elif isinstance(slices_value, PySlice):
+                            new_slices_value = slices_value
+                        else:
+                            raise ValueError("the field 'slices' received an unrecognised value'")
+                        if slices_separator is None:
+                            new_slices_separator = PyComma()
+                        elif isinstance(slices_separator, PyComma):
+                            new_slices_separator = slices_separator
+                        else:
+                            raise ValueError("the field 'slices' received an unrecognised value'")
+                        new_slices.append(new_slices_value, new_slices_separator)
+                        first_slices_element = second_slices_element
+                    except StopIteration:
+                        if isinstance(first_slices_element, tuple):
+                            slices_value = first_slices_element[0]
+                            assert(first_slices_element[1] is None)
+                        else:
+                            slices_value = first_slices_element
+                        if is_py_pattern(slices_value):
+                            new_slices_value = slices_value
+                        elif isinstance(slices_value, PySlice):
+                            new_slices_value = slices_value
+                        else:
+                            raise ValueError("the field 'slices' received an unrecognised value'")
+                        new_slices.append(new_slices_value)
+                        break
 
-            self.slices: list[tuple[(PyPattern | PySlice, PyComma | None)]] = new_slices
+            except StopIteration:
+                pass
+            self.slices: Punctuated[PyPattern | PySlice,PyComma] = new_slices
+        else:
+            raise ValueError("the field 'slices' received an unrecognised value'")
         if close_bracket is None:
             self.close_bracket: PyCloseBracket = PyCloseBracket()
-        else:
+        elif isinstance(close_bracket, PyCloseBracket):
             self.close_bracket: PyCloseBracket = close_bracket
+        else:
+            raise ValueError("the field 'close_bracket' received an unrecognised value'")
 
 
 class PyAsterisk(_BaseToken):
@@ -149,40 +231,67 @@ class PyStarredPattern(_BaseNode):
     def __init__(self, *, asterisk: 'PyAsterisk | None' = None, expr: 'PyExpr') -> None:
         if asterisk is None:
             self.asterisk: PyAsterisk = PyAsterisk()
-        else:
+        elif isinstance(asterisk, PyAsterisk):
             self.asterisk: PyAsterisk = asterisk
+        else:
+            raise ValueError("the field 'asterisk' received an unrecognised value'")
         self.expr: PyExpr = expr
 
 
 class PyListPattern(_BaseNode):
-    def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'None | list[tuple[(PyPattern, PyComma | None)]]' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+    def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'list[PyPattern] | list[tuple[PyPattern,PyComma | None | None]] | Punctuated[PyPattern,PyComma | None] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         if open_bracket is None:
             self.open_bracket: PyOpenBracket = PyOpenBracket()
-        else:
+        elif isinstance(open_bracket, PyOpenBracket):
             self.open_bracket: PyOpenBracket = open_bracket
-        if elements is None:
-            self.elements: list[tuple[(PyPattern, PyComma | None)]] = list()
         else:
-            new_elements = list()
-            for elements_element in elements:
-                assert(isinstance(elements_element, tuple))
-                elements_element_0 = elements_element[0]
-                new_elements_element_0 = elements_element_0
-                elements_element_1 = elements_element[1]
-                if isinstance(elements_element_1, PyComma):
-                    new_elements_element_1 = elements_element_1
-                elif elements_element_1 is None:
-                    new_elements_element_1 = None
-                else:
-                    raise ValueError("the field 'elements' received an unrecognised value'")
-                new_elements_element = (new_elements_element_0, new_elements_element_1)
-                new_elements.append(new_elements_element)
+            raise ValueError("the field 'open_bracket' received an unrecognised value'")
+        if elements is None:
+            self.elements: Punctuated[PyPattern,PyComma] = Punctuated()
+        elif isinstance(elements, list) or isinstance(elements, list) or isinstance(elements, Punctuated):
+            new_elements = Punctuated()
+            elements_iter = iter(elements)
+            try:
+                first_elements_element = next(elements_iter)
+                while True:
+                    try:
+                        second_elements_element = next(elements_iter)
+                        if isinstance(first_elements_element, tuple):
+                            elements_value = first_elements_element[0]
+                            elements_separator = first_elements_element[1]
+                        else:
+                            elements_value = first_elements_element
+                            elements_separator = None
+                        new_elements_value = elements_value
+                        if elements_separator is None:
+                            new_elements_separator = PyComma()
+                        elif isinstance(elements_separator, PyComma):
+                            new_elements_separator = elements_separator
+                        else:
+                            raise ValueError("the field 'elements' received an unrecognised value'")
+                        new_elements.append(new_elements_value, new_elements_separator)
+                        first_elements_element = second_elements_element
+                    except StopIteration:
+                        if isinstance(first_elements_element, tuple):
+                            elements_value = first_elements_element[0]
+                            assert(first_elements_element[1] is None)
+                        else:
+                            elements_value = first_elements_element
+                        new_elements_value = elements_value
+                        new_elements.append(new_elements_value)
+                        break
 
-            self.elements: list[tuple[(PyPattern, PyComma | None)]] = new_elements
+            except StopIteration:
+                pass
+            self.elements: Punctuated[PyPattern,PyComma] = new_elements
+        else:
+            raise ValueError("the field 'elements' received an unrecognised value'")
         if close_bracket is None:
             self.close_bracket: PyCloseBracket = PyCloseBracket()
-        else:
+        elif isinstance(close_bracket, PyCloseBracket):
             self.close_bracket: PyCloseBracket = close_bracket
+        else:
+            raise ValueError("the field 'close_bracket' received an unrecognised value'")
 
 
 class PyOpenParen(_BaseToken):
@@ -194,34 +303,59 @@ class PyCloseParen(_BaseToken):
 
 
 class PyTuplePattern(_BaseNode):
-    def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'None | list[tuple[(PyPattern, PyComma | None)]]' = None, close_paren: 'PyCloseParen | None' = None) -> None:
+    def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'list[PyPattern] | list[tuple[PyPattern,PyComma | None | None]] | Punctuated[PyPattern,PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         if open_paren is None:
             self.open_paren: PyOpenParen = PyOpenParen()
-        else:
+        elif isinstance(open_paren, PyOpenParen):
             self.open_paren: PyOpenParen = open_paren
-        if elements is None:
-            self.elements: list[tuple[(PyPattern, PyComma | None)]] = list()
         else:
-            new_elements = list()
-            for elements_element in elements:
-                assert(isinstance(elements_element, tuple))
-                elements_element_0 = elements_element[0]
-                new_elements_element_0 = elements_element_0
-                elements_element_1 = elements_element[1]
-                if isinstance(elements_element_1, PyComma):
-                    new_elements_element_1 = elements_element_1
-                elif elements_element_1 is None:
-                    new_elements_element_1 = None
-                else:
-                    raise ValueError("the field 'elements' received an unrecognised value'")
-                new_elements_element = (new_elements_element_0, new_elements_element_1)
-                new_elements.append(new_elements_element)
+            raise ValueError("the field 'open_paren' received an unrecognised value'")
+        if elements is None:
+            self.elements: Punctuated[PyPattern,PyComma] = Punctuated()
+        elif isinstance(elements, list) or isinstance(elements, list) or isinstance(elements, Punctuated):
+            new_elements = Punctuated()
+            elements_iter = iter(elements)
+            try:
+                first_elements_element = next(elements_iter)
+                while True:
+                    try:
+                        second_elements_element = next(elements_iter)
+                        if isinstance(first_elements_element, tuple):
+                            elements_value = first_elements_element[0]
+                            elements_separator = first_elements_element[1]
+                        else:
+                            elements_value = first_elements_element
+                            elements_separator = None
+                        new_elements_value = elements_value
+                        if elements_separator is None:
+                            new_elements_separator = PyComma()
+                        elif isinstance(elements_separator, PyComma):
+                            new_elements_separator = elements_separator
+                        else:
+                            raise ValueError("the field 'elements' received an unrecognised value'")
+                        new_elements.append(new_elements_value, new_elements_separator)
+                        first_elements_element = second_elements_element
+                    except StopIteration:
+                        if isinstance(first_elements_element, tuple):
+                            elements_value = first_elements_element[0]
+                            assert(first_elements_element[1] is None)
+                        else:
+                            elements_value = first_elements_element
+                        new_elements_value = elements_value
+                        new_elements.append(new_elements_value)
+                        break
 
-            self.elements: list[tuple[(PyPattern, PyComma | None)]] = new_elements
+            except StopIteration:
+                pass
+            self.elements: Punctuated[PyPattern,PyComma] = new_elements
+        else:
+            raise ValueError("the field 'elements' received an unrecognised value'")
         if close_paren is None:
             self.close_paren: PyCloseParen = PyCloseParen()
-        else:
+        elif isinstance(close_paren, PyCloseParen):
             self.close_paren: PyCloseParen = close_paren
+        else:
+            raise ValueError("the field 'close_paren' received an unrecognised value'")
 
 
 PyExpr: TypeAlias = 'PyAttrExpr | PyCallExpr | PyConstExpr | PyInfixExpr | PyListExpr | PyNamedExpr | PyNestExpr | PyPrefixExpr | PyStarredExpr | PySubscriptExpr | PyTupleExpr'
@@ -232,22 +366,19 @@ def is_py_expr(value: Any) -> TypeGuard[PyExpr]:
 
 
 class PyConstExpr(_BaseNode):
-    def __init__(self, *, literal: 'PyString | str | PyFloat | float | PyInteger | int') -> None:
-        if isinstance(literal, PyString) or isinstance(literal, str):
-            if isinstance(literal, str):
-                self.literal: PyString | PyFloat | PyInteger = PyString(literal)
-            else:
-                self.literal: PyString | PyFloat | PyInteger = literal
-        elif isinstance(literal, PyFloat) or isinstance(literal, float):
-            if isinstance(literal, float):
-                self.literal: PyString | PyFloat | PyInteger = PyFloat(literal)
-            else:
-                self.literal: PyString | PyFloat | PyInteger = literal
-        elif isinstance(literal, PyInteger) or isinstance(literal, int):
-            if isinstance(literal, int):
-                self.literal: PyString | PyFloat | PyInteger = PyInteger(literal)
-            else:
-                self.literal: PyString | PyFloat | PyInteger = literal
+    def __init__(self, *, literal: 'str | PyString | float | PyFloat | int | PyInteger') -> None:
+        if isinstance(literal, str):
+            self.literal: PyString | PyFloat | PyInteger = PyString(literal)
+        elif isinstance(literal, PyString):
+            self.literal: PyString | PyFloat | PyInteger = literal
+        elif isinstance(literal, float):
+            self.literal: PyString | PyFloat | PyInteger = PyFloat(literal)
+        elif isinstance(literal, PyFloat):
+            self.literal: PyString | PyFloat | PyInteger = literal
+        elif isinstance(literal, int):
+            self.literal: PyString | PyFloat | PyInteger = PyInteger(literal)
+        elif isinstance(literal, PyInteger):
+            self.literal: PyString | PyFloat | PyInteger = literal
         else:
             raise ValueError("the field 'literal' received an unrecognised value'")
 
@@ -256,137 +387,234 @@ class PyNestExpr(_BaseNode):
     def __init__(self, *, open_paren: 'PyOpenParen | None' = None, expr: 'PyExpr', close_paren: 'PyCloseParen | None' = None) -> None:
         if open_paren is None:
             self.open_paren: PyOpenParen = PyOpenParen()
-        else:
+        elif isinstance(open_paren, PyOpenParen):
             self.open_paren: PyOpenParen = open_paren
+        else:
+            raise ValueError("the field 'open_paren' received an unrecognised value'")
         self.expr: PyExpr = expr
         if close_paren is None:
             self.close_paren: PyCloseParen = PyCloseParen()
-        else:
+        elif isinstance(close_paren, PyCloseParen):
             self.close_paren: PyCloseParen = close_paren
+        else:
+            raise ValueError("the field 'close_paren' received an unrecognised value'")
 
 
 class PyNamedExpr(_BaseNode):
-    def __init__(self, *, name: 'PyIdent | str') -> None:
+    def __init__(self, *, name: 'str | PyIdent') -> None:
         if isinstance(name, str):
             self.name: PyIdent = PyIdent(name)
-        else:
+        elif isinstance(name, PyIdent):
             self.name: PyIdent = name
+        else:
+            raise ValueError("the field 'name' received an unrecognised value'")
 
 
 class PyAttrExpr(_BaseNode):
-    def __init__(self, *, expr: 'PyExpr', dot: 'PyDot | None' = None, name: 'PyIdent | str') -> None:
+    def __init__(self, *, expr: 'PyExpr', dot: 'PyDot | None' = None, name: 'str | PyIdent') -> None:
         self.expr: PyExpr = expr
         if dot is None:
             self.dot: PyDot = PyDot()
-        else:
+        elif isinstance(dot, PyDot):
             self.dot: PyDot = dot
+        else:
+            raise ValueError("the field 'dot' received an unrecognised value'")
         if isinstance(name, str):
             self.name: PyIdent = PyIdent(name)
-        else:
+        elif isinstance(name, PyIdent):
             self.name: PyIdent = name
+        else:
+            raise ValueError("the field 'name' received an unrecognised value'")
 
 
 class PySubscriptExpr(_BaseNode):
-    def __init__(self, *, expr: 'PyExpr', open_bracket: 'PyOpenBracket | None' = None, slices: 'None | list[tuple[(PyExpr | PySlice, PyComma | None)]]' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+    def __init__(self, *, expr: 'PyExpr', open_bracket: 'PyOpenBracket | None' = None, slices: 'list[PyExpr | PySlice] | list[tuple[PyExpr | PySlice,PyComma | None | None]] | Punctuated[PyExpr | PySlice,PyComma | None] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         self.expr: PyExpr = expr
         if open_bracket is None:
             self.open_bracket: PyOpenBracket = PyOpenBracket()
-        else:
+        elif isinstance(open_bracket, PyOpenBracket):
             self.open_bracket: PyOpenBracket = open_bracket
-        if slices is None:
-            self.slices: list[tuple[(PyExpr | PySlice, PyComma | None)]] = list()
         else:
-            new_slices = list()
-            for slices_element in slices:
-                assert(isinstance(slices_element, tuple))
-                slices_element_0 = slices_element[0]
-                new_slices_element_0 = slices_element_0
-                slices_element_1 = slices_element[1]
-                if isinstance(slices_element_1, PyComma):
-                    new_slices_element_1 = slices_element_1
-                elif slices_element_1 is None:
-                    new_slices_element_1 = None
-                else:
-                    raise ValueError("the field 'slices' received an unrecognised value'")
-                new_slices_element = (new_slices_element_0, new_slices_element_1)
-                new_slices.append(new_slices_element)
+            raise ValueError("the field 'open_bracket' received an unrecognised value'")
+        if slices is None:
+            self.slices: Punctuated[PyExpr | PySlice,PyComma] = Punctuated()
+        elif isinstance(slices, list) or isinstance(slices, list) or isinstance(slices, Punctuated):
+            new_slices = Punctuated()
+            slices_iter = iter(slices)
+            try:
+                first_slices_element = next(slices_iter)
+                while True:
+                    try:
+                        second_slices_element = next(slices_iter)
+                        if isinstance(first_slices_element, tuple):
+                            slices_value = first_slices_element[0]
+                            slices_separator = first_slices_element[1]
+                        else:
+                            slices_value = first_slices_element
+                            slices_separator = None
+                        if is_py_expr(slices_value):
+                            new_slices_value = slices_value
+                        elif isinstance(slices_value, PySlice):
+                            new_slices_value = slices_value
+                        else:
+                            raise ValueError("the field 'slices' received an unrecognised value'")
+                        if slices_separator is None:
+                            new_slices_separator = PyComma()
+                        elif isinstance(slices_separator, PyComma):
+                            new_slices_separator = slices_separator
+                        else:
+                            raise ValueError("the field 'slices' received an unrecognised value'")
+                        new_slices.append(new_slices_value, new_slices_separator)
+                        first_slices_element = second_slices_element
+                    except StopIteration:
+                        if isinstance(first_slices_element, tuple):
+                            slices_value = first_slices_element[0]
+                            assert(first_slices_element[1] is None)
+                        else:
+                            slices_value = first_slices_element
+                        if is_py_expr(slices_value):
+                            new_slices_value = slices_value
+                        elif isinstance(slices_value, PySlice):
+                            new_slices_value = slices_value
+                        else:
+                            raise ValueError("the field 'slices' received an unrecognised value'")
+                        new_slices.append(new_slices_value)
+                        break
 
-            self.slices: list[tuple[(PyExpr | PySlice, PyComma | None)]] = new_slices
+            except StopIteration:
+                pass
+            self.slices: Punctuated[PyExpr | PySlice,PyComma] = new_slices
+        else:
+            raise ValueError("the field 'slices' received an unrecognised value'")
         if close_bracket is None:
             self.close_bracket: PyCloseBracket = PyCloseBracket()
-        else:
+        elif isinstance(close_bracket, PyCloseBracket):
             self.close_bracket: PyCloseBracket = close_bracket
+        else:
+            raise ValueError("the field 'close_bracket' received an unrecognised value'")
 
 
 class PyStarredExpr(_BaseNode):
     def __init__(self, *, asterisk: 'PyAsterisk | None' = None, expr: 'PyExpr') -> None:
         if asterisk is None:
             self.asterisk: PyAsterisk = PyAsterisk()
-        else:
+        elif isinstance(asterisk, PyAsterisk):
             self.asterisk: PyAsterisk = asterisk
+        else:
+            raise ValueError("the field 'asterisk' received an unrecognised value'")
         self.expr: PyExpr = expr
 
 
 class PyListExpr(_BaseNode):
-    def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'None | list[tuple[(PyExpr, PyComma | None)]]' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+    def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'list[PyExpr] | list[tuple[PyExpr,PyComma | None | None]] | Punctuated[PyExpr,PyComma | None] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         if open_bracket is None:
             self.open_bracket: PyOpenBracket = PyOpenBracket()
-        else:
+        elif isinstance(open_bracket, PyOpenBracket):
             self.open_bracket: PyOpenBracket = open_bracket
-        if elements is None:
-            self.elements: list[tuple[(PyExpr, PyComma | None)]] = list()
         else:
-            new_elements = list()
-            for elements_element in elements:
-                assert(isinstance(elements_element, tuple))
-                elements_element_0 = elements_element[0]
-                new_elements_element_0 = elements_element_0
-                elements_element_1 = elements_element[1]
-                if isinstance(elements_element_1, PyComma):
-                    new_elements_element_1 = elements_element_1
-                elif elements_element_1 is None:
-                    new_elements_element_1 = None
-                else:
-                    raise ValueError("the field 'elements' received an unrecognised value'")
-                new_elements_element = (new_elements_element_0, new_elements_element_1)
-                new_elements.append(new_elements_element)
+            raise ValueError("the field 'open_bracket' received an unrecognised value'")
+        if elements is None:
+            self.elements: Punctuated[PyExpr,PyComma] = Punctuated()
+        elif isinstance(elements, list) or isinstance(elements, list) or isinstance(elements, Punctuated):
+            new_elements = Punctuated()
+            elements_iter = iter(elements)
+            try:
+                first_elements_element = next(elements_iter)
+                while True:
+                    try:
+                        second_elements_element = next(elements_iter)
+                        if isinstance(first_elements_element, tuple):
+                            elements_value = first_elements_element[0]
+                            elements_separator = first_elements_element[1]
+                        else:
+                            elements_value = first_elements_element
+                            elements_separator = None
+                        new_elements_value = elements_value
+                        if elements_separator is None:
+                            new_elements_separator = PyComma()
+                        elif isinstance(elements_separator, PyComma):
+                            new_elements_separator = elements_separator
+                        else:
+                            raise ValueError("the field 'elements' received an unrecognised value'")
+                        new_elements.append(new_elements_value, new_elements_separator)
+                        first_elements_element = second_elements_element
+                    except StopIteration:
+                        if isinstance(first_elements_element, tuple):
+                            elements_value = first_elements_element[0]
+                            assert(first_elements_element[1] is None)
+                        else:
+                            elements_value = first_elements_element
+                        new_elements_value = elements_value
+                        new_elements.append(new_elements_value)
+                        break
 
-            self.elements: list[tuple[(PyExpr, PyComma | None)]] = new_elements
+            except StopIteration:
+                pass
+            self.elements: Punctuated[PyExpr,PyComma] = new_elements
+        else:
+            raise ValueError("the field 'elements' received an unrecognised value'")
         if close_bracket is None:
             self.close_bracket: PyCloseBracket = PyCloseBracket()
-        else:
+        elif isinstance(close_bracket, PyCloseBracket):
             self.close_bracket: PyCloseBracket = close_bracket
+        else:
+            raise ValueError("the field 'close_bracket' received an unrecognised value'")
 
 
 class PyTupleExpr(_BaseNode):
-    def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'None | list[tuple[(PyExpr, PyComma | None)]]' = None, close_paren: 'PyCloseParen | None' = None) -> None:
+    def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'list[PyExpr] | list[tuple[PyExpr,PyComma | None | None]] | Punctuated[PyExpr,PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         if open_paren is None:
             self.open_paren: PyOpenParen = PyOpenParen()
-        else:
+        elif isinstance(open_paren, PyOpenParen):
             self.open_paren: PyOpenParen = open_paren
-        if elements is None:
-            self.elements: list[tuple[(PyExpr, PyComma | None)]] = list()
         else:
-            new_elements = list()
-            for elements_element in elements:
-                assert(isinstance(elements_element, tuple))
-                elements_element_0 = elements_element[0]
-                new_elements_element_0 = elements_element_0
-                elements_element_1 = elements_element[1]
-                if isinstance(elements_element_1, PyComma):
-                    new_elements_element_1 = elements_element_1
-                elif elements_element_1 is None:
-                    new_elements_element_1 = None
-                else:
-                    raise ValueError("the field 'elements' received an unrecognised value'")
-                new_elements_element = (new_elements_element_0, new_elements_element_1)
-                new_elements.append(new_elements_element)
+            raise ValueError("the field 'open_paren' received an unrecognised value'")
+        if elements is None:
+            self.elements: Punctuated[PyExpr,PyComma] = Punctuated()
+        elif isinstance(elements, list) or isinstance(elements, list) or isinstance(elements, Punctuated):
+            new_elements = Punctuated()
+            elements_iter = iter(elements)
+            try:
+                first_elements_element = next(elements_iter)
+                while True:
+                    try:
+                        second_elements_element = next(elements_iter)
+                        if isinstance(first_elements_element, tuple):
+                            elements_value = first_elements_element[0]
+                            elements_separator = first_elements_element[1]
+                        else:
+                            elements_value = first_elements_element
+                            elements_separator = None
+                        new_elements_value = elements_value
+                        if elements_separator is None:
+                            new_elements_separator = PyComma()
+                        elif isinstance(elements_separator, PyComma):
+                            new_elements_separator = elements_separator
+                        else:
+                            raise ValueError("the field 'elements' received an unrecognised value'")
+                        new_elements.append(new_elements_value, new_elements_separator)
+                        first_elements_element = second_elements_element
+                    except StopIteration:
+                        if isinstance(first_elements_element, tuple):
+                            elements_value = first_elements_element[0]
+                            assert(first_elements_element[1] is None)
+                        else:
+                            elements_value = first_elements_element
+                        new_elements_value = elements_value
+                        new_elements.append(new_elements_value)
+                        break
 
-            self.elements: list[tuple[(PyExpr, PyComma | None)]] = new_elements
+            except StopIteration:
+                pass
+            self.elements: Punctuated[PyExpr,PyComma] = new_elements
+        else:
+            raise ValueError("the field 'elements' received an unrecognised value'")
         if close_paren is None:
             self.close_paren: PyCloseParen = PyCloseParen()
-        else:
+        elif isinstance(close_paren, PyCloseParen):
             self.close_paren: PyCloseParen = close_paren
+        else:
+            raise ValueError("the field 'close_paren' received an unrecognised value'")
 
 
 PyArg: TypeAlias = 'PyPosArg | PyKeywordArg'
@@ -406,48 +634,77 @@ class PyEquals(_BaseToken):
 
 
 class PyKeywordArg(_BaseNode):
-    def __init__(self, *, name: 'PyIdent | str', equals: 'PyEquals | None' = None, expr: 'PyExpr') -> None:
+    def __init__(self, *, name: 'str | PyIdent', equals: 'PyEquals | None' = None, expr: 'PyExpr') -> None:
         if isinstance(name, str):
             self.name: PyIdent = PyIdent(name)
-        else:
+        elif isinstance(name, PyIdent):
             self.name: PyIdent = name
+        else:
+            raise ValueError("the field 'name' received an unrecognised value'")
         if equals is None:
             self.equals: PyEquals = PyEquals()
-        else:
+        elif isinstance(equals, PyEquals):
             self.equals: PyEquals = equals
+        else:
+            raise ValueError("the field 'equals' received an unrecognised value'")
         self.expr: PyExpr = expr
 
 
 class PyCallExpr(_BaseNode):
-    def __init__(self, *, operator: 'PyExpr', open_paren: 'PyOpenParen | None' = None, args: 'None | list[tuple[(PyArg, PyComma | None)]]' = None, close_paren: 'PyCloseParen | None' = None) -> None:
+    def __init__(self, *, operator: 'PyExpr', open_paren: 'PyOpenParen | None' = None, args: 'list[PyArg] | list[tuple[PyArg,PyComma | None | None]] | Punctuated[PyArg,PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         self.operator: PyExpr = operator
         if open_paren is None:
             self.open_paren: PyOpenParen = PyOpenParen()
-        else:
+        elif isinstance(open_paren, PyOpenParen):
             self.open_paren: PyOpenParen = open_paren
-        if args is None:
-            self.args: list[tuple[(PyArg, PyComma | None)]] = list()
         else:
-            new_args = list()
-            for args_element in args:
-                assert(isinstance(args_element, tuple))
-                args_element_0 = args_element[0]
-                new_args_element_0 = args_element_0
-                args_element_1 = args_element[1]
-                if isinstance(args_element_1, PyComma):
-                    new_args_element_1 = args_element_1
-                elif args_element_1 is None:
-                    new_args_element_1 = None
-                else:
-                    raise ValueError("the field 'args' received an unrecognised value'")
-                new_args_element = (new_args_element_0, new_args_element_1)
-                new_args.append(new_args_element)
+            raise ValueError("the field 'open_paren' received an unrecognised value'")
+        if args is None:
+            self.args: Punctuated[PyArg,PyComma] = Punctuated()
+        elif isinstance(args, list) or isinstance(args, list) or isinstance(args, Punctuated):
+            new_args = Punctuated()
+            args_iter = iter(args)
+            try:
+                first_args_element = next(args_iter)
+                while True:
+                    try:
+                        second_args_element = next(args_iter)
+                        if isinstance(first_args_element, tuple):
+                            args_value = first_args_element[0]
+                            args_separator = first_args_element[1]
+                        else:
+                            args_value = first_args_element
+                            args_separator = None
+                        new_args_value = args_value
+                        if args_separator is None:
+                            new_args_separator = PyComma()
+                        elif isinstance(args_separator, PyComma):
+                            new_args_separator = args_separator
+                        else:
+                            raise ValueError("the field 'args' received an unrecognised value'")
+                        new_args.append(new_args_value, new_args_separator)
+                        first_args_element = second_args_element
+                    except StopIteration:
+                        if isinstance(first_args_element, tuple):
+                            args_value = first_args_element[0]
+                            assert(first_args_element[1] is None)
+                        else:
+                            args_value = first_args_element
+                        new_args_value = args_value
+                        new_args.append(new_args_value)
+                        break
 
-            self.args: list[tuple[(PyArg, PyComma | None)]] = new_args
+            except StopIteration:
+                pass
+            self.args: Punctuated[PyArg,PyComma] = new_args
+        else:
+            raise ValueError("the field 'args' received an unrecognised value'")
         if close_paren is None:
             self.close_paren: PyCloseParen = PyCloseParen()
-        else:
+        elif isinstance(close_paren, PyCloseParen):
             self.close_paren: PyCloseParen = close_paren
+        else:
+            raise ValueError("the field 'close_paren' received an unrecognised value'")
 
 
 class PyPrefixOp(_BaseToken):
@@ -457,11 +714,13 @@ class PyPrefixOp(_BaseToken):
 
 
 class PyPrefixExpr(_BaseNode):
-    def __init__(self, *, prefix_op: 'PyPrefixOp | str', expr: 'PyExpr') -> None:
+    def __init__(self, *, prefix_op: 'str | PyPrefixOp', expr: 'PyExpr') -> None:
         if isinstance(prefix_op, str):
             self.prefix_op: PyPrefixOp = PyPrefixOp(prefix_op)
-        else:
+        elif isinstance(prefix_op, PyPrefixOp):
             self.prefix_op: PyPrefixOp = prefix_op
+        else:
+            raise ValueError("the field 'prefix_op' received an unrecognised value'")
         self.expr: PyExpr = expr
 
 
@@ -472,12 +731,14 @@ class PyInfixOp(_BaseToken):
 
 
 class PyInfixExpr(_BaseNode):
-    def __init__(self, *, left: 'PyExpr', op: 'PyInfixOp | str', right: 'PyExpr') -> None:
+    def __init__(self, *, left: 'PyExpr', op: 'str | PyInfixOp', right: 'PyExpr') -> None:
         self.left: PyExpr = left
         if isinstance(op, str):
             self.op: PyInfixOp = PyInfixOp(op)
-        else:
+        elif isinstance(op, PyInfixOp):
             self.op: PyInfixOp = op
+        else:
+            raise ValueError("the field 'op' received an unrecognised value'")
         self.right: PyExpr = right
 
 
@@ -496,9 +757,16 @@ class PyRetStmt(_BaseNode):
     def __init__(self, *, return_keyword: 'PyReturnKeyword | None' = None, expr: 'PyExpr | None' = None) -> None:
         if return_keyword is None:
             self.return_keyword: PyReturnKeyword = PyReturnKeyword()
-        else:
+        elif isinstance(return_keyword, PyReturnKeyword):
             self.return_keyword: PyReturnKeyword = return_keyword
-        self.expr: PyExpr | None = expr
+        else:
+            raise ValueError("the field 'return_keyword' received an unrecognised value'")
+        if is_py_expr(expr):
+            self.expr: PyExpr | None = expr
+        elif expr is None:
+            self.expr: PyExpr | None = None
+        else:
+            raise ValueError("the field 'expr' received an unrecognised value'")
 
 
 class PyExprStmt(_BaseNode):
@@ -507,29 +775,32 @@ class PyExprStmt(_BaseNode):
 
 
 class PyAssignStmt(_BaseNode):
-    def __init__(self, *, pattern: 'PyPattern', annotation: 'PyExpr | tuple[(PyColon | None, PyExpr)] | None' = None, equals: 'PyEquals | None' = None, expr: 'PyExpr') -> None:
+    def __init__(self, *, pattern: 'PyPattern', annotation: 'PyExpr | tuple[PyColon | None,PyExpr] | None' = None, equals: 'PyEquals | None' = None, expr: 'PyExpr') -> None:
         self.pattern: PyPattern = pattern
-        if is_py_expr(annotation) or isinstance(annotation, tuple):
-            if is_py_expr(annotation):
-                self.annotation: tuple[(PyColon, PyExpr)] | None = (PyColon(), annotation)
+        if is_py_expr(annotation):
+            self.annotation: tuple[PyColon,PyExpr] | None = (PyColon(), annotation)
+        elif isinstance(annotation, tuple):
+            assert(isinstance(annotation, tuple))
+            annotation_0 = annotation[0]
+            if annotation_0 is None:
+                new_annotation_0 = PyColon()
+            elif isinstance(annotation_0, PyColon):
+                new_annotation_0 = annotation_0
             else:
-                assert(isinstance(annotation, tuple))
-                annotation_0 = annotation[0]
-                if annotation_0 is None:
-                    new_annotation_0 = PyColon()
-                else:
-                    new_annotation_0 = annotation_0
-                annotation_1 = annotation[1]
-                new_annotation_1 = annotation_1
-                self.annotation: tuple[(PyColon, PyExpr)] | None = (new_annotation_0, new_annotation_1)
+                raise ValueError("the field 'annotation' received an unrecognised value'")
+            annotation_1 = annotation[1]
+            new_annotation_1 = annotation_1
+            self.annotation: tuple[PyColon,PyExpr] | None = (new_annotation_0, new_annotation_1)
         elif annotation is None:
-            self.annotation: tuple[(PyColon, PyExpr)] | None = None
+            self.annotation: tuple[PyColon,PyExpr] | None = None
         else:
             raise ValueError("the field 'annotation' received an unrecognised value'")
         if equals is None:
             self.equals: PyEquals = PyEquals()
-        else:
+        elif isinstance(equals, PyEquals):
             self.equals: PyEquals = equals
+        else:
+            raise ValueError("the field 'equals' received an unrecognised value'")
         self.expr: PyExpr = expr
 
 
@@ -541,8 +812,10 @@ class PyPassStmt(_BaseNode):
     def __init__(self, *, pass_keyword: 'PyPassKeyword | None' = None) -> None:
         if pass_keyword is None:
             self.pass_keyword: PyPassKeyword = PyPassKeyword()
-        else:
+        elif isinstance(pass_keyword, PyPassKeyword):
             self.pass_keyword: PyPassKeyword = pass_keyword
+        else:
+            raise ValueError("the field 'pass_keyword' received an unrecognised value'")
 
 
 class PyIfKeyword(_BaseToken):
@@ -566,28 +839,31 @@ class PySemicolon(_BaseToken):
 
 
 class PyIfCase(_BaseNode):
-    def __init__(self, *, if_keyword: 'PyIfKeyword | None' = None, test: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
+    def __init__(self, *, if_keyword: 'PyIfKeyword | None' = None, test: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None) -> None:
         if if_keyword is None:
             self.if_keyword: PyIfKeyword = PyIfKeyword()
-        else:
+        elif isinstance(if_keyword, PyIfKeyword):
             self.if_keyword: PyIfKeyword = if_keyword
+        else:
+            raise ValueError("the field 'if_keyword' received an unrecognised value'")
         self.test: PyExpr = test
         if colon is None:
             self.colon: PyColon = PyColon()
-        else:
+        elif isinstance(colon, PyColon):
             self.colon: PyColon = colon
+        else:
+            raise ValueError("the field 'colon' received an unrecognised value'")
         if is_py_stmt(body):
             self.body: PyStmt | list[PyStmt] = body
-        elif body is None or isinstance(body, list):
-            if body is None:
-                self.body: PyStmt | list[PyStmt] = list()
-            else:
-                new_body = list()
-                for body_element in body:
-                    new_body_element = body_element
-                    new_body.append(new_body_element)
+        elif body is None:
+            self.body: PyStmt | list[PyStmt] = list()
+        elif isinstance(body, list):
+            new_body = list()
+            for body_element in body:
+                new_body_element = body_element
+                new_body.append(new_body_element)
 
-                self.body: PyStmt | list[PyStmt] = new_body
+            self.body: PyStmt | list[PyStmt] = new_body
         else:
             raise ValueError("the field 'body' received an unrecognised value'")
 
@@ -597,28 +873,31 @@ class PyElifKeyword(_BaseToken):
 
 
 class PyElifCase(_BaseNode):
-    def __init__(self, *, elif_keyword: 'PyElifKeyword | None' = None, test: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
+    def __init__(self, *, elif_keyword: 'PyElifKeyword | None' = None, test: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None) -> None:
         if elif_keyword is None:
             self.elif_keyword: PyElifKeyword = PyElifKeyword()
-        else:
+        elif isinstance(elif_keyword, PyElifKeyword):
             self.elif_keyword: PyElifKeyword = elif_keyword
+        else:
+            raise ValueError("the field 'elif_keyword' received an unrecognised value'")
         self.test: PyExpr = test
         if colon is None:
             self.colon: PyColon = PyColon()
-        else:
+        elif isinstance(colon, PyColon):
             self.colon: PyColon = colon
+        else:
+            raise ValueError("the field 'colon' received an unrecognised value'")
         if is_py_stmt(body):
             self.body: PyStmt | list[PyStmt] = body
-        elif body is None or isinstance(body, list):
-            if body is None:
-                self.body: PyStmt | list[PyStmt] = list()
-            else:
-                new_body = list()
-                for body_element in body:
-                    new_body_element = body_element
-                    new_body.append(new_body_element)
+        elif body is None:
+            self.body: PyStmt | list[PyStmt] = list()
+        elif isinstance(body, list):
+            new_body = list()
+            for body_element in body:
+                new_body_element = body_element
+                new_body.append(new_body_element)
 
-                self.body: PyStmt | list[PyStmt] = new_body
+            self.body: PyStmt | list[PyStmt] = new_body
         else:
             raise ValueError("the field 'body' received an unrecognised value'")
 
@@ -628,44 +907,54 @@ class PyElseKeyword(_BaseToken):
 
 
 class PyElseCase(_BaseNode):
-    def __init__(self, *, else_keyword: 'PyElseKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
+    def __init__(self, *, else_keyword: 'PyElseKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None) -> None:
         if else_keyword is None:
             self.else_keyword: PyElseKeyword = PyElseKeyword()
-        else:
+        elif isinstance(else_keyword, PyElseKeyword):
             self.else_keyword: PyElseKeyword = else_keyword
+        else:
+            raise ValueError("the field 'else_keyword' received an unrecognised value'")
         if colon is None:
             self.colon: PyColon = PyColon()
-        else:
+        elif isinstance(colon, PyColon):
             self.colon: PyColon = colon
+        else:
+            raise ValueError("the field 'colon' received an unrecognised value'")
         if is_py_stmt(body):
             self.body: PyStmt | list[PyStmt] = body
-        elif body is None or isinstance(body, list):
-            if body is None:
-                self.body: PyStmt | list[PyStmt] = list()
-            else:
-                new_body = list()
-                for body_element in body:
-                    new_body_element = body_element
-                    new_body.append(new_body_element)
+        elif body is None:
+            self.body: PyStmt | list[PyStmt] = list()
+        elif isinstance(body, list):
+            new_body = list()
+            for body_element in body:
+                new_body_element = body_element
+                new_body.append(new_body_element)
 
-                self.body: PyStmt | list[PyStmt] = new_body
+            self.body: PyStmt | list[PyStmt] = new_body
         else:
             raise ValueError("the field 'body' received an unrecognised value'")
 
 
 class PyIfStmt(_BaseNode):
-    def __init__(self, *, first: 'PyIfCase', alternatives: 'None | list[PyElifCase]' = None, last: 'PyElseCase | None' = None) -> None:
+    def __init__(self, *, first: 'PyIfCase', alternatives: 'list[PyElifCase] | None' = None, last: 'PyElseCase | None' = None) -> None:
         self.first: PyIfCase = first
         if alternatives is None:
             self.alternatives: list[PyElifCase] = list()
-        else:
+        elif isinstance(alternatives, list):
             new_alternatives = list()
             for alternatives_element in alternatives:
                 new_alternatives_element = alternatives_element
                 new_alternatives.append(new_alternatives_element)
 
             self.alternatives: list[PyElifCase] = new_alternatives
-        self.last: PyElseCase | None = last
+        else:
+            raise ValueError("the field 'alternatives' received an unrecognised value'")
+        if isinstance(last, PyElseCase):
+            self.last: PyElseCase | None = last
+        elif last is None:
+            self.last: PyElseCase | None = None
+        else:
+            raise ValueError("the field 'last' received an unrecognised value'")
 
 
 class PyDelKeyword(_BaseToken):
@@ -676,8 +965,10 @@ class PyDeleteStmt(_BaseNode):
     def __init__(self, *, del_keyword: 'PyDelKeyword | None' = None, pattern: 'PyPattern') -> None:
         if del_keyword is None:
             self.del_keyword: PyDelKeyword = PyDelKeyword()
-        else:
+        elif isinstance(del_keyword, PyDelKeyword):
             self.del_keyword: PyDelKeyword = del_keyword
+        else:
+            raise ValueError("the field 'del_keyword' received an unrecognised value'")
         self.pattern: PyPattern = pattern
 
 
@@ -690,27 +981,30 @@ class PyFormKeyword(_BaseToken):
 
 
 class PyRaiseStmt(_BaseNode):
-    def __init__(self, *, raise_keyword: 'PyRaiseKeyword | None' = None, expr: 'PyExpr', cause: 'PyExpr | tuple[(PyFormKeyword | None, PyExpr)] | None' = None) -> None:
+    def __init__(self, *, raise_keyword: 'PyRaiseKeyword | None' = None, expr: 'PyExpr', cause: 'PyExpr | tuple[PyFormKeyword | None,PyExpr] | None' = None) -> None:
         if raise_keyword is None:
             self.raise_keyword: PyRaiseKeyword = PyRaiseKeyword()
-        else:
+        elif isinstance(raise_keyword, PyRaiseKeyword):
             self.raise_keyword: PyRaiseKeyword = raise_keyword
+        else:
+            raise ValueError("the field 'raise_keyword' received an unrecognised value'")
         self.expr: PyExpr = expr
-        if is_py_expr(cause) or isinstance(cause, tuple):
-            if is_py_expr(cause):
-                self.cause: tuple[(PyFormKeyword, PyExpr)] | None = (PyFormKeyword(), cause)
+        if is_py_expr(cause):
+            self.cause: tuple[PyFormKeyword,PyExpr] | None = (PyFormKeyword(), cause)
+        elif isinstance(cause, tuple):
+            assert(isinstance(cause, tuple))
+            cause_0 = cause[0]
+            if cause_0 is None:
+                new_cause_0 = PyFormKeyword()
+            elif isinstance(cause_0, PyFormKeyword):
+                new_cause_0 = cause_0
             else:
-                assert(isinstance(cause, tuple))
-                cause_0 = cause[0]
-                if cause_0 is None:
-                    new_cause_0 = PyFormKeyword()
-                else:
-                    new_cause_0 = cause_0
-                cause_1 = cause[1]
-                new_cause_1 = cause_1
-                self.cause: tuple[(PyFormKeyword, PyExpr)] | None = (new_cause_0, new_cause_1)
+                raise ValueError("the field 'cause' received an unrecognised value'")
+            cause_1 = cause[1]
+            new_cause_1 = cause_1
+            self.cause: tuple[PyFormKeyword,PyExpr] | None = (new_cause_0, new_cause_1)
         elif cause is None:
-            self.cause: tuple[(PyFormKeyword, PyExpr)] | None = None
+            self.cause: tuple[PyFormKeyword,PyExpr] | None = None
         else:
             raise ValueError("the field 'cause' received an unrecognised value'")
 
@@ -724,78 +1018,82 @@ class PyInKeyword(_BaseToken):
 
 
 class PyForStmt(_BaseNode):
-    def __init__(self, *, for_keyword: 'PyForKeyword | None' = None, pattern: 'PyPattern', in_keyword: 'PyInKeyword | None' = None, expr: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None, else_clause: 'PyStmt | list[PyStmt] | tuple[(PyElseKeyword | None, PyColon | None, PyStmt | None | list[PyStmt])] | None' = None) -> None:
+    def __init__(self, *, for_keyword: 'PyForKeyword | None' = None, pattern: 'PyPattern', in_keyword: 'PyInKeyword | None' = None, expr: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None, else_clause: 'PyStmt | list[PyStmt] | tuple[PyElseKeyword | None,PyColon | None,PyStmt | list[PyStmt] | None] | None' = None) -> None:
         if for_keyword is None:
             self.for_keyword: PyForKeyword = PyForKeyword()
-        else:
+        elif isinstance(for_keyword, PyForKeyword):
             self.for_keyword: PyForKeyword = for_keyword
+        else:
+            raise ValueError("the field 'for_keyword' received an unrecognised value'")
         self.pattern: PyPattern = pattern
         if in_keyword is None:
             self.in_keyword: PyInKeyword = PyInKeyword()
-        else:
+        elif isinstance(in_keyword, PyInKeyword):
             self.in_keyword: PyInKeyword = in_keyword
+        else:
+            raise ValueError("the field 'in_keyword' received an unrecognised value'")
         self.expr: PyExpr = expr
         if colon is None:
             self.colon: PyColon = PyColon()
-        else:
+        elif isinstance(colon, PyColon):
             self.colon: PyColon = colon
+        else:
+            raise ValueError("the field 'colon' received an unrecognised value'")
         if is_py_stmt(body):
             self.body: PyStmt | list[PyStmt] = body
-        elif body is None or isinstance(body, list):
-            if body is None:
-                self.body: PyStmt | list[PyStmt] = list()
-            else:
-                new_body = list()
-                for body_element in body:
-                    new_body_element = body_element
-                    new_body.append(new_body_element)
+        elif body is None:
+            self.body: PyStmt | list[PyStmt] = list()
+        elif isinstance(body, list):
+            new_body = list()
+            for body_element in body:
+                new_body_element = body_element
+                new_body.append(new_body_element)
 
-                self.body: PyStmt | list[PyStmt] = new_body
+            self.body: PyStmt | list[PyStmt] = new_body
         else:
             raise ValueError("the field 'body' received an unrecognised value'")
-        if is_py_stmt(else_clause) or isinstance(else_clause, list) or isinstance(else_clause, tuple):
-            if is_py_stmt(else_clause) or isinstance(else_clause, list):
-                if is_py_stmt(else_clause):
-                    self.else_clause: tuple[(PyElseKeyword, PyColon, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), PyColon(), else_clause)
-                elif isinstance(else_clause, list):
-                    new_else_clause = list()
-                    for else_clause_element in else_clause:
-                        new_else_clause_element = else_clause_element
-                        new_else_clause.append(new_else_clause_element)
+        if is_py_stmt(else_clause):
+            self.else_clause: tuple[PyElseKeyword,PyColon,PyStmt | list[PyStmt]] | None = (PyElseKeyword(), PyColon(), else_clause)
+        elif isinstance(else_clause, list):
+            new_else_clause = list()
+            for else_clause_element in else_clause:
+                new_else_clause_element = else_clause_element
+                new_else_clause.append(new_else_clause_element)
 
-                    self.else_clause: tuple[(PyElseKeyword, PyColon, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), PyColon(), new_else_clause)
-                else:
-                    raise ValueError("the field 'else_clause' received an unrecognised value'")
+            self.else_clause: tuple[PyElseKeyword,PyColon,PyStmt | list[PyStmt]] | None = (PyElseKeyword(), PyColon(), new_else_clause)
+        elif isinstance(else_clause, tuple):
+            assert(isinstance(else_clause, tuple))
+            else_clause_0 = else_clause[0]
+            if else_clause_0 is None:
+                new_else_clause_0 = PyElseKeyword()
+            elif isinstance(else_clause_0, PyElseKeyword):
+                new_else_clause_0 = else_clause_0
             else:
-                assert(isinstance(else_clause, tuple))
-                else_clause_0 = else_clause[0]
-                if else_clause_0 is None:
-                    new_else_clause_0 = PyElseKeyword()
-                else:
-                    new_else_clause_0 = else_clause_0
-                else_clause_1 = else_clause[1]
-                if else_clause_1 is None:
-                    new_else_clause_1 = PyColon()
-                else:
-                    new_else_clause_1 = else_clause_1
-                else_clause_2 = else_clause[2]
-                if is_py_stmt(else_clause_2):
-                    new_else_clause_2 = else_clause_2
-                elif else_clause_2 is None or isinstance(else_clause_2, list):
-                    if else_clause_2 is None:
-                        new_else_clause_2 = list()
-                    else:
-                        new_else_clause_2 = list()
-                        for else_clause_2_element in else_clause_2:
-                            new_else_clause_2_element = else_clause_2_element
-                            new_else_clause_2.append(new_else_clause_2_element)
+                raise ValueError("the field 'else_clause' received an unrecognised value'")
+            else_clause_1 = else_clause[1]
+            if else_clause_1 is None:
+                new_else_clause_1 = PyColon()
+            elif isinstance(else_clause_1, PyColon):
+                new_else_clause_1 = else_clause_1
+            else:
+                raise ValueError("the field 'else_clause' received an unrecognised value'")
+            else_clause_2 = else_clause[2]
+            if is_py_stmt(else_clause_2):
+                new_else_clause_2 = else_clause_2
+            elif else_clause_2 is None:
+                new_else_clause_2 = list()
+            elif isinstance(else_clause_2, list):
+                new_else_clause_2 = list()
+                for else_clause_2_element in else_clause_2:
+                    new_else_clause_2_element = else_clause_2_element
+                    new_else_clause_2.append(new_else_clause_2_element)
 
-                        new_else_clause_2 = new_else_clause_2
-                else:
-                    raise ValueError("the field 'else_clause' received an unrecognised value'")
-                self.else_clause: tuple[(PyElseKeyword, PyColon, PyStmt | list[PyStmt])] | None = (new_else_clause_0, new_else_clause_1, new_else_clause_2)
+                new_else_clause_2 = new_else_clause_2
+            else:
+                raise ValueError("the field 'else_clause' received an unrecognised value'")
+            self.else_clause: tuple[PyElseKeyword,PyColon,PyStmt | list[PyStmt]] | None = (new_else_clause_0, new_else_clause_1, new_else_clause_2)
         elif else_clause is None:
-            self.else_clause: tuple[(PyElseKeyword, PyColon, PyStmt | list[PyStmt])] | None = None
+            self.else_clause: tuple[PyElseKeyword,PyColon,PyStmt | list[PyStmt]] | None = None
         else:
             raise ValueError("the field 'else_clause' received an unrecognised value'")
 
@@ -805,73 +1103,75 @@ class PyWhileKeyword(_BaseToken):
 
 
 class PyWhileStmt(_BaseNode):
-    def __init__(self, *, while_keyword: 'PyWhileKeyword | None' = None, expr: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None, else_clause: 'PyStmt | list[PyStmt] | tuple[(PyElseKeyword | None, PyColon | None, PyStmt | None | list[PyStmt])] | None' = None) -> None:
+    def __init__(self, *, while_keyword: 'PyWhileKeyword | None' = None, expr: 'PyExpr', colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None, else_clause: 'PyStmt | list[PyStmt] | tuple[PyElseKeyword | None,PyColon | None,PyStmt | list[PyStmt] | None] | None' = None) -> None:
         if while_keyword is None:
             self.while_keyword: PyWhileKeyword = PyWhileKeyword()
-        else:
+        elif isinstance(while_keyword, PyWhileKeyword):
             self.while_keyword: PyWhileKeyword = while_keyword
+        else:
+            raise ValueError("the field 'while_keyword' received an unrecognised value'")
         self.expr: PyExpr = expr
         if colon is None:
             self.colon: PyColon = PyColon()
-        else:
+        elif isinstance(colon, PyColon):
             self.colon: PyColon = colon
+        else:
+            raise ValueError("the field 'colon' received an unrecognised value'")
         if is_py_stmt(body):
             self.body: PyStmt | list[PyStmt] = body
-        elif body is None or isinstance(body, list):
-            if body is None:
-                self.body: PyStmt | list[PyStmt] = list()
-            else:
-                new_body = list()
-                for body_element in body:
-                    new_body_element = body_element
-                    new_body.append(new_body_element)
+        elif body is None:
+            self.body: PyStmt | list[PyStmt] = list()
+        elif isinstance(body, list):
+            new_body = list()
+            for body_element in body:
+                new_body_element = body_element
+                new_body.append(new_body_element)
 
-                self.body: PyStmt | list[PyStmt] = new_body
+            self.body: PyStmt | list[PyStmt] = new_body
         else:
             raise ValueError("the field 'body' received an unrecognised value'")
-        if is_py_stmt(else_clause) or isinstance(else_clause, list) or isinstance(else_clause, tuple):
-            if is_py_stmt(else_clause) or isinstance(else_clause, list):
-                if is_py_stmt(else_clause):
-                    self.else_clause: tuple[(PyElseKeyword, PyColon, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), PyColon(), else_clause)
-                elif isinstance(else_clause, list):
-                    new_else_clause = list()
-                    for else_clause_element in else_clause:
-                        new_else_clause_element = else_clause_element
-                        new_else_clause.append(new_else_clause_element)
+        if is_py_stmt(else_clause):
+            self.else_clause: tuple[PyElseKeyword,PyColon,PyStmt | list[PyStmt]] | None = (PyElseKeyword(), PyColon(), else_clause)
+        elif isinstance(else_clause, list):
+            new_else_clause = list()
+            for else_clause_element in else_clause:
+                new_else_clause_element = else_clause_element
+                new_else_clause.append(new_else_clause_element)
 
-                    self.else_clause: tuple[(PyElseKeyword, PyColon, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), PyColon(), new_else_clause)
-                else:
-                    raise ValueError("the field 'else_clause' received an unrecognised value'")
+            self.else_clause: tuple[PyElseKeyword,PyColon,PyStmt | list[PyStmt]] | None = (PyElseKeyword(), PyColon(), new_else_clause)
+        elif isinstance(else_clause, tuple):
+            assert(isinstance(else_clause, tuple))
+            else_clause_0 = else_clause[0]
+            if else_clause_0 is None:
+                new_else_clause_0 = PyElseKeyword()
+            elif isinstance(else_clause_0, PyElseKeyword):
+                new_else_clause_0 = else_clause_0
             else:
-                assert(isinstance(else_clause, tuple))
-                else_clause_0 = else_clause[0]
-                if else_clause_0 is None:
-                    new_else_clause_0 = PyElseKeyword()
-                else:
-                    new_else_clause_0 = else_clause_0
-                else_clause_1 = else_clause[1]
-                if else_clause_1 is None:
-                    new_else_clause_1 = PyColon()
-                else:
-                    new_else_clause_1 = else_clause_1
-                else_clause_2 = else_clause[2]
-                if is_py_stmt(else_clause_2):
-                    new_else_clause_2 = else_clause_2
-                elif else_clause_2 is None or isinstance(else_clause_2, list):
-                    if else_clause_2 is None:
-                        new_else_clause_2 = list()
-                    else:
-                        new_else_clause_2 = list()
-                        for else_clause_2_element in else_clause_2:
-                            new_else_clause_2_element = else_clause_2_element
-                            new_else_clause_2.append(new_else_clause_2_element)
+                raise ValueError("the field 'else_clause' received an unrecognised value'")
+            else_clause_1 = else_clause[1]
+            if else_clause_1 is None:
+                new_else_clause_1 = PyColon()
+            elif isinstance(else_clause_1, PyColon):
+                new_else_clause_1 = else_clause_1
+            else:
+                raise ValueError("the field 'else_clause' received an unrecognised value'")
+            else_clause_2 = else_clause[2]
+            if is_py_stmt(else_clause_2):
+                new_else_clause_2 = else_clause_2
+            elif else_clause_2 is None:
+                new_else_clause_2 = list()
+            elif isinstance(else_clause_2, list):
+                new_else_clause_2 = list()
+                for else_clause_2_element in else_clause_2:
+                    new_else_clause_2_element = else_clause_2_element
+                    new_else_clause_2.append(new_else_clause_2_element)
 
-                        new_else_clause_2 = new_else_clause_2
-                else:
-                    raise ValueError("the field 'else_clause' received an unrecognised value'")
-                self.else_clause: tuple[(PyElseKeyword, PyColon, PyStmt | list[PyStmt])] | None = (new_else_clause_0, new_else_clause_1, new_else_clause_2)
+                new_else_clause_2 = new_else_clause_2
+            else:
+                raise ValueError("the field 'else_clause' received an unrecognised value'")
+            self.else_clause: tuple[PyElseKeyword,PyColon,PyStmt | list[PyStmt]] | None = (new_else_clause_0, new_else_clause_1, new_else_clause_2)
         elif else_clause is None:
-            self.else_clause: tuple[(PyElseKeyword, PyColon, PyStmt | list[PyStmt])] | None = None
+            self.else_clause: tuple[PyElseKeyword,PyColon,PyStmt | list[PyStmt]] | None = None
         else:
             raise ValueError("the field 'else_clause' received an unrecognised value'")
 
@@ -884,8 +1184,10 @@ class PyBreakStmt(_BaseNode):
     def __init__(self, *, break_keyword: 'PyBreakKeyword | None' = None) -> None:
         if break_keyword is None:
             self.break_keyword: PyBreakKeyword = PyBreakKeyword()
-        else:
+        elif isinstance(break_keyword, PyBreakKeyword):
             self.break_keyword: PyBreakKeyword = break_keyword
+        else:
+            raise ValueError("the field 'break_keyword' received an unrecognised value'")
 
 
 class PyContinueKeyword(_BaseToken):
@@ -896,8 +1198,10 @@ class PyContinueStmt(_BaseNode):
     def __init__(self, *, continue_keyword: 'PyContinueKeyword | None' = None) -> None:
         if continue_keyword is None:
             self.continue_keyword: PyContinueKeyword = PyContinueKeyword()
-        else:
+        elif isinstance(continue_keyword, PyContinueKeyword):
             self.continue_keyword: PyContinueKeyword = continue_keyword
+        else:
+            raise ValueError("the field 'continue_keyword' received an unrecognised value'")
 
 
 class PyTypeKeyword(_BaseToken):
@@ -905,74 +1209,123 @@ class PyTypeKeyword(_BaseToken):
 
 
 class PyTypeAliasStmt(_BaseNode):
-    def __init__(self, *, type_keyword: 'PyTypeKeyword | None' = None, name: 'PyIdent | str', type_params: 'list[tuple[(PyExpr, PyComma | None)]] | tuple[(PyOpenBracket | None, None | list[tuple[(PyExpr, PyComma | None)]], PyCloseBracket | None)] | None' = None, equals: 'PyEquals | None' = None, expr: 'PyExpr') -> None:
+    def __init__(self, *, type_keyword: 'PyTypeKeyword | None' = None, name: 'str | PyIdent', type_params: 'list[PyExpr] | list[tuple[PyExpr,PyComma | None | None]] | Punctuated[PyExpr,PyComma | None] | tuple[PyOpenBracket | None,list[PyExpr] | list[tuple[PyExpr,PyComma | None | None]] | Punctuated[PyExpr,PyComma | None] | None,PyCloseBracket | None] | None' = None, equals: 'PyEquals | None' = None, expr: 'PyExpr') -> None:
         if type_keyword is None:
             self.type_keyword: PyTypeKeyword = PyTypeKeyword()
-        else:
+        elif isinstance(type_keyword, PyTypeKeyword):
             self.type_keyword: PyTypeKeyword = type_keyword
+        else:
+            raise ValueError("the field 'type_keyword' received an unrecognised value'")
         if isinstance(name, str):
             self.name: PyIdent = PyIdent(name)
-        else:
+        elif isinstance(name, PyIdent):
             self.name: PyIdent = name
-        if isinstance(type_params, list) or isinstance(type_params, tuple):
-            if isinstance(type_params, list):
-                new_type_params = list()
-                for type_params_element in type_params:
-                    assert(isinstance(type_params_element, tuple))
-                    type_params_element_0 = type_params_element[0]
-                    new_type_params_element_0 = type_params_element_0
-                    type_params_element_1 = type_params_element[1]
-                    if isinstance(type_params_element_1, PyComma):
-                        new_type_params_element_1 = type_params_element_1
-                    elif type_params_element_1 is None:
-                        new_type_params_element_1 = None
-                    else:
-                        raise ValueError("the field 'type_params' received an unrecognised value'")
-                    new_type_params_element = (new_type_params_element_0, new_type_params_element_1)
-                    new_type_params.append(new_type_params_element)
-
-                self.type_params: tuple[(PyOpenBracket, list[tuple[(PyExpr, PyComma | None)]], PyCloseBracket)] | None = (PyOpenBracket(), new_type_params, PyCloseBracket())
-            else:
-                assert(isinstance(type_params, tuple))
-                type_params_0 = type_params[0]
-                if type_params_0 is None:
-                    new_type_params_0 = PyOpenBracket()
-                else:
-                    new_type_params_0 = type_params_0
-                type_params_1 = type_params[1]
-                if type_params_1 is None:
-                    new_type_params_1 = list()
-                else:
-                    new_type_params_1 = list()
-                    for type_params_1_element in type_params_1:
-                        assert(isinstance(type_params_1_element, tuple))
-                        type_params_1_element_0 = type_params_1_element[0]
-                        new_type_params_1_element_0 = type_params_1_element_0
-                        type_params_1_element_1 = type_params_1_element[1]
-                        if isinstance(type_params_1_element_1, PyComma):
-                            new_type_params_1_element_1 = type_params_1_element_1
-                        elif type_params_1_element_1 is None:
-                            new_type_params_1_element_1 = None
+        else:
+            raise ValueError("the field 'name' received an unrecognised value'")
+        if isinstance(type_params, list) or isinstance(type_params, list) or isinstance(type_params, Punctuated):
+            new_type_params = Punctuated()
+            type_params_iter = iter(type_params)
+            try:
+                first_type_params_element = next(type_params_iter)
+                while True:
+                    try:
+                        second_type_params_element = next(type_params_iter)
+                        if isinstance(first_type_params_element, tuple):
+                            type_params_value = first_type_params_element[0]
+                            type_params_separator = first_type_params_element[1]
+                        else:
+                            type_params_value = first_type_params_element
+                            type_params_separator = None
+                        new_type_params_value = type_params_value
+                        if type_params_separator is None:
+                            new_type_params_separator = PyComma()
+                        elif isinstance(type_params_separator, PyComma):
+                            new_type_params_separator = type_params_separator
                         else:
                             raise ValueError("the field 'type_params' received an unrecognised value'")
-                        new_type_params_1_element = (new_type_params_1_element_0, new_type_params_1_element_1)
-                        new_type_params_1.append(new_type_params_1_element)
+                        new_type_params.append(new_type_params_value, new_type_params_separator)
+                        first_type_params_element = second_type_params_element
+                    except StopIteration:
+                        if isinstance(first_type_params_element, tuple):
+                            type_params_value = first_type_params_element[0]
+                            assert(first_type_params_element[1] is None)
+                        else:
+                            type_params_value = first_type_params_element
+                        new_type_params_value = type_params_value
+                        new_type_params.append(new_type_params_value)
+                        break
 
-                    new_type_params_1 = new_type_params_1
-                type_params_2 = type_params[2]
-                if type_params_2 is None:
-                    new_type_params_2 = PyCloseBracket()
-                else:
-                    new_type_params_2 = type_params_2
-                self.type_params: tuple[(PyOpenBracket, list[tuple[(PyExpr, PyComma | None)]], PyCloseBracket)] | None = (new_type_params_0, new_type_params_1, new_type_params_2)
+            except StopIteration:
+                pass
+            self.type_params: tuple[PyOpenBracket,Punctuated[PyExpr,PyComma],PyCloseBracket] | None = (PyOpenBracket(), new_type_params, PyCloseBracket())
+        elif isinstance(type_params, tuple):
+            assert(isinstance(type_params, tuple))
+            type_params_0 = type_params[0]
+            if type_params_0 is None:
+                new_type_params_0 = PyOpenBracket()
+            elif isinstance(type_params_0, PyOpenBracket):
+                new_type_params_0 = type_params_0
+            else:
+                raise ValueError("the field 'type_params' received an unrecognised value'")
+            type_params_1 = type_params[1]
+            if type_params_1 is None:
+                new_type_params_1 = Punctuated()
+            elif isinstance(type_params_1, list) or isinstance(type_params_1, list) or isinstance(type_params_1, Punctuated):
+                new_type_params_1 = Punctuated()
+                type_params_1_iter = iter(type_params_1)
+                try:
+                    first_type_params_1_element = next(type_params_1_iter)
+                    while True:
+                        try:
+                            second_type_params_1_element = next(type_params_1_iter)
+                            if isinstance(first_type_params_1_element, tuple):
+                                type_params_1_value = first_type_params_1_element[0]
+                                type_params_1_separator = first_type_params_1_element[1]
+                            else:
+                                type_params_1_value = first_type_params_1_element
+                                type_params_1_separator = None
+                            new_type_params_1_value = type_params_1_value
+                            if type_params_1_separator is None:
+                                new_type_params_1_separator = PyComma()
+                            elif isinstance(type_params_1_separator, PyComma):
+                                new_type_params_1_separator = type_params_1_separator
+                            else:
+                                raise ValueError("the field 'type_params' received an unrecognised value'")
+                            new_type_params_1.append(new_type_params_1_value, new_type_params_1_separator)
+                            first_type_params_1_element = second_type_params_1_element
+                        except StopIteration:
+                            if isinstance(first_type_params_1_element, tuple):
+                                type_params_1_value = first_type_params_1_element[0]
+                                assert(first_type_params_1_element[1] is None)
+                            else:
+                                type_params_1_value = first_type_params_1_element
+                            new_type_params_1_value = type_params_1_value
+                            new_type_params_1.append(new_type_params_1_value)
+                            break
+
+                except StopIteration:
+                    pass
+                new_type_params_1 = new_type_params_1
+            else:
+                raise ValueError("the field 'type_params' received an unrecognised value'")
+            type_params_2 = type_params[2]
+            if type_params_2 is None:
+                new_type_params_2 = PyCloseBracket()
+            elif isinstance(type_params_2, PyCloseBracket):
+                new_type_params_2 = type_params_2
+            else:
+                raise ValueError("the field 'type_params' received an unrecognised value'")
+            self.type_params: tuple[PyOpenBracket,Punctuated[PyExpr,PyComma],PyCloseBracket] | None = (new_type_params_0, new_type_params_1, new_type_params_2)
         elif type_params is None:
-            self.type_params: tuple[(PyOpenBracket, list[tuple[(PyExpr, PyComma | None)]], PyCloseBracket)] | None = None
+            self.type_params: tuple[PyOpenBracket,Punctuated[PyExpr,PyComma],PyCloseBracket] | None = None
         else:
             raise ValueError("the field 'type_params' received an unrecognised value'")
         if equals is None:
             self.equals: PyEquals = PyEquals()
-        else:
+        elif isinstance(equals, PyEquals):
             self.equals: PyEquals = equals
+        else:
+            raise ValueError("the field 'equals' received an unrecognised value'")
         self.expr: PyExpr = expr
 
 
@@ -985,47 +1338,56 @@ class PyAsKeyword(_BaseToken):
 
 
 class PyExceptHandler(_BaseNode):
-    def __init__(self, *, except_keyword: 'PyExceptKeyword | None' = None, expr: 'PyExpr', binder: 'PyIdent | str | tuple[(PyAsKeyword | None, PyIdent | str)] | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
+    def __init__(self, *, except_keyword: 'PyExceptKeyword | None' = None, expr: 'PyExpr', binder: 'str | PyIdent | tuple[PyAsKeyword | None,str | PyIdent] | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None) -> None:
         if except_keyword is None:
             self.except_keyword: PyExceptKeyword = PyExceptKeyword()
-        else:
+        elif isinstance(except_keyword, PyExceptKeyword):
             self.except_keyword: PyExceptKeyword = except_keyword
+        else:
+            raise ValueError("the field 'except_keyword' received an unrecognised value'")
         self.expr: PyExpr = expr
-        if isinstance(binder, PyIdent) or isinstance(binder, str) or isinstance(binder, tuple):
-            if isinstance(binder, PyIdent) or isinstance(binder, str):
-                if isinstance(binder, str):
-                    self.binder: tuple[(PyAsKeyword, PyIdent)] | None = (PyAsKeyword(), PyIdent(binder))
-                else:
-                    self.binder: tuple[(PyAsKeyword, PyIdent)] | None = (PyAsKeyword(), binder)
+        if isinstance(binder, str):
+            self.binder: tuple[PyAsKeyword,PyIdent] | None = (PyAsKeyword(), PyIdent(binder))
+        elif isinstance(binder, PyIdent):
+            self.binder: tuple[PyAsKeyword,PyIdent] | None = (PyAsKeyword(), binder)
+        elif isinstance(binder, tuple):
+            assert(isinstance(binder, tuple))
+            binder_0 = binder[0]
+            if binder_0 is None:
+                new_binder_0 = PyAsKeyword()
+            elif isinstance(binder_0, PyAsKeyword):
+                new_binder_0 = binder_0
             else:
-                assert(isinstance(binder, tuple))
-                binder_0 = binder[0]
-                if binder_0 is None:
-                    new_binder_0 = PyAsKeyword()
-                else:
-                    new_binder_0 = binder_0
-                binder_1 = binder[1]
-                if isinstance(binder_1, str):
-                    new_binder_1 = PyIdent(binder_1)
-                else:
-                    new_binder_1 = binder_1
-                self.binder: tuple[(PyAsKeyword, PyIdent)] | None = (new_binder_0, new_binder_1)
+                raise ValueError("the field 'binder' received an unrecognised value'")
+            binder_1 = binder[1]
+            if isinstance(binder_1, str):
+                new_binder_1 = PyIdent(binder_1)
+            elif isinstance(binder_1, PyIdent):
+                new_binder_1 = binder_1
+            else:
+                raise ValueError("the field 'binder' received an unrecognised value'")
+            self.binder: tuple[PyAsKeyword,PyIdent] | None = (new_binder_0, new_binder_1)
         elif binder is None:
-            self.binder: tuple[(PyAsKeyword, PyIdent)] | None = None
+            self.binder: tuple[PyAsKeyword,PyIdent] | None = None
         else:
             raise ValueError("the field 'binder' received an unrecognised value'")
+        if colon is None:
+            self.colon: PyColon = PyColon()
+        elif isinstance(colon, PyColon):
+            self.colon: PyColon = colon
+        else:
+            raise ValueError("the field 'colon' received an unrecognised value'")
         if is_py_stmt(body):
             self.body: PyStmt | list[PyStmt] = body
-        elif body is None or isinstance(body, list):
-            if body is None:
-                self.body: PyStmt | list[PyStmt] = list()
-            else:
-                new_body = list()
-                for body_element in body:
-                    new_body_element = body_element
-                    new_body.append(new_body_element)
+        elif body is None:
+            self.body: PyStmt | list[PyStmt] = list()
+        elif isinstance(body, list):
+            new_body = list()
+            for body_element in body:
+                new_body_element = body_element
+                new_body.append(new_body_element)
 
-                self.body: PyStmt | list[PyStmt] = new_body
+            self.body: PyStmt | list[PyStmt] = new_body
         else:
             raise ValueError("the field 'body' received an unrecognised value'")
 
@@ -1039,126 +1401,129 @@ class PyFinallyKeyword(_BaseToken):
 
 
 class PyTryStmt(_BaseNode):
-    def __init__(self, *, try_keyword: 'PyTryKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None, handlers: 'None | list[PyExceptHandler]' = None, else_clause: 'PyStmt | list[PyStmt] | tuple[(PyElseKeyword | None, PyColon | None, PyStmt | None | list[PyStmt])] | None' = None, finally_clause: 'PyStmt | list[PyStmt] | tuple[(PyFinallyKeyword | None, PyColon | None, PyStmt | None | list[PyStmt])] | None' = None) -> None:
+    def __init__(self, *, try_keyword: 'PyTryKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None, handlers: 'list[PyExceptHandler] | None' = None, else_clause: 'PyStmt | list[PyStmt] | tuple[PyElseKeyword | None,PyColon | None,PyStmt | list[PyStmt] | None] | None' = None, finally_clause: 'PyStmt | list[PyStmt] | tuple[PyFinallyKeyword | None,PyColon | None,PyStmt | list[PyStmt] | None] | None' = None) -> None:
         if try_keyword is None:
             self.try_keyword: PyTryKeyword = PyTryKeyword()
-        else:
+        elif isinstance(try_keyword, PyTryKeyword):
             self.try_keyword: PyTryKeyword = try_keyword
+        else:
+            raise ValueError("the field 'try_keyword' received an unrecognised value'")
         if colon is None:
             self.colon: PyColon = PyColon()
-        else:
+        elif isinstance(colon, PyColon):
             self.colon: PyColon = colon
+        else:
+            raise ValueError("the field 'colon' received an unrecognised value'")
         if is_py_stmt(body):
             self.body: PyStmt | list[PyStmt] = body
-        elif body is None or isinstance(body, list):
-            if body is None:
-                self.body: PyStmt | list[PyStmt] = list()
-            else:
-                new_body = list()
-                for body_element in body:
-                    new_body_element = body_element
-                    new_body.append(new_body_element)
+        elif body is None:
+            self.body: PyStmt | list[PyStmt] = list()
+        elif isinstance(body, list):
+            new_body = list()
+            for body_element in body:
+                new_body_element = body_element
+                new_body.append(new_body_element)
 
-                self.body: PyStmt | list[PyStmt] = new_body
+            self.body: PyStmt | list[PyStmt] = new_body
         else:
             raise ValueError("the field 'body' received an unrecognised value'")
         if handlers is None:
             self.handlers: list[PyExceptHandler] = list()
-        else:
+        elif isinstance(handlers, list):
             new_handlers = list()
             for handlers_element in handlers:
                 new_handlers_element = handlers_element
                 new_handlers.append(new_handlers_element)
 
             self.handlers: list[PyExceptHandler] = new_handlers
-        if is_py_stmt(else_clause) or isinstance(else_clause, list) or isinstance(else_clause, tuple):
-            if is_py_stmt(else_clause) or isinstance(else_clause, list):
-                if is_py_stmt(else_clause):
-                    self.else_clause: tuple[(PyElseKeyword, PyColon, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), PyColon(), else_clause)
-                elif isinstance(else_clause, list):
-                    new_else_clause = list()
-                    for else_clause_element in else_clause:
-                        new_else_clause_element = else_clause_element
-                        new_else_clause.append(new_else_clause_element)
+        else:
+            raise ValueError("the field 'handlers' received an unrecognised value'")
+        if is_py_stmt(else_clause):
+            self.else_clause: tuple[PyElseKeyword,PyColon,PyStmt | list[PyStmt]] | None = (PyElseKeyword(), PyColon(), else_clause)
+        elif isinstance(else_clause, list):
+            new_else_clause = list()
+            for else_clause_element in else_clause:
+                new_else_clause_element = else_clause_element
+                new_else_clause.append(new_else_clause_element)
 
-                    self.else_clause: tuple[(PyElseKeyword, PyColon, PyStmt | list[PyStmt])] | None = (PyElseKeyword(), PyColon(), new_else_clause)
-                else:
-                    raise ValueError("the field 'else_clause' received an unrecognised value'")
+            self.else_clause: tuple[PyElseKeyword,PyColon,PyStmt | list[PyStmt]] | None = (PyElseKeyword(), PyColon(), new_else_clause)
+        elif isinstance(else_clause, tuple):
+            assert(isinstance(else_clause, tuple))
+            else_clause_0 = else_clause[0]
+            if else_clause_0 is None:
+                new_else_clause_0 = PyElseKeyword()
+            elif isinstance(else_clause_0, PyElseKeyword):
+                new_else_clause_0 = else_clause_0
             else:
-                assert(isinstance(else_clause, tuple))
-                else_clause_0 = else_clause[0]
-                if else_clause_0 is None:
-                    new_else_clause_0 = PyElseKeyword()
-                else:
-                    new_else_clause_0 = else_clause_0
-                else_clause_1 = else_clause[1]
-                if else_clause_1 is None:
-                    new_else_clause_1 = PyColon()
-                else:
-                    new_else_clause_1 = else_clause_1
-                else_clause_2 = else_clause[2]
-                if is_py_stmt(else_clause_2):
-                    new_else_clause_2 = else_clause_2
-                elif else_clause_2 is None or isinstance(else_clause_2, list):
-                    if else_clause_2 is None:
-                        new_else_clause_2 = list()
-                    else:
-                        new_else_clause_2 = list()
-                        for else_clause_2_element in else_clause_2:
-                            new_else_clause_2_element = else_clause_2_element
-                            new_else_clause_2.append(new_else_clause_2_element)
+                raise ValueError("the field 'else_clause' received an unrecognised value'")
+            else_clause_1 = else_clause[1]
+            if else_clause_1 is None:
+                new_else_clause_1 = PyColon()
+            elif isinstance(else_clause_1, PyColon):
+                new_else_clause_1 = else_clause_1
+            else:
+                raise ValueError("the field 'else_clause' received an unrecognised value'")
+            else_clause_2 = else_clause[2]
+            if is_py_stmt(else_clause_2):
+                new_else_clause_2 = else_clause_2
+            elif else_clause_2 is None:
+                new_else_clause_2 = list()
+            elif isinstance(else_clause_2, list):
+                new_else_clause_2 = list()
+                for else_clause_2_element in else_clause_2:
+                    new_else_clause_2_element = else_clause_2_element
+                    new_else_clause_2.append(new_else_clause_2_element)
 
-                        new_else_clause_2 = new_else_clause_2
-                else:
-                    raise ValueError("the field 'else_clause' received an unrecognised value'")
-                self.else_clause: tuple[(PyElseKeyword, PyColon, PyStmt | list[PyStmt])] | None = (new_else_clause_0, new_else_clause_1, new_else_clause_2)
+                new_else_clause_2 = new_else_clause_2
+            else:
+                raise ValueError("the field 'else_clause' received an unrecognised value'")
+            self.else_clause: tuple[PyElseKeyword,PyColon,PyStmt | list[PyStmt]] | None = (new_else_clause_0, new_else_clause_1, new_else_clause_2)
         elif else_clause is None:
-            self.else_clause: tuple[(PyElseKeyword, PyColon, PyStmt | list[PyStmt])] | None = None
+            self.else_clause: tuple[PyElseKeyword,PyColon,PyStmt | list[PyStmt]] | None = None
         else:
             raise ValueError("the field 'else_clause' received an unrecognised value'")
-        if is_py_stmt(finally_clause) or isinstance(finally_clause, list) or isinstance(finally_clause, tuple):
-            if is_py_stmt(finally_clause) or isinstance(finally_clause, list):
-                if is_py_stmt(finally_clause):
-                    self.finally_clause: tuple[(PyFinallyKeyword, PyColon, PyStmt | list[PyStmt])] | None = (PyFinallyKeyword(), PyColon(), finally_clause)
-                elif isinstance(finally_clause, list):
-                    new_finally_clause = list()
-                    for finally_clause_element in finally_clause:
-                        new_finally_clause_element = finally_clause_element
-                        new_finally_clause.append(new_finally_clause_element)
+        if is_py_stmt(finally_clause):
+            self.finally_clause: tuple[PyFinallyKeyword,PyColon,PyStmt | list[PyStmt]] | None = (PyFinallyKeyword(), PyColon(), finally_clause)
+        elif isinstance(finally_clause, list):
+            new_finally_clause = list()
+            for finally_clause_element in finally_clause:
+                new_finally_clause_element = finally_clause_element
+                new_finally_clause.append(new_finally_clause_element)
 
-                    self.finally_clause: tuple[(PyFinallyKeyword, PyColon, PyStmt | list[PyStmt])] | None = (PyFinallyKeyword(), PyColon(), new_finally_clause)
-                else:
-                    raise ValueError("the field 'finally_clause' received an unrecognised value'")
+            self.finally_clause: tuple[PyFinallyKeyword,PyColon,PyStmt | list[PyStmt]] | None = (PyFinallyKeyword(), PyColon(), new_finally_clause)
+        elif isinstance(finally_clause, tuple):
+            assert(isinstance(finally_clause, tuple))
+            finally_clause_0 = finally_clause[0]
+            if finally_clause_0 is None:
+                new_finally_clause_0 = PyFinallyKeyword()
+            elif isinstance(finally_clause_0, PyFinallyKeyword):
+                new_finally_clause_0 = finally_clause_0
             else:
-                assert(isinstance(finally_clause, tuple))
-                finally_clause_0 = finally_clause[0]
-                if finally_clause_0 is None:
-                    new_finally_clause_0 = PyFinallyKeyword()
-                else:
-                    new_finally_clause_0 = finally_clause_0
-                finally_clause_1 = finally_clause[1]
-                if finally_clause_1 is None:
-                    new_finally_clause_1 = PyColon()
-                else:
-                    new_finally_clause_1 = finally_clause_1
-                finally_clause_2 = finally_clause[2]
-                if is_py_stmt(finally_clause_2):
-                    new_finally_clause_2 = finally_clause_2
-                elif finally_clause_2 is None or isinstance(finally_clause_2, list):
-                    if finally_clause_2 is None:
-                        new_finally_clause_2 = list()
-                    else:
-                        new_finally_clause_2 = list()
-                        for finally_clause_2_element in finally_clause_2:
-                            new_finally_clause_2_element = finally_clause_2_element
-                            new_finally_clause_2.append(new_finally_clause_2_element)
+                raise ValueError("the field 'finally_clause' received an unrecognised value'")
+            finally_clause_1 = finally_clause[1]
+            if finally_clause_1 is None:
+                new_finally_clause_1 = PyColon()
+            elif isinstance(finally_clause_1, PyColon):
+                new_finally_clause_1 = finally_clause_1
+            else:
+                raise ValueError("the field 'finally_clause' received an unrecognised value'")
+            finally_clause_2 = finally_clause[2]
+            if is_py_stmt(finally_clause_2):
+                new_finally_clause_2 = finally_clause_2
+            elif finally_clause_2 is None:
+                new_finally_clause_2 = list()
+            elif isinstance(finally_clause_2, list):
+                new_finally_clause_2 = list()
+                for finally_clause_2_element in finally_clause_2:
+                    new_finally_clause_2_element = finally_clause_2_element
+                    new_finally_clause_2.append(new_finally_clause_2_element)
 
-                        new_finally_clause_2 = new_finally_clause_2
-                else:
-                    raise ValueError("the field 'finally_clause' received an unrecognised value'")
-                self.finally_clause: tuple[(PyFinallyKeyword, PyColon, PyStmt | list[PyStmt])] | None = (new_finally_clause_0, new_finally_clause_1, new_finally_clause_2)
+                new_finally_clause_2 = new_finally_clause_2
+            else:
+                raise ValueError("the field 'finally_clause' received an unrecognised value'")
+            self.finally_clause: tuple[PyFinallyKeyword,PyColon,PyStmt | list[PyStmt]] | None = (new_finally_clause_0, new_finally_clause_1, new_finally_clause_2)
         elif finally_clause is None:
-            self.finally_clause: tuple[(PyFinallyKeyword, PyColon, PyStmt | list[PyStmt])] | None = None
+            self.finally_clause: tuple[PyFinallyKeyword,PyColon,PyStmt | list[PyStmt]] | None = None
         else:
             raise ValueError("the field 'finally_clause' received an unrecognised value'")
 
@@ -1168,92 +1533,154 @@ class PyClassKeyword(_BaseToken):
 
 
 class PyClassDef(_BaseNode):
-    def __init__(self, *, class_keyword: 'PyClassKeyword | None' = None, name: 'PyIdent | str', bases: 'list[tuple[(PyIdent | str, PyComma | None)]] | tuple[(PyOpenParen | None, None | list[tuple[(PyIdent | str, PyComma | None)]], PyCloseParen | None)] | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
+    def __init__(self, *, class_keyword: 'PyClassKeyword | None' = None, name: 'str | PyIdent', bases: 'list[str | PyIdent] | list[tuple[str | PyIdent,PyComma | None | None]] | Punctuated[str | PyIdent,PyComma | None] | tuple[PyOpenParen | None,list[str | PyIdent] | list[tuple[str | PyIdent,PyComma | None | None]] | Punctuated[str | PyIdent,PyComma | None] | None,PyCloseParen | None] | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None) -> None:
         if class_keyword is None:
             self.class_keyword: PyClassKeyword = PyClassKeyword()
-        else:
+        elif isinstance(class_keyword, PyClassKeyword):
             self.class_keyword: PyClassKeyword = class_keyword
+        else:
+            raise ValueError("the field 'class_keyword' received an unrecognised value'")
         if isinstance(name, str):
             self.name: PyIdent = PyIdent(name)
-        else:
+        elif isinstance(name, PyIdent):
             self.name: PyIdent = name
-        if isinstance(bases, list) or isinstance(bases, tuple):
-            if isinstance(bases, list):
-                new_bases = list()
-                for bases_element in bases:
-                    assert(isinstance(bases_element, tuple))
-                    bases_element_0 = bases_element[0]
-                    if isinstance(bases_element_0, str):
-                        new_bases_element_0 = PyIdent(bases_element_0)
-                    else:
-                        new_bases_element_0 = bases_element_0
-                    bases_element_1 = bases_element[1]
-                    if isinstance(bases_element_1, PyComma):
-                        new_bases_element_1 = bases_element_1
-                    elif bases_element_1 is None:
-                        new_bases_element_1 = None
-                    else:
-                        raise ValueError("the field 'bases' received an unrecognised value'")
-                    new_bases_element = (new_bases_element_0, new_bases_element_1)
-                    new_bases.append(new_bases_element)
-
-                self.bases: tuple[(PyOpenParen, list[tuple[(PyIdent, PyComma | None)]], PyCloseParen)] | None = (PyOpenParen(), new_bases, PyCloseParen())
-            else:
-                assert(isinstance(bases, tuple))
-                bases_0 = bases[0]
-                if bases_0 is None:
-                    new_bases_0 = PyOpenParen()
-                else:
-                    new_bases_0 = bases_0
-                bases_1 = bases[1]
-                if bases_1 is None:
-                    new_bases_1 = list()
-                else:
-                    new_bases_1 = list()
-                    for bases_1_element in bases_1:
-                        assert(isinstance(bases_1_element, tuple))
-                        bases_1_element_0 = bases_1_element[0]
-                        if isinstance(bases_1_element_0, str):
-                            new_bases_1_element_0 = PyIdent(bases_1_element_0)
+        else:
+            raise ValueError("the field 'name' received an unrecognised value'")
+        if isinstance(bases, list) or isinstance(bases, list) or isinstance(bases, Punctuated):
+            new_bases = Punctuated()
+            bases_iter = iter(bases)
+            try:
+                first_bases_element = next(bases_iter)
+                while True:
+                    try:
+                        second_bases_element = next(bases_iter)
+                        if isinstance(first_bases_element, tuple):
+                            bases_value = first_bases_element[0]
+                            bases_separator = first_bases_element[1]
                         else:
-                            new_bases_1_element_0 = bases_1_element_0
-                        bases_1_element_1 = bases_1_element[1]
-                        if isinstance(bases_1_element_1, PyComma):
-                            new_bases_1_element_1 = bases_1_element_1
-                        elif bases_1_element_1 is None:
-                            new_bases_1_element_1 = None
+                            bases_value = first_bases_element
+                            bases_separator = None
+                        if isinstance(bases_value, str):
+                            new_bases_value = PyIdent(bases_value)
+                        elif isinstance(bases_value, PyIdent):
+                            new_bases_value = bases_value
                         else:
                             raise ValueError("the field 'bases' received an unrecognised value'")
-                        new_bases_1_element = (new_bases_1_element_0, new_bases_1_element_1)
-                        new_bases_1.append(new_bases_1_element)
+                        if bases_separator is None:
+                            new_bases_separator = PyComma()
+                        elif isinstance(bases_separator, PyComma):
+                            new_bases_separator = bases_separator
+                        else:
+                            raise ValueError("the field 'bases' received an unrecognised value'")
+                        new_bases.append(new_bases_value, new_bases_separator)
+                        first_bases_element = second_bases_element
+                    except StopIteration:
+                        if isinstance(first_bases_element, tuple):
+                            bases_value = first_bases_element[0]
+                            assert(first_bases_element[1] is None)
+                        else:
+                            bases_value = first_bases_element
+                        if isinstance(bases_value, str):
+                            new_bases_value = PyIdent(bases_value)
+                        elif isinstance(bases_value, PyIdent):
+                            new_bases_value = bases_value
+                        else:
+                            raise ValueError("the field 'bases' received an unrecognised value'")
+                        new_bases.append(new_bases_value)
+                        break
 
-                    new_bases_1 = new_bases_1
-                bases_2 = bases[2]
-                if bases_2 is None:
-                    new_bases_2 = PyCloseParen()
-                else:
-                    new_bases_2 = bases_2
-                self.bases: tuple[(PyOpenParen, list[tuple[(PyIdent, PyComma | None)]], PyCloseParen)] | None = (new_bases_0, new_bases_1, new_bases_2)
+            except StopIteration:
+                pass
+            self.bases: tuple[PyOpenParen,Punctuated[PyIdent,PyComma],PyCloseParen] | None = (PyOpenParen(), new_bases, PyCloseParen())
+        elif isinstance(bases, tuple):
+            assert(isinstance(bases, tuple))
+            bases_0 = bases[0]
+            if bases_0 is None:
+                new_bases_0 = PyOpenParen()
+            elif isinstance(bases_0, PyOpenParen):
+                new_bases_0 = bases_0
+            else:
+                raise ValueError("the field 'bases' received an unrecognised value'")
+            bases_1 = bases[1]
+            if bases_1 is None:
+                new_bases_1 = Punctuated()
+            elif isinstance(bases_1, list) or isinstance(bases_1, list) or isinstance(bases_1, Punctuated):
+                new_bases_1 = Punctuated()
+                bases_1_iter = iter(bases_1)
+                try:
+                    first_bases_1_element = next(bases_1_iter)
+                    while True:
+                        try:
+                            second_bases_1_element = next(bases_1_iter)
+                            if isinstance(first_bases_1_element, tuple):
+                                bases_1_value = first_bases_1_element[0]
+                                bases_1_separator = first_bases_1_element[1]
+                            else:
+                                bases_1_value = first_bases_1_element
+                                bases_1_separator = None
+                            if isinstance(bases_1_value, str):
+                                new_bases_1_value = PyIdent(bases_1_value)
+                            elif isinstance(bases_1_value, PyIdent):
+                                new_bases_1_value = bases_1_value
+                            else:
+                                raise ValueError("the field 'bases' received an unrecognised value'")
+                            if bases_1_separator is None:
+                                new_bases_1_separator = PyComma()
+                            elif isinstance(bases_1_separator, PyComma):
+                                new_bases_1_separator = bases_1_separator
+                            else:
+                                raise ValueError("the field 'bases' received an unrecognised value'")
+                            new_bases_1.append(new_bases_1_value, new_bases_1_separator)
+                            first_bases_1_element = second_bases_1_element
+                        except StopIteration:
+                            if isinstance(first_bases_1_element, tuple):
+                                bases_1_value = first_bases_1_element[0]
+                                assert(first_bases_1_element[1] is None)
+                            else:
+                                bases_1_value = first_bases_1_element
+                            if isinstance(bases_1_value, str):
+                                new_bases_1_value = PyIdent(bases_1_value)
+                            elif isinstance(bases_1_value, PyIdent):
+                                new_bases_1_value = bases_1_value
+                            else:
+                                raise ValueError("the field 'bases' received an unrecognised value'")
+                            new_bases_1.append(new_bases_1_value)
+                            break
+
+                except StopIteration:
+                    pass
+                new_bases_1 = new_bases_1
+            else:
+                raise ValueError("the field 'bases' received an unrecognised value'")
+            bases_2 = bases[2]
+            if bases_2 is None:
+                new_bases_2 = PyCloseParen()
+            elif isinstance(bases_2, PyCloseParen):
+                new_bases_2 = bases_2
+            else:
+                raise ValueError("the field 'bases' received an unrecognised value'")
+            self.bases: tuple[PyOpenParen,Punctuated[PyIdent,PyComma],PyCloseParen] | None = (new_bases_0, new_bases_1, new_bases_2)
         elif bases is None:
-            self.bases: tuple[(PyOpenParen, list[tuple[(PyIdent, PyComma | None)]], PyCloseParen)] | None = None
+            self.bases: tuple[PyOpenParen,Punctuated[PyIdent,PyComma],PyCloseParen] | None = None
         else:
             raise ValueError("the field 'bases' received an unrecognised value'")
         if colon is None:
             self.colon: PyColon = PyColon()
-        else:
+        elif isinstance(colon, PyColon):
             self.colon: PyColon = colon
+        else:
+            raise ValueError("the field 'colon' received an unrecognised value'")
         if is_py_stmt(body):
             self.body: PyStmt | list[PyStmt] = body
-        elif body is None or isinstance(body, list):
-            if body is None:
-                self.body: PyStmt | list[PyStmt] = list()
-            else:
-                new_body = list()
-                for body_element in body:
-                    new_body_element = body_element
-                    new_body.append(new_body_element)
+        elif body is None:
+            self.body: PyStmt | list[PyStmt] = list()
+        elif isinstance(body, list):
+            new_body = list()
+            for body_element in body:
+                new_body_element = body_element
+                new_body.append(new_body_element)
 
-                self.body: PyStmt | list[PyStmt] = new_body
+            self.body: PyStmt | list[PyStmt] = new_body
         else:
             raise ValueError("the field 'body' received an unrecognised value'")
 
@@ -1266,54 +1693,60 @@ def is_py_param(value: Any) -> TypeGuard[PyParam]:
 
 
 class PyNamedParam(_BaseNode):
-    def __init__(self, *, pattern: 'PyPattern', annotation: 'PyExpr | tuple[(PyColon | None, PyExpr)] | None' = None, default: 'PyExpr | tuple[(PyEquals | None, PyExpr)] | None' = None) -> None:
+    def __init__(self, *, pattern: 'PyPattern', annotation: 'PyExpr | tuple[PyColon | None,PyExpr] | None' = None, default: 'PyExpr | tuple[PyEquals | None,PyExpr] | None' = None) -> None:
         self.pattern: PyPattern = pattern
-        if is_py_expr(annotation) or isinstance(annotation, tuple):
-            if is_py_expr(annotation):
-                self.annotation: tuple[(PyColon, PyExpr)] | None = (PyColon(), annotation)
+        if is_py_expr(annotation):
+            self.annotation: tuple[PyColon,PyExpr] | None = (PyColon(), annotation)
+        elif isinstance(annotation, tuple):
+            assert(isinstance(annotation, tuple))
+            annotation_0 = annotation[0]
+            if annotation_0 is None:
+                new_annotation_0 = PyColon()
+            elif isinstance(annotation_0, PyColon):
+                new_annotation_0 = annotation_0
             else:
-                assert(isinstance(annotation, tuple))
-                annotation_0 = annotation[0]
-                if annotation_0 is None:
-                    new_annotation_0 = PyColon()
-                else:
-                    new_annotation_0 = annotation_0
-                annotation_1 = annotation[1]
-                new_annotation_1 = annotation_1
-                self.annotation: tuple[(PyColon, PyExpr)] | None = (new_annotation_0, new_annotation_1)
+                raise ValueError("the field 'annotation' received an unrecognised value'")
+            annotation_1 = annotation[1]
+            new_annotation_1 = annotation_1
+            self.annotation: tuple[PyColon,PyExpr] | None = (new_annotation_0, new_annotation_1)
         elif annotation is None:
-            self.annotation: tuple[(PyColon, PyExpr)] | None = None
+            self.annotation: tuple[PyColon,PyExpr] | None = None
         else:
             raise ValueError("the field 'annotation' received an unrecognised value'")
-        if is_py_expr(default) or isinstance(default, tuple):
-            if is_py_expr(default):
-                self.default: tuple[(PyEquals, PyExpr)] | None = (PyEquals(), default)
+        if is_py_expr(default):
+            self.default: tuple[PyEquals,PyExpr] | None = (PyEquals(), default)
+        elif isinstance(default, tuple):
+            assert(isinstance(default, tuple))
+            default_0 = default[0]
+            if default_0 is None:
+                new_default_0 = PyEquals()
+            elif isinstance(default_0, PyEquals):
+                new_default_0 = default_0
             else:
-                assert(isinstance(default, tuple))
-                default_0 = default[0]
-                if default_0 is None:
-                    new_default_0 = PyEquals()
-                else:
-                    new_default_0 = default_0
-                default_1 = default[1]
-                new_default_1 = default_1
-                self.default: tuple[(PyEquals, PyExpr)] | None = (new_default_0, new_default_1)
+                raise ValueError("the field 'default' received an unrecognised value'")
+            default_1 = default[1]
+            new_default_1 = default_1
+            self.default: tuple[PyEquals,PyExpr] | None = (new_default_0, new_default_1)
         elif default is None:
-            self.default: tuple[(PyEquals, PyExpr)] | None = None
+            self.default: tuple[PyEquals,PyExpr] | None = None
         else:
             raise ValueError("the field 'default' received an unrecognised value'")
 
 
 class PyRestPosParam(_BaseNode):
-    def __init__(self, *, asterisk: 'PyAsterisk | None' = None, name: 'PyIdent | str') -> None:
+    def __init__(self, *, asterisk: 'PyAsterisk | None' = None, name: 'str | PyIdent') -> None:
         if asterisk is None:
             self.asterisk: PyAsterisk = PyAsterisk()
-        else:
+        elif isinstance(asterisk, PyAsterisk):
             self.asterisk: PyAsterisk = asterisk
+        else:
+            raise ValueError("the field 'asterisk' received an unrecognised value'")
         if isinstance(name, str):
             self.name: PyIdent = PyIdent(name)
-        else:
+        elif isinstance(name, PyIdent):
             self.name: PyIdent = name
+        else:
+            raise ValueError("the field 'name' received an unrecognised value'")
 
 
 class PyAsteriskAsterisk(_BaseToken):
@@ -1321,23 +1754,29 @@ class PyAsteriskAsterisk(_BaseToken):
 
 
 class PyRestKeywordParam(_BaseNode):
-    def __init__(self, *, asterisk_asterisk: 'PyAsteriskAsterisk | None' = None, name: 'PyIdent | str') -> None:
+    def __init__(self, *, asterisk_asterisk: 'PyAsteriskAsterisk | None' = None, name: 'str | PyIdent') -> None:
         if asterisk_asterisk is None:
             self.asterisk_asterisk: PyAsteriskAsterisk = PyAsteriskAsterisk()
-        else:
+        elif isinstance(asterisk_asterisk, PyAsteriskAsterisk):
             self.asterisk_asterisk: PyAsteriskAsterisk = asterisk_asterisk
+        else:
+            raise ValueError("the field 'asterisk_asterisk' received an unrecognised value'")
         if isinstance(name, str):
             self.name: PyIdent = PyIdent(name)
-        else:
+        elif isinstance(name, PyIdent):
             self.name: PyIdent = name
+        else:
+            raise ValueError("the field 'name' received an unrecognised value'")
 
 
 class PySepParam(_BaseNode):
     def __init__(self, *, asterisk: 'PyAsterisk | None' = None) -> None:
         if asterisk is None:
             self.asterisk: PyAsterisk = PyAsterisk()
-        else:
+        elif isinstance(asterisk, PyAsterisk):
             self.asterisk: PyAsterisk = asterisk
+        else:
+            raise ValueError("the field 'asterisk' received an unrecognised value'")
 
 
 class PyAsyncKeyword(_BaseToken):
@@ -1353,7 +1792,7 @@ class PyHyphenGreaterThan(_BaseToken):
 
 
 class PyFuncDef(_BaseNode):
-    def __init__(self, *, async_keyword: 'PyAsyncKeyword | None' = None, def_keyword: 'PyDefKeyword | None' = None, name: 'PyIdent | str', open_paren: 'PyOpenParen | None' = None, params: 'None | list[tuple[(PyParam, PyComma | None)]]' = None, close_paren: 'PyCloseParen | None' = None, return_type: 'PyExpr | tuple[(PyHyphenGreaterThan | None, PyExpr)] | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | None | list[PyStmt]' = None) -> None:
+    def __init__(self, *, async_keyword: 'PyAsyncKeyword | None' = None, def_keyword: 'PyDefKeyword | None' = None, name: 'str | PyIdent', open_paren: 'PyOpenParen | None' = None, params: 'list[PyParam] | list[tuple[PyParam,PyComma | None | None]] | Punctuated[PyParam,PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None, return_type: 'PyExpr | tuple[PyHyphenGreaterThan | None,PyExpr] | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None) -> None:
         if isinstance(async_keyword, PyAsyncKeyword):
             self.async_keyword: PyAsyncKeyword | None = async_keyword
         elif async_keyword is None:
@@ -1362,87 +1801,120 @@ class PyFuncDef(_BaseNode):
             raise ValueError("the field 'async_keyword' received an unrecognised value'")
         if def_keyword is None:
             self.def_keyword: PyDefKeyword = PyDefKeyword()
-        else:
+        elif isinstance(def_keyword, PyDefKeyword):
             self.def_keyword: PyDefKeyword = def_keyword
+        else:
+            raise ValueError("the field 'def_keyword' received an unrecognised value'")
         if isinstance(name, str):
             self.name: PyIdent = PyIdent(name)
-        else:
+        elif isinstance(name, PyIdent):
             self.name: PyIdent = name
+        else:
+            raise ValueError("the field 'name' received an unrecognised value'")
         if open_paren is None:
             self.open_paren: PyOpenParen = PyOpenParen()
-        else:
+        elif isinstance(open_paren, PyOpenParen):
             self.open_paren: PyOpenParen = open_paren
-        if params is None:
-            self.params: list[tuple[(PyParam, PyComma | None)]] = list()
         else:
-            new_params = list()
-            for params_element in params:
-                assert(isinstance(params_element, tuple))
-                params_element_0 = params_element[0]
-                new_params_element_0 = params_element_0
-                params_element_1 = params_element[1]
-                if isinstance(params_element_1, PyComma):
-                    new_params_element_1 = params_element_1
-                elif params_element_1 is None:
-                    new_params_element_1 = None
-                else:
-                    raise ValueError("the field 'params' received an unrecognised value'")
-                new_params_element = (new_params_element_0, new_params_element_1)
-                new_params.append(new_params_element)
+            raise ValueError("the field 'open_paren' received an unrecognised value'")
+        if params is None:
+            self.params: Punctuated[PyParam,PyComma] = Punctuated()
+        elif isinstance(params, list) or isinstance(params, list) or isinstance(params, Punctuated):
+            new_params = Punctuated()
+            params_iter = iter(params)
+            try:
+                first_params_element = next(params_iter)
+                while True:
+                    try:
+                        second_params_element = next(params_iter)
+                        if isinstance(first_params_element, tuple):
+                            params_value = first_params_element[0]
+                            params_separator = first_params_element[1]
+                        else:
+                            params_value = first_params_element
+                            params_separator = None
+                        new_params_value = params_value
+                        if params_separator is None:
+                            new_params_separator = PyComma()
+                        elif isinstance(params_separator, PyComma):
+                            new_params_separator = params_separator
+                        else:
+                            raise ValueError("the field 'params' received an unrecognised value'")
+                        new_params.append(new_params_value, new_params_separator)
+                        first_params_element = second_params_element
+                    except StopIteration:
+                        if isinstance(first_params_element, tuple):
+                            params_value = first_params_element[0]
+                            assert(first_params_element[1] is None)
+                        else:
+                            params_value = first_params_element
+                        new_params_value = params_value
+                        new_params.append(new_params_value)
+                        break
 
-            self.params: list[tuple[(PyParam, PyComma | None)]] = new_params
+            except StopIteration:
+                pass
+            self.params: Punctuated[PyParam,PyComma] = new_params
+        else:
+            raise ValueError("the field 'params' received an unrecognised value'")
         if close_paren is None:
             self.close_paren: PyCloseParen = PyCloseParen()
-        else:
+        elif isinstance(close_paren, PyCloseParen):
             self.close_paren: PyCloseParen = close_paren
-        if is_py_expr(return_type) or isinstance(return_type, tuple):
-            if is_py_expr(return_type):
-                self.return_type: tuple[(PyHyphenGreaterThan, PyExpr)] | None = (PyHyphenGreaterThan(), return_type)
+        else:
+            raise ValueError("the field 'close_paren' received an unrecognised value'")
+        if is_py_expr(return_type):
+            self.return_type: tuple[PyHyphenGreaterThan,PyExpr] | None = (PyHyphenGreaterThan(), return_type)
+        elif isinstance(return_type, tuple):
+            assert(isinstance(return_type, tuple))
+            return_type_0 = return_type[0]
+            if return_type_0 is None:
+                new_return_type_0 = PyHyphenGreaterThan()
+            elif isinstance(return_type_0, PyHyphenGreaterThan):
+                new_return_type_0 = return_type_0
             else:
-                assert(isinstance(return_type, tuple))
-                return_type_0 = return_type[0]
-                if return_type_0 is None:
-                    new_return_type_0 = PyHyphenGreaterThan()
-                else:
-                    new_return_type_0 = return_type_0
-                return_type_1 = return_type[1]
-                new_return_type_1 = return_type_1
-                self.return_type: tuple[(PyHyphenGreaterThan, PyExpr)] | None = (new_return_type_0, new_return_type_1)
+                raise ValueError("the field 'return_type' received an unrecognised value'")
+            return_type_1 = return_type[1]
+            new_return_type_1 = return_type_1
+            self.return_type: tuple[PyHyphenGreaterThan,PyExpr] | None = (new_return_type_0, new_return_type_1)
         elif return_type is None:
-            self.return_type: tuple[(PyHyphenGreaterThan, PyExpr)] | None = None
+            self.return_type: tuple[PyHyphenGreaterThan,PyExpr] | None = None
         else:
             raise ValueError("the field 'return_type' received an unrecognised value'")
         if colon is None:
             self.colon: PyColon = PyColon()
-        else:
+        elif isinstance(colon, PyColon):
             self.colon: PyColon = colon
+        else:
+            raise ValueError("the field 'colon' received an unrecognised value'")
         if is_py_stmt(body):
             self.body: PyStmt | list[PyStmt] = body
-        elif body is None or isinstance(body, list):
-            if body is None:
-                self.body: PyStmt | list[PyStmt] = list()
-            else:
-                new_body = list()
-                for body_element in body:
-                    new_body_element = body_element
-                    new_body.append(new_body_element)
+        elif body is None:
+            self.body: PyStmt | list[PyStmt] = list()
+        elif isinstance(body, list):
+            new_body = list()
+            for body_element in body:
+                new_body_element = body_element
+                new_body.append(new_body_element)
 
-                self.body: PyStmt | list[PyStmt] = new_body
+            self.body: PyStmt | list[PyStmt] = new_body
         else:
             raise ValueError("the field 'body' received an unrecognised value'")
 
 
 class PyModule(_BaseNode):
-    def __init__(self, *, stmts: 'None | list[PyStmt]' = None) -> None:
+    def __init__(self, *, stmts: 'list[PyStmt] | None' = None) -> None:
         if stmts is None:
             self.stmts: list[PyStmt] = list()
-        else:
+        elif isinstance(stmts, list):
             new_stmts = list()
             for stmts_element in stmts:
                 new_stmts_element = stmts_element
                 new_stmts.append(new_stmts_element)
 
             self.stmts: list[PyStmt] = new_stmts
+        else:
+            raise ValueError("the field 'stmts' received an unrecognised value'")
 
 
 PyToken = PyIdent | PyInteger | PyFloat | PyString | PyColon | PyDot | PyOpenBracket | PyComma | PyCloseBracket | PyAsterisk | PyOpenParen | PyCloseParen | PyEquals | PyPrefixOp | PyInfixOp | PyReturnKeyword | PyPassKeyword | PyIfKeyword | PyHashtag | PyCarriageReturnLineFeed | PyLineFeed | PySemicolon | PyElifKeyword | PyElseKeyword | PyDelKeyword | PyRaiseKeyword | PyFormKeyword | PyForKeyword | PyInKeyword | PyWhileKeyword | PyBreakKeyword | PyContinueKeyword | PyTypeKeyword | PyExceptKeyword | PyAsKeyword | PyTryKeyword | PyFinallyKeyword | PyClassKeyword | PyAsteriskAsterisk | PyAsyncKeyword | PyDefKeyword | PyHyphenGreaterThan
@@ -1452,15 +1924,6 @@ PyNode = PySlice | PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarr
 
 
 PySyntax = PyToken | PyNode
-
-
-def is_py_token(value: Any) -> TypeGuard[PyToken]: return isinstance(value, _BaseToken)
-
-
-def is_py_node(value: Any) -> TypeGuard[PyNode]: return isinstance(value, _BaseNode)
-
-
-def is_py_syntax(value: Any): return is_py_node(value) or is_py_token(value)
 
 
 
@@ -1483,19 +1946,11 @@ def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax],None]):
     if isinstance(node, PySubscriptPattern):
         proc(node.pattern)
         proc(node.open_bracket)
-        for element_0 in node.slices:
-            element_1 = element_0[0]
-            if is_py_pattern(element_1):
-                proc(element_1)
-            elif isinstance(element_1, PySlice):
-                proc(element_1)
-            else:
-                raise ValueError()
-            element_2 = element_0[1]
-            if isinstance(element_2, PyComma):
-                proc(element_2)
-            elif element_2 is None:
-                pass
+        for (element_0,separator_0) in node.slices:
+            if is_py_pattern(element_0):
+                proc(element_0)
+            elif isinstance(element_0, PySlice):
+                proc(element_0)
             else:
                 raise ValueError()
 
@@ -1507,31 +1962,15 @@ def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax],None]):
         return
     if isinstance(node, PyListPattern):
         proc(node.open_bracket)
-        for element_0 in node.elements:
-            element_1 = element_0[0]
-            proc(element_1)
-            element_2 = element_0[1]
-            if isinstance(element_2, PyComma):
-                proc(element_2)
-            elif element_2 is None:
-                pass
-            else:
-                raise ValueError()
+        for (element_0,separator_0) in node.elements:
+            proc(element_0)
 
         proc(node.close_bracket)
         return
     if isinstance(node, PyTuplePattern):
         proc(node.open_paren)
-        for element_0 in node.elements:
-            element_1 = element_0[0]
-            proc(element_1)
-            element_2 = element_0[1]
-            if isinstance(element_2, PyComma):
-                proc(element_2)
-            elif element_2 is None:
-                pass
-            else:
-                raise ValueError()
+        for (element_0,separator_0) in node.elements:
+            proc(element_0)
 
         proc(node.close_paren)
         return
@@ -1561,19 +2000,11 @@ def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax],None]):
     if isinstance(node, PySubscriptExpr):
         proc(node.expr)
         proc(node.open_bracket)
-        for element_0 in node.slices:
-            element_1 = element_0[0]
-            if is_py_expr(element_1):
-                proc(element_1)
-            elif isinstance(element_1, PySlice):
-                proc(element_1)
-            else:
-                raise ValueError()
-            element_2 = element_0[1]
-            if isinstance(element_2, PyComma):
-                proc(element_2)
-            elif element_2 is None:
-                pass
+        for (element_0,separator_0) in node.slices:
+            if is_py_expr(element_0):
+                proc(element_0)
+            elif isinstance(element_0, PySlice):
+                proc(element_0)
             else:
                 raise ValueError()
 
@@ -1585,31 +2016,15 @@ def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax],None]):
         return
     if isinstance(node, PyListExpr):
         proc(node.open_bracket)
-        for element_0 in node.elements:
-            element_1 = element_0[0]
-            proc(element_1)
-            element_2 = element_0[1]
-            if isinstance(element_2, PyComma):
-                proc(element_2)
-            elif element_2 is None:
-                pass
-            else:
-                raise ValueError()
+        for (element_0,separator_0) in node.elements:
+            proc(element_0)
 
         proc(node.close_bracket)
         return
     if isinstance(node, PyTupleExpr):
         proc(node.open_paren)
-        for element_0 in node.elements:
-            element_1 = element_0[0]
-            proc(element_1)
-            element_2 = element_0[1]
-            if isinstance(element_2, PyComma):
-                proc(element_2)
-            elif element_2 is None:
-                pass
-            else:
-                raise ValueError()
+        for (element_0,separator_0) in node.elements:
+            proc(element_0)
 
         proc(node.close_paren)
         return
@@ -1624,16 +2039,8 @@ def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax],None]):
     if isinstance(node, PyCallExpr):
         proc(node.operator)
         proc(node.open_paren)
-        for element_0 in node.args:
-            element_1 = element_0[0]
-            proc(element_1)
-            element_2 = element_0[1]
-            if isinstance(element_2, PyComma):
-                proc(element_2)
-            elif element_2 is None:
-                pass
-            else:
-                raise ValueError()
+        for (element_0,separator_0) in node.args:
+            proc(element_0)
 
         proc(node.close_paren)
         return
@@ -1819,19 +2226,11 @@ def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax],None]):
             element_0 = node.type_params[0]
             proc(element_0)
             element_1 = node.type_params[1]
-            for element_2 in element_1:
-                element_3 = element_2[0]
-                proc(element_3)
-                element_4 = element_2[1]
-                if isinstance(element_4, PyComma):
-                    proc(element_4)
-                elif element_4 is None:
-                    pass
-                else:
-                    raise ValueError()
+            for (element_2,separator_0) in element_1:
+                proc(element_2)
 
-            element_5 = node.type_params[2]
-            proc(element_5)
+            element_3 = node.type_params[2]
+            proc(element_3)
         elif node.type_params is None:
             pass
         else:
@@ -1851,6 +2250,7 @@ def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax],None]):
             pass
         else:
             raise ValueError()
+        proc(node.colon)
         if is_py_stmt(node.body):
             proc(node.body)
         elif isinstance(node.body, list):
@@ -1918,19 +2318,11 @@ def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax],None]):
             element_0 = node.bases[0]
             proc(element_0)
             element_1 = node.bases[1]
-            for element_2 in element_1:
-                element_3 = element_2[0]
-                proc(element_3)
-                element_4 = element_2[1]
-                if isinstance(element_4, PyComma):
-                    proc(element_4)
-                elif element_4 is None:
-                    pass
-                else:
-                    raise ValueError()
+            for (element_2,separator_0) in element_1:
+                proc(element_2)
 
-            element_5 = node.bases[2]
-            proc(element_5)
+            element_3 = node.bases[2]
+            proc(element_3)
         elif node.bases is None:
             pass
         else:
@@ -1939,8 +2331,8 @@ def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax],None]):
         if is_py_stmt(node.body):
             proc(node.body)
         elif isinstance(node.body, list):
-            for element_6 in node.body:
-                proc(element_6)
+            for element_4 in node.body:
+                proc(element_4)
 
         else:
             raise ValueError()
@@ -1987,23 +2379,15 @@ def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax],None]):
         proc(node.def_keyword)
         proc(node.name)
         proc(node.open_paren)
-        for element_0 in node.params:
-            element_1 = element_0[0]
-            proc(element_1)
-            element_2 = element_0[1]
-            if isinstance(element_2, PyComma):
-                proc(element_2)
-            elif element_2 is None:
-                pass
-            else:
-                raise ValueError()
+        for (element_0,separator_0) in node.params:
+            proc(element_0)
 
         proc(node.close_paren)
         if isinstance(node.return_type, tuple):
-            element_3 = node.return_type[0]
-            proc(element_3)
-            element_4 = node.return_type[1]
-            proc(element_4)
+            element_1 = node.return_type[0]
+            proc(element_1)
+            element_2 = node.return_type[1]
+            proc(element_2)
         elif node.return_type is None:
             pass
         else:
@@ -2012,8 +2396,8 @@ def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax],None]):
         if is_py_stmt(node.body):
             proc(node.body)
         elif isinstance(node.body, list):
-            for element_5 in node.body:
-                proc(element_5)
+            for element_3 in node.body:
+                proc(element_3)
 
         else:
             raise ValueError()
