@@ -1,10 +1,9 @@
 
 from __future__ import annotations
 
-# FIXME Node and Token should have a common base
 # TODO Generate a union type with all nodes/tokens
 
-from types import MethodDescriptorType
+from functools import _lru_cache_wrapper
 from typing import Iterable, Iterator, Sequence, assert_never, TypeVar, cast
 
 import templaty
@@ -30,8 +29,6 @@ def to_class_name(name: str) -> str:
 
 type Case = tuple[PyExpr | None, list[PyStmt]]
 
-T = TypeVar('T', covariant=True)
-
 is_node_name = f'is_{prefix}node'
 is_token_name = f'is_{prefix}token'
 is_syntax_name = f'is_{prefix}syntax'
@@ -40,6 +37,8 @@ for_each_child_name = f'for_each_{prefix}child'
 node_class_name = to_class_name('node')
 token_class_name = to_class_name('token')
 syntax_class_name = to_class_name('syntax')
+
+T = TypeVar('T', covariant=True)
 
 def list_comma(it: Iterator[T] | Sequence[T]) -> list[tuple[T, PyComma | None]]:
     if not is_iterator(it):
@@ -74,6 +73,13 @@ def build_cond(cases: list[Case]) -> list[PyStmt]:
             break
         alternatives.append(PyElifCase(test=test, body=body))
     return [ PyIfStmt(first=first, alternatives=alternatives, last=last) ]
+
+def build_is_none(value: PyExpr) -> PyExpr:
+    return PyInfixExpr(
+        left=value,
+        op='is',
+        right=PyNamedExpr(name='None')
+    )
 
 def build_infix(it: Iterable[PyExpr] | Iterator[PyExpr], op: str, init: PyExpr) -> PyExpr:
     if not is_iterator(it):
@@ -159,7 +165,7 @@ def gen_shallow_test(ty: Type, target: PyExpr) -> PyExpr:
     if isinstance(ty, TokenType):
         return PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyPosArg(expr=target), PyPosArg(expr=PyNamedExpr(name=to_class_name(ty.name))) ]))
     if isinstance(ty, NoneType):
-        return PyInfixExpr(left=target, op='is', right=PyNamedExpr(name='None'))
+        return build_is_none(target)
     if isinstance(ty, TupleType):
         return PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyPosArg(expr=target), PyPosArg(expr=PyNamedExpr(name='tuple')) ]))
         #return ast.BoolOp(left=test, op=ast.And(), values=[ make_and(gen_test(element, ast.Subscript(target, ast.Constant(i))) for i, element in enumerate(ty.element_types)) ])
@@ -239,30 +245,69 @@ def cst() -> str:
     def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Callable[[PyExpr], PyStmt]) -> tuple[Type, list[PyStmt]]:
 
         def collect(ty: Type, in_name: str, assign: Callable[[PyExpr], PyStmt], has_none: bool) -> tuple[Type, list[PyStmt]]:
-            cases = list[Case]()
+            cases: list[Case] = []
             types: list[Type] = []
-            add_self = True
-            for coerce_ty, coerce_test, coerce_body in visit(ty, in_name, assign, has_none):
-                if coerce_test is None:
-                    add_self = False
-                cases.append((coerce_test, coerce_body))
+            for coerce_ty, coerce_body in coercions(ty, in_name, assign, has_none):
+                cases.append((gen_shallow_test(coerce_ty, PyNamedExpr(name=in_name)), coerce_body))
                 types.append(coerce_ty)
-            if add_self:
-                test = None #gen_shallow_test(ty, PyNamedExpr(name=in_name)) if types else None
-                cases.append((test, [ assign(PyNamedExpr(name=in_name)) ]))
-                types.append(ty)
-            return simplify_type(UnionType(types)), build_cond(cases)
 
-        def visit(ty: Type, in_name: str, assign: Callable[[PyExpr], PyStmt], has_none: bool) -> Generator[tuple[Type, PyExpr | None, list[PyStmt]], None, None]:
+            res_ty = simplify_type(UnionType(types))
+
+            # For very simple fields, there's no need to do any checks. We
+            # assume the type checker catches whatever error the user makes.
+            if len(cases) == 1:
+                return res_ty, cases[0][1]
+
+            cases.append((
+                None,
+                [
+                    PyRaiseStmt(
+                        expr=PyCallExpr(
+                            operator=PyNamedExpr(name='ValueError'),
+                            args=list_comma([ PyPosArg(expr=PyConstExpr(literal=f"the field '{field_name}' received an unrecognised value'")) ])
+                        )
+                    )
+                ]
+            ))
+
+            return res_ty, build_cond(cases)
+
+        def coercions(ty: Type, in_name: str, assign: Callable[[PyExpr], PyStmt], has_none: bool) -> Generator[tuple[Type, list[PyStmt]], None, None]:
+
+            if isinstance(ty, UnionType):
+
+                types = list(flatten_union(ty))
+
+                for member_ty in types:
+                    if isinstance(member_ty, NoneType):
+                        has_none = True
+
+                for member_ty in types:
+                    yield from coercions(member_ty, in_name, assign, has_none)
+
+                return
+
+            if isinstance(ty, NoneType):
+                yield NoneType(), [ assign(PyNamedExpr(name='None')) ]
+                return
+
+            # Now that we've handled union types and empty types, we can
+            # attempt to construct the type from a certain default value.
+            # This can only happen if `None` is not already used by the type
+            # itself. We continue processing the other types after this
+            # operation.
+            if not has_none and is_default_constructible(ty):
+                yield NoneType(), [ assign(gen_default_constructor(ty)) ]
 
             if isinstance(ty, NodeType):
 
                 spec = specs.lookup(ty.name)
+
                 # spec can also be a VariantSpec so we need to run isinstance
-                if isinstance(spec, NodeSpec) and len(spec.members) == 1:
+                if isinstance(spec, NodeSpec) and len(spec.members) == 1 and not has_none:
                     # TODO maybe also coerce spec.members[0].ty recursively?
                     single_ty = spec.members[0].ty
-                    yield single_ty, gen_shallow_test(single_ty, PyNamedExpr(name=in_name)), [
+                    yield single_ty, [
                         assign(
                             PyCallExpr(
                                 operator=PyNamedExpr(name=to_class_name(ty.name)),
@@ -271,9 +316,8 @@ def cst() -> str:
                         )
                     ]
 
-                return
+                yield ty, [ assign(PyNamedExpr(name=in_name)) ]
 
-            if isinstance(ty, NoneType):
                 return
 
             if isinstance(ty, TokenType):
@@ -281,18 +325,12 @@ def cst() -> str:
                 spec = specs.lookup(ty.name)
                 assert(isinstance(spec, TokenSpec))
 
-                if spec.is_static:
+                # If a token is not static, like an identifier or a string,
+                # then we might be able to coerce the token based on the data
+                # that it wraps.
+                if not spec.is_static:
 
-                    if not has_none:
-                        test = PyInfixExpr(left=PyNamedExpr(name=in_name), op='is', right=PyNamedExpr(name='None'))
-                        yield NoneType(), test, [
-                            assign(PyCallExpr(operator=PyNamedExpr(name=to_class_name(ty.name)), args=[]))
-                        ]
-
-                else:
-
-                    test = gen_rule_type_test(spec.field_type, PyNamedExpr(name=in_name))
-                    yield ExternType(spec.field_type), test, [
+                    yield ExternType(spec.field_type), [
                         assign(
                             PyCallExpr(
                                 operator=PyNamedExpr(name=to_class_name(ty.name)),
@@ -301,19 +339,11 @@ def cst() -> str:
                         )
                     ]
 
+                yield ty, [ assign(PyNamedExpr(name=in_name)) ]
+
                 return
 
             if isinstance(ty, PunctType):
-
-                if not has_none:
-                    test = PyInfixExpr(
-                        left=PyNamedExpr(name=in_name),
-                        op='is',
-                        right=PyNamedExpr(name='None')
-                    )
-                    yield NoneType(), test, [
-                        assign(PyCallExpr(operator=PyNamedExpr(name='Punctuated')))
-                    ]
 
                 new_elements_name = f'new_{in_name}'
                 first_element_name = f'first_{in_name}_element'
@@ -331,19 +361,13 @@ def cst() -> str:
                 separator_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_separator_name: PyAssignStmt(pattern=PyNamedPattern(name=name), expr=value)
                 separator_type, separator_stmts = collect(ty.separator_type, separator_name, separator_assign, False)
 
-                ty = UnionType([
+                coerced_ty = UnionType([
                     ListType(value_type),
                     ListType(TupleType([ value_type, make_optional(separator_type) ])),
                     PunctType(value_type, separator_type),
                 ])
 
-                # test = build_or([
-                #     build_isinstance(PyNamedExpr(name=in_name), PyNamedExpr(name='list')),
-                #     build_isinstance(PyNamedExpr(name=in_name), PyNamedExpr(name='Punctuated'))
-                # ])
-
-
-                yield ty, None, [
+                yield coerced_ty, [
                     PyAssignStmt(
                         pattern=PyNamedPattern(name=new_elements_name),
                         expr=PyCallExpr(operator=PyNamedExpr(name='Punctuated'))
@@ -367,12 +391,6 @@ def cst() -> str:
                                                 pattern=PyNamedPattern(name=second_element_name),
                                                 expr=PyCallExpr(operator=PyNamedExpr(name='next'), args=list_comma([ PyPosArg(expr=PyNamedExpr(name=elements_iter_name)) ]))
                                             ),
-                                            # if isinstance(first_element, tuple):
-                                            #     value = first_element[0]
-                                            #     separator = first_element[1]
-                                            # else:
-                                            #     value = first_element
-                                            #     separator = Token()
                                             *build_cond([
                                                 (
                                                     # FIXME does not handle nested tuples
@@ -422,10 +440,33 @@ def cst() -> str:
                                             PyExceptHandler(
                                                 expr=PyNamedExpr(name='StopIteration'),
                                                 body=[
-                                                    PyAssignStmt(
-                                                        pattern=PyNamedPattern(name=value_name),
-                                                        expr=PyNamedExpr(name=first_element_name),
-                                                    ),
+                                                    *build_cond([
+                                                        (
+                                                            # FIXME does not handle nested tuples
+                                                            build_isinstance(PyNamedExpr(name=first_element_name), PyNamedExpr(name='tuple')),
+                                                            [
+                                                                PyAssignStmt(
+                                                                    pattern=PyNamedPattern(name=value_name),
+                                                                    expr=PySubscriptExpr(expr=PyNamedExpr(name=first_element_name), slices=list_comma([ PyConstExpr(literal=0) ])),
+                                                                ),
+                                                                PyExprStmt(
+                                                                    expr=PyCallExpr(
+                                                                        operator=PyNamedExpr(name='assert'),
+                                                                        args=list_comma([ PyPosArg(expr=build_is_none(PySubscriptExpr(expr=PyNamedExpr(name=first_element_name), slices=list_comma([ PyConstExpr(literal=1) ])))) ])
+                                                                    )
+                                                                )
+                                                            ]
+                                                        ),
+                                                        (
+                                                            None,
+                                                            [
+                                                                PyAssignStmt(
+                                                                    pattern=PyNamedPattern(name=value_name),
+                                                                    expr=PyNamedExpr(name=first_element_name),
+                                                                )
+                                                            ]
+                                                        )
+                                                    ]),
                                                     *value_stmts,
                                                     PyExprStmt(
                                                         expr=PyCallExpr(
@@ -448,55 +489,6 @@ def cst() -> str:
                             )
                         ]
                     ),
-                    # PyForStmt(
-                    #     pattern=PyNamedPattern(name=element_name),
-                    #     expr=PyNamedExpr(name=in_name),
-                    #     body=[
-                    #         *build_cond([
-                    #             (
-                    #                 # FIXME does not handle nested tuples
-                    #                 build_isinstance(PyNamedExpr(name=element_name), PyNamedExpr(name='tuple')),
-                    #                 [
-                    #                     PyAssignStmt(
-                    #                         pattern=PyNamedPattern(name=value_name),
-                    #                         expr=PySubscriptExpr(expr=PyNamedExpr(name=element_name), slices=list_comma([ PyConstExpr(literal=0) ])),
-                    #                     ),
-                    #                     PyAssignStmt(
-                    #                         pattern=PyNamedPattern(name=separator_name),
-                    #                         expr=PySubscriptExpr(expr=PyNamedExpr(name=element_name), slices=list_comma([ PyConstExpr(literal=1) ])),
-                    #                     ),
-                    #                 ]
-                    #             ),
-                    #             (
-                    #                 None,
-                    #                 [
-                    #                     PyAssignStmt(
-                    #                         pattern=PyNamedPattern(name=value_name),
-                    #                         expr=PyNamedExpr(name=element_name),
-                    #                     ),
-                    #                     PyAssignStmt(
-                    #                         pattern=PyNamedPattern(name=separator_name),
-                    #                         expr=PyNamedExpr(name='None'),
-                    #                     ),
-                    #                 ]
-                    #             )
-                    #         ]),
-                    #         *value_stmts,
-                    #         *separator_stmts,
-                    #         PyExprStmt(
-                    #             expr=PyCallExpr(
-                    #                 operator=PyAttrExpr(
-                    #                     expr=PyNamedExpr(name=new_elements_name),
-                    #                     name='append'
-                    #                 ),
-                    #                 args=list_comma([
-                    #                     PyPosArg(expr=PyNamedExpr(name=new_value_name)),
-                    #                     PyPosArg(expr=PyNamedExpr(name=new_separator_name))
-                    #                 ])
-                    #             )
-                    #         )
-                    #     ]
-                    # ),
                     assign(PyNamedExpr(name=new_elements_name))
                 ]
 
@@ -515,20 +507,10 @@ def cst() -> str:
                 element_name = f'{in_name}_element'
                 new_element_name = f'new_{in_name}_element'
 
-                if not has_none:
-                    test = PyInfixExpr(
-                        left=PyNamedExpr(name=in_name),
-                        op='is',
-                        right=PyNamedExpr(name='None')
-                    )
-                    yield NoneType(), test, [
-                        assign(PyCallExpr(operator=PyNamedExpr(name='list')))
-                    ]
-
                 element_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name=name), expr=value)
                 element_type, element_stmts = collect(ty.element_type, element_name, element_assign, False)
 
-                yield ListType(element_type), None, [
+                yield ListType(element_type), [
                     PyAssignStmt(
                         pattern=PyNamedPattern(name=new_elements_name),
                         expr=PyCallExpr(operator=PyNamedExpr(name='list'))
@@ -582,14 +564,12 @@ def cst() -> str:
                             )
                         )
 
-                    new_main_type, body = collect(main_type, in_name, first_assign, has_none)
-                    test = gen_shallow_test(new_main_type, PyNamedExpr(name=in_name))
-                    yield new_main_type, test, body
+                    yield from coercions(main_type, in_name, first_assign, True)
 
                 new_elements: list[PyExpr] = []
                 new_element_types: list[Type] = []
 
-                #  Generates for example: assert(isinstance(in_name, ty))
+                # Generates for example: assert(isinstance(in_name, ty))
                 orelse: list[PyStmt] = [
                     PyExprStmt(
                         expr=PyCallExpr(
@@ -625,65 +605,9 @@ def cst() -> str:
 
                 orelse.append(assign(PyTupleExpr(elements=list_comma(new_elements))))
 
-                yield TupleType(new_element_types), None, orelse
+                yield TupleType(new_element_types), orelse
 
                 return
-
-            if isinstance(ty, UnionType):
-
-                types = list(flatten_union(ty))
-
-                has_none = False
-                for member_ty in types:
-                    if isinstance(member_ty, NoneType):
-                        has_none = True
-
-                for member_ty in types:
-                    add_self = True
-                    for new_ty, test, body in visit(member_ty, in_name, assign, has_none):
-                        if test is None:
-                            test = gen_shallow_test(member_ty, PyNamedExpr(name=in_name))
-                            add_self = False
-                        yield new_ty, test, body
-                    if add_self:
-                        yield member_ty, gen_shallow_test(member_ty, PyNamedExpr(name=in_name)), [
-                            assign(PyNamedExpr(name=in_name))
-                        ]
-
-                # if has_none:
-                #     test = PyInfixExpr(
-                #         left=PyNamedExpr(name=in_name),
-                #         op='is',
-                #         right=PyNamedExpr(name='None')
-                #     )
-                #     yield NoneType(), test, [ assign(PyNamedExpr(name='None')) ]
-
-                # if len(not_none) == 1 and is_default_constructible(not_none[0]):
-                #     cases.append((
-                #         None,
-                #         [ assign(gen_default_constructor(ty.types[0])) ]
-                #     ))
-                # else:
-                yield NeverType(), None, [
-                    PyRaiseStmt(
-                        expr=PyCallExpr(
-                            operator=PyNamedExpr(name='ValueError'),
-                            args=list_comma([ PyPosArg(expr=PyConstExpr(literal=f"the field '{field_name}' received an unrecognised value'")) ])
-                        )
-                    )
-                ]
-
-                # ty_0 = ty.types[0]
-                # ty_n = ty.types[1:]
-                # if_body = []
-                # new_ty_0 = visit(ty_0, in_name, out_name, if_body)
-                # if_orelse = []
-                # new_rest = visit(UnionType(ty_n), in_name, out_name, if_orelse)
-                # stmts.append(ast.If(test=gen_shallow_test(ty_0, PyNamedExpr(name=in_name)), body=if_body, orelse=if_orelse))
-
-                return
-
-            raise RuntimeError(f'unexpected {ty}')
 
         return collect(field_type, in_name, assign, False)
 
@@ -776,7 +700,7 @@ def cst() -> str:
             stmts.append(PyFuncDef(
                 name=f'is_{namespace(spec.name)}',
                 params=list_comma(params),
-                return_type=PySubscriptExpr(expr=PyNamedExpr(name='TypeGuard'), slices=[ (PyNamedExpr(name=cls_name), None) ]),
+                return_type=PySubscriptExpr(expr=PyNamedExpr(name='TypeGuard'), slices=list_comma([ PyNamedExpr(name=cls_name) ])),
                 body=[
                     PyRetStmt(expr=build_or(gen_instance_check(name, PyNamedExpr(name='value')) for name in spec.members))
                 ],
