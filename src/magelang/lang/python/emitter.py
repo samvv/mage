@@ -107,6 +107,10 @@ def emit(node: PyNode) -> str:
             out.write('def')
             return
 
+        if isinstance(node, PyTryKeyword):
+            out.write('try')
+            return
+
         if isinstance(node, PyAsyncKeyword):
             out.write('async')
             return
@@ -129,6 +133,10 @@ def emit(node: PyNode) -> str:
 
         if isinstance(node, PyInKeyword):
             out.write('in')
+            return
+
+        if isinstance(node, PyExceptKeyword):
+            out.write('except')
             return
 
         if isinstance(node, PyRaiseKeyword):
@@ -332,6 +340,29 @@ def emit(node: PyNode) -> str:
                 visit(colon)
                 visit_body(body)
             out.write('\n')
+            return
+
+        if isinstance(node, PyTryStmt):
+            visit(node.try_keyword)
+            visit(node.colon)
+            visit_body(node.body)
+            for handler in node.handlers:
+                visit(handler.except_keyword)
+                out.write(' ')
+                visit(handler.expr)
+                # visit(handler.colon)
+                out.write(':') # FIXME
+                visit_body(handler.body)
+            if node.else_clause is not None:
+                else_keyword, colon, body = node.else_clause
+                visit(else_keyword)
+                visit(colon)
+                visit_body(body)
+            if node.finally_clause is not None:
+                finally_keyword, colon, body = node.finally_clause
+                visit(finally_keyword)
+                visit(colon)
+                visit_body(body)
             return
 
         if isinstance(node, PyIfStmt):
