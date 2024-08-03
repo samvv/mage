@@ -3,7 +3,6 @@ from __future__ import annotations
 
 # TODO Generate a union type with all nodes/tokens
 
-from functools import _lru_cache_wrapper
 from typing import Iterable, Iterator, Sequence, assert_never, TypeVar, cast
 
 import templaty
@@ -38,25 +37,6 @@ node_class_name = to_class_name('node')
 token_class_name = to_class_name('token')
 syntax_class_name = to_class_name('syntax')
 
-T = TypeVar('T', covariant=True)
-
-def list_comma(it: Iterator[T] | Sequence[T]) -> list[tuple[T, PyComma | None]]:
-    if not is_iterator(it):
-        it = iter(it)
-    out: list[tuple[T, PyComma | None]] = []
-    prev: T | None = None
-    while True:
-        try:
-            curr = next(it)
-        except StopIteration:
-            if prev is not None:
-                out.append((prev, None))
-            break
-        if prev is not None:
-            out.append((prev, PyComma()))
-        prev = curr
-    return out
-
 def build_cond(cases: list[Case]) -> list[PyStmt]:
     if len(cases) == 0:
         return []
@@ -78,7 +58,7 @@ def build_is_none(value: PyExpr) -> PyExpr:
     return PyInfixExpr(
         left=value,
         op='is',
-        right=PyNamedExpr(name='None')
+        right=PyNamedExpr('None')
     )
 
 def build_infix(it: Iterable[PyExpr] | Iterator[PyExpr], op: str, init: PyExpr) -> PyExpr:
@@ -93,30 +73,30 @@ def build_infix(it: Iterable[PyExpr] | Iterator[PyExpr], op: str, init: PyExpr) 
     return out
 
 def build_or(iter: Iterable[PyExpr]) -> PyExpr:
-    return build_infix(iter, 'or', PyNamedExpr(name='False'))
+    return build_infix(iter, 'or', PyNamedExpr('False'))
 
 def build_and(iter: Iterable[PyExpr]) -> PyExpr:
-    return build_infix(iter, 'and', PyNamedExpr(name='True'))
+    return build_infix(iter, 'and', PyNamedExpr('True'))
 
 def build_union(it: list[PyExpr] | Iterator[PyExpr]) -> PyExpr:
-    return build_infix(it, '|', PyNamedExpr(name='Never'))
+    return build_infix(it, '|', PyNamedExpr('Never'))
 
 def build_isinstance(expr: PyExpr, ty: PyExpr) -> PyExpr:
-    return PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyPosArg(expr=expr), PyPosArg(expr=ty) ]))
+    return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ expr, ty ])
 
 specs = grammar_to_specs(grammar)
 
 def gen_py_type(ty: Type) -> PyExpr:
     if isinstance(ty, NodeType):
-        return PyNamedExpr(name=to_class_name(ty.name))
+        return PyNamedExpr(to_class_name(ty.name))
     if isinstance(ty, TokenType):
-        return PyNamedExpr(name=to_class_name(ty.name))
+        return PyNamedExpr(to_class_name(ty.name))
     if isinstance(ty, ListType):
-        return PySubscriptExpr(expr=PyNamedExpr(name='list'), slices=list_comma([ gen_py_type(ty.element_type) ]))
+        return PySubscriptExpr(expr=PyNamedExpr('list'), slices=[ gen_py_type(ty.element_type) ])
     if isinstance(ty, PunctType):
-        return PySubscriptExpr(expr=PyNamedExpr(name='Punctuated'), slices=list_comma([ gen_py_type(ty.element_type), gen_py_type(ty.separator_type) ]))
+        return PySubscriptExpr(expr=PyNamedExpr('Punctuated'), slices=[ gen_py_type(ty.element_type), gen_py_type(ty.separator_type) ])
     if isinstance(ty, TupleType):
-        return PySubscriptExpr(expr=PyNamedExpr(name='tuple'), slices=list_comma(gen_py_type(element) for element in ty.element_types))
+        return PySubscriptExpr(expr=PyNamedExpr('tuple'), slices=list(gen_py_type(element) for element in ty.element_types))
     if isinstance(ty, UnionType):
         out = gen_py_type(ty.types[0])
         for element in ty.types[1:]:
@@ -125,21 +105,21 @@ def gen_py_type(ty: Type) -> PyExpr:
     if isinstance(ty, ExternType):
         return rule_type_to_py_type(ty.name)
     if isinstance(ty, NoneType):
-        return PyNamedExpr(name='None')
+        return PyNamedExpr('None')
     if isinstance(ty, NeverType):
-        return PyNamedExpr(name='Never')
+        return PyNamedExpr('Never')
     raise RuntimeError(f'unexpected {ty}')
 
 def rule_type_to_py_type(type_name: str) -> PyExpr:
     if type_name == 'String':
-        return PyNamedExpr(name='str')
+        return PyNamedExpr('str')
     if type_name == 'Integer':
-        return PyNamedExpr(name='int')
+        return PyNamedExpr('int')
     if type_name == 'Float32':
         warn('No exact representation for Float32 was found, so we are falling back to 64-bit Python float type')
-        return PyNamedExpr(name='float')
+        return PyNamedExpr('float')
     if type_name == 'Float' or type_name == 'Float64':
-        return PyNamedExpr(name='float')
+        return PyNamedExpr('float')
     raise RuntimeError(f"unexpected rule type '{type_name}'")
 
 def is_optional(ty: Type) -> bool:
@@ -154,43 +134,43 @@ def is_optional(ty: Type) -> bool:
 def gen_instance_check(name: str, target: PyExpr) -> PyExpr:
     spec = specs.lookup(name)
     if isinstance(spec, VariantSpec):
-        return PyCallExpr(operator=PyNamedExpr(name=f'is_{namespace(name)}'), args=list_comma([ PyPosArg(expr=target) ]))
+        return PyCallExpr(operator=PyNamedExpr(f'is_{namespace(name)}'), args=[ target ])
     if isinstance(spec, NodeSpec) or isinstance(spec, TokenSpec):
-        return PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyPosArg(expr=target), PyPosArg(expr=PyNamedExpr(name=to_class_name(name))) ]))
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr(to_class_name(name)) ])
     raise RuntimeError(f'unexpected {spec}')
 
 def gen_shallow_test(ty: Type, target: PyExpr) -> PyExpr:
     if isinstance(ty, NodeType):
         return gen_instance_check(ty.name, target)
     if isinstance(ty, TokenType):
-        return PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyPosArg(expr=target), PyPosArg(expr=PyNamedExpr(name=to_class_name(ty.name))) ]))
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr(to_class_name(ty.name)) ])
     if isinstance(ty, NoneType):
         return build_is_none(target)
     if isinstance(ty, TupleType):
-        return PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyPosArg(expr=target), PyPosArg(expr=PyNamedExpr(name='tuple')) ]))
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('tuple') ])
         #return ast.BoolOp(left=test, op=ast.And(), values=[ make_and(gen_test(element, ast.Subscript(target, ast.Constant(i))) for i, element in enumerate(ty.element_types)) ])
     if isinstance(ty, ListType):
-        return PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyPosArg(expr=target), PyPosArg(expr=PyNamedExpr(name='list')) ]))
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('list') ])
     if isinstance(ty, PunctType):
-        return PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyPosArg(expr=target), PyPosArg(expr=PyNamedExpr(name='Punctuated')) ]))
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('Punctuated') ])
     if isinstance(ty, UnionType):
         return build_or(gen_shallow_test(element, target) for element in ty.types)
     if isinstance(ty, ExternType):
         return gen_rule_type_test(ty.name, target)
     if isinstance(ty, NeverType):
-        return PyNamedExpr(name='False')
+        return PyNamedExpr('False')
     raise RuntimeError(f'unexpected {ty}')
 
 def gen_rule_type_test(type_name: str, target: PyExpr) -> PyExpr:
     if type_name == 'String':
-        return PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyPosArg(expr=target), PyPosArg(expr=PyNamedExpr(name='str')) ]))
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('str') ])
     if type_name == 'Integer':
-        return PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyPosArg(expr=target), PyPosArg(expr=PyNamedExpr(name='int')) ]))
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('int') ])
     if type_name == 'Float32':
         warn('No exact representation for Float32 was found, so we are falling back to 64-bit Python float type')
-        return PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyPosArg(expr=target), PyPosArg(expr=PyNamedExpr(name='float')) ]))
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('float') ])
     if type_name == 'Float' or type_name == 'Float64':
-        return PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyPosArg(expr=target), PyPosArg(expr=PyNamedExpr(name='float')) ]))
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('float') ])
     raise RuntimeError(f"unexpected rule type '{type_name}'")
 
 
@@ -224,16 +204,16 @@ def cst() -> str:
 
     def gen_default_constructor(ty: Type) -> PyExpr:
         if isinstance(ty, NoneType):
-            return PyNamedExpr(name='None')
+            return PyNamedExpr('None')
         if isinstance(ty, NodeType) or isinstance(ty, TokenType):
-            return PyCallExpr(operator=PyNamedExpr(name=to_class_name(ty.name)))
+            return PyCallExpr(operator=PyNamedExpr(to_class_name(ty.name)))
         if isinstance(ty, ListType):
-            return PyCallExpr(operator=PyNamedExpr(name='list'))
+            return PyCallExpr(operator=PyNamedExpr('list'))
         if isinstance(ty, PunctType):
             # FIXME maybe add the generic arguments?
-            return PyCallExpr(operator=PyNamedExpr(name='Punctuated'))
+            return PyCallExpr(operator=PyNamedExpr('Punctuated'))
         if isinstance(ty, TupleType):
-            return PyTupleExpr(elements=list_comma(gen_default_constructor(element_type) for element_type in ty.element_types))
+            return PyTupleExpr(elements=list(gen_default_constructor(element_type) for element_type in ty.element_types))
         if isinstance(ty, UnionType):
             # This assumes we already detected that there is exactly one
             # default-constrcuctible member in the union type
@@ -248,7 +228,7 @@ def cst() -> str:
             cases: list[Case] = []
             types: list[Type] = []
             for coerce_ty, coerce_body in coercions(ty, in_name, assign, has_none):
-                cases.append((gen_shallow_test(coerce_ty, PyNamedExpr(name=in_name)), coerce_body))
+                cases.append((gen_shallow_test(coerce_ty, PyNamedExpr(in_name)), coerce_body))
                 types.append(coerce_ty)
 
             res_ty = simplify_type(UnionType(types))
@@ -263,8 +243,8 @@ def cst() -> str:
                 [
                     PyRaiseStmt(
                         expr=PyCallExpr(
-                            operator=PyNamedExpr(name='ValueError'),
-                            args=list_comma([ PyPosArg(expr=PyConstExpr(literal=f"the field '{field_name}' received an unrecognised value'")) ])
+                            operator=PyNamedExpr('ValueError'),
+                            args=[ PyConstExpr(f"the field '{field_name}' received an unrecognised value'") ]
                         )
                     )
                 ]
@@ -288,7 +268,7 @@ def cst() -> str:
                 return
 
             if isinstance(ty, NoneType):
-                yield NoneType(), [ assign(PyNamedExpr(name='None')) ]
+                yield NoneType(), [ assign(PyNamedExpr('None')) ]
                 return
 
             # Now that we've handled union types and empty types, we can
@@ -310,13 +290,13 @@ def cst() -> str:
                     yield single_ty, [
                         assign(
                             PyCallExpr(
-                                operator=PyNamedExpr(name=to_class_name(ty.name)),
-                                args=list_comma([ PyPosArg(expr=PyNamedExpr(name=in_name)) ])
+                                operator=PyNamedExpr(to_class_name(ty.name)),
+                                args=[ PyNamedExpr(in_name) ]
                             )
                         )
                     ]
 
-                yield ty, [ assign(PyNamedExpr(name=in_name)) ]
+                yield ty, [ assign(PyNamedExpr(in_name)) ]
 
                 return
 
@@ -333,13 +313,13 @@ def cst() -> str:
                     yield ExternType(spec.field_type), [
                         assign(
                             PyCallExpr(
-                                operator=PyNamedExpr(name=to_class_name(ty.name)),
-                                args=list_comma([ PyPosArg(expr=PyNamedExpr(name=in_name)) ])
+                                operator=PyNamedExpr(to_class_name(ty.name)),
+                                args=[ PyNamedExpr(in_name) ]
                             )
                         )
                     ]
 
-                yield ty, [ assign(PyNamedExpr(name=in_name)) ]
+                yield ty, [ assign(PyNamedExpr(in_name)) ]
 
                 return
 
@@ -355,10 +335,10 @@ def cst() -> str:
                 separator_name = f'{in_name}_separator'
                 new_separator_name = f'new_{in_name}_separator'
 
-                value_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_value_name: PyAssignStmt(pattern=PyNamedPattern(name=name), expr=value)
+                value_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_value_name: PyAssignStmt(pattern=PyNamedPattern(name), expr=value)
                 value_type, value_stmts = collect(ty.element_type, value_name, value_assign, False)
 
-                separator_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_separator_name: PyAssignStmt(pattern=PyNamedPattern(name=name), expr=value)
+                separator_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_separator_name: PyAssignStmt(pattern=PyNamedPattern(name), expr=value)
                 separator_type, separator_stmts = collect(ty.separator_type, separator_name, separator_assign, False)
 
                 coerced_ty = UnionType([
@@ -369,40 +349,40 @@ def cst() -> str:
 
                 yield coerced_ty, [
                     PyAssignStmt(
-                        pattern=PyNamedPattern(name=new_elements_name),
-                        expr=PyCallExpr(operator=PyNamedExpr(name='Punctuated'))
+                        pattern=PyNamedPattern(new_elements_name),
+                        expr=PyCallExpr(operator=PyNamedExpr('Punctuated'))
                     ),
                     PyAssignStmt(
-                        pattern=PyNamedPattern(name=elements_iter_name),
-                        expr=PyCallExpr(operator=PyNamedExpr(name='iter'), args=list_comma([ PyPosArg(expr=PyNamedExpr(name=in_name)) ])),
+                        pattern=PyNamedPattern(elements_iter_name),
+                        expr=PyCallExpr(operator=PyNamedExpr('iter'), args=[ PyNamedExpr(in_name) ]),
                     ),
                     PyTryStmt(
                         body=[
                             PyAssignStmt(
-                                pattern=PyNamedPattern(name=first_element_name),
-                                expr=PyCallExpr(operator=PyNamedExpr(name='next'), args=list_comma([ PyPosArg(expr=PyNamedExpr(name=elements_iter_name)) ]))
+                                pattern=PyNamedPattern(first_element_name),
+                                expr=PyCallExpr(operator=PyNamedExpr('next'), args=[ PyNamedExpr(elements_iter_name) ])
                             ),
                             PyWhileStmt(
-                                expr=PyNamedExpr(name='True'),
+                                expr=PyNamedExpr('True'),
                                 body=[
                                     PyTryStmt(
                                         body=[
                                             PyAssignStmt(
-                                                pattern=PyNamedPattern(name=second_element_name),
-                                                expr=PyCallExpr(operator=PyNamedExpr(name='next'), args=list_comma([ PyPosArg(expr=PyNamedExpr(name=elements_iter_name)) ]))
+                                                pattern=PyNamedPattern(second_element_name),
+                                                expr=PyCallExpr(operator=PyNamedExpr('next'), args=[ PyNamedExpr(elements_iter_name) ])
                                             ),
                                             *build_cond([
                                                 (
                                                     # FIXME does not handle nested tuples
-                                                    build_isinstance(PyNamedExpr(name=first_element_name), PyNamedExpr(name='tuple')),
+                                                    build_isinstance(PyNamedExpr(first_element_name), PyNamedExpr('tuple')),
                                                     [
                                                         PyAssignStmt(
-                                                            pattern=PyNamedPattern(name=value_name),
-                                                            expr=PySubscriptExpr(expr=PyNamedExpr(name=first_element_name), slices=list_comma([ PyConstExpr(literal=0) ])),
+                                                            pattern=PyNamedPattern(value_name),
+                                                            expr=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(literal=0) ]),
                                                         ),
                                                         PyAssignStmt(
-                                                            pattern=PyNamedPattern(name=separator_name),
-                                                            expr=PySubscriptExpr(expr=PyNamedExpr(name=first_element_name), slices=list_comma([ PyConstExpr(literal=1) ])),
+                                                            pattern=PyNamedPattern(separator_name),
+                                                            expr=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(literal=1) ]),
                                                         ),
                                                     ]
                                                 ),
@@ -410,12 +390,12 @@ def cst() -> str:
                                                     None,
                                                     [
                                                         PyAssignStmt(
-                                                            pattern=PyNamedPattern(name=value_name),
-                                                            expr=PyNamedExpr(name=first_element_name),
+                                                            pattern=PyNamedPattern(value_name),
+                                                            expr=PyNamedExpr(first_element_name),
                                                         ),
                                                         PyAssignStmt(
-                                                            pattern=PyNamedPattern(name=separator_name),
-                                                            expr=PyNamedExpr(name='None'),
+                                                            pattern=PyNamedPattern(separator_name),
+                                                            expr=PyNamedExpr('None'),
                                                         ),
                                                     ]
                                                 )
@@ -424,35 +404,35 @@ def cst() -> str:
                                             *separator_stmts,
                                             PyExprStmt(
                                                 expr=PyCallExpr(
-                                                    operator=PyAttrExpr(expr=PyNamedExpr(name=new_elements_name), name='append'),
-                                                    args=list_comma([
-                                                        PyPosArg(expr=PyNamedExpr(name=new_value_name)),
-                                                        PyPosArg(expr=PyNamedExpr(name=new_separator_name))
-                                                    ])
+                                                    operator=PyAttrExpr(PyNamedExpr(new_elements_name), 'append'),
+                                                    args=[
+                                                        PyNamedExpr(new_value_name),
+                                                        PyNamedExpr(new_separator_name)
+                                                    ]
                                                 )
                                             ),
                                             PyAssignStmt(
-                                                pattern=PyNamedPattern(name=first_element_name),
-                                                expr=PyNamedExpr(name=second_element_name),
+                                                pattern=PyNamedPattern(first_element_name),
+                                                expr=PyNamedExpr(second_element_name),
                                             ),
                                         ],
                                         handlers=[
                                             PyExceptHandler(
-                                                expr=PyNamedExpr(name='StopIteration'),
+                                                expr=PyNamedExpr('StopIteration'),
                                                 body=[
                                                     *build_cond([
                                                         (
                                                             # FIXME does not handle nested tuples
-                                                            build_isinstance(PyNamedExpr(name=first_element_name), PyNamedExpr(name='tuple')),
+                                                            build_isinstance(PyNamedExpr(first_element_name), PyNamedExpr('tuple')),
                                                             [
                                                                 PyAssignStmt(
-                                                                    pattern=PyNamedPattern(name=value_name),
-                                                                    expr=PySubscriptExpr(expr=PyNamedExpr(name=first_element_name), slices=list_comma([ PyConstExpr(literal=0) ])),
+                                                                    pattern=PyNamedPattern(value_name),
+                                                                    expr=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(0) ]),
                                                                 ),
                                                                 PyExprStmt(
                                                                     expr=PyCallExpr(
-                                                                        operator=PyNamedExpr(name='assert'),
-                                                                        args=list_comma([ PyPosArg(expr=build_is_none(PySubscriptExpr(expr=PyNamedExpr(name=first_element_name), slices=list_comma([ PyConstExpr(literal=1) ])))) ])
+                                                                        operator=PyNamedExpr('assert'),
+                                                                        args=[ build_is_none(PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(1) ])) ]
                                                                     )
                                                                 )
                                                             ]
@@ -461,8 +441,8 @@ def cst() -> str:
                                                             None,
                                                             [
                                                                 PyAssignStmt(
-                                                                    pattern=PyNamedPattern(name=value_name),
-                                                                    expr=PyNamedExpr(name=first_element_name),
+                                                                    pattern=PyNamedPattern(value_name),
+                                                                    expr=PyNamedExpr(first_element_name),
                                                                 )
                                                             ]
                                                         )
@@ -470,8 +450,8 @@ def cst() -> str:
                                                     *value_stmts,
                                                     PyExprStmt(
                                                         expr=PyCallExpr(
-                                                            operator=PyAttrExpr(expr=PyNamedExpr(name=new_elements_name), name='append'),
-                                                            args=list_comma([ PyPosArg(expr=PyNamedExpr(name=new_value_name)) ])
+                                                            operator=PyAttrExpr(PyNamedExpr(new_elements_name), 'append'),
+                                                            args=[ PyNamedExpr(new_value_name) ]
                                                         )
                                                     ),
                                                     PyBreakStmt(),
@@ -484,12 +464,12 @@ def cst() -> str:
                         ],
                         handlers=[
                             PyExceptHandler(
-                                expr=PyNamedExpr(name='StopIteration'),
+                                expr=PyNamedExpr('StopIteration'),
                                 body=[ PyPassStmt() ]
                             )
                         ]
                     ),
-                    assign(PyNamedExpr(name=new_elements_name))
+                    assign(PyNamedExpr(new_elements_name))
                 ]
 
                 return
@@ -507,31 +487,31 @@ def cst() -> str:
                 element_name = f'{in_name}_element'
                 new_element_name = f'new_{in_name}_element'
 
-                element_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name=name), expr=value)
+                element_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name), expr=value)
                 element_type, element_stmts = collect(ty.element_type, element_name, element_assign, False)
 
                 yield ListType(element_type), [
                     PyAssignStmt(
-                        pattern=PyNamedPattern(name=new_elements_name),
-                        expr=PyCallExpr(operator=PyNamedExpr(name='list'))
+                        pattern=PyNamedPattern(new_elements_name),
+                        expr=PyCallExpr(operator=PyNamedExpr('list'))
                     ),
                     PyForStmt(
-                        pattern=PyNamedPattern(name=element_name),
-                        expr=PyNamedExpr(name=in_name),
+                        pattern=PyNamedPattern(element_name),
+                        expr=PyNamedExpr(in_name),
                         body=[
                             *element_stmts,
                             PyExprStmt(
                                 expr=PyCallExpr(
                                     operator=PyAttrExpr(
-                                        expr=PyNamedExpr(name=new_elements_name),
+                                        expr=PyNamedExpr(new_elements_name),
                                         name='append'
                                     ),
-                                    args=list_comma([ PyPosArg(expr=PyNamedExpr(name=new_element_name)) ])
+                                    args=[ PyNamedExpr(new_element_name) ]
                                 )
                             )
                         ]
                     ),
-                    assign(PyNamedExpr(name=new_elements_name))
+                    assign(PyNamedExpr(new_elements_name))
                 ]
 
                 return
@@ -560,7 +540,7 @@ def cst() -> str:
                         # Generates for example: self.field = (Dot(), $value, Dot())
                         return assign(
                             PyTupleExpr(
-                                elements=list_comma(value if el_ty == main_type else gen_default_constructor(el_ty) for el_ty in ty.element_types)
+                                elements=list(value if el_ty == main_type else gen_default_constructor(el_ty) for el_ty in ty.element_types)
                             )
                         )
 
@@ -573,8 +553,8 @@ def cst() -> str:
                 orelse: list[PyStmt] = [
                     PyExprStmt(
                         expr=PyCallExpr(
-                            operator=PyNamedExpr(name='assert'),
-                            args=list_comma([ PyPosArg(expr=gen_shallow_test(ty, PyNamedExpr(name=in_name))) ])
+                            operator=PyNamedExpr('assert'),
+                            args=[ gen_shallow_test(ty, PyNamedExpr(in_name)) ]
                         )
                     )
                 ]
@@ -583,16 +563,16 @@ def cst() -> str:
 
                     element_name = f'{in_name}_{i}'
                     new_element_name = f'new_{in_name}_{i}'
-                    element_assign = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name=name), expr=value)
+                    element_assign = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name), expr=value)
 
-                    new_elements.append(PyNamedExpr(name=new_element_name))
+                    new_elements.append(PyNamedExpr(new_element_name))
 
                     orelse.append(
                         PyAssignStmt(
-                            pattern=PyNamedPattern(name=element_name),
+                            pattern=PyNamedPattern(element_name),
                             expr=PySubscriptExpr(
-                                expr=PyNamedExpr(name=in_name),
-                                slices=list_comma([ PyConstExpr(literal=i) ])
+                                expr=PyNamedExpr(in_name),
+                                slices=[ PyConstExpr(literal=i) ]
                             )
                         )
                     )
@@ -603,7 +583,7 @@ def cst() -> str:
 
                     new_element_types.append(new_element_type)
 
-                orelse.append(assign(PyTupleExpr(elements=list_comma(new_elements))))
+                orelse.append(assign(PyTupleExpr(elements=new_elements)))
 
                 yield TupleType(new_element_types), orelse
 
@@ -621,35 +601,61 @@ def cst() -> str:
             params: list[PyParam] = []
             init_body: list[PyStmt] = []
 
+            inits = []
+
             for field in spec.members:
+                assign: Callable[[PyExpr], PyStmt] = lambda value, field=field: PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern('self'), name=field.name), annotation=gen_py_type(field.ty), expr=value)
+                inits.append(gen_initializers(field.name, field.ty, field.name, assign))
+
+            for (param_type, param_init), field in zip(inits, spec.members):
+
+                if is_optional(param_type):
+                    continue
 
                 # param_type = get_coerce_type(field.ty)
                 # tmp = f'{field.name}__coerced'
-
-                assign: Callable[[PyExpr], PyStmt] = lambda value, field=field: PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern(name='self'), name=field.name), annotation=gen_py_type(field.ty), expr=value)
-                param_type, param_init = gen_initializers(field.name, field.ty, field.name, assign)
 
                 init_body.extend(param_init)
 
                 param_type_str = emit(gen_py_type(param_type))
                 params.append(PyNamedParam(
-                    pattern=PyNamedPattern(name=field.name),
+                    pattern=PyNamedPattern(field.name),
                     annotation=PyConstExpr(literal=param_type_str),
-                    default=PyNamedExpr(name='None') if is_optional(param_type) else None
                 ))
+
+            first = True
+
+            for (param_type, param_init), field in zip(inits, spec.members):
+
+                if not is_optional(param_type):
+                    continue
+
+                if first:
+                    params.append(PySepParam())
+                    first = False
+
+                init_body.extend(param_init)
+
+                param_type_str = emit(gen_py_type(param_type))
+                params.append(PyNamedParam(
+                    pattern=PyNamedPattern(field.name),
+                    annotation=PyConstExpr(literal=param_type_str),
+                    default=PyNamedExpr('None') if is_optional(param_type) else None
+                ))
+
 
             # args = ast.arguments(args=[ ast.arg('self') ], kwonlyargs=params, defaults=[], kw_defaults=params_defaults)
             body.append(PyFuncDef(
                 name='__init__',
-                params=list_comma([ PyNamedParam(pattern=PyNamedPattern(name='self')), PySepParam(), *params ]),
-                return_type=PyNamedExpr(name='None'),
+                params=[ PyNamedParam(pattern=PyNamedPattern('self')), *params ],
+                return_type=PyNamedExpr('None'),
                 body=init_body
             ))
 
             #for field in element.members:
-            #     body.append(ast.AnnAssign(target=PyNamedExpr(name=field.name), annotation=gen_type(field.ty), simple=True))
+            #     body.append(ast.AnnAssign(target=PyNamedExpr(field.name), annotation=gen_type(field.ty), simple=True))
 
-            stmts.append(PyClassDef(name=to_class_name(spec.name), bases=list_comma([ '_BaseNode' ]), body=body))
+            stmts.append(PyClassDef(name=to_class_name(spec.name), bases=[ '_BaseNode' ], body=body))
 
             continue
 
@@ -665,44 +671,44 @@ def cst() -> str:
 
                 init_body: list[PyStmt] = []
 
-                init_body.append(PyExprStmt(expr=PyCallExpr(operator=PyAttrExpr(expr=PyCallExpr(operator=PyNamedExpr(name='super')), name='__init__'), args=[ (PyKeywordArg(name='span', expr=PyNamedExpr(name='span')), None) ])))
+                init_body.append(PyExprStmt(expr=PyCallExpr(operator=PyAttrExpr(expr=PyCallExpr(operator=PyNamedExpr('super')), name='__init__'), args=[ (PyKeywordArg(name='span', expr=PyNamedExpr('span')), None) ])))
 
                 params: list[PyParam] = []
-                params.append(PyNamedParam(pattern=PyNamedPattern(name='self')))
+                params.append(PyNamedParam(pattern=PyNamedPattern('self')))
 
                 # value: Field | None = None
-                params.append(PyNamedParam(pattern=PyNamedPattern(name='value'), annotation=build_union([ rule_type_to_py_type(spec.field_type), PyNamedExpr(name='None') ]), default=PyNamedExpr(name='None')))
+                params.append(PyNamedParam(pattern=PyNamedPattern('value'), annotation=build_union([ rule_type_to_py_type(spec.field_type), PyNamedExpr('None') ]), default=PyNamedExpr('None')))
 
                 # span: Span | None = None
-                params.append(PyNamedParam(pattern=PyNamedPattern(name='span'), annotation=build_union([ PyNamedExpr(name='Span'), PyNamedExpr(name='None') ]), default=PyNamedExpr(name='None')))
+                params.append(PyNamedParam(pattern=PyNamedPattern('span'), annotation=build_union([ PyNamedExpr('Span'), PyNamedExpr('None') ]), default=PyNamedExpr('None')))
 
-                init_body.append(PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern(name='self'), name='value'), expr=PyNamedExpr(name='value')))
+                init_body.append(PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern('self'), name='value'), expr=PyNamedExpr('value')))
 
-                body.append(PyFuncDef(name='__init__', params=list_comma(params), body=init_body))
+                body.append(PyFuncDef(name='__init__', params=params, body=init_body))
 
-            stmts.append(PyClassDef(name=to_class_name(spec.name), bases=list_comma([ '_BaseToken' ]), body=body))
+            stmts.append(PyClassDef(name=to_class_name(spec.name), bases=[ '_BaseToken' ], body=body))
 
             continue
 
         if isinstance(spec, VariantSpec):
-            # ty = PyNamedExpr(name=to_class_case(element.members[0]))
+            # ty = PyNamedExpr(to_class_case(element.members[0]))
             # for name in element.members[1:]:
-            #     ty = ast.BinOp(left=ty, op=ast.BitOr(), right=PyNamedExpr(name=to_class_case(name)))
+            #     ty = ast.BinOp(left=ty, op=ast.BitOr(), right=PyNamedExpr(to_class_case(name)))
 
             cls_name = to_class_name(spec.name)
 
             assert(len(spec.members) > 0)
-            py_type = PyConstExpr(literal=emit(build_union(PyNamedExpr(name=to_class_name(name)) for name in spec.members)))
-            stmts.append(PyAssignStmt(pattern=PyNamedPattern(name=cls_name), annotation=PyNamedExpr(name='TypeAlias'), expr=py_type))
+            py_type = PyConstExpr(literal=emit(build_union(PyNamedExpr(to_class_name(name)) for name in spec.members)))
+            stmts.append(PyAssignStmt(pattern=PyNamedPattern(cls_name), annotation=PyNamedExpr('TypeAlias'), expr=py_type))
 
             params: list[PyParam] = []
-            params.append(PyNamedParam(pattern=PyNamedPattern(name='value'), annotation=PyNamedExpr(name='Any')))
+            params.append(PyNamedParam(pattern=PyNamedPattern('value'), annotation=PyNamedExpr('Any')))
             stmts.append(PyFuncDef(
                 name=f'is_{namespace(spec.name)}',
-                params=list_comma(params),
-                return_type=PySubscriptExpr(expr=PyNamedExpr(name='TypeGuard'), slices=list_comma([ PyNamedExpr(name=cls_name) ])),
+                params=params,
+                return_type=PySubscriptExpr(expr=PyNamedExpr('TypeGuard'), slices=[ PyNamedExpr(cls_name) ]),
                 body=[
-                    PyRetStmt(expr=build_or(gen_instance_check(name, PyNamedExpr(name='value')) for name in spec.members))
+                    PyRetStmt(expr=build_or(gen_instance_check(name, PyNamedExpr('value')) for name in spec.members))
                 ],
             ))
 
@@ -723,8 +729,8 @@ def cst() -> str:
     # Token = Comma | Dot | Ident | ...
     stmts.append(
         PyAssignStmt(
-            pattern=PyNamedPattern(name=token_class_name),
-            expr=build_union(PyNamedExpr(name=to_class_name(name)) for name in token_names)
+            pattern=PyNamedPattern(token_class_name),
+            expr=build_union(PyNamedExpr(to_class_name(name)) for name in token_names)
         )
     )
 
@@ -733,8 +739,8 @@ def cst() -> str:
     # Node = Foo | Bar | ...
     stmts.append(
         PyAssignStmt(
-            pattern=PyNamedPattern(name=node_class_name),
-            expr=build_union(PyNamedExpr(name=to_class_name(name)) for name in node_names)
+            pattern=PyNamedPattern(node_class_name),
+            expr=build_union(PyNamedExpr(to_class_name(name)) for name in node_names)
         )
     )
 
@@ -743,8 +749,8 @@ def cst() -> str:
     # Syntax = Token | Node
     stmts.append(
         PyAssignStmt(
-            pattern=PyNamedPattern(name=syntax_class_name),
-            expr=build_union([ PyNamedExpr(name=token_class_name), PyNamedExpr(name=node_class_name) ])
+            pattern=PyNamedPattern(syntax_class_name),
+            expr=build_union([ PyNamedExpr(token_class_name), PyNamedExpr(node_class_name) ])
         )
     )
 
@@ -756,24 +762,24 @@ def cst() -> str:
     #    name=is_token_name,
     #    params=list_comma([
     #        PyNamedParam(
-    #            pattern=PyNamedPattern(name='value'),
-    #            annotation=PyNamedExpr(name='Any')
+    #            pattern=PyNamedPattern('value'),
+    #            annotation=PyNamedExpr('Any')
     #        )
     #    ]),
     #    return_type=PySubscriptExpr(
-    #        expr=PyNamedExpr(name='TypeGuard'),
-    #        slices=list_comma([ PyNamedExpr(name=token_class_name) ])
+    #        expr=PyNamedExpr('TypeGuard'),
+    #        slices=list_comma([ PyNamedExpr(token_class_name) ])
     #    ),
     #    body=PyRetStmt(
     #        expr=PyCallExpr(
-    #            operator=PyNamedExpr(name='isinstance'),
+    #            operator=PyNamedExpr('isinstance'),
     #            args=list_comma([
-    #                PyPosArg(expr=PyNamedExpr(name='value')),
-    #                PyPosArg(expr=PyNamedExpr(name='_BaseToken'))
+    #                PyPosArg(expr=PyNamedExpr('value')),
+    #                PyPosArg(expr=PyNamedExpr('_BaseToken'))
     #            ])
     #        )
     #    )
-    #    # body=PyRetStmt(expr=make_or(PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyNamedExpr(name='value'), PyNamedExpr(name=to_class_name(name)) ])) for name in token_names))
+    #    # body=PyRetStmt(expr=make_or(PyCallExpr(operator=PyNamedExpr('isinstance'), args=list_comma([ PyNamedExpr('value'), PyNamedExpr(to_class_name(name)) ])) for name in token_names))
     #))
 
     ## Generates:
@@ -784,24 +790,24 @@ def cst() -> str:
     #    name=is_node_name,
     #    params=list_comma([
     #        PyNamedParam(
-    #            pattern=PyNamedPattern(name='value'),
-    #            annotation=PyNamedExpr(name='Any')
+    #            pattern=PyNamedPattern('value'),
+    #            annotation=PyNamedExpr('Any')
     #        )
     #    ]),
     #    return_type=PySubscriptExpr(
-    #        expr=PyNamedExpr(name='TypeGuard'),
-    #        slices=list_comma([ PyNamedExpr(name=node_class_name) ])
+    #        expr=PyNamedExpr('TypeGuard'),
+    #        slices=list_comma([ PyNamedExpr(node_class_name) ])
     #    ),
     #    body=PyRetStmt(
     #        expr=PyCallExpr(
-    #            operator=PyNamedExpr(name='isinstance'),
+    #            operator=PyNamedExpr('isinstance'),
     #            args=list_comma([
-    #                PyPosArg(expr=PyNamedExpr(name='value')),
-    #                PyPosArg(expr=PyNamedExpr(name='_BaseNode'))
+    #                PyPosArg(expr=PyNamedExpr('value')),
+    #                PyPosArg(expr=PyNamedExpr('_BaseNode'))
     #            ])
     #        )
     #    )
-    #    # body=PyRetStmt(expr=make_or(PyCallExpr(operator=PyNamedExpr(name='isinstance'), args=list_comma([ PyNamedExpr(name='value'), PyNamedExpr(name=to_class_name(name)) ])) for name in node_names))
+    #    # body=PyRetStmt(expr=make_or(PyCallExpr(operator=PyNamedExpr('isinstance'), args=list_comma([ PyNamedExpr('value'), PyNamedExpr(to_class_name(name)) ])) for name in node_names))
     #))
 
     ## Generates:
@@ -810,17 +816,17 @@ def cst() -> str:
     ##    return is_token(value) or is_node(value)
     #stmts.append(PyFuncDef(
     #    name=is_syntax_name,
-    #    params=list_comma([ PyNamedParam(pattern=PyNamedPattern(name='value'), annotation=PyNamedExpr(name='Any')) ]),
+    #    params=list_comma([ PyNamedParam(pattern=PyNamedPattern('value'), annotation=PyNamedExpr('Any')) ]),
     #    body=PyRetStmt(
     #        expr=PyInfixExpr(
     #             left=PyCallExpr(
-    #                operator=PyNamedExpr(name=is_node_name),
-    #                args=list_comma([ PyPosArg(expr=PyNamedExpr(name='value')) ])
+    #                operator=PyNamedExpr(is_node_name),
+    #                args=list_comma([ PyPosArg(expr=PyNamedExpr('value')) ])
     #            ),
     #            op='or',
     #            right=PyCallExpr(
-    #                operator=PyNamedExpr(name=is_token_name),
-    #                args=list_comma([ PyPosArg(expr=PyNamedExpr(name='value')) ])
+    #                operator=PyNamedExpr(is_token_name),
+    #                args=list_comma([ PyPosArg(expr=PyNamedExpr('value')) ])
     #            )
     #        )
     #    )
@@ -840,30 +846,30 @@ def visitor() -> str:
             yield PyPassStmt()
             return
         if isinstance(ty, TokenType) or isinstance(ty, NodeType):
-            yield PyExprStmt(expr=PyCallExpr(operator=PyNamedExpr(name=proc_name), args=list_comma([ PyPosArg(expr=target) ])))
+            yield PyExprStmt(expr=PyCallExpr(operator=PyNamedExpr(proc_name), args=[ target ]))
             return
         if isinstance(ty, TupleType):
             for i, element_type in enumerate(ty.element_types):
                 tmp = generate_temporary(prefix='element_')
-                yield PyAssignStmt(pattern=PyNamedPattern(name=tmp), expr=PySubscriptExpr(expr=target, slices=list_comma([ PyConstExpr(literal=i) ])))
-                yield from gen_proc_call(element_type, PyNamedExpr(name=tmp))
+                yield PyAssignStmt(pattern=PyNamedPattern(tmp), expr=PySubscriptExpr(expr=target, slices=[ PyConstExpr(literal=i) ]))
+                yield from gen_proc_call(element_type, PyNamedExpr(tmp))
             return
         if isinstance(ty, ListType):
             element_name = generate_temporary(prefix='element_')
-            yield PyForStmt(pattern=PyNamedPattern(name=element_name), expr=target, body=list(gen_proc_call(ty.element_type, PyNamedExpr(name=element_name))))
+            yield PyForStmt(pattern=PyNamedPattern(element_name), expr=target, body=list(gen_proc_call(ty.element_type, PyNamedExpr(element_name))))
             return
         if isinstance(ty, PunctType):
             element_name = generate_temporary(prefix='element_')
             separator_name = generate_temporary(prefix='separator_')
             yield PyForStmt(
                 pattern=PyTuplePattern(
-                    elements=list_comma([
-                        PyNamedPattern(name=element_name),
-                        PyNamedPattern(name=separator_name)
-                    ]),
+                    elements=[
+                        PyNamedPattern(element_name),
+                        PyNamedPattern(separator_name)
+                    ],
                 ),
                 expr=target,
-                body=list(gen_proc_call(ty.element_type, PyNamedExpr(name=element_name)))
+                body=list(gen_proc_call(ty.element_type, PyNamedExpr(element_name)))
             )
             return
         if isinstance(ty, UnionType):
@@ -873,7 +879,7 @@ def visitor() -> str:
                     gen_shallow_test(element_type, target),
                     list(gen_proc_call(element_type, target))
                 ))
-            cases.append((None, [ PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr(name='ValueError'))) ]))
+            cases.append((None, [ PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr('ValueError'))) ]))
             yield from build_cond(cases)
             return
         raise RuntimeError(f'unexpected {ty}')
@@ -882,8 +888,8 @@ def visitor() -> str:
 
     body.append(PyIfStmt(first=PyIfCase(
         test=PyCallExpr(
-            operator=PyNamedExpr(name=is_token_name),
-            args=list_comma([ PyPosArg(expr=PyNamedExpr(name=syntax_param_name)) ])
+            operator=PyNamedExpr(is_token_name),
+            args=[ PyNamedExpr(syntax_param_name) ]
         ),
         body=PyRetStmt(),
     )))
@@ -898,15 +904,15 @@ def visitor() -> str:
         if isinstance(spec, NodeSpec):
             if_body: list[PyStmt] = []
             for field in spec.members:
-                if_body.extend(gen_proc_call(field.ty, PyAttrExpr(expr=PyNamedExpr(name=syntax_param_name), name=field.name)))
+                if_body.extend(gen_proc_call(field.ty, PyAttrExpr(expr=PyNamedExpr(syntax_param_name), name=field.name)))
             if_body.append(PyRetStmt())
             body.append(PyIfStmt(first=PyIfCase(
                 test=PyCallExpr(
-                    operator=PyNamedExpr(name='isinstance'),
-                    args=list_comma([
-                        PyPosArg(expr=PyNamedExpr(name=syntax_param_name)),
-                        PyPosArg(expr=PyNamedExpr(name=to_class_name(spec.name)))
-                    ])
+                    operator=PyNamedExpr('isinstance'),
+                    args=[
+                        PyNamedExpr(syntax_param_name),
+                        PyNamedExpr(to_class_name(spec.name))
+                    ]
                 ),
                 body=if_body
             )))
@@ -918,16 +924,16 @@ def visitor() -> str:
 
     return emit(PyFuncDef(
         name=for_each_child_name,
-        params=list_comma([
+        params=[
             PyNamedParam(
-                pattern=PyNamedPattern(name=syntax_param_name),
-                annotation=PyNamedExpr(name=syntax_class_name)
+                PyNamedPattern(syntax_param_name),
+                annotation=PyNamedExpr(syntax_class_name)
             ),
             PyNamedParam(
-                pattern=PyNamedPattern(name=proc_name),
-                annotation=PySubscriptExpr(expr=PyNamedExpr(name='Callable'), slices=list_comma([ PyListExpr(elements=list_comma([ PyNamedExpr(name=syntax_class_name) ])), PyNamedExpr(name='None') ]))
+                PyNamedPattern(proc_name),
+                annotation=PySubscriptExpr(expr=PyNamedExpr('Callable'), slices=[ PyListExpr(elements=[ PyNamedExpr(syntax_class_name) ]), PyNamedExpr('None') ])
             )
-        ]),
+        ],
         body=body,
     ))
 
@@ -943,8 +949,8 @@ def lexer_logic() -> str:
             return PyNestExpr(expr=PyInfixExpr(
                 left=PyInfixExpr(
                     left=PyCallExpr(
-                        operator=PyNamedExpr(name='ord'),
-                        args=list_comma([ PyPosArg(expr=target) ])
+                        operator=PyNamedExpr('ord'),
+                        args=[ target ]
                     ),
                     op='>=',
                     right=PyConstExpr(literal=ord(low))
@@ -952,8 +958,8 @@ def lexer_logic() -> str:
                 op='and',
                 right=PyInfixExpr(
                     left=PyCallExpr(
-                        operator=PyNamedExpr(name='ord'),
-                        args=list_comma([ PyPosArg(expr=target) ])
+                        operator=PyNamedExpr('ord'),
+                        args=[ target ]
                     ),
                     op='<=',
                     right=PyConstExpr(literal=ord(high))
@@ -978,9 +984,9 @@ def lexer_logic() -> str:
             for ch in expr.text:
                 ch_name = f'c_{i}'
                 i += 1
-                out.append(PyAssignStmt(pattern=PyNamedPattern(name=ch_name), expr=PyCallExpr(operator=PyAttrExpr(expr=PyNamedExpr(name='self'), name='_get_char'))))
+                out.append(PyAssignStmt(pattern=PyNamedPattern(ch_name), expr=PyCallExpr(operator=PyAttrExpr(expr=PyNamedExpr('self'), name='_get_char'))))
                 out.extend(build_cond([(
-                    PyInfixExpr(left=PyNamedExpr(name=ch_name), op='!=', right=PyConstExpr(literal=ch)),
+                    PyInfixExpr(left=PyNamedExpr(ch_name), op='!=', right=PyConstExpr(literal=ch)),
                     fail()
                 )]))
 
@@ -994,9 +1000,9 @@ def lexer_logic() -> str:
         elif isinstance(expr, CharSetExpr):
             ch_name = f'c_{i}'
             i += 1
-            out.append(PyAssignStmt(pattern=PyNamedPattern(name=ch_name), expr=PyCallExpr(operator=PyAttrExpr(expr=PyNamedExpr(name='self'), name='_get_char'))))
+            out.append(PyAssignStmt(pattern=PyNamedPattern(ch_name), expr=PyCallExpr(operator=PyAttrExpr(expr=PyNamedExpr('self'), name='_get_char'))))
             out.extend(build_cond([(
-                build_or(make_charset_predicate(element, PyNamedExpr(name=ch_name)) for element in expr.elements),
+                build_or(make_charset_predicate(element, PyNamedExpr(ch_name)) for element in expr.elements),
                 fail()
             )]))
 
@@ -1005,19 +1011,19 @@ def lexer_logic() -> str:
             if expr.min > 0:
                 min_body = lex_visit(expr.expr, rule_name, noop, fail)
                 out.append(PyForStmt(
-                    pattern=PyNamedPattern(name='_'),
-                    expr=PyCallExpr(operator=PyNamedExpr(name='range'), args=list_comma([ PyPosArg(expr=PyConstExpr(literal=0)), PyPosArg(expr=PyConstExpr(literal=expr.min)) ])),
+                    pattern=PyNamedPattern('_'),
+                    expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
                     body=min_body
                 ))
             if expr.max > 0:
                 if expr.max == POSINF:
                     max_body = lex_visit(expr.expr, rule_name, brk, brk)
-                    out.append(PyWhileStmt(expr=PyNamedExpr(name='True'), body=max_body))
+                    out.append(PyWhileStmt(expr=PyNamedExpr('True'), body=max_body))
                 else:
                     max_body = lex_visit(expr.expr, rule_name, brk, brk)
                     out.append(PyForStmt(
-                        pattern=PyNamedPattern(name='_'),
-                        expr=PyCallExpr(operator=PyNamedExpr(name='range'), args=list_comma([ PyPosArg(expr=PyConstExpr(literal=0)), PyPosArg(expr=PyConstExpr(literal=expr.max - expr.min)) ])),
+                        pattern=PyNamedPattern('_'),
+                        expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.max - expr.min) ]),
                         body=max_body
                     ))
                 out.extend(success())
@@ -1036,10 +1042,10 @@ def lexer_logic() -> str:
         return out
 
     def make_toplevel_fail(rule_name: str) -> Callable[[], list[PyStmt]]:
-        return lambda: [ PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr(name='ScanError'), args=[])) ]
+        return lambda: [ PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr('ScanError'), args=[])) ]
 
     def make_toplevel_success(rule_name: str) -> Callable[[], list[PyStmt]]:
-        return lambda: [ PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(name=rule_name), args=list_comma([]))) ]
+        return lambda: [ PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(rule_name), args=[])) ]
 
 
     for rule in grammar.rules:

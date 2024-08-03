@@ -120,11 +120,8 @@ pub tuple_expr
   = '(' elements:(expr % ',') ')'
 
 pub arg
-  = pos_arg
-  | keyword_arg
-
-pub pos_arg
-  = expr
+  = keyword_arg
+  | expr
 
 pub keyword_arg
   = name:ident '=' expr
