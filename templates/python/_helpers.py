@@ -1,8 +1,6 @@
 
 from __future__ import annotations
 
-# TODO Generate a union type with all nodes/tokens
-
 from typing import Iterable, Iterator, Sequence, assert_never, TypeVar, cast
 
 import templaty
