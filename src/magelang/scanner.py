@@ -188,26 +188,26 @@ class Scanner:
             raise ScanError(ch, pos)
         return int(ch, 16)
 
-    def _scan_escapable_char(self) -> tuple[str, bool]:
+    def _scan_escapable_char(self) -> str:
         c0 = self._get_char()
         if c0 == '\\':
             c1 = self._get_char()
             if c1 == 'x':
                 d0 = self._scan_hex_digit()
                 d1 = self._scan_hex_digit()
-                return (chr(d0 * 16 + d1), True)
+                return chr(d0 * 16 + d1)
             elif c1 == 'u':
                 d0 = self._scan_hex_digit()
                 d1 = self._scan_hex_digit()
                 d2 = self._scan_hex_digit()
                 d3 = self._scan_hex_digit()
-                return (chr(d0 * 16 * 16 * 16 + d1 * 16 * 16 + d2 * 16 + d3), True)
+                return chr(d0 * 16 * 16 * 16 + d1 * 16 * 16 + d2 * 16 + d3)
             elif c1 in _ascii_escape_chars:
-                return (_ascii_escape_chars[c1], True)
+                return _ascii_escape_chars[c1]
             else:
-                return (c1, True)
+                return c1
         else:
-            return (c0, False)
+            return c0
 
     def scan(self):
 
@@ -276,27 +276,20 @@ class Scanner:
             self._get_char()
             elements = []
             while True:
-                c1, x1 = self._scan_escapable_char()
+                if self._peek_char() == ']':
+                    self._get_char()
+                    break
+                c1 = self._scan_escapable_char()
                 if c1 == EOF:
                     raise ScanError(c1, self.curr_pos.clone())
-                if c1 == ']' and not x1:
-                    break
-                c2, x2 = self._scan_escapable_char()
-                if c2 == EOF:
-                    raise ScanError(c2, self.curr_pos.clone())
-                if c2 == ']' and not x2:
-                    elements.append(c1)
-                    break
-                if c2 == '-':
-                    c3, x3 = self._scan_escapable_char()
-                    if c3 == EOF:
-                        raise ScanError(c3, self.curr_pos.clone())
-                    if c3 == ']' and not x3:
-                        break
-                    elements.append((c1, c3))
+                if self._peek_char() == '-':
+                    self._get_char()
+                    c2 = self._scan_escapable_char()
+                    if c2 == EOF:
+                        raise ScanError(c2, self.curr_pos.clone())
+                    elements.append((c1, c2))
                 else:
                     elements.append(c1)
-                    elements.append(c2)
             ci = False
             c4 = self._peek_char()
             if c4 == 'i':
