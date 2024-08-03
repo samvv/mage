@@ -261,6 +261,12 @@ def emit(node: PyNode) -> str:
             visit(node.asterisk)
             return
 
+        if isinstance(node, PySlice):
+            visit(node.lower)
+            visit(node.colon)
+            visit(node.upper)
+            return
+
         if isinstance(node, PyInfixExpr):
             visit(node.left)
             out.write(' ')
@@ -271,6 +277,11 @@ def emit(node: PyNode) -> str:
 
         if isinstance(node, PyBreakStmt):
             out.write('break')
+            out.write('\n')
+            return
+
+        if isinstance(node, PyContinueStmt):
+            out.write('continue')
             out.write('\n')
             return
 
