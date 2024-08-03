@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Iterator, Sequence, assert_never, TypeVar, cast
+from typing import Iterable, Iterator, assert_never, cast
 
 import templaty
 from sweetener import is_iterator, warn
