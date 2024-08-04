@@ -5,6 +5,7 @@ from typing import Iterable, Iterator, assert_never, cast
 
 import templaty
 from sweetener import is_iterator, warn
+from templaty.util import to_snake_case
 from magelang.repr import *
 from magelang.util import NameGenerator
 from magelang.lang.python.cst import *
@@ -966,91 +967,169 @@ def lexer_logic() -> str:
         assert_never(element)
 
     stmts: list[PyStmt] = []
-    i = 0
+
+    offset_name = 'i'
 
     def noop() -> list[PyStmt]: return [ PyPassStmt() ]
 
     def brk() -> list[PyStmt]: return [ PyBreakStmt() ]
 
-    def lex_visit(expr: Expr, rule_name: str, success: Callable[[], list[PyStmt]], fail: Callable[[], list[PyStmt]]) -> list[PyStmt]:
+    def contin() -> list[PyStmt]: return [ PyContinueStmt() ]
 
-        nonlocal i
+    def lex_visit_backtrack(expr: Expr, rule_name: str, success: Callable[[], list[PyStmt]], fail: Callable[[], list[PyStmt]]) -> list[PyStmt]:
+        keep_name = generate_temporary(prefix='keep_')
+        def fail_wrapped() -> list[PyStmt]:
+            return [
+                PyAssignStmt(PyNamedPattern(offset_name), PyNamedExpr(keep_name)),
+                *fail(),
+            ]
+        return [
+            PyAssignStmt(PyNamedPattern(keep_name), PyNamedExpr(offset_name)),
+            *lex_visit(expr, rule_name, success, fail_wrapped)
+        ]
 
-        out: list[PyStmt] = []
+    def lex_visit(expr: Expr, rule_name: str, success: Callable[[], list[PyStmt]], fallthrough: Callable[[], list[PyStmt]]) -> list[PyStmt]:
+
+        if isinstance(expr, RefExpr):
+            rule = grammar.lookup(expr.name)
+            assert(rule.expr is not None)
+            return lex_visit(rule.expr, rule_name, success, fallthrough)
 
         if isinstance(expr, LitExpr):
-            for ch in expr.text:
-                ch_name = f'c_{i}'
-                i += 1
-                out.append(PyAssignStmt(pattern=PyNamedPattern(ch_name), expr=PyCallExpr(operator=PyAttrExpr(expr=PyNamedExpr('self'), name='_get_char'))))
-                out.extend(build_cond([(
-                    PyInfixExpr(left=PyNamedExpr(ch_name), op='!=', right=PyConstExpr(literal=ch)),
-                    fail()
-                )]))
 
-        elif isinstance(expr, SeqExpr):
-            def make_chain(n: int) -> list[PyStmt]:
+            def next_char(k: int) -> list[PyStmt]:
+                if k == len(expr.text):
+                    return success()
+                ch_name = generate_temporary(prefix='ch_')
+                ch = expr.text[k]
+                return [
+                    PyAssignStmt(pattern=PyNamedPattern(ch_name), expr=PyCallExpr(operator=PyAttrExpr(expr=PyNamedExpr('self'), name='_char_at'), args=[ PyNamedExpr(offset_name) ])),
+                    *build_cond([(
+                        PyInfixExpr(left=PyNamedExpr(ch_name), op='==', right=PyConstExpr(literal=ch)),
+                        [
+                            PyAssignStmt(PyNamedPattern(offset_name), PyInfixExpr(PyNamedExpr(offset_name), '+', PyConstExpr(1))),
+                            *next_char(k+1)
+                        ]
+                    )])
+                ]
+
+            return [
+                *next_char(0),
+                *fallthrough(),
+            ]
+
+        if isinstance(expr, SeqExpr):
+
+            def next_element(n: int) -> list[PyStmt]:
                 if n == len(expr.elements):
                     return success()
-                return lex_visit(expr.elements[n], rule_name, lambda: make_chain(n+1), fail)
-            out.extend(make_chain(0))
+                return lex_visit(expr.elements[n], rule_name, lambda: next_element(n+1), noop)
 
-        elif isinstance(expr, CharSetExpr):
-            ch_name = f'c_{i}'
-            i += 1
-            out.append(PyAssignStmt(pattern=PyNamedPattern(ch_name), expr=PyCallExpr(operator=PyAttrExpr(expr=PyNamedExpr('self'), name='_get_char'))))
-            out.extend(build_cond([(
-                build_or(make_charset_predicate(element, PyNamedExpr(ch_name)) for element in expr.elements),
-                fail()
-            )]))
+            return [
+                *next_element(0),
+                *fallthrough(),
+            ]
 
-        elif isinstance(expr, RepeatExpr):
+        if isinstance(expr, CharSetExpr):
 
-            if expr.min > 0:
-                min_body = lex_visit(expr.expr, rule_name, noop, fail)
-                out.append(PyForStmt(
-                    pattern=PyNamedPattern('_'),
-                    expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
-                    body=min_body
-                ))
-            if expr.max > 0:
-                if expr.max == POSINF:
-                    max_body = lex_visit(expr.expr, rule_name, brk, brk)
-                    out.append(PyWhileStmt(expr=PyNamedExpr('True'), body=max_body))
-                else:
-                    max_body = lex_visit(expr.expr, rule_name, brk, brk)
-                    out.append(PyForStmt(
-                        pattern=PyNamedPattern('_'),
-                        expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.max - expr.min) ]),
-                        body=max_body
-                    ))
-                out.extend(success())
+            ch_name = generate_temporary(prefix='ch_')
 
-        elif isinstance(expr, ChoiceExpr):
+            return [
+                PyAssignStmt(pattern=PyNamedPattern(ch_name), expr=PyCallExpr(operator=PyAttrExpr(expr=PyNamedExpr('self'), name='_char_at'), args=[ PyNamedExpr(offset_name) ])),
+                *build_cond([(
+                    build_or(make_charset_predicate(element, PyNamedExpr(ch_name)) for element in expr.elements),
+                    [
+                        PyAssignStmt(PyNamedPattern(offset_name), PyInfixExpr(PyNamedExpr(offset_name), '+', PyConstExpr(1))),
+                        *success()
+                    ]
+                )]),
+                *fallthrough()
+            ]
+
+        if isinstance(expr, RepeatExpr):
+
+            if expr.min == 0 and expr.max == 1:
+                return lex_visit_backtrack(expr.expr, rule_name, success, fallthrough)
+
             out: list[PyStmt] = []
-            def try_next(k: int) -> list[PyStmt]:
-                if k == 0:
-                    return fail()
-                return lex_visit(expr.elements[k], rule_name, success, lambda: try_next(k-1))
+
+            out.append(PyAssignStmt(PyNamedPattern('matches'), PyNamedExpr('True')))
+            def min_fail() -> list[PyStmt]:
+                return [
+                    PyAssignStmt(PyNamedPattern('matches'), PyNamedExpr('False')),
+                    PyBreakStmt(),
+                ]
+            out.append(PyForStmt(
+                pattern=PyNamedPattern('_'),
+                expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
+                body=lex_visit(expr.expr, rule_name, contin, min_fail)
+            ))
+
+            max_body = []
+            assert(expr.max > 0)
+            if expr.max == POSINF:
+                max_body.append(PyWhileStmt(expr=PyNamedExpr('True'), body=lex_visit(expr.expr, rule_name, contin, brk)))
+            else:
+                max_body.append(PyForStmt(
+                    pattern=PyNamedPattern('_'),
+                    expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.max - expr.min) ]),
+                    body=lex_visit(expr.expr, rule_name, contin, brk)
+                ))
+            max_body.extend(success())
+
+            out.append(PyIfStmt(first=PyIfCase(test=PyNamedExpr('matches'), body=max_body)))
+
+            out.extend(fallthrough())
+
             return out
 
-        else:
-            raise RuntimeError(f'unexpected {expr}')
+        if isinstance(expr, ChoiceExpr):
 
+            def next_choice(k: int) -> list[PyStmt]:
+                if k == len(expr.elements):
+                    return fallthrough()
+                return lex_visit(expr.elements[k], rule_name, success, lambda: next_choice(k+1))
+
+            return next_choice(0)
+
+        assert_never(expr)
+
+    def next_rule(k: int) -> list[PyStmt]:
+        if k == len(grammar.rules):
+            return [ PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr('ScanError'), args=[])) ]
+        rule = grammar.rules[k]
+        if not rule.is_token or rule.expr is None:
+            return next_rule(k+1)
+        out = []
+        spec = specs.lookup(rule.name)
+        assert(isinstance(spec, TokenSpec))
+        token_args = []
+        out.append(PyAssignStmt(PyNamedPattern(offset_name), PyAttrExpr(PyNamedExpr('self'), '_curr_offset')))
+        if not spec.is_static:
+            token_args.append(
+                PyCallExpr(
+                    PyNamedExpr(f'_parse_{to_snake_case(spec.field_type)}'),
+                    args=[
+                        PySubscriptExpr(
+                            PyAttrExpr(PyNamedExpr('self'), '_text'),
+                            slices=[ PySlice(PyNamedExpr('start'), PyNamedExpr(offset_name)) ]
+                        )
+                    ]
+                )
+            )
+            out.append(PyAssignStmt(PyNamedPattern('start'), PyNamedExpr(offset_name)))
+        out.extend(lex_visit(
+            rule.expr,
+            rule.name,
+            lambda: [
+                PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), '_curr_offset'), PyNamedExpr(offset_name)),
+                PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(to_class_name(rule.name)), args=token_args))
+            ],
+            lambda: next_rule(k+1),
+        ))
         return out
 
-    def make_toplevel_fail(rule_name: str) -> Callable[[], list[PyStmt]]:
-        return lambda: [ PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr('ScanError'), args=[])) ]
-
-    def make_toplevel_success(rule_name: str) -> Callable[[], list[PyStmt]]:
-        return lambda: [ PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(rule_name), args=[])) ]
-
-
-    for rule in grammar.rules:
-        if not rule.is_token:
-            continue
-        if rule.expr is not None:
-            stmts.extend(lex_visit(rule.expr, rule.name, make_toplevel_success(rule.name), make_toplevel_fail(rule.name)))
+    stmts.extend(next_rule(0))
 
     return emit(PyModule(stmts=stmts))
 

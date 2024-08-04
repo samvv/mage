@@ -6,6 +6,21 @@ EOF = '\uFFFF'
 class ScanError(RuntimeError):
     pass
 
+class LineColumn:
+
+    def __init__(self, line: int, column: int) -> None:
+        self.line = line
+        self.column = column
+
+def _parse_string(buffer: str) -> str:
+    return buffer
+
+def _parse_integer(buffer: str) -> int:
+    return int(buffer)
+
+def _parse_float(buffer: str) -> float:
+    return float(buffer)
+
 class Lexer:
 
     def __init__(self, text: str, start_offset = 0, start_line = 1, start_column = 1) -> None:
@@ -15,10 +30,17 @@ class Lexer:
         self._curr_pos = LineColumn(start_line, start_column)
         {% endif %}
 
+    def _char_at(self, offset: int) -> str:
+        return self._text[offset] if offset < len(self._text) else EOF
+
+    def _peek_char(self, offset = 0) -> str:
+        k = self._curr_offset + offset
+        return self._text[k] if k < len(self._text) else EOF
+
     def _get_char(self) -> str:
-        ch = self._text[self._curr_offset]
-        if ch == EOF:
+        if self._curr_offset >= len(self._text):
             return EOF
+        ch = self._text[self._curr_offset]
         self._curr_offset += 1
         {% if enable_linecol %}
         if ch == '\n':
