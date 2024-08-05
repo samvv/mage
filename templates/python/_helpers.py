@@ -6,8 +6,9 @@ from typing import Iterable, Iterator, assert_never, cast
 import templaty
 from sweetener import is_iterator, warn
 from templaty.util import to_snake_case
+from magelang.lang.python.opt import remove_unused_assignments
 from magelang.repr import *
-from magelang.util import NameGenerator
+from magelang.util import NameGenerator, pipe
 from magelang.lang.python.cst import *
 from magelang.lang.python.emitter import emit
 
@@ -147,13 +148,47 @@ def gen_shallow_test(ty: Type, target: PyExpr) -> PyExpr:
         return build_is_none(target)
     if isinstance(ty, TupleType):
         return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('tuple') ])
-        #return ast.BoolOp(left=test, op=ast.And(), values=[ make_and(gen_test(element, ast.Subscript(target, ast.Constant(i))) for i, element in enumerate(ty.element_types)) ])
     if isinstance(ty, ListType):
         return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('list') ])
     if isinstance(ty, PunctType):
         return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('Punctuated') ])
     if isinstance(ty, UnionType):
         return build_or(gen_shallow_test(element, target) for element in ty.types)
+    if isinstance(ty, ExternType):
+        return gen_rule_type_test(ty.name, target)
+    if isinstance(ty, NeverType):
+        return PyNamedExpr('False')
+    raise RuntimeError(f'unexpected {ty}')
+
+def gen_deep_test(ty: Type, target: PyExpr) -> PyExpr:
+    if isinstance(ty, NodeType):
+        return gen_instance_check(ty.name, target)
+    if isinstance(ty, TokenType):
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr(to_class_name(ty.name)) ])
+    if isinstance(ty, NoneType):
+        return build_is_none(target)
+    if isinstance(ty, TupleType):
+        return build_and([
+            PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('tuple') ]),
+            *(gen_deep_test(element, PySubscriptExpr(target, slices=[ PyConstExpr(i) ])) for i, element in enumerate(ty.element_types))
+        ])
+    if isinstance(ty, ListType):
+        # FIXME
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('list') ])
+        return PyInfixExpr(
+            left=PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('list') ]),
+            op='and',
+            right=PyCallExpr(PyNamedExpr('all'), args=[ PyForExpr(gen_deep_test(ty.element_type, PyNamedExpr('element')), PyNamedPattern('element'), target) ]),
+        )
+    if isinstance(ty, PunctType):
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('Punctuated') ])
+        return PyInfixExpr(
+            left=PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('Punctuated') ]),
+            op='and',
+            right=PyCallExpr(PyNamedExpr('all'), args=[ PyForExpr(gen_deep_test(ty.element_type, PyNamedExpr('element')), PyNamedPattern('element'), target) ]),
+        )
+    if isinstance(ty, UnionType):
+        return build_or(gen_deep_test(element, target) for element in ty.types)
     if isinstance(ty, ExternType):
         return gen_rule_type_test(ty.name, target)
     if isinstance(ty, NeverType):
@@ -709,7 +744,7 @@ def cst() -> str:
             cls_name = to_class_name(spec.name)
 
             assert(len(spec.members) > 0)
-            py_type = PyConstExpr(literal=emit(build_union(PyNamedExpr(to_class_name(name)) for name in spec.members)))
+            py_type = PyConstExpr(literal=emit(build_union(gen_py_type(ty) for _, ty in spec.members)))
             stmts.append(PyAssignStmt(pattern=PyNamedPattern(cls_name), annotation=PyNamedExpr('TypeAlias'), expr=py_type))
 
             params: list[PyParam] = []
@@ -719,7 +754,7 @@ def cst() -> str:
                 params=params,
                 return_type=PySubscriptExpr(expr=PyNamedExpr('TypeGuard'), slices=[ PyNamedExpr(cls_name) ]),
                 body=[
-                    PyRetStmt(expr=build_or(gen_instance_check(name, PyNamedExpr('value')) for name in spec.members))
+                    PyRetStmt(expr=build_or(gen_deep_test(ty, PyNamedExpr('value')) for _, ty in spec.members))
                 ],
             ))
 

@@ -88,7 +88,7 @@ class NodeSpec(SpecBase):
 
 class VariantSpec(SpecBase):
     name: str
-    members: list[str]
+    members: list[tuple[str, Type]]
 
 Spec = TokenSpec | NodeSpec | VariantSpec
 
@@ -224,21 +224,29 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         field_counter += 1
         return name
 
-    def get_variant_members(expr: Expr) -> Generator[str, None, None]:
+    def get_member_name(expr: Expr) -> str:
+        if expr.label is not None:
+            return expr.label
         if isinstance(expr, RefExpr):
             rule = grammar.lookup(expr.name)
-            if rule.is_public:
-                yield rule.name
-                return
-            # FIXME What to do with Rule(is_extern=True, is_public=False) ?
-            if rule.expr is not None:
-                yield from get_variant_members(rule.expr)
-            return
+            assert(rule.is_public)
+            return expr.name
+        raise NotImplementedError()
+
+    def get_variant_members(expr: Expr) -> Generator[tuple[str, Type], None, None]:
         if isinstance(expr, ChoiceExpr):
             for element in expr.elements:
                 yield from get_variant_members(element)
             return
-        assert(False)
+        if isinstance(expr, SeqExpr):
+            names = []
+            types = []
+            for element in expr.elements:
+                names.append(get_member_name(element))
+                types.append(infer_type(grammar, element))
+            yield '_'.join(names), TupleType(types)
+            return
+        yield get_member_name(expr), infer_type(grammar, expr)
 
     def plural(name: str) -> str:
         return name if name.endswith('s') else f'{name}s'

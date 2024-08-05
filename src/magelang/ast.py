@@ -198,28 +198,11 @@ class Grammar(Node):
         return rule.is_public and not self.is_token_rule(rule)
 
     def is_variant(self, rule: Rule) -> bool:
-        count = 0
-        def visit(expr: Expr) -> bool:
-            nonlocal count
-            if isinstance(expr, RefExpr):
-                rule = self.lookup(expr.name)
-                if self.is_parse_rule(rule):
-                    count += 1
-                    return True
-                # FIXME What to do with Rule(is_extern=True, is_public=False) ?
-                assert(rule.expr is not None)
-                return visit(rule.expr)
-            if isinstance(expr, ChoiceExpr):
-                for element in expr.elements:
-                    if not visit(element):
-                        return False
-                return True
-            return False
         if rule.is_extern:
             return False
         # only Rule(is_extern=True) can not hold an expression
         assert(rule.expr is not None)
-        return visit(rule.expr) and count > 1
+        return isinstance(rule.expr, ChoiceExpr)
 
     def get_token_rules(self) -> Generator[Rule, None, None]:
         for rule in self.rules:
