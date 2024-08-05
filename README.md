@@ -161,7 +161,7 @@ not be visible in the resulting CST/AST.
 
 > [!WARNING]
 >
-> This command is under construction.
+> This expression is under construction.
 
 Parse the expression at least `n` times and at most `m` times.
 
