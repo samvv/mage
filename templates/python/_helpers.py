@@ -682,14 +682,17 @@ def cst() -> str:
                 init_body.append(PyExprStmt(expr=PyCallExpr(operator=PyAttrExpr(expr=PyCallExpr(operator=PyNamedExpr('super')), name='__init__'), args=[ (PyKeywordArg(name='span', expr=PyNamedExpr('span')), None) ])))
 
                 params: list[PyParam] = []
+
+                # self
                 params.append(PyNamedParam(pattern=PyNamedPattern('self')))
 
-                # value: Field | None = None
-                params.append(PyNamedParam(pattern=PyNamedPattern('value'), annotation=build_union([ rule_type_to_py_type(spec.field_type), PyNamedExpr('None') ]), default=PyNamedExpr('None')))
+                # value: Type
+                params.append(PyNamedParam(pattern=PyNamedPattern('value'), annotation=rule_type_to_py_type(spec.field_type)))
 
                 # span: Span | None = None
                 params.append(PyNamedParam(pattern=PyNamedPattern('span'), annotation=build_union([ PyNamedExpr('Span'), PyNamedExpr('None') ]), default=PyNamedExpr('None')))
 
+                # self.value = value
                 init_body.append(PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern('self'), name='value'), expr=PyNamedExpr('value')))
 
                 body.append(PyFuncDef(name='__init__', params=params, body=init_body))

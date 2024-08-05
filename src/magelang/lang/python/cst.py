@@ -67,25 +67,25 @@ class Punctuated[_T, _P]:
             yield self.last, None
 
 class PyIdent(_BaseToken):
-    def __init__(self, value: str | None = None, span: Span | None = None):
+    def __init__(self, value: str, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
 class PyInteger(_BaseToken):
-    def __init__(self, value: int | None = None, span: Span | None = None):
+    def __init__(self, value: int, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
 class PyFloat(_BaseToken):
-    def __init__(self, value: float | None = None, span: Span | None = None):
+    def __init__(self, value: float, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
 class PyString(_BaseToken):
-    def __init__(self, value: str | None = None, span: Span | None = None):
+    def __init__(self, value: str, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
@@ -703,7 +703,7 @@ class PyCallExpr(_BaseNode):
 
 
 class PyPrefixOp(_BaseToken):
-    def __init__(self, value: str | None = None, span: Span | None = None):
+    def __init__(self, value: str, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
@@ -720,7 +720,7 @@ class PyPrefixExpr(_BaseNode):
 
 
 class PyInfixOp(_BaseToken):
-    def __init__(self, value: str | None = None, span: Span | None = None):
+    def __init__(self, value: str, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
