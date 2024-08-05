@@ -169,6 +169,53 @@ Parse the expression at least `n` times and at most `m` times.
 unicode_char = 'U+' hex_digit{4,4}
 ```
 
+### `@skip`
+
+Register the chosen rule as a special rule that the lexer uses to lex 'gibberish'.
+
+The rule will still be available in other rules, e.g. when `@noskip` was added.
+
+```
+@skip
+whitespace = [\n\r\t ]*
+```
+
+### 🚧 `@noskip`
+
+> [!WARNING]
+>
+> This decorator is under construction.
+
+Disable automatic injection of the `@skip` rule for the chosen rule.
+
+This can be useful for e.g. parsing indentation in a context where whitespace
+is normally discarded.
+
+```
+@skip
+__ = [\n\r\t ]*
+
+@noskip
+pub body
+  = ':' __ stmt
+  | ':' \indent stmt* \dedent
+```
+
+### `@wrap`
+
+Adding this decorator to a rule ensures that a real CST node is emitted for
+that rule, instead of possibly a variant.
+
+This decorator makes the CST heavier, but this might be warranted in the name
+of robustness and forward compatibility. Use this decorator if you plan to add
+more fields to the rule.
+
+```
+@wrap
+pub lit_expr
+   = literal:(string | integer | boolean)
+```
+
 ## FAQ
 
 ### How do I assign a list of nodes to another node in Python without type errors?
