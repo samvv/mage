@@ -657,48 +657,36 @@ def cst() -> str:
             params: list[PyParam] = []
             init_body: list[PyStmt] = []
 
-            inits = []
+            required = []
+            optional = []
 
             for field in spec.members:
-                assign: Callable[[PyExpr], PyStmt] = lambda value, field=field: PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern('self'), name=field.name), annotation=gen_py_type(field.ty), expr=value)
-                inits.append(gen_initializers(field.name, field.ty, field.name, assign))
 
-            for (param_type, param_init), field in zip(inits, spec.members):
+                out_name = f'{field.name}_out'
+                assign: Callable[[PyExpr], PyStmt] = lambda value, name=out_name: PyAssignStmt(PyNamedPattern(name), value)
+                param_type, param_stmts = gen_initializers(field.name, field.ty, field.name, assign)
+                param_stmts.append(PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern('self'), name=field.name), annotation=gen_py_type(field.ty), expr=PyNamedExpr(out_name)))
+
+                init_body.extend(param_stmts)
+
+                param_type_str = emit(gen_py_type(param_type))
 
                 if is_optional(param_type):
-                    continue
+                    optional.append(PyNamedParam(
+                        pattern=PyNamedPattern(field.name),
+                        annotation=PyConstExpr(literal=param_type_str),
+                        default=PyNamedExpr('None')
+                    ))
+                else:
+                    required.append(PyNamedParam(
+                        pattern=PyNamedPattern(field.name),
+                        annotation=PyConstExpr(param_type_str),
+                    ))
 
-                # param_type = get_coerce_type(field.ty)
-                # tmp = f'{field.name}__coerced'
-
-                init_body.extend(param_init)
-
-                param_type_str = emit(gen_py_type(param_type))
-                params.append(PyNamedParam(
-                    pattern=PyNamedPattern(field.name),
-                    annotation=PyConstExpr(literal=param_type_str),
-                ))
-
-            first = True
-
-            for (param_type, param_init), field in zip(inits, spec.members):
-
-                if not is_optional(param_type):
-                    continue
-
-                if first:
-                    params.append(PySepParam())
-                    first = False
-
-                init_body.extend(param_init)
-
-                param_type_str = emit(gen_py_type(param_type))
-                params.append(PyNamedParam(
-                    pattern=PyNamedPattern(field.name),
-                    annotation=PyConstExpr(literal=param_type_str),
-                    default=PyNamedExpr('None') if is_optional(param_type) else None
-                ))
-
+            params.extend(required)
+            if optional:
+                params.append(PySepParam())
+                params.extend(optional)
 
             # args = ast.arguments(args=[ ast.arg('self') ], kwonlyargs=params, defaults=[], kw_defaults=params_defaults)
             body.append(PyFuncDef(
