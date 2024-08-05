@@ -757,9 +757,7 @@ def cst() -> str:
             cls_name = to_class_name(spec.name)
 
             assert(len(spec.members) > 0)
-            raw_py_type = build_union(gen_py_type(ty) for _, ty in spec.members)
-            py_type = PyConstExpr(literal=emit(raw_py_type))
-            stmts.append(PyTypeAliasStmt(cls_name, raw_py_type))
+            stmts.append(PyTypeAliasStmt(cls_name, build_union(gen_py_type(ty) for _, ty in spec.members)))
 
             params: list[PyParam] = []
             params.append(PyNamedParam(pattern=PyNamedPattern('value'), annotation=PyNamedExpr('Any')))
