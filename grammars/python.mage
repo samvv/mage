@@ -230,7 +230,7 @@ pub delete_stmt
   = 'del' pattern
 
 pub raise_stmt
-  = 'raise' expr cause:('form' expr)?
+  = 'raise' expr cause:('from' expr)?
 
 pub for_stmt
   = 'for' pattern 'in' expr ':' body else_clause:('else' ':' body)?
