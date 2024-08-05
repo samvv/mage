@@ -86,6 +86,7 @@ pub expr
   = attr_expr
   | call_expr
   | const_expr
+  | generator_expr
   | infix_expr
   | list_expr
   | named_expr
@@ -94,6 +95,15 @@ pub expr
   | starred_expr
   | subscript_expr
   | tuple_expr
+
+pub guard
+  = 'if' expr
+
+pub comprehension
+  = 'async'? 'for' pattern 'in' target:expr guards:guard+
+
+pub generator_expr
+  = element:expr generators:comprehension+
 
 pub const_expr
    = literal:(string | float | integer)
