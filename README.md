@@ -169,6 +169,20 @@ Parse the expression at least `n` times and at most `m` times.
 unicode_char = 'U+' hex_digit{4,4}
 ```
 
+### `@keyword`
+
+Treat the given rule as being a potential source for keywords.
+
+String literals matching this rule will get the special `_keyword`-suffix
+during transformation. The lexer will also take into account that the rule
+conflicts with keywords and generate code accordingly.
+
+```
+@keyword
+pub token ident
+  = [a-zA-Z_] [a-zA-Z_0-9]*
+```
+
 ### `@skip`
 
 Register the chosen rule as a special rule that the lexer uses to lex 'gibberish'.
