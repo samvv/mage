@@ -113,6 +113,10 @@ class Rule(Node):
     def is_skip(self) -> bool:
         return self.has_decorator('skip')
 
+    @property
+    def is_wrap(self) -> bool:
+        return self.has_decorator('wrap')
+
 class Grammar(Node):
 
     rules: list[Rule]
@@ -198,7 +202,7 @@ class Grammar(Node):
         return rule.is_public and not self.is_token_rule(rule)
 
     def is_variant(self, rule: Rule) -> bool:
-        if rule.is_extern:
+        if rule.is_extern or rule.is_wrap:
             return False
         # only Rule(is_extern=True) can not hold an expression
         assert(rule.expr is not None)

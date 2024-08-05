@@ -105,6 +105,7 @@ pub comprehension
 pub generator_expr
   = element:expr generators:comprehension+
 
+@wrap
 pub const_expr
    = literal:(string | float | integer)
 
