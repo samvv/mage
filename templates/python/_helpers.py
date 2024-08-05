@@ -985,7 +985,7 @@ def lexer_logic() -> str:
 
     def contin() -> list[PyStmt]: return [ PyContinueStmt() ]
 
-    def lex_visit_backtrack(expr: Expr, rule_name: str, success: Callable[[], list[PyStmt]], fail: Callable[[], list[PyStmt]]) -> list[PyStmt]:
+    def lex_visit_backtrack(expr: Expr, success: Callable[[], list[PyStmt]], fail: Callable[[], list[PyStmt]]) -> list[PyStmt]:
         keep_name = generate_temporary(prefix='keep_')
         def fail_wrapped() -> list[PyStmt]:
             return [
@@ -994,15 +994,15 @@ def lexer_logic() -> str:
             ]
         return [
             PyAssignStmt(PyNamedPattern(keep_name), PyNamedExpr(offset_name)),
-            *lex_visit(expr, rule_name, success, fail_wrapped)
+            *lex_visit(expr, success, fail_wrapped)
         ]
 
-    def lex_visit(expr: Expr, rule_name: str, success: Callable[[], list[PyStmt]], fallthrough: Callable[[], list[PyStmt]]) -> list[PyStmt]:
+    def lex_visit(expr: Expr, success: Callable[[], list[PyStmt]], fallthrough: Callable[[], list[PyStmt]]) -> list[PyStmt]:
 
         if isinstance(expr, RefExpr):
             rule = grammar.lookup(expr.name)
             assert(rule.expr is not None)
-            return lex_visit(rule.expr, rule_name, success, fallthrough)
+            return lex_visit(rule.expr, success, fallthrough)
 
         if isinstance(expr, LitExpr):
 
@@ -1032,7 +1032,7 @@ def lexer_logic() -> str:
             def next_element(n: int) -> list[PyStmt]:
                 if n == len(expr.elements):
                     return success()
-                return lex_visit(expr.elements[n], rule_name, lambda: next_element(n+1), noop)
+                return lex_visit(expr.elements[n], lambda: next_element(n+1), noop)
 
             return [
                 *next_element(0),
@@ -1058,7 +1058,7 @@ def lexer_logic() -> str:
         if isinstance(expr, RepeatExpr):
 
             if expr.min == 0 and expr.max == 1:
-                return lex_visit_backtrack(expr.expr, rule_name, success, fallthrough)
+                return lex_visit_backtrack(expr.expr, success, fallthrough)
 
             out: list[PyStmt] = []
 
@@ -1071,18 +1071,18 @@ def lexer_logic() -> str:
             out.append(PyForStmt(
                 pattern=PyNamedPattern('_'),
                 expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
-                body=lex_visit(expr.expr, rule_name, contin, min_fail)
+                body=lex_visit(expr.expr, contin, min_fail)
             ))
 
             max_body = []
             assert(expr.max > 0)
             if expr.max == POSINF:
-                max_body.append(PyWhileStmt(expr=PyNamedExpr('True'), body=lex_visit(expr.expr, rule_name, contin, brk)))
+                max_body.append(PyWhileStmt(expr=PyNamedExpr('True'), body=lex_visit(expr.expr, contin, brk)))
             else:
                 max_body.append(PyForStmt(
                     pattern=PyNamedPattern('_'),
                     expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.max - expr.min) ]),
-                    body=lex_visit(expr.expr, rule_name, contin, brk)
+                    body=lex_visit(expr.expr, contin, brk)
                 ))
             max_body.extend(success())
 
@@ -1097,7 +1097,7 @@ def lexer_logic() -> str:
             def next_choice(k: int) -> list[PyStmt]:
                 if k == len(expr.elements):
                     return fallthrough()
-                return lex_visit(expr.elements[k], rule_name, success, lambda: next_choice(k+1))
+                return lex_visit(expr.elements[k], success, lambda: next_choice(k+1))
 
             return next_choice(0)
 
@@ -1129,7 +1129,6 @@ def lexer_logic() -> str:
             out.append(PyAssignStmt(PyNamedPattern('start'), PyNamedExpr(offset_name)))
         out.extend(lex_visit(
             rule.expr,
-            rule.name,
             lambda: [
                 PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), '_curr_offset'), PyNamedExpr(offset_name)),
                 PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(to_class_name(rule.name)), args=token_args))
