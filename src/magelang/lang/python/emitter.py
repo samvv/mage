@@ -556,6 +556,24 @@ def emit(node: PyNode) -> str:
             visit_body(node.body)
             return
 
+        if isinstance(node, PyTypeAliasStmt):
+            visit_token(node.type_keyword)
+            out.write(' ')
+            visit_token(node.name)
+            if node.type_params is not None:
+                open, params, close = node.type_params
+                visit_token(open)
+                for param, comma in params:
+                    visit_expr(param)
+                    if comma is not None:
+                        visit_token(comma)
+                visit_token(close)
+            out.write(' ')
+            visit_token(node.equals)
+            out.write(' ')
+            visit_expr(node.expr)
+            return
+
         if isinstance(node, PyClassDef):
             visit_token(node.class_keyword)
             out.write(' ')
