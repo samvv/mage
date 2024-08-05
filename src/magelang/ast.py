@@ -109,6 +109,10 @@ class Rule(Node):
                 return True
         return False
 
+    @property
+    def is_skip(self) -> bool:
+        return self.has_decorator('skip')
+
 class Grammar(Node):
 
     rules: list[Rule]
@@ -146,6 +150,13 @@ class Grammar(Node):
                 or isinstance(expr, CharSetExpr):
             return False
         raise RuntimeError(f'unexpected node {expr}')
+
+    @property
+    @cache
+    def skip_rule(self) -> Rule | None:
+        for rule in self.rules:
+            if rule.is_skip:
+                return rule
 
     @cache
     def is_token_rule(self, rule: Rule) -> bool:

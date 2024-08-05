@@ -988,24 +988,26 @@ def lexer_logic() -> str:
 
     def contin() -> list[PyStmt]: return [ PyContinueStmt() ]
 
-    def lex_visit_backtrack(expr: Expr, success: Callable[[], list[PyStmt]], fail: Callable[[], list[PyStmt]]) -> list[PyStmt]:
+    def lex_visit_backtrack(expr: Expr, success: Callable[[], list[PyStmt]]) -> list[PyStmt]:
         keep_name = generate_temporary(prefix='keep_')
-        def fail_wrapped() -> list[PyStmt]:
-            return [
-                PyAssignStmt(PyNamedPattern(offset_name), PyNamedExpr(keep_name)),
-                *fail(),
-            ]
         return [
             PyAssignStmt(PyNamedPattern(keep_name), PyNamedExpr(offset_name)),
-            *lex_visit(expr, success, fail_wrapped)
+            *lex_visit(expr, lambda: [
+                PyAssignStmt(PyNamedPattern(offset_name), PyNamedExpr(keep_name)),
+                *success()
+            ]),
+            PyAssignStmt(PyNamedPattern(offset_name), PyNamedExpr(keep_name)),
         ]
 
-    def lex_visit(expr: Expr, success: Callable[[], list[PyStmt]], fallthrough: Callable[[], list[PyStmt]]) -> list[PyStmt]:
+    def lex_visit(expr: Expr, success: Callable[[], list[PyStmt]]) -> list[PyStmt]:
 
         if isinstance(expr, RefExpr):
             rule = grammar.lookup(expr.name)
             assert(rule.expr is not None)
-            return lex_visit(rule.expr, success, fallthrough)
+            return lex_visit(rule.expr, success)
+
+        if isinstance(expr, LookaheadExpr):
+            return lex_visit_backtrack(expr.expr, success)
 
         if isinstance(expr, LitExpr):
 
@@ -1025,22 +1027,16 @@ def lexer_logic() -> str:
                     )])
                 ]
 
-            return [
-                *next_char(0),
-                *fallthrough(),
-            ]
+            return next_char(0)
 
         if isinstance(expr, SeqExpr):
 
             def next_element(n: int) -> list[PyStmt]:
                 if n == len(expr.elements):
                     return success()
-                return lex_visit(expr.elements[n], lambda: next_element(n+1), noop)
+                return lex_visit(expr.elements[n], lambda: next_element(n+1))
 
-            return [
-                *next_element(0),
-                *fallthrough(),
-            ]
+            return next_element(0)
 
         if isinstance(expr, CharSetExpr):
 
@@ -1055,69 +1051,73 @@ def lexer_logic() -> str:
                         *success()
                     ]
                 )]),
-                *fallthrough()
             ]
 
         if isinstance(expr, RepeatExpr):
 
             if expr.min == 0 and expr.max == 1:
-                return lex_visit_backtrack(expr.expr, success, fallthrough)
+                return lex_visit_backtrack(expr.expr, success)
 
             out: list[PyStmt] = []
 
             out.append(PyAssignStmt(PyNamedPattern('matches'), PyNamedExpr('True')))
-            def min_fail() -> list[PyStmt]:
-                return [
-                    PyAssignStmt(PyNamedPattern('matches'), PyNamedExpr('False')),
-                    PyBreakStmt(),
-                ]
             out.append(PyForStmt(
                 pattern=PyNamedPattern('_'),
                 expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
-                body=lex_visit(expr.expr, contin, min_fail)
+                body=[
+                    *lex_visit(expr.expr, contin),
+                    PyAssignStmt(PyNamedPattern('matches'), PyNamedExpr('False')),
+                    PyBreakStmt(),
+                ]
             ))
 
             max_body = []
             assert(expr.max > 0)
             if expr.max == POSINF:
-                max_body.append(PyWhileStmt(expr=PyNamedExpr('True'), body=lex_visit(expr.expr, contin, brk)))
+                max_body.append(PyWhileStmt(expr=PyNamedExpr('True'), body=[
+                    *lex_visit(expr.expr, contin),
+                    PyBreakStmt(),
+                ]))
             else:
                 max_body.append(PyForStmt(
                     pattern=PyNamedPattern('_'),
                     expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.max - expr.min) ]),
-                    body=lex_visit(expr.expr, contin, brk)
+                    body=[
+                        *lex_visit(expr.expr, contin),
+                        PyBreakStmt(),
+                    ]
                 ))
             max_body.extend(success())
 
             out.append(PyIfStmt(first=PyIfCase(test=PyNamedExpr('matches'), body=max_body)))
 
-            out.extend(fallthrough())
-
             return out
 
         if isinstance(expr, ChoiceExpr):
 
-            def next_choice(k: int) -> list[PyStmt]:
-                if k == len(expr.elements):
-                    return fallthrough()
-                return lex_visit(expr.elements[k], success, lambda: next_choice(k+1))
-
-            return next_choice(0)
+            out: list[PyStmt] = []
+            for element in expr.elements:
+                # FIXME backtracking
+                out.extend(lex_visit_backtrack(element, success))
+            return out
 
         assert_never(expr)
 
-    def next_rule(k: int) -> list[PyStmt]:
-        if k == len(grammar.rules):
-            return [ PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr('ScanError'), args=[])) ]
-        rule = grammar.rules[k]
+    if grammar.skip_rule:
+        assert(grammar.skip_rule.expr is not None)
+        stmts.append(PyAssignStmt(PyNamedPattern(offset_name), PyAttrExpr(PyNamedExpr('self'), '_curr_offset')))
+        # FIXME success() might assume termination of lexing procedure
+        stmts.extend(lex_visit(grammar.skip_rule.expr, noop))
+
+    for rule in grammar.rules:
         if not rule.is_token or rule.expr is None:
-            return next_rule(k+1)
-        out = []
+            continue
         spec = specs.lookup(rule.name)
         assert(isinstance(spec, TokenSpec))
+        stmts.append(PyAssignStmt(PyNamedPattern(offset_name), PyAttrExpr(PyNamedExpr('self'), '_curr_offset')))
         token_args = []
-        out.append(PyAssignStmt(PyNamedPattern(offset_name), PyAttrExpr(PyNamedExpr('self'), '_curr_offset')))
         if not spec.is_static:
+            stmts.append(PyAssignStmt(PyNamedPattern('start'), PyNamedExpr(offset_name)))
             token_args.append(
                 PyCallExpr(
                     PyNamedExpr(f'_parse_{to_snake_case(spec.field_type)}'),
@@ -1129,18 +1129,15 @@ def lexer_logic() -> str:
                     ]
                 )
             )
-            out.append(PyAssignStmt(PyNamedPattern('start'), PyNamedExpr(offset_name)))
-        out.extend(lex_visit(
+        stmts.extend(lex_visit(
             rule.expr,
             lambda: [
                 PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), '_curr_offset'), PyNamedExpr(offset_name)),
                 PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(to_class_name(rule.name)), args=token_args))
             ],
-            lambda: next_rule(k+1),
         ))
-        return out
 
-    stmts.extend(next_rule(0))
+    stmts.append(PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr('ScanError'), args=[])))
 
     return emit(PyModule(stmts=stmts))
 

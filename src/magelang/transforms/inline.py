@@ -18,7 +18,7 @@ def inline(grammar: Grammar) -> Grammar:
     for rule in grammar.rules:
         if rule.is_extern:
             new_rules.append(rule)
-        if rule.is_public:
+        elif rule.is_public or rule.is_skip:
             assert(rule.expr is not None)
             new_rules.append(Rule(
                 decorators=rule.decorators,
