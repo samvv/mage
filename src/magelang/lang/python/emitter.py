@@ -305,6 +305,7 @@ def emit(node: PyNode) -> str:
             if node.annotation is not None:
                 colon, expr = node.annotation
                 visit_token(colon)
+                out.write(' ')
                 visit_expr(expr)
             if node.default is not None:
                 equals, expr = node.default
