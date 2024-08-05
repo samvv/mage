@@ -176,30 +176,39 @@ def gen_rule_type_test(type_name: str, target: PyExpr) -> PyExpr:
 def cst() -> str:
 
     def is_default_constructible(ty: Type, allow_empty_sequences: bool = True) -> bool:
-        if isinstance(ty, ListType):
-            return allow_empty_sequences
-        if isinstance(ty, PunctType):
-            return allow_empty_sequences
-        if isinstance(ty, NoneType):
-            return True
-        if isinstance(ty, NodeType):
-            spec = specs.lookup(ty.name)
-            if not isinstance(spec, NodeSpec): # if it's a VariantSpec
-                return False
-            return all(is_default_constructible(field.ty, allow_empty_sequences) for field in spec.members)
-        if isinstance(ty, TokenType):
-            spec = specs.lookup(ty.name)
-            assert(isinstance(spec, TokenSpec))
-            return spec.is_static
-        if isinstance(ty, TupleType):
-            return all(is_default_constructible(element, False) for element in ty.element_types)
-        if isinstance(ty, UnionType):
-            counter = 0
-            for element_type in ty.types:
-                if is_default_constructible(element_type, allow_empty_sequences):
-                    counter += 1
-            return counter == 1
-        raise RuntimeError(f'unexpected {ty}')
+        visited = set()
+        def visit(ty: Type, allow_empty_sequences: bool) -> bool:
+            if isinstance(ty, ListType):
+                return allow_empty_sequences
+            if isinstance(ty, PunctType):
+                return allow_empty_sequences
+            if isinstance(ty, NoneType):
+                return True
+            if isinstance(ty, NodeType):
+                if ty.name in visited:
+                    return False
+                visited.add(ty.name)
+                spec = specs.lookup(ty.name)
+                if not isinstance(spec, NodeSpec): # if it's a VariantSpec
+                    return False
+                return all(visit(field.ty, allow_empty_sequences) for field in spec.members)
+            if isinstance(ty, TokenType):
+                if ty.name in visited:
+                    return False
+                visited.add(ty.name)
+                spec = specs.lookup(ty.name)
+                assert(isinstance(spec, TokenSpec))
+                return spec.is_static
+            if isinstance(ty, TupleType):
+                return all(visit(element, False) for element in ty.element_types)
+            if isinstance(ty, UnionType):
+                count = 0
+                for element_type in ty.types:
+                    if visit(element_type, allow_empty_sequences):
+                        count += 1
+                return count == 1
+            raise RuntimeError(f'unexpected {ty}')
+        return visit(ty, allow_empty_sequences)
 
     def gen_default_constructor(ty: Type) -> PyExpr:
         if isinstance(ty, NoneType):
