@@ -1,7 +1,7 @@
 
 from io import StringIO
 from typing import NewType, assert_never
-from sweetener import IndentWriter, warn
+from sweetener import IndentWriter
 
 from .cst import *
 
@@ -40,7 +40,13 @@ _infix_operator_table = {
 }
 
 def _describe_infix_operator(op: PyInfixOp) -> tuple[int, _Assoc]:
-    text = emit_token(op)
+    names = []
+    if isinstance(op, tuple):
+        for element in op:
+            names.append(emit_token(element))
+    else:
+        names.append(emit_token(op))
+    text = ' '.join(names)
     return _infix_operator_table[text]
 
 def emit_token(node: PyToken) -> str:
@@ -141,11 +147,77 @@ def emit_token(node: PyToken) -> str:
     if isinstance(node, PyHashtag):
         return '#'
 
-    if isinstance(node, PyPrefixOp):
-        return node.value
+    if isinstance(node, PyVerticalBar):
+        return '|'
 
-    if isinstance(node, PyInfixOp):
-        return node.value
+    if isinstance(node, PyTilde):
+        return '~'
+
+    if isinstance(node, PyTypeKeyword):
+        return 'type'
+
+    if isinstance(node, PyOrKeyword):
+        return 'or'
+
+    if isinstance(node, PyAndKeyword):
+        return 'and'
+
+    if isinstance(node, PyNotKeyword):
+        return 'not'
+
+    if isinstance(node, PyIsKeyword):
+        return 'is'
+
+    if isinstance(node, PyDelKeyword):
+        return 'del'
+
+    if isinstance(node, PyCaret):
+        return '^'
+
+    if isinstance(node, PyAsKeyword):
+        return 'as'
+
+    if isinstance(node, PyAtSign):
+        return '*'
+
+    if isinstance(node, PyGreaterThan):
+        return '>'
+
+    if isinstance(node, PyGreaterThanEquals):
+        return '>='
+
+    if isinstance(node, PyLessThan):
+        return '<'
+
+    if isinstance(node, PyLessThanEquals):
+        return '<='
+
+    if isinstance(node, PyGreaterThan):
+        return '>'
+
+    if isinstance(node, PyLessThanLessThan):
+        return '<<'
+
+    if isinstance(node, PyGreaterThanGreaterThan):
+        return '>>'
+
+    if isinstance(node, PyEqualsEquals):
+        return '=='
+
+    if isinstance(node, PySemicolon):
+        return ';'
+
+    if isinstance(node, PyPlus):
+        return '+'
+
+    if isinstance(node, PyHyphen):
+        return '-'
+
+    if isinstance(node, PyExclamationMarkEquals):
+        return '!='
+
+    if isinstance(node, PyAmpersand):
+        return '&'
 
     assert_never(node)
 
@@ -294,10 +366,6 @@ def emit(node: PyNode) -> str:
 
         if is_py_expr(node):
             visit_expr(node)
-            return
-
-        if isinstance(node, PyInfixOp):
-            out.write(node.value)
             return
 
         if isinstance(node, PyNamedParam):

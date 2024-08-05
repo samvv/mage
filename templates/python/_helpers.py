@@ -57,11 +57,11 @@ def build_cond(cases: list[Case]) -> list[PyStmt]:
 def build_is_none(value: PyExpr) -> PyExpr:
     return PyInfixExpr(
         left=value,
-        op='is',
+        op=PyIsKeyword(),
         right=PyNamedExpr('None')
     )
 
-def build_infix(it: Iterable[PyExpr] | Iterator[PyExpr], op: str, init: PyExpr) -> PyExpr:
+def build_infix(it: Iterable[PyExpr] | Iterator[PyExpr], op: PyInfixOp, init: PyExpr) -> PyExpr:
     if not is_iterator(it):
         it = iter(it)
     try:
@@ -73,13 +73,13 @@ def build_infix(it: Iterable[PyExpr] | Iterator[PyExpr], op: str, init: PyExpr) 
     return out
 
 def build_or(iter: Iterable[PyExpr]) -> PyExpr:
-    return build_infix(iter, 'or', PyNamedExpr('False'))
+    return build_infix(iter, PyOrKeyword(), PyNamedExpr('False'))
 
 def build_and(iter: Iterable[PyExpr]) -> PyExpr:
-    return build_infix(iter, 'and', PyNamedExpr('True'))
+    return build_infix(iter, PyAndKeyword(), PyNamedExpr('True'))
 
 def build_union(it: list[PyExpr] | Iterator[PyExpr]) -> PyExpr:
-    return build_infix(it, '|', PyNamedExpr('Never'))
+    return build_infix(it, PyVerticalBar(), PyNamedExpr('Never'))
 
 def build_isinstance(expr: PyExpr, ty: PyExpr) -> PyExpr:
     return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ expr, ty ])
@@ -100,7 +100,7 @@ def gen_py_type(ty: Type) -> PyExpr:
     if isinstance(ty, UnionType):
         out = gen_py_type(ty.types[0])
         for element in ty.types[1:]:
-            out = PyInfixExpr(left=out, op='|', right=gen_py_type(element))
+            out = PyInfixExpr(left=out, op=PyVerticalBar(), right=gen_py_type(element))
         return out
     if isinstance(ty, ExternType):
         return rule_type_to_py_type(ty.name)
@@ -173,19 +173,32 @@ def gen_deep_test(ty: Type, target: PyExpr) -> PyExpr:
             *(gen_deep_test(element, PySubscriptExpr(target, slices=[ PyConstExpr(i) ])) for i, element in enumerate(ty.element_types))
         ])
     if isinstance(ty, ListType):
-        # FIXME
-        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('list') ])
         return PyInfixExpr(
             left=PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('list') ]),
-            op='and',
-            right=PyCallExpr(PyNamedExpr('all'), args=[ PyForExpr(gen_deep_test(ty.element_type, PyNamedExpr('element')), PyNamedPattern('element'), target) ]),
+            op=PyAndKeyword(),
+            right=PyCallExpr(
+                PyNamedExpr('all'),
+                args=[
+                    PyGeneratorExpr(
+                        gen_deep_test(ty.element_type, PyNamedExpr('element')),
+                        generators=[ PyComprehension(PyNamedPattern('element'), target) ]
+                    )
+                ]
+            ),
         )
     if isinstance(ty, PunctType):
-        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('Punctuated') ])
         return PyInfixExpr(
             left=PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('Punctuated') ]),
-            op='and',
-            right=PyCallExpr(PyNamedExpr('all'), args=[ PyForExpr(gen_deep_test(ty.element_type, PyNamedExpr('element')), PyNamedPattern('element'), target) ]),
+            op=PyAndKeyword(),
+            right=PyCallExpr(
+                PyNamedExpr('all'),
+                args=[
+                    PyGeneratorExpr(
+                        gen_deep_test(ty.element_type, PyNamedExpr('element')),
+                        generators=[ PyComprehension(PyNamedPattern('element'), target) ]
+                    )
+                ]
+            ),
         )
     if isinstance(ty, UnionType):
         return build_or(gen_deep_test(element, target) for element in ty.types)
@@ -989,7 +1002,7 @@ def lexer_logic() -> str:
 
     def make_charset_predicate(element: CharSetElement, target: PyExpr) -> PyExpr:
         if isinstance(element, str):
-            return PyInfixExpr(left=target, op='==', right=PyConstExpr(literal=element))
+            return PyInfixExpr(left=target, op=PyEqualsEquals(), right=PyConstExpr(literal=element))
         if isinstance(element, tuple):
             low, high = element
             return PyNestExpr(expr=PyInfixExpr(
@@ -998,16 +1011,16 @@ def lexer_logic() -> str:
                         operator=PyNamedExpr('ord'),
                         args=[ target ]
                     ),
-                    op='>=',
+                    op=PyGreaterThanEquals(),
                     right=PyConstExpr(literal=ord(low))
                 ),
-                op='and',
+                op=PyAndKeyword(),
                 right=PyInfixExpr(
                     left=PyCallExpr(
                         operator=PyNamedExpr('ord'),
                         args=[ target ]
                     ),
-                    op='<=',
+                    op=PyLessThanEquals(),
                     right=PyConstExpr(literal=ord(high))
                 )
             ))
@@ -1054,9 +1067,9 @@ def lexer_logic() -> str:
                 return [
                     PyAssignStmt(pattern=PyNamedPattern(ch_name), expr=PyCallExpr(operator=PyAttrExpr(expr=PyNamedExpr('self'), name='_char_at'), args=[ PyNamedExpr(offset_name) ])),
                     *build_cond([(
-                        PyInfixExpr(left=PyNamedExpr(ch_name), op='==', right=PyConstExpr(literal=ch)),
+                        PyInfixExpr(left=PyNamedExpr(ch_name), op=PyEqualsEquals(), right=PyConstExpr(literal=ch)),
                         [
-                            PyAssignStmt(PyNamedPattern(offset_name), PyInfixExpr(PyNamedExpr(offset_name), '+', PyConstExpr(1))),
+                            PyAssignStmt(PyNamedPattern(offset_name), PyInfixExpr(PyNamedExpr(offset_name), PyPlus(), PyConstExpr(1))),
                             *next_char(k+1)
                         ]
                     )])
@@ -1082,7 +1095,7 @@ def lexer_logic() -> str:
                 *build_cond([(
                     build_or(make_charset_predicate(element, PyNamedExpr(ch_name)) for element in expr.elements),
                     [
-                        PyAssignStmt(PyNamedPattern(offset_name), PyInfixExpr(PyNamedExpr(offset_name), '+', PyConstExpr(1))),
+                        PyAssignStmt(PyNamedPattern(offset_name), PyInfixExpr(PyNamedExpr(offset_name), PyPlus(), PyConstExpr(1))),
                         *success()
                     ]
                 )]),
@@ -1132,7 +1145,6 @@ def lexer_logic() -> str:
 
             out: list[PyStmt] = []
             for element in expr.elements:
-                # FIXME backtracking
                 out.extend(lex_visit_backtrack(element, success))
             return out
 
