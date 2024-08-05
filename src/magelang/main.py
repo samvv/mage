@@ -6,6 +6,7 @@ from sweetener.visual import visualize
 
 import templaty
 
+from .util import pipe
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser
@@ -30,8 +31,7 @@ def _do_generate(args) -> int:
     grammar = parser.parse_grammar()
     #grammar = transform_prefix(grammar)
     #grammar = transform_reduce(grammar)
-    grammar = inline(grammar)
-    grammar = extract_literals(grammar)
+    grammar = pipe(grammar, inline, extract_literals)
     #visualize(grammar, format='png')
 
     ctx = {
