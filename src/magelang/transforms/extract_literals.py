@@ -32,7 +32,6 @@ def extract_literals(grammar: Grammar) -> Grammar:
                 name = generate_token_name()
             if expr.text not in literal_to_name:
                 literal_to_name[expr.text] = name
-                new_rules.append(Rule(decorators=[], flags=PUBLIC | FORCE_TOKEN, name=name, expr=expr, type_name=string_rule_type))
             return RefExpr(name)
 
     for rule in grammar.rules:
@@ -41,6 +40,10 @@ def extract_literals(grammar: Grammar) -> Grammar:
             new_rules.append(Rule(decorators=rule.decorators, flags=rule.flags, name=rule.name, type_name=rule.type_name, expr=rewrite_expr(rule.expr, rewriter)))
         else:
             new_rules.append(rule)
+
+    for literal in reversed(sorted(literal_to_name.keys())):
+        name = literal_to_name[literal]
+        new_rules.append(Rule(decorators=[], flags=PUBLIC | FORCE_TOKEN, name=name, expr=LitExpr(literal), type_name=string_rule_type))
 
     return Grammar(new_rules)
 
