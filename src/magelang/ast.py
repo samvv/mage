@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class Node(BaseNode):
     pass
 
-type Expr = LitExpr | RefExpr | CharSetExpr | LookaheadExpr | ChoiceExpr | SeqExpr | HideExpr | ListExpr
+type Expr = LitExpr | RefExpr | CharSetExpr | LookaheadExpr | ChoiceExpr | SeqExpr | HideExpr | ListExpr | RepeatExpr
 
 class ExprBase(Node):
 
