@@ -115,7 +115,7 @@ class Grammar(Node):
 
     def __init__(self, rules):
         super().__init__(rules)
-        self._rules_by_name = dict()
+        self._rules_by_name = dict[str, Rule]()
         for rule in rules:
             self._rules_by_name[rule.name] = rule
 
