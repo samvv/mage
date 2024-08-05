@@ -129,8 +129,7 @@ pub keyword_arg
 pub call_expr
   = operator:expr '(' args:(arg % ',')  ')'
 
-# TODO should not be a token
-pub token prefix_op
+pub prefix_op
   = 'not'
   | '+'
   | '-'
@@ -139,8 +138,7 @@ pub token prefix_op
 pub prefix_expr
   = prefix_op expr
 
-# TODO should not be a token
-pub token infix_op
+pub infix_op
   = '+'
   | '-'
   | '*'
