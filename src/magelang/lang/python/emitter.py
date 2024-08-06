@@ -226,16 +226,18 @@ def emit(node: PyNode) -> str:
     string = StringIO()
     out = IndentWriter(string, indentation='    ')
 
-    def visit_body(body: 'PyStmt | list[PyStmt]') -> None:
+    def visit_body(body: 'PyStmt | list[PyStmt]', newline = '') -> None:
         if is_py_stmt(body):
             out.write(' ')
             visit(body)
         else:
             assert(isinstance(body, list))
             out.write('\n')
+            out.write(newline)
             out.indent()
             for stmt in body:
                 visit(stmt)
+                out.write(newline)
             out.dedent()
 
     def visit_expr(node: PyExpr, info: tuple[int, _Assoc] | None = None) -> None:
@@ -587,13 +589,13 @@ def emit(node: PyNode) -> str:
                         visit_token(comma)
                 visit_token(close_paren)
             visit_token(node.colon)
-            visit_body(node.body)
+            visit_body(node.body, '\n')
             return
 
         if isinstance(node, PyModule):
             for stmt in node.stmts:
                 visit(stmt)
-                out.write('\n\n')
+                out.write('\n')
             return
 
         assert_never(node)
