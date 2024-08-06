@@ -50,7 +50,7 @@ pub token string
 # General syntax
 
 pub slice
-   = lower:expr ':' upper:expr
+   = lower:expr? ':' upper:expr? step:(':' expr)?
 
 # Patterns
 
