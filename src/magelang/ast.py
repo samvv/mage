@@ -24,6 +24,7 @@ class ExprBase(Node):
         self.rules: list['Rule'] = rules
         self.field_name: str | None = None
         self.field_type: Type | None = None
+        self.action: Rule | None = None
 
 class LitExpr(ExprBase):
     text: str
