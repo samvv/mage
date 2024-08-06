@@ -505,11 +505,11 @@ def emit(node: PyNode) -> str:
 
         if isinstance(node, PyIfStmt):
             visit(node.first)
-            out.write('\n')
             for alt in node.alternatives:
-                visit(alt)
                 out.write('\n')
+                visit(alt)
             if node.last is not None:
+                out.write('\n')
                 visit(node.last)
             return
 
