@@ -202,6 +202,30 @@ pub infix_expr
 
 # Statements
 
+pub qual_name
+  = modules:(ident % '.') name:ident
+
+pub absolute_path
+  = qual_name
+
+pub relative_path
+  = '.'+ qual_name?
+
+pub path
+  = absolute_path
+  | relative_path
+
+pub alias
+  = path asname:('as' ident)?
+
+# FIXME define and use %%
+pub import_stmt
+  = 'import' aliases:(alias % ',')
+
+# FIXME define and use %%
+pub import_from_stmt
+  = 'from' path 'import' aliases:(alias % ',')
+
 pub stmt
   = assign_stmt
   | break_stmt
@@ -212,6 +236,8 @@ pub stmt
   | for_stmt
   | func_def
   | if_stmt
+  | import_stmt
+  | import_from_stmt
   | pass_stmt
   | raise_stmt
   | ret_stmt
