@@ -289,7 +289,7 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
     specs = Specs()
 
     for rule in grammar.rules:
-        if rule.is_extern or grammar.is_fragment(rule) or rule.has_decorator('skip'):
+        if rule.is_extern or grammar.is_fragment(rule) or rule.is_skip:
             continue
         # only Rule(is_extern=True) can have an empty expression
         assert(rule.expr is not None)
