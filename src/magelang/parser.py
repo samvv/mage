@@ -78,8 +78,15 @@ class Parser:
         t0 = self._peek_token()
         if t0.type == TT_PERC:
             self._get_token()
+            count = 0
+            while True:
+                t1 = self._peek_token()
+                if t1.type != TT_PERC:
+                    break
+                self._get_token()
+                count += 1
             separator = self._parse_prim_expr()
-            return ListExpr(element, separator)
+            return ListExpr(element, separator, count)
         return element
 
     def _parse_expr_with_prefixes(self) -> Expr:

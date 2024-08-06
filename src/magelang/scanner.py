@@ -287,6 +287,12 @@ class Scanner:
             end_pos = self.curr_pos.clone()
             return Token(_delimiter_to_token_type[c0], (start_pos, end_pos))
 
+        if c0 == '%':
+            start_pos = self.curr_pos.clone()
+            self._get_char()
+            end_pos = self.curr_pos.clone()
+            return Token(TT_PERC, (start_pos, end_pos))
+
         if is_operator_part(c0):
             start_pos = self.curr_pos.clone()
             self._get_char()

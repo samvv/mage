@@ -52,6 +52,7 @@ class SeqExpr(ExprBase):
 class ListExpr(ExprBase):
     element: Expr
     separator: Expr
+    min_count: int
 
 class HideExpr(ExprBase):
     expr: Expr
@@ -255,7 +256,7 @@ def rewrite_expr(expr: Expr, proc: Callable[[Expr], Expr | None]) -> Expr:
             new_separator = visit(expr.separator)
             if new_element == expr.element and new_separator == expr.separator:
                 return expr
-            return ListExpr(element=new_element, separator=new_separator, rules=expr.rules, label=expr.label)
+            return ListExpr(element=new_element, separator=new_separator, min_count=expr.min_count, rules=expr.rules, label=expr.label)
         if isinstance(expr, ChoiceExpr):
             new_elements = []
             changed = False
