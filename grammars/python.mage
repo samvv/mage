@@ -218,13 +218,11 @@ pub path
 pub alias
   = path asname:('as' ident)?
 
-# FIXME define and use %%
 pub import_stmt
-  = 'import' aliases:(alias % ',')
+  = 'import' aliases:(alias %% ',')
 
-# FIXME define and use %%
 pub import_from_stmt
-  = 'from' path 'import' aliases:(alias % ',')
+  = 'from' path 'import' aliases:(alias %% ',')
 
 pub stmt
   = assign_stmt
