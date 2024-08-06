@@ -276,8 +276,11 @@ pub rest_keyword_param
 pub sep_param
   = '*'
 
+pub decorator
+  = '@' expr
+
 pub func_def
-  = 'async'? 'def' name:ident '(' params:(param % ',') ')' return_type:('->' expr)? ':' body
+  = decorator+ 'async'? 'def' name:ident '(' params:(param % ',') ')' return_type:('->' expr)? ':' body
 
 # Toplevel expressions
 
