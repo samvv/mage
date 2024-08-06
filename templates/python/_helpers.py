@@ -1158,7 +1158,7 @@ def lexer_logic() -> str:
                     args=[
                         PySubscriptExpr(
                             PyAttrExpr(PyNamedExpr('self'), '_text'),
-                            slices=[ PySlice(PyNamedExpr('start'), PyNamedExpr(offset_name)) ]
+                            slices=[ PySlice(lower=PyNamedExpr('start'), upper=PyNamedExpr(offset_name)) ]
                         )
                     ]
                 )
