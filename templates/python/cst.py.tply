@@ -28,8 +28,9 @@ class _BaseToken(_BaseSyntax):
 
 class _BaseNode(_BaseSyntax):
 
-    def __init__(self) -> None:
+    def __init__(self, parent = None) -> None:
         super().__init__()
+        self._parent = parent
         pass
 
 def {{is_token_name}}(value: Any) -> TypeGuard['{{token_class_name}}']:
