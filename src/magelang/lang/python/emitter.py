@@ -226,18 +226,16 @@ def emit(node: PyNode) -> str:
     string = StringIO()
     out = IndentWriter(string, indentation='    ')
 
-    def visit_body(body: 'PyStmt | list[PyStmt]', newline = '') -> None:
+    def visit_body(body: 'PyStmt | list[PyStmt]', newline = '\n') -> None:
         if is_py_stmt(body):
             out.write(' ')
             visit(body)
         else:
             assert(isinstance(body, list))
-            out.write('\n')
-            out.write(newline)
             out.indent()
             for stmt in body:
-                visit(stmt)
                 out.write(newline)
+                visit(stmt)
             out.dedent()
 
     def visit_expr(node: PyExpr, info: tuple[int, _Assoc] | None = None) -> None:
@@ -403,24 +401,20 @@ def emit(node: PyNode) -> str:
 
         if isinstance(node, PyBreakStmt):
             visit_token(node.break_keyword)
-            out.write('\n')
             return
 
         if isinstance(node, PyContinueStmt):
             visit_token(node.continue_keyword)
-            out.write('\n')
             return
 
         if isinstance(node, PyRaiseStmt):
             visit_token(node.raise_keyword)
             out.write(' ')
             visit_expr(node.expr)
-            out.write('\n')
             return
 
         if isinstance(node, PyExprStmt):
             visit_expr(node.expr)
-            out.write('\n')
             return
 
         if isinstance(node, PyRetStmt):
@@ -428,7 +422,6 @@ def emit(node: PyNode) -> str:
             if node.expr is not None:
                 out.write(' ')
                 visit_expr(node.expr)
-            out.write('\n')
             return
 
         if isinstance(node, PyIfCase):
@@ -463,7 +456,6 @@ def emit(node: PyNode) -> str:
             visit_expr(node.expr)
             visit_token(node.colon)
             visit_body(node.body)
-            out.write('\n')
             return
 
         if isinstance(node, PyWhileStmt):
@@ -473,11 +465,11 @@ def emit(node: PyNode) -> str:
             visit_token(node.colon)
             visit_body(node.body)
             if node.else_clause is not None:
+                out.write('\n')
                 else_keyword, colon, body = node.else_clause
                 visit_token(else_keyword)
                 visit_token(colon)
                 visit_body(body)
-            out.write('\n')
             return
 
         if isinstance(node, PyTryStmt):
@@ -485,17 +477,20 @@ def emit(node: PyNode) -> str:
             visit_token(node.colon)
             visit_body(node.body)
             for handler in node.handlers:
+                out.write('\n')
                 visit_token(handler.except_keyword)
                 out.write(' ')
                 visit_expr(handler.expr)
                 visit_token(handler.colon)
                 visit_body(handler.body)
             if node.else_clause is not None:
+                out.write('\n')
                 else_keyword, colon, body = node.else_clause
                 visit_token(else_keyword)
                 visit_token(colon)
                 visit_body(body)
             if node.finally_clause is not None:
+                out.write('\n')
                 finally_keyword, colon, body = node.finally_clause
                 visit_token(finally_keyword)
                 visit_token(colon)
@@ -504,8 +499,10 @@ def emit(node: PyNode) -> str:
 
         if isinstance(node, PyIfStmt):
             visit(node.first)
+            out.write('\n')
             for alt in node.alternatives:
                 visit(alt)
+                out.write('\n')
             if node.last is not None:
                 visit(node.last)
             return
@@ -521,12 +518,10 @@ def emit(node: PyNode) -> str:
             visit_token(node.equals)
             out.write(' ')
             visit_expr(node.expr)
-            out.write('\n')
             return
 
         if isinstance(node, PyPassStmt):
             visit_token(node.pass_keyword)
-            out.write('\n')
             return
 
         if isinstance(node, PyRaiseStmt):
@@ -539,7 +534,6 @@ def emit(node: PyNode) -> str:
                 visit_token(from_keyword)
                 out.write(' ')
                 visit_expr(expr)
-            out.write('\n')
             return
 
         if isinstance(node, PyFuncDef):
@@ -595,13 +589,13 @@ def emit(node: PyNode) -> str:
                         visit_token(comma)
                 visit_token(close_paren)
             visit_token(node.colon)
-            visit_body(node.body, '\n')
+            visit_body(node.body, newline='\n\n')
             return
 
         if isinstance(node, PyModule):
             for stmt in node.stmts:
                 visit(stmt)
-                out.write('\n')
+                out.write('\n\n\n')
             return
 
         assert_never(node)
