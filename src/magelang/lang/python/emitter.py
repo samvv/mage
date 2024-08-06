@@ -238,6 +238,12 @@ def emit(node: PyNode) -> str:
                 visit(stmt)
             out.dedent()
 
+    def visit_infix_op(op: PyInfixOp):
+        if isinstance(op, tuple):
+            out.write(' '.join(emit_token(element) for element in op))
+            return
+        visit_token(op)
+
     def visit_expr(node: PyExpr, info: tuple[int, _Assoc] | None = None) -> None:
 
         if isinstance(node, PyNamedExpr):
@@ -251,7 +257,7 @@ def emit(node: PyNode) -> str:
                 out.write('(')
             visit_expr(node.left, (new_prec, new_assoc))
             out.write(' ')
-            visit_token(node.op)
+            visit_infix_op(node.op)
             out.write(' ')
             visit_expr(node.right, (new_prec, new_assoc))
             if should_nest:
