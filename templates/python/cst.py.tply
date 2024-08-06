@@ -28,10 +28,12 @@ class _BaseToken(_BaseSyntax):
 
 class _BaseNode(_BaseSyntax):
 
-    def __init__(self, parent = None) -> None:
+    def __init__(self, parent: Any = None) -> None:
         super().__init__()
         self._parent = parent
-        pass
+
+    def has_parent(self) -> bool:
+        return self._parent is not None
 
 def {{is_token_name}}(value: Any) -> TypeGuard['{{token_class_name}}']:
     return isinstance(value, _BaseToken)

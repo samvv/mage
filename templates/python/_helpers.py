@@ -228,11 +228,8 @@ def cst() -> str:
 
     def get_parent_type(name: str) -> Type:
         if name not in parent_nodes:
-            return NoneType()
-        return UnionType([
-            *(NodeType(name) for name in parent_nodes[name]),
-            NoneType(),
-        ])
+            return NeverType()
+        return UnionType(list(NodeType(name) for name in parent_nodes[name]))
 
     def add_to_parent_nodes(name: str, ty: Type) -> None:
         if isinstance(ty, NodeType) or isinstance(ty, TokenType):
@@ -738,12 +735,20 @@ def cst() -> str:
 
             if cst_parent_pointers:
                 parent_type = get_parent_type(spec.name)
+                parent_type_name = f'{to_class_name(spec.name)}Parent'
+                stmts.append(PyTypeAliasStmt(parent_type_name, gen_py_type(parent_type)))
+                get_parent_body = []
+                if isinstance(parent_type, NeverType):
+                    get_parent_body.append(PyRaiseStmt(PyCallExpr(PyNamedExpr('AssertionError'), args=[ PyConstExpr('trying to access the parent node of a top-level node') ])))
+                else:
+                    get_parent_body.append(PyCallExpr(PyNamedExpr('assert'), args=[ PyInfixExpr(PyAttrExpr(PyNamedExpr('self'), '_parent'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')) ]))
+                    get_parent_body.append(PyRetStmt(expr=PyAttrExpr(PyNamedExpr('self'), '_parent')))
                 body.append(PyFuncDef(
                     decorators=[ PyDecorator(PyNamedExpr('property')) ],
                     name='parent',
                     params=[ PyNamedParam(PyNamedPattern('self')) ],
-                    return_type=PyConstExpr(emit(gen_py_type(parent_type))),
-                    body=[ PyRetStmt(expr=PyAttrExpr(PyNamedExpr('self'), '_parent')) ]
+                    return_type=PyNamedExpr(parent_type_name),
+                    body=get_parent_body,
                 ))
 
             stmts.append(PyClassDef(name=to_class_name(spec.name), bases=[ '_BaseNode' ], body=body))
