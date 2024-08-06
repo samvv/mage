@@ -34,10 +34,13 @@ def _do_generate(args) -> int:
     grammar = pipe(grammar, inline, extract_literals)
     #visualize(grammar, format='png')
 
+    cst_parent_pointers = args.feat_all or args.feat_cst_parent_pointers
+
     ctx = {
         'prefix': prefix + '_' if prefix else '',
         'grammar': grammar,
         'enable_linecol': enable_linecol,
+        'cst_parent_pointers': cst_parent_pointers,
     }
 
     indentation = None
@@ -63,6 +66,8 @@ def main() -> int:
 
     generate_parser.add_argument('template', choices=template_names, help='The name of the template to use')
     generate_parser.add_argument('file', nargs=1, help='A path to a grammar file')
+    generate_parser.add_argument('--feat-all', action='store_true', help='Enable all output features')
+    generate_parser.add_argument('--feat-cst-parent-pointers', action='store_true', help='Generate references to the parent of a CST node')
     generate_parser.add_argument('--force', action='store_true', help='Always overwrite files that already exist')
     generate_parser.add_argument('--out-dir', default='output', help='Where to place the generated files')
     generate_parser.add_argument('--prefix', default='', help='Prefix all rules in the grammar with this value')

@@ -16,6 +16,7 @@ ctx = templaty.load_context()
 
 grammar = cast(Grammar, ctx['grammar'])
 prefix = cast(str, ctx['prefix'])
+cst_parent_pointers = cast(bool, ctx['cst_parent_pointers'])
 
 def to_camel_case(snake_str: str) -> str:
     return "".join(x.capitalize() for x in snake_str.lower().split("_"))
@@ -223,44 +224,45 @@ def gen_rule_type_test(type_name: str, target: PyExpr) -> PyExpr:
 
 def cst() -> str:
 
-    parent_types = dict[str, set[str]]()
+    parent_nodes = dict[str, set[str]]()
 
-    def add_to_parents(name: str, ty: Type) -> None:
+    def get_parent_type(name: str) -> Type:
+        if name not in parent_nodes:
+            return NoneType()
+        return UnionType([
+            *(NodeType(name) for name in parent_nodes[name]),
+            NoneType(),
+        ])
+
+    def add_to_parent_nodes(name: str, ty: Type) -> None:
         if isinstance(ty, NodeType) or isinstance(ty, TokenType):
             spec = specs.lookup(ty.name)
             if isinstance(spec, VariantSpec):
                 for _, member_type in spec.members:
-                    add_to_parents(name, member_type)
+                    add_to_parent_nodes(name, member_type)
                 return
-            if spec.name not in parent_types:
-                parent_types[spec.name] = set()
-            parent_types[spec.name].add(name)
+            if spec.name not in parent_nodes:
+                parent_nodes[spec.name] = set()
+            parent_nodes[spec.name].add(name)
         elif isinstance(ty, TupleType):
             for element in ty.element_types:
-                add_to_parents(name, element)
+                add_to_parent_nodes(name, element)
         elif isinstance(ty, ListType) or isinstance(ty, PunctType):
-            add_to_parents(name, ty.element_type)
+            add_to_parent_nodes(name, ty.element_type)
         elif isinstance(ty, UnionType):
             for element in ty.types:
-                add_to_parents(name, element)
+                add_to_parent_nodes(name, element)
         elif isinstance(ty, NoneType) or isinstance(ty, ExternType) or isinstance(ty, NeverType):
             pass
         else:
             raise NotImplementedError()
 
-    for spec in specs:
-        if not isinstance(spec, NodeSpec):
-            continue
-        for field in spec.members:
-            add_to_parents(spec.name, field.ty)
-
-    def get_parent_type(name: str) -> Type:
-        if name not in parent_types:
-            return NoneType()
-        return UnionType([
-            *(NodeType(name) for name in parent_types[name]),
-            NoneType(),
-        ])
+    if cst_parent_pointers:
+        for spec in specs:
+            if not isinstance(spec, NodeSpec):
+                continue
+            for field in spec.members:
+                add_to_parent_nodes(spec.name, field.ty)
 
     def is_default_constructible(ty: Type, allow_empty_sequences: bool = True) -> bool:
         visited = set()
@@ -734,15 +736,15 @@ def cst() -> str:
                 body=init_body
             ))
 
-            parent_type = get_parent_type(spec.name)
-
-            body.append(PyFuncDef(
-                decorators=[ PyDecorator(PyNamedExpr('property')) ],
-                name='parent',
-                params=[ PyNamedParam(PyNamedPattern('self')) ],
-                return_type=PyConstExpr(emit(gen_py_type(parent_type))),
-                body=[ PyRetStmt(expr=PyAttrExpr(PyNamedExpr('self'), '_parent')) ]
-            ))
+            if cst_parent_pointers:
+                parent_type = get_parent_type(spec.name)
+                body.append(PyFuncDef(
+                    decorators=[ PyDecorator(PyNamedExpr('property')) ],
+                    name='parent',
+                    params=[ PyNamedParam(PyNamedPattern('self')) ],
+                    return_type=PyConstExpr(emit(gen_py_type(parent_type))),
+                    body=[ PyRetStmt(expr=PyAttrExpr(PyNamedExpr('self'), '_parent')) ]
+                ))
 
             stmts.append(PyClassDef(name=to_class_name(spec.name), bases=[ '_BaseNode' ], body=body))
 
