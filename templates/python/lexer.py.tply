@@ -37,6 +37,9 @@ class {{lexer_class_name}}:
         k = self._curr_offset + offset
         return self._text[k] if k < len(self._text) else EOF
 
+    def at_eof(self) -> bool:
+        return self._curr_offset >= len(self._text)
+
     def _get_char(self) -> str:
         if self._curr_offset >= len(self._text):
             return EOF

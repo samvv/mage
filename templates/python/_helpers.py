@@ -1304,11 +1304,11 @@ def lexer_tests() -> str:
         i = 0
         for child in doc.children:
             if isinstance(child, marko.block.FencedCode):
-                print(repr(child.lang))
                 input = get_text(child.children[0]).strip()
                 body: list[PyStmt] = [
                     PyAssignStmt(PyNamedPattern('lexer'), PyCallExpr(PyNamedExpr(lexer_class_name), args=[ PyConstExpr(input) ])),
                     PyAssignStmt(PyNamedPattern(f't{i}'), PyCallExpr(PyAttrExpr(PyNamedExpr('lexer'), 'lex'))),
+                    PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ PyCallExpr(PyAttrExpr(PyNamedExpr('lexer'), 'at_eof')) ])),
                     PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ build_isinstance(PyNamedExpr(f't{i}'), PyNamedExpr(this_class_name)) ])),
                 ]
                 i += 1
