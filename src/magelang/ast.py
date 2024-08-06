@@ -82,6 +82,7 @@ builtin_types = {
 }
 
 class Rule(Node):
+    comment: str | None
     decorators: list[Decorator]
     flags: int
     name: str

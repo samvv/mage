@@ -154,6 +154,7 @@ class Parser:
         return ChoiceExpr(elements)
 
     def parse_rule(self) -> Rule:
+        comment = self.scanner.take_comment()
         decorators = []
         while True:
             t0 = self._peek_token()
@@ -181,10 +182,10 @@ class Parser:
             self._get_token()
             type_name = self._expect_token(TT_IDENT).value
         if flags & EXTERN:
-            return Rule(decorators, flags, t0.value, type_name,  None)
+            return Rule(comment, decorators, flags, t0.value, type_name,  None)
         self._expect_token(TT_EQUAL)
         expr = self.parse_expr()
-        return Rule(decorators, flags, t0.value, type_name, expr)
+        return Rule(comment, decorators, flags, t0.value, type_name, expr)
 
     def parse_grammar(self) -> Grammar:
         elements = []

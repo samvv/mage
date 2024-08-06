@@ -21,6 +21,7 @@ def inline(grammar: Grammar) -> Grammar:
         elif rule.is_public or rule.is_skip:
             assert(rule.expr is not None)
             new_rules.append(Rule(
+                comment=rule.comment,
                 decorators=rule.decorators,
                 flags=rule.flags,
                 name=rule.name,

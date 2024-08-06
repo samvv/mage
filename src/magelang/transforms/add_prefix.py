@@ -12,7 +12,7 @@ def add_prefix(grammar: Grammar, prefix: str) -> Grammar:
 
     def visit_rule(rule: Rule) -> Rule:
         expr = rewrite_expr(rule.expr, rewrite) if rule.expr is not None else None
-        return Rule(decorators=rule.decorators, flags=rule.flags, name=transform(rule.name), type_name=rule.type_name, expr=expr)
+        return Rule(comment=rule.comment, decorators=rule.decorators, flags=rule.flags, name=transform(rule.name), type_name=rule.type_name, expr=expr)
 
     return Grammar(rules=list(visit_rule(rule) for rule in grammar.rules))
 

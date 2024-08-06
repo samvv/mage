@@ -1,7 +1,11 @@
 
 from __future__ import annotations
 
+from textwrap import dedent
 from typing import Iterable, Iterator, assert_never, cast
+
+import marko
+import marko.inline
 
 import templaty
 from sweetener import is_iterator, warn
@@ -37,6 +41,7 @@ for_each_child_name = f'for_each_{prefix}child'
 node_class_name = to_class_name('node')
 token_class_name = to_class_name('token')
 syntax_class_name = to_class_name('syntax')
+lexer_class_name = to_class_name('lexer')
 
 def build_cond(cases: list[Case]) -> list[PyStmt]:
     if len(cases) == 0:
@@ -1273,6 +1278,44 @@ def lexer_logic() -> str:
     stmts.extend(lex_visit(ChoiceExpr(choices), noop))
 
     stmts.append(PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr('ScanError'), args=[])))
+
+    return emit(PyModule(stmts=stmts))
+
+def get_text(el: Any) -> str:
+    if isinstance(el, marko.inline.RawText):
+        out = ''
+        for child in el.children:
+            out += child
+        return out
+    else:
+        raise NotImplementedError()
+
+def lexer_tests() -> str:
+
+    stmts: list[PyStmt] = []
+
+    generate_temporary = NameGenerator()
+
+    for rule in grammar.rules:
+        if not grammar.is_token_rule(rule) or rule.comment is None:
+            continue
+        this_class_name = to_class_name(rule.name)
+        doc = marko.parse(dedent(rule.comment))
+        i = 0
+        for child in doc.children:
+            if isinstance(child, marko.block.FencedCode):
+                print(repr(child.lang))
+                input = get_text(child.children[0]).strip()
+                body: list[PyStmt] = [
+                    PyAssignStmt(PyNamedPattern('lexer'), PyCallExpr(PyNamedExpr(lexer_class_name), args=[ PyConstExpr(input) ])),
+                    PyAssignStmt(PyNamedPattern(f't{i}'), PyCallExpr(PyAttrExpr(PyNamedExpr('lexer'), 'lex'))),
+                    PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ build_isinstance(PyNamedExpr(f't{i}'), PyNamedExpr(this_class_name)) ])),
+                ]
+                i += 1
+                stmts.append(PyFuncDef(
+                    name=generate_temporary(prefix=f'test_{rule.name}_'),
+                    body=body,
+                ))
 
     return emit(PyModule(stmts=stmts))
 

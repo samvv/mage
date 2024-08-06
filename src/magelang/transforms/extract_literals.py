@@ -37,13 +37,13 @@ def extract_literals(grammar: Grammar) -> Grammar:
     for rule in grammar.rules:
         if grammar.is_parse_rule(rule):
             assert(rule.expr is not None)
-            new_rules.append(Rule(decorators=rule.decorators, flags=rule.flags, name=rule.name, type_name=rule.type_name, expr=rewrite_expr(rule.expr, rewriter)))
+            new_rules.append(Rule(comment=rule.comment, decorators=rule.decorators, flags=rule.flags, name=rule.name, type_name=rule.type_name, expr=rewrite_expr(rule.expr, rewriter)))
         else:
             new_rules.append(rule)
 
     for literal in reversed(sorted(literal_to_name.keys())):
         name = literal_to_name[literal]
-        new_rules.append(Rule(decorators=[], flags=PUBLIC | FORCE_TOKEN, name=name, expr=LitExpr(literal), type_name=string_rule_type))
+        new_rules.append(Rule(comment=None, decorators=[], flags=PUBLIC | FORCE_TOKEN, name=name, expr=LitExpr(literal), type_name=string_rule_type))
 
     return Grammar(new_rules)
 

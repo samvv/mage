@@ -150,7 +150,9 @@ class Scanner:
             init_pos = TextPos()
         self.text = text
         self._text_offset = text_offset
+        self._last_comment_line = 0
         self.curr_pos = init_pos
+        self._comment = ''
 
     def _get_char(self):
         if self._text_offset >= len(self.text):
@@ -209,23 +211,46 @@ class Scanner:
         else:
             return c0
 
-    def scan(self):
+    def _reset_comment(self) -> None:
+        self._comment = ''
+
+    def take_comment(self) -> str | None:
+        self._scan_whitespace_and_comments()
+        if self._last_comment_line != self.curr_pos.line-1:
+            return None
+        keep = self._comment
+        self._comment = ''
+        return keep
+
+    def _scan_whitespace_and_comments(self) -> None:
 
         c0 = self._peek_char()
 
         while True:
             if c0 == '#':
                 self._get_char()
+                if self._last_comment_line != self.curr_pos.line-1:
+                    self._reset_comment()
+                self._last_comment_line = self.curr_pos.line
+                text = ''
                 while True:
                     c1 = self._get_char()
                     if c1 == '\n' or c1 == EOF:
                         break
+                    text += c1
+                self._comment += text + '\n'
                 c0 = self._peek_char()
                 continue
             if not is_space(c0):
                 break
             self._get_char()
             c0 = self._peek_char()
+
+    def scan(self) -> Token:
+
+        self._scan_whitespace_and_comments()
+
+        c0 = self._peek_char()
 
         if c0 == EOF:
             return Token(TT_EOF, (self.curr_pos.clone(), self.curr_pos.clone()))

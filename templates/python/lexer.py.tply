@@ -21,7 +21,7 @@ def _parse_integer(buffer: str) -> int:
 def _parse_float(buffer: str) -> float:
     return float(buffer)
 
-class Lexer:
+class {{lexer_class_name}}:
 
     def __init__(self, text: str, start_offset = 0, start_line = 1, start_column = 1) -> None:
         self._text = text

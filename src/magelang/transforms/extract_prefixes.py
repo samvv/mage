@@ -93,4 +93,4 @@ def extract_prefixes(grammar: Grammar) -> Grammar:
             elements.append(expr)
         return ChoiceExpr(elements)
 
-    return Grammar([ Rule(True, True, '$token', generate(global_prefixes))])
+    return Grammar([ Rule(None, True, True, '$token', generate(global_prefixes))])
