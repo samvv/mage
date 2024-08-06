@@ -390,9 +390,15 @@ def emit(node: PyNode) -> str:
             return
 
         if isinstance(node, PySlice):
-            visit_expr(node.lower)
+            if node.lower is not None:
+                visit_expr(node.lower)
             visit_token(node.colon)
-            visit_expr(node.upper)
+            if node.upper is not None:
+                visit_expr(node.upper)
+            if node.step is not None:
+                colon, expr = node.step
+                visit_token(colon)
+                visit_expr(expr)
             return
 
         if isinstance(node, PyBreakStmt):
