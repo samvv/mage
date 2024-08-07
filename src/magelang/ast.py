@@ -221,7 +221,7 @@ class Grammar(Node):
             if self.is_parse_rule(rule):
                 yield rule
 
-    def lookup(self, name) -> Rule:
+    def lookup(self, name: str) -> Rule:
         if name not in self._rules_by_name:
             raise RuntimeError(f"a rule named '{name}' was not found in the current grammar")
         return self._rules_by_name[name]
