@@ -66,9 +66,9 @@ def main() -> int:
 
     generate_parser.add_argument('template', choices=template_names, help='The name of the template to use')
     generate_parser.add_argument('file', nargs=1, help='A path to a grammar file')
-    generate_parser.add_argument('--feat-all', action='store_true', help='Enable all output features')
-    generate_parser.add_argument('--feat-cst-parent-pointers', action='store_true', help='Generate references to the parent of a CST node')
-    generate_parser.add_argument('--force', action='store_true', help='Always overwrite files that already exist')
+    generate_parser.add_argument('--feat-all', action=argparse.BooleanOptionalAction, default=False, help='Enable all output features (off by default)')
+    generate_parser.add_argument('--feat-cst-parent-pointers', action=argparse.BooleanOptionalAction, default=False, help='Generate references to the parent of a CST node (off by default)')
+    generate_parser.add_argument('--force', action=argparse.BooleanOptionalAction, default=False, help='Add this flag to always overwrite files that already exist')
     generate_parser.add_argument('--out-dir', default='output', help='Where to place the generated files')
     generate_parser.add_argument('--prefix', default='', help='Prefix all rules in the grammar with this value')
     generate_parser.set_defaults(func=_do_generate)
