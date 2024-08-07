@@ -141,7 +141,7 @@ pub attr_expr
   = expr '.' name:ident
 
 pub subscript_expr
-  = expr '[' slices:((expr | slice) % ',') ']'
+  = expr '[' slices:((expr | slice) %% ',') ']'
 
 pub starred_expr
   = '*' expr
