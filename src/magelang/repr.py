@@ -252,11 +252,11 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         return name if name.endswith('s') else f'{name}s'
 
     def get_field_name(expr: Expr) -> str:
+        if expr.label is not None:
+            return expr.label
         if isinstance(expr, RefExpr):
-            return expr.label if expr.label is not None else expr.name
+            return expr.name
         if isinstance(expr, RepeatExpr):
-            if expr.label is not None:
-                return expr.label
             element_label = get_field_name(expr.expr)
             if element_label is not None:
                 if expr.max > 1:
@@ -264,7 +264,7 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
                 return element_label
             return generate_field_name()
         if isinstance(expr, ListExpr) or isinstance(expr, CharSetExpr) or isinstance(expr, ChoiceExpr):
-            return expr.label if expr.label is not None else generate_field_name()
+            return generate_field_name()
         raise RuntimeError(f'unexpected {expr}')
 
     def get_node_members(expr: Expr) -> Generator[Field, None, None]:
