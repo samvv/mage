@@ -203,7 +203,7 @@ pub infix_expr
 # Statements
 
 pub qual_name
-  = modules:(ident % '.') name:ident
+  = modules:(ident '.')* name:ident
 
 pub absolute_path
   = qual_name
