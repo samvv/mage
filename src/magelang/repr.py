@@ -123,6 +123,15 @@ class Specs:
 def make_optional(ty: Type) -> Type:
     return UnionType([ ty, NoneType() ])
 
+def is_optional(ty: Type) -> bool:
+    # if isinstance(ty, NoneType):
+    #     return True
+    if isinstance(ty, UnionType):
+        for element in flatten_union(ty):
+            if isinstance(element, NoneType):
+                return True
+    return False
+
 def make_unit() -> Type:
     return TupleType([])
 
