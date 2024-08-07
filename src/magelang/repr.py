@@ -286,6 +286,16 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         expr.field_type = field_type
         yield Field(field_name, field_type)
 
+    def rename_duplicate_members(members: list[Field]) -> list[Field]:
+        taken = dict[str, int]()
+        out = []
+        for field in members:
+            count = taken.get(field.name, 0)
+            taken[field.name] = count + 1
+            if count > 0:
+                field.name = f'{field.name}_{count+1}'
+        return out
+
     specs = Specs()
 
     for rule in grammar.rules:
@@ -302,6 +312,7 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         field_counter = 0
         assert(rule.expr is not None)
         members = list(get_node_members(rule.expr))
+        rename_duplicate_members(members)
         specs.add(NodeSpec(rule.name, members))
 
     kw_rules = []
