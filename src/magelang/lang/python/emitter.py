@@ -144,6 +144,12 @@ def emit_token(node: PyToken) -> str:
     if isinstance(node, PyRaiseKeyword):
         return 'raise'
 
+    if isinstance(node, PyFromKeyword):
+        return 'from'
+
+    if isinstance(node, PyImportKeyword):
+        return 'import'
+
     if isinstance(node, PyHashtag):
         return '#'
 
@@ -359,51 +365,21 @@ def emit(node: PyNode) -> str:
 
         assert_never(node)
 
+    prev_token = None
+
+    def write_whitespace() -> None:
+        out.write(' ')
+
     def visit_token(node: PyToken) -> None:
+        nonlocal prev_token
+        # if (is_py_keyword(prev_token) or isinstance(prev_token, PyIdent)) and (is_py_keyword(node) or isinstance(node, PyIdent)):
+        #     write_whitespace()
+        prev_token = node
         out.write(emit_token(node))
         if isinstance(node, PyComma):
             out.write(' ')
 
-    def visit(node: PyNode) -> None:
-
-        if is_py_pattern(node):
-            visit_pattern(node)
-            return
-
-        if is_py_expr(node):
-            visit_expr(node)
-            return
-
-        if isinstance(node, PyNamedParam):
-            visit_pattern(node.pattern)
-            if node.annotation is not None:
-                colon, expr = node.annotation
-                visit_token(colon)
-                out.write(' ')
-                visit_expr(expr)
-            if node.default is not None:
-                equals, expr = node.default
-                out.write(' ')
-                visit_token(equals)
-                out.write(' ')
-                visit_expr(expr)
-            return
-
-        if isinstance(node, PySepParam):
-            visit_token(node.asterisk)
-            return
-
-        if isinstance(node, PySlice):
-            if node.lower is not None:
-                visit_expr(node.lower)
-            visit_token(node.colon)
-            if node.upper is not None:
-                visit_expr(node.upper)
-            if node.step is not None:
-                colon, expr = node.step
-                visit_token(colon)
-                visit_expr(expr)
-            return
+    def visit_stmt(node: PyStmt) -> None:
 
         if isinstance(node, PyBreakStmt):
             visit_token(node.break_keyword)
@@ -428,28 +404,6 @@ def emit(node: PyNode) -> str:
             if node.expr is not None:
                 out.write(' ')
                 visit_expr(node.expr)
-            return
-
-        if isinstance(node, PyIfCase):
-            visit_token(node.if_keyword)
-            out.write(' ')
-            visit_expr(node.test)
-            visit_token(node.colon)
-            visit_body(node.body)
-            return
-
-        if isinstance(node, PyElifCase):
-            visit_token(node.elif_keyword)
-            out.write(' ')
-            visit_expr(node.test)
-            visit_token(node.colon)
-            visit_body(node.body)
-            return
-
-        if isinstance(node, PyElseCase):
-            visit_token(node.else_keyword)
-            visit_token(node.colon)
-            visit_body(node.body)
             return
 
         if isinstance(node, PyForStmt):
@@ -596,6 +550,140 @@ def emit(node: PyNode) -> str:
                 visit_token(close_paren)
             visit_token(node.colon)
             visit_body(node.body, newline='\n\n')
+            return
+
+        if isinstance(node, PyImportFromStmt):
+            visit_token(node.from_keyword)
+            out.write(' ')
+            visit(node.path)
+            out.write(' ')
+            visit_token(node.import_keyword)
+            out.write(' ')
+            for alias, comma in node.aliases:
+                visit(alias)
+                if comma is not None:
+                    visit_token(comma)
+            return
+
+        if isinstance(node, PyImportStmt):
+            visit_token(node.import_keyword)
+            out.write(' ')
+            for alias, comma in node.aliases:
+                visit(alias)
+                if comma is not None:
+                    visit_token(comma)
+            return
+
+        if isinstance(node, PyDeleteStmt):
+            visit_token(node.del_keyword)
+            visit_pattern(node.pattern)
+            return
+
+        assert_never(node)
+
+    def visit(node: PyNode) -> None:
+
+        if is_py_pattern(node):
+            visit_pattern(node)
+            return
+
+        if is_py_expr(node):
+            visit_expr(node)
+            return
+
+        if is_py_stmt(node):
+            visit_stmt(node)
+            return
+
+        if isinstance(node, PyNamedParam):
+            visit_pattern(node.pattern)
+            if node.annotation is not None:
+                colon, expr = node.annotation
+                visit_token(colon)
+                out.write(' ')
+                visit_expr(expr)
+            if node.default is not None:
+                equals, expr = node.default
+                out.write(' ')
+                visit_token(equals)
+                out.write(' ')
+                visit_expr(expr)
+            return
+
+        if isinstance(node, PySepParam):
+            visit_token(node.asterisk)
+            return
+
+        if isinstance(node, PySlice):
+            if node.lower is not None:
+                visit_expr(node.lower)
+            visit_token(node.colon)
+            if node.upper is not None:
+                visit_expr(node.upper)
+            if node.step is not None:
+                colon, expr = node.step
+                visit_token(colon)
+                visit_expr(expr)
+            return
+
+        if isinstance(node, PyQualName):
+            for name, dot in node.modules:
+                visit_token(name)
+                assert(dot is not None)
+                visit_token(dot)
+            visit_token(node.name)
+            return
+
+        if isinstance(node, PyRelativePath):
+            for dot in node.dots:
+                visit_token(dot)
+            if node.name is not None:
+                visit(node.name)
+            # for name, dot in node.modules:
+            #     visit_token(name)
+            #     visit_token(dot)
+            # if node.name is not None:
+            #     visit_token(node.name)
+            return
+
+        if isinstance(node, PyAbsolutePath):
+            visit(node.name)
+            return
+            # for name, dot in node.modules:
+            #     visit_token(name)
+            #     visit_token(dot)
+            # if node.name is not None:
+            #     visit_token(node.name)
+            # return
+
+        if isinstance(node, PyAlias):
+            visit(node.path)
+            if node.asname is not None:
+                as_kw, name = node.asname
+                visit_token(as_kw)
+                visit_token(name)
+            return
+
+        if isinstance(node, PyIfCase):
+            visit_token(node.if_keyword)
+            out.write(' ')
+            visit_expr(node.test)
+            visit_token(node.colon)
+            visit_body(node.body)
+            return
+
+        if isinstance(node, PyElifCase):
+            visit_token(node.elif_keyword)
+            out.write(' ')
+            visit_expr(node.test)
+            visit_token(node.colon)
+            visit_body(node.body)
+            return
+
+        if isinstance(node, PyElseCase):
+            visit_token(node.else_keyword)
+            visit_token(node.colon)
+            visit_body(node.body)
             return
 
         if isinstance(node, PyModule):

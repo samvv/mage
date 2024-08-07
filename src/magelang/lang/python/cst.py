@@ -97,6 +97,9 @@ class PyString(_BaseToken):
         self.value = value
 
 
+type PySliceParent = PySubscriptExpr | PySubscriptPattern
+
+
 class PySlice(_BaseNode):
 
     def __init__(self, *, lower: 'PyExpr | None' = None, colon: 'PyColon | None' = None, upper: 'PyExpr | None' = None, step: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None) -> None:
@@ -141,12 +144,19 @@ class PySlice(_BaseNode):
             raise ValueError("the field 'step' received an unrecognised value'")
         self.step: tuple[PyColon, PyExpr] | None = step_out
 
+    def parent(self) -> PySliceParent:
+        assert(self._parent is not None)
+        return self._parent
+
 
 type PyPattern = PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern
 
 
 def is_py_pattern(value: Any) -> TypeGuard[PyPattern]:
     return isinstance(value, PyNamedPattern) or isinstance(value, PyAttrPattern) or isinstance(value, PySubscriptPattern) or isinstance(value, PyStarredPattern) or isinstance(value, PyListPattern) or isinstance(value, PyTuplePattern)
+
+
+type PyNamedPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyComprehension | PyDeleteStmt | PyListPattern | PySubscriptPattern | PyAttrPattern | PyAssignStmt
 
 
 class PyNamedPattern(_BaseNode):
@@ -159,6 +169,13 @@ class PyNamedPattern(_BaseNode):
         else:
             raise ValueError("the field 'name' received an unrecognised value'")
         self.name: PyIdent = name_out
+
+    def parent(self) -> PyNamedPatternParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyAttrPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyComprehension | PyDeleteStmt | PyListPattern | PySubscriptPattern | PyAttrPattern | PyAssignStmt
 
 
 class PyAttrPattern(_BaseNode):
@@ -180,6 +197,13 @@ class PyAttrPattern(_BaseNode):
         else:
             raise ValueError("the field 'name' received an unrecognised value'")
         self.name: PyIdent = name_out
+
+    def parent(self) -> PyAttrPatternParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PySubscriptPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyComprehension | PyDeleteStmt | PyListPattern | PySubscriptPattern | PyAttrPattern | PyAssignStmt
 
 
 class PySubscriptPattern(_BaseNode):
@@ -256,6 +280,13 @@ class PySubscriptPattern(_BaseNode):
             raise ValueError("the field 'close_bracket' received an unrecognised value'")
         self.close_bracket: PyCloseBracket = close_bracket_out
 
+    def parent(self) -> PySubscriptPatternParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyStarredPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyComprehension | PyDeleteStmt | PyListPattern | PySubscriptPattern | PyAttrPattern | PyAssignStmt
+
 
 class PyStarredPattern(_BaseNode):
 
@@ -269,6 +300,13 @@ class PyStarredPattern(_BaseNode):
         self.asterisk: PyAsterisk = asterisk_out
         expr_out = expr
         self.expr: PyExpr = expr_out
+
+    def parent(self) -> PyStarredPatternParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyListPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyComprehension | PyDeleteStmt | PyListPattern | PySubscriptPattern | PyAttrPattern | PyAssignStmt
 
 
 class PyListPattern(_BaseNode):
@@ -329,6 +367,13 @@ class PyListPattern(_BaseNode):
             raise ValueError("the field 'close_bracket' received an unrecognised value'")
         self.close_bracket: PyCloseBracket = close_bracket_out
 
+    def parent(self) -> PyListPatternParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyTuplePatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyComprehension | PyDeleteStmt | PyListPattern | PySubscriptPattern | PyAttrPattern | PyAssignStmt
+
 
 class PyTuplePattern(_BaseNode):
 
@@ -388,12 +433,19 @@ class PyTuplePattern(_BaseNode):
             raise ValueError("the field 'close_paren' received an unrecognised value'")
         self.close_paren: PyCloseParen = close_paren_out
 
+    def parent(self) -> PyTuplePatternParent:
+        assert(self._parent is not None)
+        return self._parent
+
 
 type PyExpr = PyAttrExpr | PyCallExpr | PyConstExpr | PyGeneratorExpr | PyInfixExpr | PyListExpr | PyNamedExpr | PyNestExpr | PyPrefixExpr | PyStarredExpr | PySubscriptExpr | PyTupleExpr
 
 
 def is_py_expr(value: Any) -> TypeGuard[PyExpr]:
     return isinstance(value, PyAttrExpr) or isinstance(value, PyCallExpr) or isinstance(value, PyConstExpr) or isinstance(value, PyGeneratorExpr) or isinstance(value, PyInfixExpr) or isinstance(value, PyListExpr) or isinstance(value, PyNamedExpr) or isinstance(value, PyNestExpr) or isinstance(value, PyPrefixExpr) or isinstance(value, PyStarredExpr) or isinstance(value, PySubscriptExpr) or isinstance(value, PyTupleExpr)
+
+
+type PyGuardParent = PyComprehension
 
 
 class PyGuard(_BaseNode):
@@ -408,6 +460,13 @@ class PyGuard(_BaseNode):
         self.if_keyword: PyIfKeyword = if_keyword_out
         expr_out = expr
         self.expr: PyExpr = expr_out
+
+    def parent(self) -> PyGuardParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyComprehensionParent = PyGeneratorExpr
 
 
 class PyComprehension(_BaseNode):
@@ -450,6 +509,13 @@ class PyComprehension(_BaseNode):
             raise ValueError("the field 'guards' received an unrecognised value'")
         self.guards: list[PyGuard] = guards_out
 
+    def parent(self) -> PyComprehensionParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyGeneratorExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+
 
 class PyGeneratorExpr(_BaseNode):
 
@@ -467,6 +533,13 @@ class PyGeneratorExpr(_BaseNode):
         else:
             raise ValueError("the field 'generators' received an unrecognised value'")
         self.generators: list[PyComprehension] = generators_out
+
+    def parent(self) -> PyGeneratorExprParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyConstExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
 
 
 class PyConstExpr(_BaseNode):
@@ -487,6 +560,13 @@ class PyConstExpr(_BaseNode):
         else:
             raise ValueError("the field 'literal' received an unrecognised value'")
         self.literal: PyString | PyFloat | PyInteger = literal_out
+
+    def parent(self) -> PyConstExprParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyNestExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
 
 
 class PyNestExpr(_BaseNode):
@@ -509,6 +589,13 @@ class PyNestExpr(_BaseNode):
             raise ValueError("the field 'close_paren' received an unrecognised value'")
         self.close_paren: PyCloseParen = close_paren_out
 
+    def parent(self) -> PyNestExprParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyNamedExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+
 
 class PyNamedExpr(_BaseNode):
 
@@ -520,6 +607,13 @@ class PyNamedExpr(_BaseNode):
         else:
             raise ValueError("the field 'name' received an unrecognised value'")
         self.name: PyIdent = name_out
+
+    def parent(self) -> PyNamedExprParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyAttrExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
 
 
 class PyAttrExpr(_BaseNode):
@@ -541,6 +635,13 @@ class PyAttrExpr(_BaseNode):
         else:
             raise ValueError("the field 'name' received an unrecognised value'")
         self.name: PyIdent = name_out
+
+    def parent(self) -> PyAttrExprParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PySubscriptExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
 
 
 class PySubscriptExpr(_BaseNode):
@@ -617,6 +718,13 @@ class PySubscriptExpr(_BaseNode):
             raise ValueError("the field 'close_bracket' received an unrecognised value'")
         self.close_bracket: PyCloseBracket = close_bracket_out
 
+    def parent(self) -> PySubscriptExprParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyStarredExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+
 
 class PyStarredExpr(_BaseNode):
 
@@ -630,6 +738,13 @@ class PyStarredExpr(_BaseNode):
         self.asterisk: PyAsterisk = asterisk_out
         expr_out = expr
         self.expr: PyExpr = expr_out
+
+    def parent(self) -> PyStarredExprParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyListExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
 
 
 class PyListExpr(_BaseNode):
@@ -690,6 +805,13 @@ class PyListExpr(_BaseNode):
             raise ValueError("the field 'close_bracket' received an unrecognised value'")
         self.close_bracket: PyCloseBracket = close_bracket_out
 
+    def parent(self) -> PyListExprParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyTupleExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+
 
 class PyTupleExpr(_BaseNode):
 
@@ -749,12 +871,19 @@ class PyTupleExpr(_BaseNode):
             raise ValueError("the field 'close_paren' received an unrecognised value'")
         self.close_paren: PyCloseParen = close_paren_out
 
+    def parent(self) -> PyTupleExprParent:
+        assert(self._parent is not None)
+        return self._parent
+
 
 type PyArg = PyKeywordArg | PyExpr
 
 
 def is_py_arg(value: Any) -> TypeGuard[PyArg]:
     return isinstance(value, PyKeywordArg) or is_py_expr(value)
+
+
+type PyKeywordArgParent = PyCallExpr
 
 
 class PyKeywordArg(_BaseNode):
@@ -776,6 +905,13 @@ class PyKeywordArg(_BaseNode):
         self.equals: PyEquals = equals_out
         expr_out = expr
         self.expr: PyExpr = expr_out
+
+    def parent(self) -> PyKeywordArgParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyCallExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
 
 
 class PyCallExpr(_BaseNode):
@@ -838,12 +974,19 @@ class PyCallExpr(_BaseNode):
             raise ValueError("the field 'close_paren' received an unrecognised value'")
         self.close_paren: PyCloseParen = close_paren_out
 
+    def parent(self) -> PyCallExprParent:
+        assert(self._parent is not None)
+        return self._parent
+
 
 type PyPrefixOp = PyNotKeyword | PyPlus | PyHyphen | PyTilde
 
 
 def is_py_prefix_op(value: Any) -> TypeGuard[PyPrefixOp]:
     return isinstance(value, PyNotKeyword) or isinstance(value, PyPlus) or isinstance(value, PyHyphen) or isinstance(value, PyTilde)
+
+
+type PyPrefixExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
 
 
 class PyPrefixExpr(_BaseNode):
@@ -854,12 +997,19 @@ class PyPrefixExpr(_BaseNode):
         expr_out = expr
         self.expr: PyExpr = expr_out
 
+    def parent(self) -> PyPrefixExprParent:
+        assert(self._parent is not None)
+        return self._parent
+
 
 type PyInfixOp = PyPlus | PyHyphen | PyAsterisk | PySlash | PySlashSlash | PyPercenct | PyLessThanLessThan | PyGreaterThanGreaterThan | PyVerticalBar | PyCaret | PyAmpersand | PyAtSign | PyOrKeyword | PyAndKeyword | PyEqualsEquals | PyExclamationMarkEquals | PyLessThan | PyLessThanEquals | PyGreaterThan | PyGreaterThanEquals | PyIsKeyword | tuple[PyIsKeyword, PyNotKeyword] | PyInKeyword | tuple[PyNotKeyword, PyInKeyword]
 
 
 def is_py_infix_op(value: Any) -> TypeGuard[PyInfixOp]:
     return isinstance(value, PyPlus) or isinstance(value, PyHyphen) or isinstance(value, PyAsterisk) or isinstance(value, PySlash) or isinstance(value, PySlashSlash) or isinstance(value, PyPercenct) or isinstance(value, PyLessThanLessThan) or isinstance(value, PyGreaterThanGreaterThan) or isinstance(value, PyVerticalBar) or isinstance(value, PyCaret) or isinstance(value, PyAmpersand) or isinstance(value, PyAtSign) or isinstance(value, PyOrKeyword) or isinstance(value, PyAndKeyword) or isinstance(value, PyEqualsEquals) or isinstance(value, PyExclamationMarkEquals) or isinstance(value, PyLessThan) or isinstance(value, PyLessThanEquals) or isinstance(value, PyGreaterThan) or isinstance(value, PyGreaterThanEquals) or isinstance(value, PyIsKeyword) or (isinstance(value, tuple) and isinstance(value[0], PyIsKeyword) and isinstance(value[1], PyNotKeyword)) or isinstance(value, PyInKeyword) or (isinstance(value, tuple) and isinstance(value[0], PyNotKeyword) and isinstance(value[1], PyInKeyword))
+
+
+type PyInfixExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
 
 
 class PyInfixExpr(_BaseNode):
@@ -872,60 +1022,50 @@ class PyInfixExpr(_BaseNode):
         right_out = right
         self.right: PyExpr = right_out
 
+    def parent(self) -> PyInfixExprParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyQualNameParent = PyAbsolutePath | PyRelativePath
+
 
 class PyQualName(_BaseNode):
 
-    def __init__(self, name: 'str | PyIdent', *, modules: 'list[str | PyIdent] | list[tuple[str | PyIdent, PyDot | None | None]] | Punctuated[str | PyIdent, PyDot | None] | None' = None) -> None:
+    def __init__(self, name: 'str | PyIdent', *, modules: 'list[str | PyIdent | tuple[str | PyIdent, PyDot | None]] | None' = None) -> None:
         if modules is None:
-            modules_out = Punctuated()
-        elif isinstance(modules, list) or isinstance(modules, list) or isinstance(modules, Punctuated):
-            new_modules = Punctuated()
-            modules_iter = iter(modules)
-            try:
-                first_modules_element = next(modules_iter)
-                while True:
-                    try:
-                        second_modules_element = next(modules_iter)
-                        if isinstance(first_modules_element, tuple):
-                            modules_value = first_modules_element[0]
-                            modules_separator = first_modules_element[1]
-                        else:
-                            modules_value = first_modules_element
-                            modules_separator = None
-                        if isinstance(modules_value, str):
-                            new_modules_value = PyIdent(modules_value)
-                        elif isinstance(modules_value, PyIdent):
-                            new_modules_value = modules_value
-                        else:
-                            raise ValueError("the field 'modules' received an unrecognised value'")
-                        if modules_separator is None:
-                            new_modules_separator = PyDot()
-                        elif isinstance(modules_separator, PyDot):
-                            new_modules_separator = modules_separator
-                        else:
-                            raise ValueError("the field 'modules' received an unrecognised value'")
-                        new_modules.append(new_modules_value, new_modules_separator)
-                        first_modules_element = second_modules_element
-                    except StopIteration:
-                        if isinstance(first_modules_element, tuple):
-                            modules_value = first_modules_element[0]
-                            assert(first_modules_element[1] is None)
-                        else:
-                            modules_value = first_modules_element
-                        if isinstance(modules_value, str):
-                            new_modules_value = PyIdent(modules_value)
-                        elif isinstance(modules_value, PyIdent):
-                            new_modules_value = modules_value
-                        else:
-                            raise ValueError("the field 'modules' received an unrecognised value'")
-                        new_modules.append(new_modules_value)
-                        break
-            except StopIteration:
-                pass
+            modules_out = list()
+        elif isinstance(modules, list):
+            new_modules = list()
+            for modules_element in modules:
+                if isinstance(modules_element, str):
+                    new_modules_element = (PyIdent(modules_element), PyDot())
+                elif isinstance(modules_element, PyIdent):
+                    new_modules_element = (modules_element, PyDot())
+                elif isinstance(modules_element, tuple):
+                    assert(isinstance(modules_element, tuple))
+                    modules_element_0 = modules_element[0]
+                    if isinstance(modules_element_0, str):
+                        new_modules_element_0 = PyIdent(modules_element_0)
+                    elif isinstance(modules_element_0, PyIdent):
+                        new_modules_element_0 = modules_element_0
+                    else:
+                        raise ValueError("the field 'modules' received an unrecognised value'")
+                    modules_element_1 = modules_element[1]
+                    if modules_element_1 is None:
+                        new_modules_element_1 = PyDot()
+                    elif isinstance(modules_element_1, PyDot):
+                        new_modules_element_1 = modules_element_1
+                    else:
+                        raise ValueError("the field 'modules' received an unrecognised value'")
+                    new_modules_element = (new_modules_element_0, new_modules_element_1)
+                else:
+                    raise ValueError("the field 'modules' received an unrecognised value'")
+                new_modules.append(new_modules_element)
             modules_out = new_modules
         else:
             raise ValueError("the field 'modules' received an unrecognised value'")
-        self.modules: Punctuated[PyIdent, PyDot] = modules_out
+        self.modules: list[tuple[PyIdent, PyDot]] = modules_out
         if isinstance(name, str):
             name_out = PyIdent(name)
         elif isinstance(name, PyIdent):
@@ -934,17 +1074,31 @@ class PyQualName(_BaseNode):
             raise ValueError("the field 'name' received an unrecognised value'")
         self.name: PyIdent = name_out
 
+    def parent(self) -> PyQualNameParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyAbsolutePathParent = PyAlias | PyImportFromStmt
+
 
 class PyAbsolutePath(_BaseNode):
 
-    def __init__(self, qual_name: 'PyQualName') -> None:
-        qual_name_out = qual_name
-        self.qual_name: PyQualName = qual_name_out
+    def __init__(self, name: 'PyQualName') -> None:
+        name_out = name
+        self.name: PyQualName = name_out
+
+    def parent(self) -> PyAbsolutePathParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyRelativePathParent = PyAlias | PyImportFromStmt
 
 
 class PyRelativePath(_BaseNode):
 
-    def __init__(self, *, dots: 'list[PyDot | None] | None' = None, qual_name: 'PyQualName | None' = None) -> None:
+    def __init__(self, *, dots: 'list[PyDot | None] | None' = None, name: 'PyQualName | None' = None) -> None:
         if dots is None:
             dots_out = list()
         elif isinstance(dots, list):
@@ -961,13 +1115,17 @@ class PyRelativePath(_BaseNode):
         else:
             raise ValueError("the field 'dots' received an unrecognised value'")
         self.dots: list[PyDot] = dots_out
-        if isinstance(qual_name, PyQualName):
-            qual_name_out = qual_name
-        elif qual_name is None:
-            qual_name_out = None
+        if isinstance(name, PyQualName):
+            name_out = name
+        elif name is None:
+            name_out = None
         else:
-            raise ValueError("the field 'qual_name' received an unrecognised value'")
-        self.qual_name: PyQualName | None = qual_name_out
+            raise ValueError("the field 'name' received an unrecognised value'")
+        self.name: PyQualName | None = name_out
+
+    def parent(self) -> PyRelativePathParent:
+        assert(self._parent is not None)
+        return self._parent
 
 
 type PyPath = PyAbsolutePath | PyRelativePath
@@ -975,6 +1133,9 @@ type PyPath = PyAbsolutePath | PyRelativePath
 
 def is_py_path(value: Any) -> TypeGuard[PyPath]:
     return isinstance(value, PyAbsolutePath) or isinstance(value, PyRelativePath)
+
+
+type PyAliasParent = PyImportStmt | PyImportFromStmt
 
 
 class PyAlias(_BaseNode):
@@ -1008,6 +1169,13 @@ class PyAlias(_BaseNode):
         else:
             raise ValueError("the field 'asname' received an unrecognised value'")
         self.asname: tuple[PyAsKeyword, PyIdent] | None = asname_out
+
+    def parent(self) -> PyAliasParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyImportStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
 
 
 class PyImportStmt(_BaseNode):
@@ -1060,6 +1228,13 @@ class PyImportStmt(_BaseNode):
         else:
             raise ValueError("the field 'aliases' received an unrecognised value'")
         self.aliases: Punctuated[PyAlias, PyComma] = aliases_out
+
+    def parent(self) -> PyImportStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyImportFromStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
 
 
 class PyImportFromStmt(_BaseNode):
@@ -1122,12 +1297,19 @@ class PyImportFromStmt(_BaseNode):
             raise ValueError("the field 'aliases' received an unrecognised value'")
         self.aliases: Punctuated[PyAlias, PyComma] = aliases_out
 
+    def parent(self) -> PyImportFromStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
 
 type PyStmt = PyAssignStmt | PyBreakStmt | PyClassDef | PyContinueStmt | PyDeleteStmt | PyExprStmt | PyForStmt | PyFuncDef | PyIfStmt | PyImportStmt | PyImportFromStmt | PyPassStmt | PyRaiseStmt | PyRetStmt | PyTryStmt | PyTypeAliasStmt | PyWhileStmt
 
 
 def is_py_stmt(value: Any) -> TypeGuard[PyStmt]:
     return isinstance(value, PyAssignStmt) or isinstance(value, PyBreakStmt) or isinstance(value, PyClassDef) or isinstance(value, PyContinueStmt) or isinstance(value, PyDeleteStmt) or isinstance(value, PyExprStmt) or isinstance(value, PyForStmt) or isinstance(value, PyFuncDef) or isinstance(value, PyIfStmt) or isinstance(value, PyImportStmt) or isinstance(value, PyImportFromStmt) or isinstance(value, PyPassStmt) or isinstance(value, PyRaiseStmt) or isinstance(value, PyRetStmt) or isinstance(value, PyTryStmt) or isinstance(value, PyTypeAliasStmt) or isinstance(value, PyWhileStmt)
+
+
+type PyRetStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
 
 
 class PyRetStmt(_BaseNode):
@@ -1148,12 +1330,26 @@ class PyRetStmt(_BaseNode):
             raise ValueError("the field 'expr' received an unrecognised value'")
         self.expr: PyExpr | None = expr_out
 
+    def parent(self) -> PyRetStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyExprStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+
 
 class PyExprStmt(_BaseNode):
 
     def __init__(self, expr: 'PyExpr') -> None:
         expr_out = expr
         self.expr: PyExpr = expr_out
+
+    def parent(self) -> PyExprStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyAssignStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
 
 
 class PyAssignStmt(_BaseNode):
@@ -1190,6 +1386,13 @@ class PyAssignStmt(_BaseNode):
         expr_out = expr
         self.expr: PyExpr = expr_out
 
+    def parent(self) -> PyAssignStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyPassStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+
 
 class PyPassStmt(_BaseNode):
 
@@ -1201,6 +1404,13 @@ class PyPassStmt(_BaseNode):
         else:
             raise ValueError("the field 'pass_keyword' received an unrecognised value'")
         self.pass_keyword: PyPassKeyword = pass_keyword_out
+
+    def parent(self) -> PyPassStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyIfCaseParent = PyIfStmt
 
 
 class PyIfCase(_BaseNode):
@@ -1236,6 +1446,13 @@ class PyIfCase(_BaseNode):
             raise ValueError("the field 'body' received an unrecognised value'")
         self.body: PyStmt | list[PyStmt] = body_out
 
+    def parent(self) -> PyIfCaseParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyElifCaseParent = PyIfStmt
+
 
 class PyElifCase(_BaseNode):
 
@@ -1270,6 +1487,13 @@ class PyElifCase(_BaseNode):
             raise ValueError("the field 'body' received an unrecognised value'")
         self.body: PyStmt | list[PyStmt] = body_out
 
+    def parent(self) -> PyElifCaseParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyElseCaseParent = PyIfStmt
+
 
 class PyElseCase(_BaseNode):
 
@@ -1302,6 +1526,13 @@ class PyElseCase(_BaseNode):
             raise ValueError("the field 'body' received an unrecognised value'")
         self.body: PyStmt | list[PyStmt] = body_out
 
+    def parent(self) -> PyElseCaseParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyIfStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+
 
 class PyIfStmt(_BaseNode):
 
@@ -1327,6 +1558,13 @@ class PyIfStmt(_BaseNode):
             raise ValueError("the field 'last' received an unrecognised value'")
         self.last: PyElseCase | None = last_out
 
+    def parent(self) -> PyIfStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyDeleteStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+
 
 class PyDeleteStmt(_BaseNode):
 
@@ -1340,6 +1578,13 @@ class PyDeleteStmt(_BaseNode):
         self.del_keyword: PyDelKeyword = del_keyword_out
         pattern_out = pattern
         self.pattern: PyPattern = pattern_out
+
+    def parent(self) -> PyDeleteStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyRaiseStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
 
 
 class PyRaiseStmt(_BaseNode):
@@ -1373,6 +1618,13 @@ class PyRaiseStmt(_BaseNode):
         else:
             raise ValueError("the field 'cause' received an unrecognised value'")
         self.cause: tuple[PyFromKeyword, PyExpr] | None = cause_out
+
+    def parent(self) -> PyRaiseStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyForStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
 
 
 class PyForStmt(_BaseNode):
@@ -1460,6 +1712,13 @@ class PyForStmt(_BaseNode):
             raise ValueError("the field 'else_clause' received an unrecognised value'")
         self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None = else_clause_out
 
+    def parent(self) -> PyForStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyWhileStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+
 
 class PyWhileStmt(_BaseNode):
 
@@ -1537,6 +1796,13 @@ class PyWhileStmt(_BaseNode):
             raise ValueError("the field 'else_clause' received an unrecognised value'")
         self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None = else_clause_out
 
+    def parent(self) -> PyWhileStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyBreakStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+
 
 class PyBreakStmt(_BaseNode):
 
@@ -1549,6 +1815,13 @@ class PyBreakStmt(_BaseNode):
             raise ValueError("the field 'break_keyword' received an unrecognised value'")
         self.break_keyword: PyBreakKeyword = break_keyword_out
 
+    def parent(self) -> PyBreakStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyContinueStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+
 
 class PyContinueStmt(_BaseNode):
 
@@ -1560,6 +1833,13 @@ class PyContinueStmt(_BaseNode):
         else:
             raise ValueError("the field 'continue_keyword' received an unrecognised value'")
         self.continue_keyword: PyContinueKeyword = continue_keyword_out
+
+    def parent(self) -> PyContinueStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyTypeAliasStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
 
 
 class PyTypeAliasStmt(_BaseNode):
@@ -1686,6 +1966,13 @@ class PyTypeAliasStmt(_BaseNode):
         expr_out = expr
         self.expr: PyExpr = expr_out
 
+    def parent(self) -> PyTypeAliasStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyExceptHandlerParent = PyTryStmt
+
 
 class PyExceptHandler(_BaseNode):
 
@@ -1745,6 +2032,13 @@ class PyExceptHandler(_BaseNode):
         else:
             raise ValueError("the field 'body' received an unrecognised value'")
         self.body: PyStmt | list[PyStmt] = body_out
+
+    def parent(self) -> PyExceptHandlerParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyTryStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
 
 
 class PyTryStmt(_BaseNode):
@@ -1874,6 +2168,13 @@ class PyTryStmt(_BaseNode):
         else:
             raise ValueError("the field 'finally_clause' received an unrecognised value'")
         self.finally_clause: tuple[PyFinallyKeyword, PyColon, PyStmt | list[PyStmt]] | None = finally_clause_out
+
+    def parent(self) -> PyTryStmtParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyClassDefParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
 
 
 class PyClassDef(_BaseNode):
@@ -2031,12 +2332,19 @@ class PyClassDef(_BaseNode):
             raise ValueError("the field 'body' received an unrecognised value'")
         self.body: PyStmt | list[PyStmt] = body_out
 
+    def parent(self) -> PyClassDefParent:
+        assert(self._parent is not None)
+        return self._parent
+
 
 type PyParam = PyNamedParam | PyRestPosParam | PyRestKeywordParam | PySepParam
 
 
 def is_py_param(value: Any) -> TypeGuard[PyParam]:
     return isinstance(value, PyNamedParam) or isinstance(value, PyRestPosParam) or isinstance(value, PyRestKeywordParam) or isinstance(value, PySepParam)
+
+
+type PyNamedParamParent = PyFuncDef
 
 
 class PyNamedParam(_BaseNode):
@@ -2083,6 +2391,13 @@ class PyNamedParam(_BaseNode):
             raise ValueError("the field 'default' received an unrecognised value'")
         self.default: tuple[PyEquals, PyExpr] | None = default_out
 
+    def parent(self) -> PyNamedParamParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyRestPosParamParent = PyFuncDef
+
 
 class PyRestPosParam(_BaseNode):
 
@@ -2101,6 +2416,13 @@ class PyRestPosParam(_BaseNode):
         else:
             raise ValueError("the field 'name' received an unrecognised value'")
         self.name: PyIdent = name_out
+
+    def parent(self) -> PyRestPosParamParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyRestKeywordParamParent = PyFuncDef
 
 
 class PyRestKeywordParam(_BaseNode):
@@ -2121,6 +2443,13 @@ class PyRestKeywordParam(_BaseNode):
             raise ValueError("the field 'name' received an unrecognised value'")
         self.name: PyIdent = name_out
 
+    def parent(self) -> PyRestKeywordParamParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PySepParamParent = PyFuncDef
+
 
 class PySepParam(_BaseNode):
 
@@ -2132,6 +2461,13 @@ class PySepParam(_BaseNode):
         else:
             raise ValueError("the field 'asterisk' received an unrecognised value'")
         self.asterisk: PyAsterisk = asterisk_out
+
+    def parent(self) -> PySepParamParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyDecoratorParent = PyFuncDef
 
 
 class PyDecorator(_BaseNode):
@@ -2146,6 +2482,13 @@ class PyDecorator(_BaseNode):
         self.at_sign: PyAtSign = at_sign_out
         expr_out = expr
         self.expr: PyExpr = expr_out
+
+    def parent(self) -> PyDecoratorParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyFuncDefParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
 
 
 class PyFuncDef(_BaseNode):
@@ -2277,6 +2620,13 @@ class PyFuncDef(_BaseNode):
             raise ValueError("the field 'body' received an unrecognised value'")
         self.body: PyStmt | list[PyStmt] = body_out
 
+    def parent(self) -> PyFuncDefParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyModuleParent = Never
+
 
 class PyModule(_BaseNode):
 
@@ -2292,6 +2642,9 @@ class PyModule(_BaseNode):
         else:
             raise ValueError("the field 'stmts' received an unrecognised value'")
         self.stmts: list[PyStmt] = stmts_out
+
+    def parent(self) -> PyModuleParent:
+        raise AssertionError('trying to access the parent node of a top-level node')
 
 
 class PyTilde(_BaseToken):
@@ -2758,19 +3111,22 @@ def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax], None]):
         proc(node.right)
         return
     if isinstance(node, PyQualName):
-        for (element_0, separator_0) in node.modules:
-            proc(element_0)
+        for element_0 in node.modules:
+            element_1 = element_0[0]
+            proc(element_1)
+            element_2 = element_0[1]
+            proc(element_2)
         proc(node.name)
         return
     if isinstance(node, PyAbsolutePath):
-        proc(node.qual_name)
+        proc(node.name)
         return
     if isinstance(node, PyRelativePath):
         for element_0 in node.dots:
             proc(element_0)
-        if isinstance(node.qual_name, PyQualName):
-            proc(node.qual_name)
-        elif node.qual_name is None:
+        if isinstance(node.name, PyQualName):
+            proc(node.name)
+        elif node.name is None:
             pass
         else:
             raise ValueError()

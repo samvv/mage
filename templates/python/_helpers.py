@@ -1292,7 +1292,10 @@ def get_text(el: Any) -> str:
 
 def lexer_tests() -> str:
 
-    stmts: list[PyStmt] = []
+    stmts: list[PyStmt] = [
+       PyImportFromStmt(PyRelativePath(dots=[ PyDot() ], name=PyQualName('cst')), aliases=[ PyAlias(PyAbsolutePath(PyQualName('*'))) ]),
+       PyImportFromStmt(PyRelativePath(dots=[ PyDot() ], name=PyQualName('lexer')), aliases=[ PyAlias(PyAbsolutePath(PyQualName(lexer_class_name))) ]),
+    ]
 
     generate_temporary = NameGenerator()
 
