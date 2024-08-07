@@ -194,6 +194,8 @@ class Grammar(Node):
             if expr.min != expr.max:
                 return False
             return self.is_static_token(expr.expr)
+        if isinstance(expr, ListExpr):
+            return False
         if isinstance(expr, LookaheadExpr):
             # Lookahead has no effect on what (non-)static characters are generated
             return True
