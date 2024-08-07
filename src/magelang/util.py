@@ -1,6 +1,6 @@
 
 from typing import Callable, TypeVar, overload
-
+import re
 
 def to_camel_case(snake_str: str):
     return "".join(x.capitalize() for x in snake_str.lower().split("_"))
@@ -8,6 +8,13 @@ def to_camel_case(snake_str: str):
 def to_lower_camel_case(snake_str):
     camel_string = to_camel_case(snake_str)
     return snake_str[0].lower() + camel_string[1:]
+
+def to_snake_case(name: str) -> str:
+    if '-' in name:
+        return name.replace('-', '_')
+    else:
+        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 T = TypeVar('T')
 
