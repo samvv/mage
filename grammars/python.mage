@@ -206,10 +206,10 @@ pub qual_name
   = modules:(ident '.')* name:ident
 
 pub absolute_path
-  = qual_name
+  = name:qual_name
 
 pub relative_path
-  = '.'+ qual_name?
+  = '.'+ name:qual_name?
 
 pub path
   = absolute_path
