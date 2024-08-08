@@ -155,8 +155,8 @@ def infer_type(grammar: Grammar, expr: Expr) -> Type:
         return make_unit()
 
     if isinstance(expr, ListExpr):
-        element_field = infer_type(grammar, expr.element)
-        separator_field = infer_type(grammar, expr.separator)
+        element_field = infer_type(expr.element, grammar)
+        separator_field = infer_type(expr.separator, grammar)
         return PunctType(element_field, separator_field)
 
     if isinstance(expr, RefExpr):
@@ -164,7 +164,7 @@ def infer_type(grammar: Grammar, expr: Expr) -> Type:
         if rule.is_extern:
             return ExternType(rule.type_name) #TokenType(rule.name) if rule.is_token else NodeType(rule.name)
         if not rule.is_public:
-            return infer_type(grammar, nonnull(rule.expr))
+            return infer_type(nonnull(rule.expr), grammar)
         if grammar.is_token_rule(rule):
             return TokenType(rule.name) 
         if grammar.is_variant(rule):
@@ -175,7 +175,7 @@ def infer_type(grammar: Grammar, expr: Expr) -> Type:
         assert(False) # literals should already have been eliminated
 
     if isinstance(expr, RepeatExpr):
-        element_type = infer_type(grammar, expr.expr)
+        element_type = infer_type(expr.expr, grammar)
         if expr.max == 0:
             return make_unit()
         elif expr.min == 0 and expr.max == 1:
@@ -189,7 +189,7 @@ def infer_type(grammar: Grammar, expr: Expr) -> Type:
     if isinstance(expr, SeqExpr):
         types = []
         for element in expr.elements:
-            ty = infer_type(grammar, element)
+            ty = infer_type(element, grammar)
             if is_unit(ty):
                 continue
             types.append(ty)
@@ -201,7 +201,7 @@ def infer_type(grammar: Grammar, expr: Expr) -> Type:
         return make_unit()
 
     if isinstance(expr, ChoiceExpr):
-        return UnionType(list(infer_type(grammar, element) for element in expr.elements))
+        return UnionType(list(infer_type(element, grammar) for element in expr.elements))
 
     assert_never(expr)
 
@@ -304,10 +304,10 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
             types = []
             for element in expr.elements:
                 names.append(get_member_name(element))
-                types.append(infer_type(grammar, element))
+                types.append(infer_type(element, grammar))
             yield '_'.join(names), TupleType(types)
             return
-        yield get_member_name(expr), infer_type(grammar, expr)
+        yield get_member_name(expr), infer_type(expr, grammar)
 
     def plural(name: str) -> str:
         return name if name.endswith('s') else f'{name}s'
@@ -342,7 +342,7 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
             assert(False) # literals should already have been eliminated
 
         field_name = get_field_name(expr)
-        field_type = simplify_type(infer_type(grammar, expr))
+        field_type = simplify_type(infer_type(expr, grammar))
         expr.field_name = field_name
         expr.field_type = field_type
         yield Field(field_name, field_type)
