@@ -1,5 +1,5 @@
 
-from typing import Iterator
+from typing import Iterator, assert_never
 from sweetener import Record
 
 from magelang.eval import accepts
@@ -133,8 +133,8 @@ def is_optional(ty: Type) -> bool:
     # if isinstance(ty, NoneType):
     #     return True
     if isinstance(ty, UnionType):
-        for element in flatten_union(ty):
-            if isinstance(element, NoneType):
+        for ty_2 in flatten_union(ty):
+            if isinstance(ty_2, NoneType):
                 return True
     return False
 
@@ -196,15 +196,9 @@ def infer_type(grammar: Grammar, expr: Expr) -> Type:
         return make_unit()
 
     if isinstance(expr, ChoiceExpr):
-        types = list(infer_type(grammar, element) for element in expr.elements)
-        # FIXME can't we just return an empty union type and normalize it afterwards?
-        if len(types) == 0:
-            return NeverType()
-        if len(types) == 1:
-            return types[0]
-        return UnionType(types)
+        return UnionType(list(infer_type(grammar, element) for element in expr.elements))
 
-    raise RuntimeError(f'unexpected {expr}')
+    assert_never(expr)
 
 def flatten_union(ty: Type) -> Generator[Type, None, None]:
     if isinstance(ty, UnionType):
