@@ -93,11 +93,10 @@ def generate_cst(
             if isinstance(ty, TupleType):
                 return all(visit(element, False) for element in ty.element_types)
             if isinstance(ty, UnionType):
-                count = 0
-                for element_type in ty.types:
-                    if visit(element_type, allow_empty_sequences):
-                        count += 1
-                return count == 1
+                # We assume the type has been simplified, such that singleton
+                # union types do not occur. Otherwise, we did have to recurse
+                # on the single union type member.
+                return False
             raise RuntimeError(f'unexpected {ty}')
         return visit(ty, allow_empty_sequences)
 
