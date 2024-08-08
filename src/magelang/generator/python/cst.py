@@ -240,6 +240,8 @@ def generate_cst(
 
             if isinstance(ty, PunctType):
 
+                assert(is_default_constructible(ty.separator_type))
+
                 new_elements_name = f'new_{in_name}'
 
                 if is_static(ty.element_type, grammar):
@@ -320,7 +322,7 @@ def generate_cst(
                                                         ),
                                                         PyAssignStmt(
                                                             pattern=PyNamedPattern(separator_name),
-                                                            expr=PyNamedExpr('None'),
+                                                            expr=gen_default_constructor(ty.separator_type),
                                                         ),
                                                     ]
                                                 )
