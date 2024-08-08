@@ -122,10 +122,11 @@ def generate_cst(
 
     def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Callable[[PyExpr], PyStmt]) -> tuple[Type, list[PyStmt]]:
 
-        def collect(ty: Type, in_name: str, assign: Callable[[PyExpr], PyStmt], has_none: bool) -> tuple[Type, list[PyStmt]]:
+        def collect(ty: Type, in_name: str, assign: Callable[[PyExpr], PyStmt], forbid_none: bool) -> tuple[Type, list[PyStmt]]:
+
             cases: list[Case] = []
             types: list[Type] = []
-            for coerce_ty, coerce_body in coercions(ty, in_name, assign, has_none):
+            for coerce_ty, coerce_body in coercions(ty, in_name, assign, forbid_none):
                 cases.append((gen_shallow_test(coerce_ty, PyNamedExpr(in_name), prefix), coerce_body))
                 types.append(coerce_ty)
 
@@ -150,23 +151,35 @@ def generate_cst(
 
             return res_ty, build_cond(cases)
 
-        def coercions(ty: Type, in_name: str, assign: Callable[[PyExpr], PyStmt], has_none: bool) -> Generator[tuple[Type, list[PyStmt]], None, None]:
+        def coercions(ty: Type, in_name: str, assign: Callable[[PyExpr], PyStmt], forbid_none: bool) -> Generator[tuple[Type, list[PyStmt]], None, None]:
 
             if isinstance(ty, UnionType):
 
                 types = list(flatten_union(ty))
 
-                for member_ty in types:
-                    if isinstance(member_ty, NoneType):
-                        has_none = True
+                for element_type in types:
+                    if isinstance(element_type, NoneType):
+                        forbid_none = True
 
-                for member_ty in types:
-                    yield from coercions(member_ty, in_name, assign, has_none)
+                rejected = set()
+                out = []
+                for element_type in types:
+                    for coerced_type, coerced_stmts in coercions(element_type, in_name, assign, True):
+                        for i, (ty, _) in enumerate(out):
+                            if do_types_shallow_overlap(ty, coerced_type):
+                                rejected.add(i)
+                                continue
+                        out.append((coerced_type, coerced_stmts))
+
+                for i, (ty, stmts) in enumerate(out):
+                    if i in rejected:
+                        continue
+                    yield ty, stmts
 
                 return
 
             if isinstance(ty, NoneType):
-                yield NoneType(), [ assign(PyNamedExpr('None')) ]
+                yield NoneType(), [ assign(gen_default_constructor(ty)) ]
                 return
 
             # Now that we've handled union types and empty types, we can
@@ -174,7 +187,7 @@ def generate_cst(
             # This can only happen if `None` is not already used by the type
             # itself. We continue processing the other types after this
             # operation.
-            if not has_none and is_default_constructible(ty):
+            if not forbid_none and is_default_constructible(ty):
                 yield NoneType(), [ assign(gen_default_constructor(ty)) ]
 
             if isinstance(ty, VariantType):
@@ -186,7 +199,7 @@ def generate_cst(
                 spec = specs.lookup(ty.name)
                 assert(isinstance(spec, NodeSpec))
 
-                if len(spec.members) == 1 and not has_none:
+                if len(spec.members) == 1 and not forbid_none:
                     # TODO maybe also coerce spec.members[0].ty recursively?
                     single_ty = spec.members[0].ty
                     yield single_ty, [

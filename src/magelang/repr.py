@@ -213,6 +213,49 @@ def flatten_union(ty: Type) -> Generator[Type, None, None]:
     else:
         yield ty
 
+def do_types_shallow_overlap(a: Type, b: Type) -> bool:
+    """
+    Determine whether two types have roughly the same structure.
+
+    In Python, you could view this as whether the check `type(a) == type(b)`
+    will always hold.
+    """
+
+    if isinstance(a, NeverType) or isinstance(b, NeverType):
+        return False
+
+    if isinstance(a, UnionType):
+        return any(do_types_shallow_overlap(element_type, b) for element_type in a.types)
+
+    if isinstance(b, UnionType):
+        return do_types_shallow_overlap(b, a)
+
+    if isinstance(a, ExternType) and isinstance(b, ExternType):
+        return a.name == b.name
+
+    if isinstance(a, NodeType) and isinstance(b, NodeType):
+        return a.name == b.name
+
+    if isinstance(a, VariantType) and isinstance(b, VariantType):
+        return a.name == b.name
+
+    if isinstance(a, TokenType) and isinstance(b, TokenType):
+        return a.name == b.name
+
+    if isinstance(a, ListType) and isinstance(b, ListType):
+        return True
+
+    if isinstance(a, PunctType) and isinstance(b, PunctType):
+        return True
+
+    if isinstance(a, NoneType) and isinstance(b, NoneType):
+        return True
+
+    if isinstance(a, TupleType) and isinstance(b, TupleType):
+        return True
+
+    return False
+
 def simplify_type(ty: Type) -> Type:
     if isinstance(ty, UnionType):
         types = []
