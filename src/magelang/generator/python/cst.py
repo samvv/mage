@@ -241,6 +241,16 @@ def generate_cst(
             if isinstance(ty, PunctType):
 
                 new_elements_name = f'new_{in_name}'
+
+                if is_static(ty.element_type, grammar):
+                    yield ExternType(integer_rule_type), [
+                        PyAssignStmt(PyNamedPattern(new_elements_name), expr=PyCallExpr(PyNamedExpr('Punctuated'))),
+                        PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyNamedExpr(in_name) ]), body= [
+                            PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(new_elements_name), 'append'), args=[ gen_default_constructor(ty.element_type) ])),
+                        ]),
+                        assign(PyNamedExpr(new_elements_name)),
+                    ]
+
                 first_element_name = f'first_{in_name}_element'
                 second_element_name = f'second_{in_name}_element'
                 element_name = f'{in_name}_element'
@@ -399,6 +409,16 @@ def generate_cst(
                 #     out_name.append(new_element_name)
 
                 new_elements_name = f'new_{in_name}'
+
+                if is_static(ty.element_type, grammar):
+                    yield ExternType(integer_rule_type), [
+                        PyAssignStmt(PyNamedPattern(new_elements_name), expr=PyCallExpr(PyNamedExpr('list'))),
+                        PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyNamedExpr(in_name) ]), body= [
+                            PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(new_elements_name), 'append'), args=[ gen_default_constructor(ty.element_type) ])),
+                        ]),
+                        assign(PyNamedExpr(new_elements_name)),
+                    ]
+
                 element_name = f'{in_name}_element'
                 new_element_name = f'new_{in_name}_element'
 

@@ -149,7 +149,28 @@ def make_unit() -> Type:
 def is_unit(ty: Type) -> bool:
     return isinstance(ty, TupleType) and len(ty.element_types) == 0
 
-def infer_type(grammar: Grammar, expr: Expr) -> Type:
+def is_static(ty: Type, grammar: Grammar) -> bool:
+    if isinstance(ty, ExternType):
+        return False
+    if isinstance(ty, NeverType):
+        return False
+    if isinstance(ty, UnionType):
+        return all(is_static(ty_2, grammar) for ty_2 in ty.types)
+    if isinstance(ty, RuleType):
+        rule = grammar.lookup(ty.name)
+        if rule.expr is None:
+            return False
+        return grammar.is_static_token(rule.expr)
+    if isinstance(ty, TupleType):
+        return all(is_static(ty_2, grammar) for ty_2 in ty.element_types)
+    if isinstance(ty, ListType):
+        # This assumes that repetitions of a fixed size have been eliminated.
+        return False
+    if isinstance(ty, PunctType):
+        return False
+    assert_never(ty)
+
+def infer_type(expr: Expr, grammar: Grammar) -> Type:
 
     if isinstance(expr, HideExpr):
         return make_unit()
