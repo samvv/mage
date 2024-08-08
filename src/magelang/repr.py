@@ -56,6 +56,7 @@ class ListType(TypeBase):
     A type that allows multiple values of the same underlying type.
     """
     element_type: Type
+    required: bool
 
 class PunctType(TypeBase):
     """
@@ -63,6 +64,7 @@ class PunctType(TypeBase):
     """
     element_type: Type
     separator_type: Type
+    required: bool
 
 class UnionType(TypeBase):
     """
@@ -178,7 +180,7 @@ def infer_type(expr: Expr, grammar: Grammar) -> Type:
     if isinstance(expr, ListExpr):
         element_field = infer_type(expr.element, grammar)
         separator_field = infer_type(expr.separator, grammar)
-        return PunctType(element_field, separator_field)
+        return PunctType(element_field, separator_field, expr.min_count > 0)
 
     if isinstance(expr, RefExpr):
         rule = grammar.lookup(expr.name)
@@ -204,7 +206,7 @@ def infer_type(expr: Expr, grammar: Grammar) -> Type:
         elif expr.min == 1 and expr.max == 1:
             ty = element_type
         else:
-            ty = ListType(element_type)
+            ty = ListType(element_type, expr.min > 0)
         return ty
 
     if isinstance(expr, SeqExpr):

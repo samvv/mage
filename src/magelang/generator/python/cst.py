@@ -69,9 +69,9 @@ def generate_cst(
         visited = set()
         def visit(ty: Type, allow_empty_sequences: bool) -> bool:
             if isinstance(ty, ListType):
-                return allow_empty_sequences
+                return allow_empty_sequences and not ty.required
             if isinstance(ty, PunctType):
-                return allow_empty_sequences
+                return allow_empty_sequences and not ty.required
             if isinstance(ty, NoneType):
                 return True
             if isinstance(ty, VariantType):
@@ -269,9 +269,9 @@ def generate_cst(
                 separator_type, separator_stmts = collect(ty.separator_type, separator_name, separator_assign, True)
 
                 coerced_ty = UnionType([
-                    ListType(value_type),
-                    ListType(TupleType([ value_type, make_optional(separator_type) ])),
-                    PunctType(value_type, make_optional(separator_type)),
+                    ListType(value_type, ty.required),
+                    ListType(TupleType([ value_type, make_optional(separator_type) ]), ty.required),
+                    PunctType(value_type, make_optional(separator_type), ty.required),
                 ])
 
                 yield coerced_ty, [
@@ -427,7 +427,7 @@ def generate_cst(
                 element_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name), expr=value)
                 element_type, element_stmts = collect(ty.element_type, element_name, element_assign, True)
 
-                yield ListType(element_type), [
+                yield ListType(element_type, ty.required), [
                     PyAssignStmt(
                         pattern=PyNamedPattern(new_elements_name),
                         expr=PyCallExpr(operator=PyNamedExpr('list'))
