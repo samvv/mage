@@ -7,7 +7,7 @@ from magelang.util import nonnull
 
 from .ast import *
 
-type Type = ExternType | NodeType | TokenType | VariantType | NeverType | TupleType | ListType | PunctType | UnionType
+type Type = ExternType | NodeType | TokenType | VariantType | NeverType | TupleType | ListType | PunctType | UnionType | NoneType
 
 class TypeBase(Record):
     pass
