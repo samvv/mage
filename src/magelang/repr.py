@@ -7,65 +7,70 @@ from magelang.util import nonnull
 
 from .ast import *
 
-class Type(Record):
+type Type = ExternType | NodeType | TokenType | VariantType | NeverType | TupleType | ListType | PunctType | UnionType
+
+class TypeBase(Record):
     pass
 
-class ExternType(Type):
+class ExternType(TypeBase):
     """
     A type that is directly representing the Foo part in a `pub foo -> Foo = bar` 
     """
     name: str
 
-class NodeType(Type):
+class RuleType(TypeBase):
+    name: str
+
+class NodeType(RuleType):
     """
     Matches a leaf node in the AST/CST.
     """
-    name: str
+    pass
 
-class TokenType(Type):
+class TokenType(RuleType):
     """
     Matches a token type in the CST.
     """
-    name: str
+    pass
 
-class VariantType(Type):
+class VariantType(RuleType):
     """
     Matches a union of different nodes in the AST/CST.
     """
-    name: str
+    pass
 
-class NeverType(Type):
+class NeverType(TypeBase):
     """
     Represents a type that never matches. Mostly useful to close off a union type when generating types.
     """
     pass
 
-class TupleType(Type):
+class TupleType(TypeBase):
     """
     A type that allows values to contain a specific sequence of types.
     """
     element_types: list[Type]
 
-class ListType(Type):
+class ListType(TypeBase):
     """
     A type that allows multiple values of the same underlying type.
     """
     element_type: Type
 
-class PunctType(Type):
+class PunctType(TypeBase):
     """
     A type that is like a list but where values are seperated by another type.
     """
     element_type: Type
     separator_type: Type
 
-class UnionType(Type):
+class UnionType(TypeBase):
     """
     A type where any of the member types are valid.
     """
     types: list[Type]
 
-class NoneType(Type):
+class NoneType(TypeBase):
     """
     A type that indicates that the value is empty.
 
