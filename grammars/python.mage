@@ -218,11 +218,14 @@ pub path
 pub alias
   = path asname:('as' ident)?
 
+pub from_alias
+  = name:(ident | '*') asname:('as' ident)?
+
 pub import_stmt
   = 'import' aliases:(alias %% ',')
 
 pub import_from_stmt
-  = 'from' path 'import' aliases:(alias %% ',')
+  = 'from' path 'import' aliases:(from_alias %% ',')
 
 pub stmt
   = assign_stmt

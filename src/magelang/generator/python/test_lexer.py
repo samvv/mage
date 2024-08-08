@@ -14,8 +14,13 @@ def generate_test_lexer(
     lexer_class_name = to_class_name('lexer', prefix)
 
     stmts: list[PyStmt] = [
-       PyImportFromStmt(PyRelativePath(dots=[ PyDot() ], name=PyQualName('cst')), aliases=[ PyAlias(PyAbsolutePath(PyQualName('*'))) ]),
-       PyImportFromStmt(PyRelativePath(dots=[ PyDot() ], name=PyQualName('lexer')), aliases=[ PyAlias(PyAbsolutePath(PyQualName(lexer_class_name))) ]),
+        PyImportFromStmt(
+            PyRelativePath(dots=[ PyDot() ], name=PyQualName('cst')),
+            aliases=[ PyFromAlias(PyAsterisk()) ]),
+        PyImportFromStmt(
+            PyRelativePath(dots=[ PyDot() ], name=PyQualName('lexer')),
+            aliases=[ PyFromAlias(lexer_class_name) ]
+        ),
     ]
 
     generate_temporary = NameGenerator()

@@ -664,6 +664,14 @@ def emit(node: PyNode) -> str:
                 visit_token(name)
             return
 
+        if isinstance(node, PyFromAlias):
+            visit_token(node.name)
+            if node.asname is not None:
+                as_kw, name = node.asname
+                visit_token(as_kw)
+                visit_token(name)
+            return
+
         if isinstance(node, PyIfCase):
             visit_token(node.if_keyword)
             out.write(' ')

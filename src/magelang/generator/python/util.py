@@ -1,4 +1,5 @@
 
+from typing import Iterator, Iterable
 import marko.inline
 from sweetener import is_iterator, warn
 from magelang.repr import *

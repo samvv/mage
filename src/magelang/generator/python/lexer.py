@@ -236,12 +236,13 @@ def generate_lexer(
     body.append(PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr('ScanError'), args=[])))
 
     return PyModule(stmts=[
-        PyImportFromStmt(PyRelativePath(dots=[ PyDot() ], name=PyQualName('cst')), aliases=[
-            PyAlias(PyAbsolutePath(PyQualName('*'))),
-        ]),
+        PyImportFromStmt(
+            PyRelativePath(dots=[ PyDot() ], name=PyQualName('cst')),
+            aliases=[ PyFromAlias(PyAsterisk()), ]
+        ),
         PyImportFromStmt(PyAbsolutePath(PyQualName(modules=[ 'magelang' ], name='runtime')), aliases=[
-            PyAlias(PyAbsolutePath(PyQualName('AbstractLexer'))),
-            PyAlias(PyAbsolutePath(PyQualName('ScanError'))),
+            PyFromAlias('AbstractLexer'),
+            PyFromAlias('ScanError'),
         ]),
         PyClassDef(lexer_class_name, bases=[ 'AbstractLexer' ], body=[
             PyFuncDef('lex', params=[ PyNamedParam(PyNamedPattern('self')) ], return_type=PyNamedExpr(token_type_name), body=body),

@@ -1,106 +1,63 @@
+from typing import Any, TypeGuard, Never
 
-from typing import TypeGuard, Iterable, Iterator, TypeAlias, TypeGuard, Any, Callable, TypeVar, Never
 
-class TextPos:
+from magelang.runtime import BaseNode, BaseToken, Punctuated, Span
 
-    def __init__(self, offset: int, line: int, column: int) -> None:
-        self.offset = offset
-        self.line = line
-        self.column = column
 
-class Span:
+class _PyBaseNode(BaseNode):
 
-    def __init__(self, start_offset: int, end_offset: int) -> None:
-        self.start_offset = start_offset
-        self.end_offset = end_offset
-
-    def __len__(self) -> int:
-        return self.end_offset - self.start_offset
-
-class _BaseSyntax:
     pass
 
-class _BaseToken(_BaseSyntax):
 
-    def __init__(self, span: Span | None = None) -> None:
-        super().__init__()
-        self.span = span
+class _PyBaseToken(BaseToken):
 
-class _BaseNode(_BaseSyntax):
+    pass
 
-    def __init__(self, parent: Any = None) -> None:
-        super().__init__()
-        self._parent = parent
-
-    def has_parent(self) -> bool:
-        return self._parent is not None
 
 def is_py_token(value: Any) -> TypeGuard['PyToken']:
-    return isinstance(value, _BaseToken)
+    return isinstance(value, _PyBaseToken)
+
 
 def is_py_node(value: Any) -> TypeGuard['PyNode']:
-    return isinstance(value, _BaseNode)
+    return isinstance(value, _PyBaseNode)
+
 
 def is_py_syntax(value: Any) -> TypeGuard['PySyntax']:
-    return isinstance(value, _BaseSyntax)
+    return is_py_node(value) or is_py_token(value)
 
-_T = TypeVar('_T')
-_P = TypeVar('_P')
 
-class Punctuated[_T, _P]:
-
-    def __init__(self, elements: Iterable[tuple[_T, _P | None]] | None = None) -> None:
-        self.elements = []
-        self.last = None
-        if elements is not None:
-          for element, sep  in elements:
-              self.append(element, sep)
-
-    def append(self, element: _T, separator: _P | None = None) -> None:
-        if separator is None:
-            assert(self.last is None)
-            self.last = element
-        else:
-            self.elements.append((element, separator))
-
-    def __iter__(self) -> Iterator[tuple[_T, _P | None]]:
-        for item in self.elements:
-            yield item
-        if self.last is not None:
-            yield self.last, None
-
-class PyIdent(_BaseToken):
+class PyIdent(_PyBaseToken):
 
     def __init__(self, value: str, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
-class PyFloat(_BaseToken):
+class PyFloat(_PyBaseToken):
 
     def __init__(self, value: float, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
-class PyInteger(_BaseToken):
+class PyInteger(_PyBaseToken):
 
     def __init__(self, value: int, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
-class PyString(_BaseToken):
+class PyString(_PyBaseToken):
 
     def __init__(self, value: str, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
 
 
-type PySliceParent = PySubscriptExpr | PySubscriptPattern
+type PySliceParent = PySubscriptPattern | PySubscriptExpr
 
 
-class PySlice(_BaseNode):
+class PySlice(_PyBaseNode):
 
     def __init__(self, *, lower: 'PyExpr | None' = None, colon: 'PyColon | None' = None, upper: 'PyExpr | None' = None, step: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None) -> None:
         if is_py_expr(lower):
@@ -156,10 +113,10 @@ def is_py_pattern(value: Any) -> TypeGuard[PyPattern]:
     return isinstance(value, PyNamedPattern) or isinstance(value, PyAttrPattern) or isinstance(value, PySubscriptPattern) or isinstance(value, PyStarredPattern) or isinstance(value, PyListPattern) or isinstance(value, PyTuplePattern)
 
 
-type PyNamedPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyComprehension | PyDeleteStmt | PyListPattern | PySubscriptPattern | PyAttrPattern | PyAssignStmt
+type PyNamedPatternParent = PySubscriptPattern | PyNamedParam | PyAttrPattern | PyForStmt | PyDeleteStmt | PyAssignStmt | PyListPattern | PyComprehension | PyTuplePattern
 
 
-class PyNamedPattern(_BaseNode):
+class PyNamedPattern(_PyBaseNode):
 
     def __init__(self, name: 'str | PyIdent') -> None:
         if isinstance(name, str):
@@ -175,10 +132,10 @@ class PyNamedPattern(_BaseNode):
         return self._parent
 
 
-type PyAttrPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyComprehension | PyDeleteStmt | PyListPattern | PySubscriptPattern | PyAttrPattern | PyAssignStmt
+type PyAttrPatternParent = PySubscriptPattern | PyNamedParam | PyAttrPattern | PyForStmt | PyDeleteStmt | PyAssignStmt | PyListPattern | PyComprehension | PyTuplePattern
 
 
-class PyAttrPattern(_BaseNode):
+class PyAttrPattern(_PyBaseNode):
 
     def __init__(self, pattern: 'PyPattern', name: 'str | PyIdent', *, dot: 'PyDot | None' = None) -> None:
         pattern_out = pattern
@@ -203,12 +160,12 @@ class PyAttrPattern(_BaseNode):
         return self._parent
 
 
-type PySubscriptPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyComprehension | PyDeleteStmt | PyListPattern | PySubscriptPattern | PyAttrPattern | PyAssignStmt
+type PySubscriptPatternParent = PySubscriptPattern | PyNamedParam | PyAttrPattern | PyForStmt | PyDeleteStmt | PyAssignStmt | PyListPattern | PyComprehension | PyTuplePattern
 
 
-class PySubscriptPattern(_BaseNode):
+class PySubscriptPattern(_PyBaseNode):
 
-    def __init__(self, pattern: 'PyPattern', *, open_bracket: 'PyOpenBracket | None' = None, slices: 'list[PyPattern | PySlice | None] | list[tuple[PyPattern | PySlice | None, PyComma | None | None]] | Punctuated[PyPattern | PySlice | None, PyComma | None] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+    def __init__(self, pattern: 'PyPattern', *, open_bracket: 'PyOpenBracket | None' = None, slices: 'list[PyPattern | PySlice] | list[tuple[PyPattern | PySlice, PyComma | None | None]] | Punctuated[PyPattern | PySlice, PyComma | None] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         pattern_out = pattern
         self.pattern: PyPattern = pattern_out
         if open_bracket is None:
@@ -236,8 +193,6 @@ class PySubscriptPattern(_BaseNode):
                             slices_separator = None
                         if is_py_pattern(slices_value):
                             new_slices_value = slices_value
-                        elif slices_value is None:
-                            new_slices_value = PySlice()
                         elif isinstance(slices_value, PySlice):
                             new_slices_value = slices_value
                         else:
@@ -258,8 +213,6 @@ class PySubscriptPattern(_BaseNode):
                             slices_value = first_slices_element
                         if is_py_pattern(slices_value):
                             new_slices_value = slices_value
-                        elif slices_value is None:
-                            new_slices_value = PySlice()
                         elif isinstance(slices_value, PySlice):
                             new_slices_value = slices_value
                         else:
@@ -285,10 +238,10 @@ class PySubscriptPattern(_BaseNode):
         return self._parent
 
 
-type PyStarredPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyComprehension | PyDeleteStmt | PyListPattern | PySubscriptPattern | PyAttrPattern | PyAssignStmt
+type PyStarredPatternParent = PySubscriptPattern | PyNamedParam | PyAttrPattern | PyForStmt | PyDeleteStmt | PyAssignStmt | PyListPattern | PyComprehension | PyTuplePattern
 
 
-class PyStarredPattern(_BaseNode):
+class PyStarredPattern(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', *, asterisk: 'PyAsterisk | None' = None) -> None:
         if asterisk is None:
@@ -306,10 +259,10 @@ class PyStarredPattern(_BaseNode):
         return self._parent
 
 
-type PyListPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyComprehension | PyDeleteStmt | PyListPattern | PySubscriptPattern | PyAttrPattern | PyAssignStmt
+type PyListPatternParent = PySubscriptPattern | PyNamedParam | PyAttrPattern | PyForStmt | PyDeleteStmt | PyAssignStmt | PyListPattern | PyComprehension | PyTuplePattern
 
 
-class PyListPattern(_BaseNode):
+class PyListPattern(_PyBaseNode):
 
     def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'list[PyPattern] | list[tuple[PyPattern, PyComma | None | None]] | Punctuated[PyPattern, PyComma | None] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         if open_bracket is None:
@@ -372,10 +325,10 @@ class PyListPattern(_BaseNode):
         return self._parent
 
 
-type PyTuplePatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyComprehension | PyDeleteStmt | PyListPattern | PySubscriptPattern | PyAttrPattern | PyAssignStmt
+type PyTuplePatternParent = PySubscriptPattern | PyNamedParam | PyAttrPattern | PyForStmt | PyDeleteStmt | PyAssignStmt | PyListPattern | PyComprehension | PyTuplePattern
 
 
-class PyTuplePattern(_BaseNode):
+class PyTuplePattern(_PyBaseNode):
 
     def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'list[PyPattern] | list[tuple[PyPattern, PyComma | None | None]] | Punctuated[PyPattern, PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         if open_paren is None:
@@ -448,7 +401,7 @@ def is_py_expr(value: Any) -> TypeGuard[PyExpr]:
 type PyGuardParent = PyComprehension
 
 
-class PyGuard(_BaseNode):
+class PyGuard(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', *, if_keyword: 'PyIfKeyword | None' = None) -> None:
         if if_keyword is None:
@@ -469,7 +422,7 @@ class PyGuard(_BaseNode):
 type PyComprehensionParent = PyGeneratorExpr
 
 
-class PyComprehension(_BaseNode):
+class PyComprehension(_PyBaseNode):
 
     def __init__(self, pattern: 'PyPattern', target: 'PyExpr', *, async_keyword: 'PyAsyncKeyword | None' = None, for_keyword: 'PyForKeyword | None' = None, in_keyword: 'PyInKeyword | None' = None, guards: 'list[PyGuard] | None' = None) -> None:
         if isinstance(async_keyword, PyAsyncKeyword):
@@ -514,10 +467,10 @@ class PyComprehension(_BaseNode):
         return self._parent
 
 
-type PyGeneratorExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+type PyGeneratorExprParent = PyElifCase | PyRaiseStmt | PyExceptHandler | PyListExpr | PyStarredExpr | PyInfixExpr | PyExprStmt | PyIfCase | PyPrefixExpr | PyCallExpr | PyAssignStmt | PyGeneratorExpr | PyComprehension | PySlice | PyGuard | PyNestExpr | PyDecorator | PyFuncDef | PyRetStmt | PyTypeAliasStmt | PyWhileStmt | PySubscriptExpr | PyForStmt | PyStarredPattern | PyTupleExpr | PyKeywordArg | PyNamedParam | PyAttrExpr
 
 
-class PyGeneratorExpr(_BaseNode):
+class PyGeneratorExpr(_PyBaseNode):
 
     def __init__(self, element: 'PyExpr', *, generators: 'list[PyComprehension] | None' = None) -> None:
         element_out = element
@@ -539,10 +492,10 @@ class PyGeneratorExpr(_BaseNode):
         return self._parent
 
 
-type PyConstExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+type PyConstExprParent = PyElifCase | PyRaiseStmt | PyExceptHandler | PyListExpr | PyStarredExpr | PyInfixExpr | PyExprStmt | PyIfCase | PyPrefixExpr | PyCallExpr | PyAssignStmt | PyGeneratorExpr | PyComprehension | PySlice | PyGuard | PyNestExpr | PyDecorator | PyFuncDef | PyRetStmt | PyTypeAliasStmt | PyWhileStmt | PySubscriptExpr | PyForStmt | PyStarredPattern | PyTupleExpr | PyKeywordArg | PyNamedParam | PyAttrExpr
 
 
-class PyConstExpr(_BaseNode):
+class PyConstExpr(_PyBaseNode):
 
     def __init__(self, literal: 'str | PyString | float | PyFloat | int | PyInteger') -> None:
         if isinstance(literal, str):
@@ -566,10 +519,10 @@ class PyConstExpr(_BaseNode):
         return self._parent
 
 
-type PyNestExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+type PyNestExprParent = PyElifCase | PyRaiseStmt | PyExceptHandler | PyListExpr | PyStarredExpr | PyInfixExpr | PyExprStmt | PyIfCase | PyPrefixExpr | PyCallExpr | PyAssignStmt | PyGeneratorExpr | PyComprehension | PySlice | PyGuard | PyNestExpr | PyDecorator | PyFuncDef | PyRetStmt | PyTypeAliasStmt | PyWhileStmt | PySubscriptExpr | PyForStmt | PyStarredPattern | PyTupleExpr | PyKeywordArg | PyNamedParam | PyAttrExpr
 
 
-class PyNestExpr(_BaseNode):
+class PyNestExpr(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', *, open_paren: 'PyOpenParen | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         if open_paren is None:
@@ -594,10 +547,10 @@ class PyNestExpr(_BaseNode):
         return self._parent
 
 
-type PyNamedExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+type PyNamedExprParent = PyElifCase | PyRaiseStmt | PyExceptHandler | PyListExpr | PyStarredExpr | PyInfixExpr | PyExprStmt | PyIfCase | PyPrefixExpr | PyCallExpr | PyAssignStmt | PyGeneratorExpr | PyComprehension | PySlice | PyGuard | PyNestExpr | PyDecorator | PyFuncDef | PyRetStmt | PyTypeAliasStmt | PyWhileStmt | PySubscriptExpr | PyForStmt | PyStarredPattern | PyTupleExpr | PyKeywordArg | PyNamedParam | PyAttrExpr
 
 
-class PyNamedExpr(_BaseNode):
+class PyNamedExpr(_PyBaseNode):
 
     def __init__(self, name: 'str | PyIdent') -> None:
         if isinstance(name, str):
@@ -613,10 +566,10 @@ class PyNamedExpr(_BaseNode):
         return self._parent
 
 
-type PyAttrExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+type PyAttrExprParent = PyElifCase | PyRaiseStmt | PyExceptHandler | PyListExpr | PyStarredExpr | PyInfixExpr | PyExprStmt | PyIfCase | PyPrefixExpr | PyCallExpr | PyAssignStmt | PyGeneratorExpr | PyComprehension | PySlice | PyGuard | PyNestExpr | PyDecorator | PyFuncDef | PyRetStmt | PyTypeAliasStmt | PyWhileStmt | PySubscriptExpr | PyForStmt | PyStarredPattern | PyTupleExpr | PyKeywordArg | PyNamedParam | PyAttrExpr
 
 
-class PyAttrExpr(_BaseNode):
+class PyAttrExpr(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', name: 'str | PyIdent', *, dot: 'PyDot | None' = None) -> None:
         expr_out = expr
@@ -641,12 +594,12 @@ class PyAttrExpr(_BaseNode):
         return self._parent
 
 
-type PySubscriptExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+type PySubscriptExprParent = PyElifCase | PyRaiseStmt | PyExceptHandler | PyListExpr | PyStarredExpr | PyInfixExpr | PyExprStmt | PyIfCase | PyPrefixExpr | PyCallExpr | PyAssignStmt | PyGeneratorExpr | PyComprehension | PySlice | PyGuard | PyNestExpr | PyDecorator | PyFuncDef | PyRetStmt | PyTypeAliasStmt | PyWhileStmt | PySubscriptExpr | PyForStmt | PyStarredPattern | PyTupleExpr | PyKeywordArg | PyNamedParam | PyAttrExpr
 
 
-class PySubscriptExpr(_BaseNode):
+class PySubscriptExpr(_PyBaseNode):
 
-    def __init__(self, expr: 'PyExpr', *, open_bracket: 'PyOpenBracket | None' = None, slices: 'list[PyExpr | PySlice | None] | list[tuple[PyExpr | PySlice | None, PyComma | None | None]] | Punctuated[PyExpr | PySlice | None, PyComma | None] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+    def __init__(self, expr: 'PyExpr', *, open_bracket: 'PyOpenBracket | None' = None, slices: 'list[PyExpr | PySlice] | list[tuple[PyExpr | PySlice, PyComma | None | None]] | Punctuated[PyExpr | PySlice, PyComma | None] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         expr_out = expr
         self.expr: PyExpr = expr_out
         if open_bracket is None:
@@ -674,8 +627,6 @@ class PySubscriptExpr(_BaseNode):
                             slices_separator = None
                         if is_py_expr(slices_value):
                             new_slices_value = slices_value
-                        elif slices_value is None:
-                            new_slices_value = PySlice()
                         elif isinstance(slices_value, PySlice):
                             new_slices_value = slices_value
                         else:
@@ -696,8 +647,6 @@ class PySubscriptExpr(_BaseNode):
                             slices_value = first_slices_element
                         if is_py_expr(slices_value):
                             new_slices_value = slices_value
-                        elif slices_value is None:
-                            new_slices_value = PySlice()
                         elif isinstance(slices_value, PySlice):
                             new_slices_value = slices_value
                         else:
@@ -723,10 +672,10 @@ class PySubscriptExpr(_BaseNode):
         return self._parent
 
 
-type PyStarredExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+type PyStarredExprParent = PyElifCase | PyRaiseStmt | PyExceptHandler | PyListExpr | PyStarredExpr | PyInfixExpr | PyExprStmt | PyIfCase | PyPrefixExpr | PyCallExpr | PyAssignStmt | PyGeneratorExpr | PyComprehension | PySlice | PyGuard | PyNestExpr | PyDecorator | PyFuncDef | PyRetStmt | PyTypeAliasStmt | PyWhileStmt | PySubscriptExpr | PyForStmt | PyStarredPattern | PyTupleExpr | PyKeywordArg | PyNamedParam | PyAttrExpr
 
 
-class PyStarredExpr(_BaseNode):
+class PyStarredExpr(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', *, asterisk: 'PyAsterisk | None' = None) -> None:
         if asterisk is None:
@@ -744,10 +693,10 @@ class PyStarredExpr(_BaseNode):
         return self._parent
 
 
-type PyListExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+type PyListExprParent = PyElifCase | PyRaiseStmt | PyExceptHandler | PyListExpr | PyStarredExpr | PyInfixExpr | PyExprStmt | PyIfCase | PyPrefixExpr | PyCallExpr | PyAssignStmt | PyGeneratorExpr | PyComprehension | PySlice | PyGuard | PyNestExpr | PyDecorator | PyFuncDef | PyRetStmt | PyTypeAliasStmt | PyWhileStmt | PySubscriptExpr | PyForStmt | PyStarredPattern | PyTupleExpr | PyKeywordArg | PyNamedParam | PyAttrExpr
 
 
-class PyListExpr(_BaseNode):
+class PyListExpr(_PyBaseNode):
 
     def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'list[PyExpr] | list[tuple[PyExpr, PyComma | None | None]] | Punctuated[PyExpr, PyComma | None] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         if open_bracket is None:
@@ -810,10 +759,10 @@ class PyListExpr(_BaseNode):
         return self._parent
 
 
-type PyTupleExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+type PyTupleExprParent = PyElifCase | PyRaiseStmt | PyExceptHandler | PyListExpr | PyStarredExpr | PyInfixExpr | PyExprStmt | PyIfCase | PyPrefixExpr | PyCallExpr | PyAssignStmt | PyGeneratorExpr | PyComprehension | PySlice | PyGuard | PyNestExpr | PyDecorator | PyFuncDef | PyRetStmt | PyTypeAliasStmt | PyWhileStmt | PySubscriptExpr | PyForStmt | PyStarredPattern | PyTupleExpr | PyKeywordArg | PyNamedParam | PyAttrExpr
 
 
-class PyTupleExpr(_BaseNode):
+class PyTupleExpr(_PyBaseNode):
 
     def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'list[PyExpr] | list[tuple[PyExpr, PyComma | None | None]] | Punctuated[PyExpr, PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         if open_paren is None:
@@ -886,7 +835,7 @@ def is_py_arg(value: Any) -> TypeGuard[PyArg]:
 type PyKeywordArgParent = PyCallExpr
 
 
-class PyKeywordArg(_BaseNode):
+class PyKeywordArg(_PyBaseNode):
 
     def __init__(self, name: 'str | PyIdent', expr: 'PyExpr', *, equals: 'PyEquals | None' = None) -> None:
         if isinstance(name, str):
@@ -911,10 +860,10 @@ class PyKeywordArg(_BaseNode):
         return self._parent
 
 
-type PyCallExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+type PyCallExprParent = PyElifCase | PyRaiseStmt | PyExceptHandler | PyListExpr | PyStarredExpr | PyInfixExpr | PyExprStmt | PyIfCase | PyPrefixExpr | PyCallExpr | PyAssignStmt | PyGeneratorExpr | PyComprehension | PySlice | PyGuard | PyNestExpr | PyDecorator | PyFuncDef | PyRetStmt | PyTypeAliasStmt | PyWhileStmt | PySubscriptExpr | PyForStmt | PyStarredPattern | PyTupleExpr | PyKeywordArg | PyNamedParam | PyAttrExpr
 
 
-class PyCallExpr(_BaseNode):
+class PyCallExpr(_PyBaseNode):
 
     def __init__(self, operator: 'PyExpr', *, open_paren: 'PyOpenParen | None' = None, args: 'list[PyArg] | list[tuple[PyArg, PyComma | None | None]] | Punctuated[PyArg, PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         operator_out = operator
@@ -986,10 +935,10 @@ def is_py_prefix_op(value: Any) -> TypeGuard[PyPrefixOp]:
     return isinstance(value, PyNotKeyword) or isinstance(value, PyPlus) or isinstance(value, PyHyphen) or isinstance(value, PyTilde)
 
 
-type PyPrefixExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+type PyPrefixExprParent = PyElifCase | PyRaiseStmt | PyExceptHandler | PyListExpr | PyStarredExpr | PyInfixExpr | PyExprStmt | PyIfCase | PyPrefixExpr | PyCallExpr | PyAssignStmt | PyGeneratorExpr | PyComprehension | PySlice | PyGuard | PyNestExpr | PyDecorator | PyFuncDef | PyRetStmt | PyTypeAliasStmt | PyWhileStmt | PySubscriptExpr | PyForStmt | PyStarredPattern | PyTupleExpr | PyKeywordArg | PyNamedParam | PyAttrExpr
 
 
-class PyPrefixExpr(_BaseNode):
+class PyPrefixExpr(_PyBaseNode):
 
     def __init__(self, prefix_op: 'PyPrefixOp', expr: 'PyExpr') -> None:
         prefix_op_out = prefix_op
@@ -1009,10 +958,10 @@ def is_py_infix_op(value: Any) -> TypeGuard[PyInfixOp]:
     return isinstance(value, PyPlus) or isinstance(value, PyHyphen) or isinstance(value, PyAsterisk) or isinstance(value, PySlash) or isinstance(value, PySlashSlash) or isinstance(value, PyPercenct) or isinstance(value, PyLessThanLessThan) or isinstance(value, PyGreaterThanGreaterThan) or isinstance(value, PyVerticalBar) or isinstance(value, PyCaret) or isinstance(value, PyAmpersand) or isinstance(value, PyAtSign) or isinstance(value, PyOrKeyword) or isinstance(value, PyAndKeyword) or isinstance(value, PyEqualsEquals) or isinstance(value, PyExclamationMarkEquals) or isinstance(value, PyLessThan) or isinstance(value, PyLessThanEquals) or isinstance(value, PyGreaterThan) or isinstance(value, PyGreaterThanEquals) or isinstance(value, PyIsKeyword) or (isinstance(value, tuple) and isinstance(value[0], PyIsKeyword) and isinstance(value[1], PyNotKeyword)) or isinstance(value, PyInKeyword) or (isinstance(value, tuple) and isinstance(value[0], PyNotKeyword) and isinstance(value[1], PyInKeyword))
 
 
-type PyInfixExprParent = PySlice | PyComprehension | PyGeneratorExpr | PyGuard | PyAttrExpr | PyDecorator | PyIfCase | PyNamedParam | PyElifCase | PyAssignStmt | PyStarredPattern | PyExceptHandler | PySubscriptExpr | PyTypeAliasStmt | PyWhileStmt | PyFuncDef | PyExprStmt | PyListExpr | PyInfixExpr | PyKeywordArg | PyRetStmt | PyRaiseStmt | PyNestExpr | PyPrefixExpr | PyTupleExpr | PyForStmt | PyCallExpr | PyStarredExpr
+type PyInfixExprParent = PyElifCase | PyRaiseStmt | PyExceptHandler | PyListExpr | PyStarredExpr | PyInfixExpr | PyExprStmt | PyIfCase | PyPrefixExpr | PyCallExpr | PyAssignStmt | PyGeneratorExpr | PyComprehension | PySlice | PyGuard | PyNestExpr | PyDecorator | PyFuncDef | PyRetStmt | PyTypeAliasStmt | PyWhileStmt | PySubscriptExpr | PyForStmt | PyStarredPattern | PyTupleExpr | PyKeywordArg | PyNamedParam | PyAttrExpr
 
 
-class PyInfixExpr(_BaseNode):
+class PyInfixExpr(_PyBaseNode):
 
     def __init__(self, left: 'PyExpr', op: 'PyInfixOp', right: 'PyExpr') -> None:
         left_out = left
@@ -1027,10 +976,10 @@ class PyInfixExpr(_BaseNode):
         return self._parent
 
 
-type PyQualNameParent = PyAbsolutePath | PyRelativePath
+type PyQualNameParent = PyRelativePath | PyAbsolutePath
 
 
-class PyQualName(_BaseNode):
+class PyQualName(_PyBaseNode):
 
     def __init__(self, name: 'str | PyIdent', *, modules: 'list[str | PyIdent | tuple[str | PyIdent, PyDot | None]] | None' = None) -> None:
         if modules is None:
@@ -1079,10 +1028,10 @@ class PyQualName(_BaseNode):
         return self._parent
 
 
-type PyAbsolutePathParent = PyAlias | PyImportFromStmt
+type PyAbsolutePathParent = PyImportFromStmt | PyAlias
 
 
-class PyAbsolutePath(_BaseNode):
+class PyAbsolutePath(_PyBaseNode):
 
     def __init__(self, name: 'PyQualName') -> None:
         name_out = name
@@ -1093,10 +1042,10 @@ class PyAbsolutePath(_BaseNode):
         return self._parent
 
 
-type PyRelativePathParent = PyAlias | PyImportFromStmt
+type PyRelativePathParent = PyImportFromStmt | PyAlias
 
 
-class PyRelativePath(_BaseNode):
+class PyRelativePath(_PyBaseNode):
 
     def __init__(self, *, dots: 'list[PyDot | None] | None' = None, name: 'PyQualName | None' = None) -> None:
         if dots is None:
@@ -1135,10 +1084,10 @@ def is_py_path(value: Any) -> TypeGuard[PyPath]:
     return isinstance(value, PyAbsolutePath) or isinstance(value, PyRelativePath)
 
 
-type PyAliasParent = PyImportStmt | PyImportFromStmt
+type PyAliasParent = PyImportStmt
 
 
-class PyAlias(_BaseNode):
+class PyAlias(_PyBaseNode):
 
     def __init__(self, path: 'PyPath', *, asname: 'str | PyIdent | tuple[PyAsKeyword | None, str | PyIdent] | None' = None) -> None:
         path_out = path
@@ -1175,10 +1124,57 @@ class PyAlias(_BaseNode):
         return self._parent
 
 
-type PyImportStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyFromAliasParent = PyImportFromStmt
 
 
-class PyImportStmt(_BaseNode):
+class PyFromAlias(_PyBaseNode):
+
+    def __init__(self, name: 'str | PyIdent | PyAsterisk', *, asname: 'str | PyIdent | tuple[PyAsKeyword | None, str | PyIdent] | None' = None) -> None:
+        if isinstance(name, str):
+            name_out = PyIdent(name)
+        elif isinstance(name, PyIdent):
+            name_out = name
+        elif isinstance(name, PyAsterisk):
+            name_out = name
+        else:
+            raise ValueError("the field 'name' received an unrecognised value'")
+        self.name: PyIdent | PyAsterisk = name_out
+        if isinstance(asname, str):
+            asname_out = (PyAsKeyword(), PyIdent(asname))
+        elif isinstance(asname, PyIdent):
+            asname_out = (PyAsKeyword(), asname)
+        elif isinstance(asname, tuple):
+            assert(isinstance(asname, tuple))
+            asname_0 = asname[0]
+            if asname_0 is None:
+                new_asname_0 = PyAsKeyword()
+            elif isinstance(asname_0, PyAsKeyword):
+                new_asname_0 = asname_0
+            else:
+                raise ValueError("the field 'asname' received an unrecognised value'")
+            asname_1 = asname[1]
+            if isinstance(asname_1, str):
+                new_asname_1 = PyIdent(asname_1)
+            elif isinstance(asname_1, PyIdent):
+                new_asname_1 = asname_1
+            else:
+                raise ValueError("the field 'asname' received an unrecognised value'")
+            asname_out = (new_asname_0, new_asname_1)
+        elif asname is None:
+            asname_out = None
+        else:
+            raise ValueError("the field 'asname' received an unrecognised value'")
+        self.asname: tuple[PyAsKeyword, PyIdent] | None = asname_out
+
+    def parent(self) -> PyFromAliasParent:
+        assert(self._parent is not None)
+        return self._parent
+
+
+type PyImportStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
+
+
+class PyImportStmt(_PyBaseNode):
 
     def __init__(self, *, import_keyword: 'PyImportKeyword | None' = None, aliases: 'list[PyAlias] | list[tuple[PyAlias, PyComma | None | None]] | Punctuated[PyAlias, PyComma | None] | None' = None) -> None:
         if import_keyword is None:
@@ -1234,12 +1230,12 @@ class PyImportStmt(_BaseNode):
         return self._parent
 
 
-type PyImportFromStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyImportFromStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyImportFromStmt(_BaseNode):
+class PyImportFromStmt(_PyBaseNode):
 
-    def __init__(self, path: 'PyPath', *, from_keyword: 'PyFromKeyword | None' = None, import_keyword: 'PyImportKeyword | None' = None, aliases: 'list[PyAlias] | list[tuple[PyAlias, PyComma | None | None]] | Punctuated[PyAlias, PyComma | None] | None' = None) -> None:
+    def __init__(self, path: 'PyPath', *, from_keyword: 'PyFromKeyword | None' = None, import_keyword: 'PyImportKeyword | None' = None, aliases: 'list[PyFromAlias] | list[tuple[PyFromAlias, PyComma | None | None]] | Punctuated[PyFromAlias, PyComma | None] | None' = None) -> None:
         if from_keyword is None:
             from_keyword_out = PyFromKeyword()
         elif isinstance(from_keyword, PyFromKeyword):
@@ -1295,7 +1291,7 @@ class PyImportFromStmt(_BaseNode):
             aliases_out = new_aliases
         else:
             raise ValueError("the field 'aliases' received an unrecognised value'")
-        self.aliases: Punctuated[PyAlias, PyComma] = aliases_out
+        self.aliases: Punctuated[PyFromAlias, PyComma] = aliases_out
 
     def parent(self) -> PyImportFromStmtParent:
         assert(self._parent is not None)
@@ -1309,10 +1305,10 @@ def is_py_stmt(value: Any) -> TypeGuard[PyStmt]:
     return isinstance(value, PyAssignStmt) or isinstance(value, PyBreakStmt) or isinstance(value, PyClassDef) or isinstance(value, PyContinueStmt) or isinstance(value, PyDeleteStmt) or isinstance(value, PyExprStmt) or isinstance(value, PyForStmt) or isinstance(value, PyFuncDef) or isinstance(value, PyIfStmt) or isinstance(value, PyImportStmt) or isinstance(value, PyImportFromStmt) or isinstance(value, PyPassStmt) or isinstance(value, PyRaiseStmt) or isinstance(value, PyRetStmt) or isinstance(value, PyTryStmt) or isinstance(value, PyTypeAliasStmt) or isinstance(value, PyWhileStmt)
 
 
-type PyRetStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyRetStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyRetStmt(_BaseNode):
+class PyRetStmt(_PyBaseNode):
 
     def __init__(self, *, return_keyword: 'PyReturnKeyword | None' = None, expr: 'PyExpr | None' = None) -> None:
         if return_keyword is None:
@@ -1335,10 +1331,10 @@ class PyRetStmt(_BaseNode):
         return self._parent
 
 
-type PyExprStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyExprStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyExprStmt(_BaseNode):
+class PyExprStmt(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr') -> None:
         expr_out = expr
@@ -1349,10 +1345,10 @@ class PyExprStmt(_BaseNode):
         return self._parent
 
 
-type PyAssignStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyAssignStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyAssignStmt(_BaseNode):
+class PyAssignStmt(_PyBaseNode):
 
     def __init__(self, pattern: 'PyPattern', expr: 'PyExpr', *, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None, equals: 'PyEquals | None' = None) -> None:
         pattern_out = pattern
@@ -1391,10 +1387,10 @@ class PyAssignStmt(_BaseNode):
         return self._parent
 
 
-type PyPassStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyPassStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyPassStmt(_BaseNode):
+class PyPassStmt(_PyBaseNode):
 
     def __init__(self, *, pass_keyword: 'PyPassKeyword | None' = None) -> None:
         if pass_keyword is None:
@@ -1413,9 +1409,9 @@ class PyPassStmt(_BaseNode):
 type PyIfCaseParent = PyIfStmt
 
 
-class PyIfCase(_BaseNode):
+class PyIfCase(_PyBaseNode):
 
-    def __init__(self, test: 'PyExpr', *, if_keyword: 'PyIfKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None) -> None:
+    def __init__(self, test: 'PyExpr', body: 'PyStmt | list[PyStmt]', *, if_keyword: 'PyIfKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
         if if_keyword is None:
             if_keyword_out = PyIfKeyword()
         elif isinstance(if_keyword, PyIfKeyword):
@@ -1434,8 +1430,6 @@ class PyIfCase(_BaseNode):
         self.colon: PyColon = colon_out
         if is_py_stmt(body):
             body_out = body
-        elif body is None:
-            body_out = list()
         elif isinstance(body, list):
             new_body = list()
             for body_element in body:
@@ -1454,9 +1448,9 @@ class PyIfCase(_BaseNode):
 type PyElifCaseParent = PyIfStmt
 
 
-class PyElifCase(_BaseNode):
+class PyElifCase(_PyBaseNode):
 
-    def __init__(self, test: 'PyExpr', *, elif_keyword: 'PyElifKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None) -> None:
+    def __init__(self, test: 'PyExpr', body: 'PyStmt | list[PyStmt]', *, elif_keyword: 'PyElifKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
         if elif_keyword is None:
             elif_keyword_out = PyElifKeyword()
         elif isinstance(elif_keyword, PyElifKeyword):
@@ -1475,8 +1469,6 @@ class PyElifCase(_BaseNode):
         self.colon: PyColon = colon_out
         if is_py_stmt(body):
             body_out = body
-        elif body is None:
-            body_out = list()
         elif isinstance(body, list):
             new_body = list()
             for body_element in body:
@@ -1495,9 +1487,9 @@ class PyElifCase(_BaseNode):
 type PyElseCaseParent = PyIfStmt
 
 
-class PyElseCase(_BaseNode):
+class PyElseCase(_PyBaseNode):
 
-    def __init__(self, *, else_keyword: 'PyElseKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None) -> None:
+    def __init__(self, body: 'PyStmt | list[PyStmt]', *, else_keyword: 'PyElseKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
         if else_keyword is None:
             else_keyword_out = PyElseKeyword()
         elif isinstance(else_keyword, PyElseKeyword):
@@ -1514,8 +1506,6 @@ class PyElseCase(_BaseNode):
         self.colon: PyColon = colon_out
         if is_py_stmt(body):
             body_out = body
-        elif body is None:
-            body_out = list()
         elif isinstance(body, list):
             new_body = list()
             for body_element in body:
@@ -1531,10 +1521,10 @@ class PyElseCase(_BaseNode):
         return self._parent
 
 
-type PyIfStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyIfStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyIfStmt(_BaseNode):
+class PyIfStmt(_PyBaseNode):
 
     def __init__(self, first: 'PyIfCase', *, alternatives: 'list[PyElifCase] | None' = None, last: 'PyElseCase | None' = None) -> None:
         first_out = first
@@ -1563,10 +1553,10 @@ class PyIfStmt(_BaseNode):
         return self._parent
 
 
-type PyDeleteStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyDeleteStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyDeleteStmt(_BaseNode):
+class PyDeleteStmt(_PyBaseNode):
 
     def __init__(self, pattern: 'PyPattern', *, del_keyword: 'PyDelKeyword | None' = None) -> None:
         if del_keyword is None:
@@ -1584,10 +1574,10 @@ class PyDeleteStmt(_BaseNode):
         return self._parent
 
 
-type PyRaiseStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyRaiseStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyRaiseStmt(_BaseNode):
+class PyRaiseStmt(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', *, raise_keyword: 'PyRaiseKeyword | None' = None, cause: 'PyExpr | tuple[PyFromKeyword | None, PyExpr] | None' = None) -> None:
         if raise_keyword is None:
@@ -1624,12 +1614,12 @@ class PyRaiseStmt(_BaseNode):
         return self._parent
 
 
-type PyForStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyForStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyForStmt(_BaseNode):
+class PyForStmt(_PyBaseNode):
 
-    def __init__(self, pattern: 'PyPattern', expr: 'PyExpr', *, for_keyword: 'PyForKeyword | None' = None, in_keyword: 'PyInKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None, else_clause: 'PyStmt | list[PyStmt] | tuple[PyElseKeyword | None, PyColon | None, PyStmt | list[PyStmt] | None] | None' = None) -> None:
+    def __init__(self, pattern: 'PyPattern', expr: 'PyExpr', body: 'PyStmt | list[PyStmt]', *, for_keyword: 'PyForKeyword | None' = None, in_keyword: 'PyInKeyword | None' = None, colon: 'PyColon | None' = None, else_clause: 'PyStmt | list[PyStmt] | tuple[PyElseKeyword | None, PyColon | None, PyStmt | list[PyStmt]] | None' = None) -> None:
         if for_keyword is None:
             for_keyword_out = PyForKeyword()
         elif isinstance(for_keyword, PyForKeyword):
@@ -1657,8 +1647,6 @@ class PyForStmt(_BaseNode):
         self.colon: PyColon = colon_out
         if is_py_stmt(body):
             body_out = body
-        elif body is None:
-            body_out = list()
         elif isinstance(body, list):
             new_body = list()
             for body_element in body:
@@ -1695,8 +1683,6 @@ class PyForStmt(_BaseNode):
             else_clause_2 = else_clause[2]
             if is_py_stmt(else_clause_2):
                 new_else_clause_2 = else_clause_2
-            elif else_clause_2 is None:
-                new_else_clause_2 = list()
             elif isinstance(else_clause_2, list):
                 new_else_clause_2 = list()
                 for else_clause_2_element in else_clause_2:
@@ -1717,12 +1703,12 @@ class PyForStmt(_BaseNode):
         return self._parent
 
 
-type PyWhileStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyWhileStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyWhileStmt(_BaseNode):
+class PyWhileStmt(_PyBaseNode):
 
-    def __init__(self, expr: 'PyExpr', *, while_keyword: 'PyWhileKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None, else_clause: 'PyStmt | list[PyStmt] | tuple[PyElseKeyword | None, PyColon | None, PyStmt | list[PyStmt] | None] | None' = None) -> None:
+    def __init__(self, expr: 'PyExpr', body: 'PyStmt | list[PyStmt]', *, while_keyword: 'PyWhileKeyword | None' = None, colon: 'PyColon | None' = None, else_clause: 'PyStmt | list[PyStmt] | tuple[PyElseKeyword | None, PyColon | None, PyStmt | list[PyStmt]] | None' = None) -> None:
         if while_keyword is None:
             while_keyword_out = PyWhileKeyword()
         elif isinstance(while_keyword, PyWhileKeyword):
@@ -1741,8 +1727,6 @@ class PyWhileStmt(_BaseNode):
         self.colon: PyColon = colon_out
         if is_py_stmt(body):
             body_out = body
-        elif body is None:
-            body_out = list()
         elif isinstance(body, list):
             new_body = list()
             for body_element in body:
@@ -1779,8 +1763,6 @@ class PyWhileStmt(_BaseNode):
             else_clause_2 = else_clause[2]
             if is_py_stmt(else_clause_2):
                 new_else_clause_2 = else_clause_2
-            elif else_clause_2 is None:
-                new_else_clause_2 = list()
             elif isinstance(else_clause_2, list):
                 new_else_clause_2 = list()
                 for else_clause_2_element in else_clause_2:
@@ -1801,10 +1783,10 @@ class PyWhileStmt(_BaseNode):
         return self._parent
 
 
-type PyBreakStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyBreakStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyBreakStmt(_BaseNode):
+class PyBreakStmt(_PyBaseNode):
 
     def __init__(self, *, break_keyword: 'PyBreakKeyword | None' = None) -> None:
         if break_keyword is None:
@@ -1820,10 +1802,10 @@ class PyBreakStmt(_BaseNode):
         return self._parent
 
 
-type PyContinueStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyContinueStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyContinueStmt(_BaseNode):
+class PyContinueStmt(_PyBaseNode):
 
     def __init__(self, *, continue_keyword: 'PyContinueKeyword | None' = None) -> None:
         if continue_keyword is None:
@@ -1839,10 +1821,10 @@ class PyContinueStmt(_BaseNode):
         return self._parent
 
 
-type PyTypeAliasStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyTypeAliasStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyTypeAliasStmt(_BaseNode):
+class PyTypeAliasStmt(_PyBaseNode):
 
     def __init__(self, name: 'str | PyIdent', expr: 'PyExpr', *, type_keyword: 'PyTypeKeyword | None' = None, type_params: 'list[PyExpr] | list[tuple[PyExpr, PyComma | None | None]] | Punctuated[PyExpr, PyComma | None] | tuple[PyOpenBracket | None, list[PyExpr] | list[tuple[PyExpr, PyComma | None | None]] | Punctuated[PyExpr, PyComma | None] | None, PyCloseBracket | None] | None' = None, equals: 'PyEquals | None' = None) -> None:
         if type_keyword is None:
@@ -1974,9 +1956,9 @@ class PyTypeAliasStmt(_BaseNode):
 type PyExceptHandlerParent = PyTryStmt
 
 
-class PyExceptHandler(_BaseNode):
+class PyExceptHandler(_PyBaseNode):
 
-    def __init__(self, expr: 'PyExpr', *, except_keyword: 'PyExceptKeyword | None' = None, binder: 'str | PyIdent | tuple[PyAsKeyword | None, str | PyIdent] | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None) -> None:
+    def __init__(self, expr: 'PyExpr', body: 'PyStmt | list[PyStmt]', *, except_keyword: 'PyExceptKeyword | None' = None, binder: 'str | PyIdent | tuple[PyAsKeyword | None, str | PyIdent] | None' = None, colon: 'PyColon | None' = None) -> None:
         if except_keyword is None:
             except_keyword_out = PyExceptKeyword()
         elif isinstance(except_keyword, PyExceptKeyword):
@@ -2021,8 +2003,6 @@ class PyExceptHandler(_BaseNode):
         self.colon: PyColon = colon_out
         if is_py_stmt(body):
             body_out = body
-        elif body is None:
-            body_out = list()
         elif isinstance(body, list):
             new_body = list()
             for body_element in body:
@@ -2038,12 +2018,12 @@ class PyExceptHandler(_BaseNode):
         return self._parent
 
 
-type PyTryStmtParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyTryStmtParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyTryStmt(_BaseNode):
+class PyTryStmt(_PyBaseNode):
 
-    def __init__(self, *, try_keyword: 'PyTryKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None, handlers: 'list[PyExceptHandler] | None' = None, else_clause: 'PyStmt | list[PyStmt] | tuple[PyElseKeyword | None, PyColon | None, PyStmt | list[PyStmt] | None] | None' = None, finally_clause: 'PyStmt | list[PyStmt] | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | list[PyStmt] | None] | None' = None) -> None:
+    def __init__(self, body: 'PyStmt | list[PyStmt]', *, try_keyword: 'PyTryKeyword | None' = None, colon: 'PyColon | None' = None, handlers: 'list[PyExceptHandler] | None' = None, else_clause: 'PyStmt | list[PyStmt] | tuple[PyElseKeyword | None, PyColon | None, PyStmt | list[PyStmt]] | None' = None, finally_clause: 'PyStmt | list[PyStmt] | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | list[PyStmt]] | None' = None) -> None:
         if try_keyword is None:
             try_keyword_out = PyTryKeyword()
         elif isinstance(try_keyword, PyTryKeyword):
@@ -2060,8 +2040,6 @@ class PyTryStmt(_BaseNode):
         self.colon: PyColon = colon_out
         if is_py_stmt(body):
             body_out = body
-        elif body is None:
-            body_out = list()
         elif isinstance(body, list):
             new_body = list()
             for body_element in body:
@@ -2109,8 +2087,6 @@ class PyTryStmt(_BaseNode):
             else_clause_2 = else_clause[2]
             if is_py_stmt(else_clause_2):
                 new_else_clause_2 = else_clause_2
-            elif else_clause_2 is None:
-                new_else_clause_2 = list()
             elif isinstance(else_clause_2, list):
                 new_else_clause_2 = list()
                 for else_clause_2_element in else_clause_2:
@@ -2152,8 +2128,6 @@ class PyTryStmt(_BaseNode):
             finally_clause_2 = finally_clause[2]
             if is_py_stmt(finally_clause_2):
                 new_finally_clause_2 = finally_clause_2
-            elif finally_clause_2 is None:
-                new_finally_clause_2 = list()
             elif isinstance(finally_clause_2, list):
                 new_finally_clause_2 = list()
                 for finally_clause_2_element in finally_clause_2:
@@ -2174,12 +2148,12 @@ class PyTryStmt(_BaseNode):
         return self._parent
 
 
-type PyClassDefParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyClassDefParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyClassDef(_BaseNode):
+class PyClassDef(_PyBaseNode):
 
-    def __init__(self, name: 'str | PyIdent', *, class_keyword: 'PyClassKeyword | None' = None, bases: 'list[str | PyIdent] | list[tuple[str | PyIdent, PyComma | None | None]] | Punctuated[str | PyIdent, PyComma | None] | tuple[PyOpenParen | None, list[str | PyIdent] | list[tuple[str | PyIdent, PyComma | None | None]] | Punctuated[str | PyIdent, PyComma | None] | None, PyCloseParen | None] | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None) -> None:
+    def __init__(self, name: 'str | PyIdent', body: 'PyStmt | list[PyStmt]', *, class_keyword: 'PyClassKeyword | None' = None, bases: 'list[str | PyIdent] | list[tuple[str | PyIdent, PyComma | None | None]] | Punctuated[str | PyIdent, PyComma | None] | tuple[PyOpenParen | None, list[str | PyIdent] | list[tuple[str | PyIdent, PyComma | None | None]] | Punctuated[str | PyIdent, PyComma | None] | None, PyCloseParen | None] | None' = None, colon: 'PyColon | None' = None) -> None:
         if class_keyword is None:
             class_keyword_out = PyClassKeyword()
         elif isinstance(class_keyword, PyClassKeyword):
@@ -2320,8 +2294,6 @@ class PyClassDef(_BaseNode):
         self.colon: PyColon = colon_out
         if is_py_stmt(body):
             body_out = body
-        elif body is None:
-            body_out = list()
         elif isinstance(body, list):
             new_body = list()
             for body_element in body:
@@ -2347,7 +2319,7 @@ def is_py_param(value: Any) -> TypeGuard[PyParam]:
 type PyNamedParamParent = PyFuncDef
 
 
-class PyNamedParam(_BaseNode):
+class PyNamedParam(_PyBaseNode):
 
     def __init__(self, pattern: 'PyPattern', *, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None, default: 'PyExpr | tuple[PyEquals | None, PyExpr] | None' = None) -> None:
         pattern_out = pattern
@@ -2399,7 +2371,7 @@ class PyNamedParam(_BaseNode):
 type PyRestPosParamParent = PyFuncDef
 
 
-class PyRestPosParam(_BaseNode):
+class PyRestPosParam(_PyBaseNode):
 
     def __init__(self, name: 'str | PyIdent', *, asterisk: 'PyAsterisk | None' = None) -> None:
         if asterisk is None:
@@ -2425,7 +2397,7 @@ class PyRestPosParam(_BaseNode):
 type PyRestKeywordParamParent = PyFuncDef
 
 
-class PyRestKeywordParam(_BaseNode):
+class PyRestKeywordParam(_PyBaseNode):
 
     def __init__(self, name: 'str | PyIdent', *, asterisk_asterisk: 'PyAsteriskAsterisk | None' = None) -> None:
         if asterisk_asterisk is None:
@@ -2451,7 +2423,7 @@ class PyRestKeywordParam(_BaseNode):
 type PySepParamParent = PyFuncDef
 
 
-class PySepParam(_BaseNode):
+class PySepParam(_PyBaseNode):
 
     def __init__(self, *, asterisk: 'PyAsterisk | None' = None) -> None:
         if asterisk is None:
@@ -2470,7 +2442,7 @@ class PySepParam(_BaseNode):
 type PyDecoratorParent = PyFuncDef
 
 
-class PyDecorator(_BaseNode):
+class PyDecorator(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', *, at_sign: 'PyAtSign | None' = None) -> None:
         if at_sign is None:
@@ -2488,12 +2460,12 @@ class PyDecorator(_BaseNode):
         return self._parent
 
 
-type PyFuncDefParent = PyTryStmt | PyModule | PyFuncDef | PyWhileStmt | PyForStmt | PyIfCase | PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
+type PyFuncDefParent = PyElifCase | PyExceptHandler | PyElseCase | PyForStmt | PyFuncDef | PyModule | PyClassDef | PyIfCase | PyTryStmt | PyWhileStmt
 
 
-class PyFuncDef(_BaseNode):
+class PyFuncDef(_PyBaseNode):
 
-    def __init__(self, name: 'str | PyIdent', *, decorators: 'list[PyDecorator] | None' = None, async_keyword: 'PyAsyncKeyword | None' = None, def_keyword: 'PyDefKeyword | None' = None, open_paren: 'PyOpenParen | None' = None, params: 'list[PyParam] | list[tuple[PyParam, PyComma | None | None]] | Punctuated[PyParam, PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None, return_type: 'PyExpr | tuple[PyHyphenGreaterThan | None, PyExpr] | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | list[PyStmt] | None' = None) -> None:
+    def __init__(self, name: 'str | PyIdent', body: 'PyStmt | list[PyStmt]', *, decorators: 'list[PyDecorator] | None' = None, async_keyword: 'PyAsyncKeyword | None' = None, def_keyword: 'PyDefKeyword | None' = None, open_paren: 'PyOpenParen | None' = None, params: 'list[PyParam] | list[tuple[PyParam, PyComma | None | None]] | Punctuated[PyParam, PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None, return_type: 'PyExpr | tuple[PyHyphenGreaterThan | None, PyExpr] | None' = None, colon: 'PyColon | None' = None) -> None:
         if decorators is None:
             decorators_out = list()
         elif isinstance(decorators, list):
@@ -2608,8 +2580,6 @@ class PyFuncDef(_BaseNode):
         self.colon: PyColon = colon_out
         if is_py_stmt(body):
             body_out = body
-        elif body is None:
-            body_out = list()
         elif isinstance(body, list):
             new_body = list()
             for body_element in body:
@@ -2628,7 +2598,7 @@ class PyFuncDef(_BaseNode):
 type PyModuleParent = Never
 
 
-class PyModule(_BaseNode):
+class PyModule(_PyBaseNode):
 
     def __init__(self, *, stmts: 'list[PyStmt] | None' = None) -> None:
         if stmts is None:
@@ -2647,297 +2617,297 @@ class PyModule(_BaseNode):
         raise AssertionError('trying to access the parent node of a top-level node')
 
 
-class PyTilde(_BaseToken):
+class PyTilde(_PyBaseToken):
 
     pass
 
 
-class PyVerticalBar(_BaseToken):
+class PyVerticalBar(_PyBaseToken):
 
     pass
 
 
-class PyWhileKeyword(_BaseToken):
+class PyWhileKeyword(_PyBaseToken):
 
     pass
 
 
-class PyTypeKeyword(_BaseToken):
+class PyTypeKeyword(_PyBaseToken):
 
     pass
 
 
-class PyTryKeyword(_BaseToken):
+class PyTryKeyword(_PyBaseToken):
 
     pass
 
 
-class PyReturnKeyword(_BaseToken):
+class PyReturnKeyword(_PyBaseToken):
 
     pass
 
 
-class PyRaiseKeyword(_BaseToken):
+class PyRaiseKeyword(_PyBaseToken):
 
     pass
 
 
-class PyPassKeyword(_BaseToken):
+class PyPassKeyword(_PyBaseToken):
 
     pass
 
 
-class PyOrKeyword(_BaseToken):
+class PyOrKeyword(_PyBaseToken):
 
     pass
 
 
-class PyNotKeyword(_BaseToken):
+class PyNotKeyword(_PyBaseToken):
 
     pass
 
 
-class PyIsKeyword(_BaseToken):
+class PyIsKeyword(_PyBaseToken):
 
     pass
 
 
-class PyInKeyword(_BaseToken):
+class PyInKeyword(_PyBaseToken):
 
     pass
 
 
-class PyImportKeyword(_BaseToken):
+class PyImportKeyword(_PyBaseToken):
 
     pass
 
 
-class PyIfKeyword(_BaseToken):
+class PyIfKeyword(_PyBaseToken):
 
     pass
 
 
-class PyFromKeyword(_BaseToken):
+class PyFromKeyword(_PyBaseToken):
 
     pass
 
 
-class PyForKeyword(_BaseToken):
+class PyForKeyword(_PyBaseToken):
 
     pass
 
 
-class PyFinallyKeyword(_BaseToken):
+class PyFinallyKeyword(_PyBaseToken):
 
     pass
 
 
-class PyExceptKeyword(_BaseToken):
+class PyExceptKeyword(_PyBaseToken):
 
     pass
 
 
-class PyElseKeyword(_BaseToken):
+class PyElseKeyword(_PyBaseToken):
 
     pass
 
 
-class PyElifKeyword(_BaseToken):
+class PyElifKeyword(_PyBaseToken):
 
     pass
 
 
-class PyDelKeyword(_BaseToken):
+class PyDelKeyword(_PyBaseToken):
 
     pass
 
 
-class PyDefKeyword(_BaseToken):
+class PyDefKeyword(_PyBaseToken):
 
     pass
 
 
-class PyContinueKeyword(_BaseToken):
+class PyContinueKeyword(_PyBaseToken):
 
     pass
 
 
-class PyClassKeyword(_BaseToken):
+class PyClassKeyword(_PyBaseToken):
 
     pass
 
 
-class PyBreakKeyword(_BaseToken):
+class PyBreakKeyword(_PyBaseToken):
 
     pass
 
 
-class PyAsyncKeyword(_BaseToken):
+class PyAsyncKeyword(_PyBaseToken):
 
     pass
 
 
-class PyAsKeyword(_BaseToken):
+class PyAsKeyword(_PyBaseToken):
 
     pass
 
 
-class PyAndKeyword(_BaseToken):
+class PyAndKeyword(_PyBaseToken):
 
     pass
 
 
-class PyCaret(_BaseToken):
+class PyCaret(_PyBaseToken):
 
     pass
 
 
-class PyCloseBracket(_BaseToken):
+class PyCloseBracket(_PyBaseToken):
 
     pass
 
 
-class PyOpenBracket(_BaseToken):
+class PyOpenBracket(_PyBaseToken):
 
     pass
 
 
-class PyAtSign(_BaseToken):
+class PyAtSign(_PyBaseToken):
 
     pass
 
 
-class PyGreaterThanGreaterThan(_BaseToken):
+class PyGreaterThanGreaterThan(_PyBaseToken):
 
     pass
 
 
-class PyGreaterThanEquals(_BaseToken):
+class PyGreaterThanEquals(_PyBaseToken):
 
     pass
 
 
-class PyGreaterThan(_BaseToken):
+class PyGreaterThan(_PyBaseToken):
 
     pass
 
 
-class PyEqualsEquals(_BaseToken):
+class PyEqualsEquals(_PyBaseToken):
 
     pass
 
 
-class PyEquals(_BaseToken):
+class PyEquals(_PyBaseToken):
 
     pass
 
 
-class PyLessThanEquals(_BaseToken):
+class PyLessThanEquals(_PyBaseToken):
 
     pass
 
 
-class PyLessThanLessThan(_BaseToken):
+class PyLessThanLessThan(_PyBaseToken):
 
     pass
 
 
-class PyLessThan(_BaseToken):
+class PyLessThan(_PyBaseToken):
 
     pass
 
 
-class PySemicolon(_BaseToken):
+class PySemicolon(_PyBaseToken):
 
     pass
 
 
-class PyColon(_BaseToken):
+class PyColon(_PyBaseToken):
 
     pass
 
 
-class PySlashSlash(_BaseToken):
+class PySlashSlash(_PyBaseToken):
 
     pass
 
 
-class PySlash(_BaseToken):
+class PySlash(_PyBaseToken):
 
     pass
 
 
-class PyDot(_BaseToken):
+class PyDot(_PyBaseToken):
 
     pass
 
 
-class PyHyphenGreaterThan(_BaseToken):
+class PyHyphenGreaterThan(_PyBaseToken):
 
     pass
 
 
-class PyHyphen(_BaseToken):
+class PyHyphen(_PyBaseToken):
 
     pass
 
 
-class PyComma(_BaseToken):
+class PyComma(_PyBaseToken):
 
     pass
 
 
-class PyPlus(_BaseToken):
+class PyPlus(_PyBaseToken):
 
     pass
 
 
-class PyAsteriskAsterisk(_BaseToken):
+class PyAsteriskAsterisk(_PyBaseToken):
 
     pass
 
 
-class PyAsterisk(_BaseToken):
+class PyAsterisk(_PyBaseToken):
 
     pass
 
 
-class PyCloseParen(_BaseToken):
+class PyCloseParen(_PyBaseToken):
 
     pass
 
 
-class PyOpenParen(_BaseToken):
+class PyOpenParen(_PyBaseToken):
 
     pass
 
 
-class PyAmpersand(_BaseToken):
+class PyAmpersand(_PyBaseToken):
 
     pass
 
 
-class PyPercenct(_BaseToken):
+class PyPercenct(_PyBaseToken):
 
     pass
 
 
-class PyHashtag(_BaseToken):
+class PyHashtag(_PyBaseToken):
 
     pass
 
 
-class PyExclamationMarkEquals(_BaseToken):
+class PyExclamationMarkEquals(_PyBaseToken):
 
     pass
 
 
-class PyCarriageReturnLineFeed(_BaseToken):
+class PyCarriageReturnLineFeed(_PyBaseToken):
 
     pass
 
 
-class PyLineFeed(_BaseToken):
+class PyLineFeed(_PyBaseToken):
 
     pass
 
@@ -2945,554 +2915,9 @@ class PyLineFeed(_BaseToken):
 PyToken = PyIdent | PyFloat | PyInteger | PyString | PyTilde | PyVerticalBar | PyWhileKeyword | PyTypeKeyword | PyTryKeyword | PyReturnKeyword | PyRaiseKeyword | PyPassKeyword | PyOrKeyword | PyNotKeyword | PyIsKeyword | PyInKeyword | PyImportKeyword | PyIfKeyword | PyFromKeyword | PyForKeyword | PyFinallyKeyword | PyExceptKeyword | PyElseKeyword | PyElifKeyword | PyDelKeyword | PyDefKeyword | PyContinueKeyword | PyClassKeyword | PyBreakKeyword | PyAsyncKeyword | PyAsKeyword | PyAndKeyword | PyCaret | PyCloseBracket | PyOpenBracket | PyAtSign | PyGreaterThanGreaterThan | PyGreaterThanEquals | PyGreaterThan | PyEqualsEquals | PyEquals | PyLessThanEquals | PyLessThanLessThan | PyLessThan | PySemicolon | PyColon | PySlashSlash | PySlash | PyDot | PyHyphenGreaterThan | PyHyphen | PyComma | PyPlus | PyAsteriskAsterisk | PyAsterisk | PyCloseParen | PyOpenParen | PyAmpersand | PyPercenct | PyHashtag | PyExclamationMarkEquals | PyCarriageReturnLineFeed | PyLineFeed
 
 
-PyNode = PySlice | PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern | PyGuard | PyComprehension | PyGeneratorExpr | PyConstExpr | PyNestExpr | PyNamedExpr | PyAttrExpr | PySubscriptExpr | PyStarredExpr | PyListExpr | PyTupleExpr | PyKeywordArg | PyCallExpr | PyPrefixExpr | PyInfixExpr | PyQualName | PyAbsolutePath | PyRelativePath | PyAlias | PyImportStmt | PyImportFromStmt | PyRetStmt | PyExprStmt | PyAssignStmt | PyPassStmt | PyIfCase | PyElifCase | PyElseCase | PyIfStmt | PyDeleteStmt | PyRaiseStmt | PyForStmt | PyWhileStmt | PyBreakStmt | PyContinueStmt | PyTypeAliasStmt | PyExceptHandler | PyTryStmt | PyClassDef | PyNamedParam | PyRestPosParam | PyRestKeywordParam | PySepParam | PyDecorator | PyFuncDef | PyModule
+PyNode = PySlice | PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern | PyGuard | PyComprehension | PyGeneratorExpr | PyConstExpr | PyNestExpr | PyNamedExpr | PyAttrExpr | PySubscriptExpr | PyStarredExpr | PyListExpr | PyTupleExpr | PyKeywordArg | PyCallExpr | PyPrefixExpr | PyInfixExpr | PyQualName | PyAbsolutePath | PyRelativePath | PyAlias | PyFromAlias | PyImportStmt | PyImportFromStmt | PyRetStmt | PyExprStmt | PyAssignStmt | PyPassStmt | PyIfCase | PyElifCase | PyElseCase | PyIfStmt | PyDeleteStmt | PyRaiseStmt | PyForStmt | PyWhileStmt | PyBreakStmt | PyContinueStmt | PyTypeAliasStmt | PyExceptHandler | PyTryStmt | PyClassDef | PyNamedParam | PyRestPosParam | PyRestKeywordParam | PySepParam | PyDecorator | PyFuncDef | PyModule
 
 
 PySyntax = PyToken | PyNode
 
 
-
-
-def for_each_py_child(node: PySyntax, proc: Callable[[PySyntax], None]):
-    if is_py_token(node): return
-    if isinstance(node, PySlice):
-        if is_py_expr(node.lower):
-            proc(node.lower)
-        elif node.lower is None:
-            pass
-        else:
-            raise ValueError()
-        proc(node.colon)
-        if is_py_expr(node.upper):
-            proc(node.upper)
-        elif node.upper is None:
-            pass
-        else:
-            raise ValueError()
-        if isinstance(node.step, tuple):
-            element_0 = node.step[0]
-            proc(element_0)
-            element_1 = node.step[1]
-            proc(element_1)
-        elif node.step is None:
-            pass
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyNamedPattern):
-        proc(node.name)
-        return
-    if isinstance(node, PyAttrPattern):
-        proc(node.pattern)
-        proc(node.dot)
-        proc(node.name)
-        return
-    if isinstance(node, PySubscriptPattern):
-        proc(node.pattern)
-        proc(node.open_bracket)
-        for (element_0, separator_0) in node.slices:
-            if is_py_pattern(element_0):
-                proc(element_0)
-            elif isinstance(element_0, PySlice):
-                proc(element_0)
-            else:
-                raise ValueError()
-        proc(node.close_bracket)
-        return
-    if isinstance(node, PyStarredPattern):
-        proc(node.asterisk)
-        proc(node.expr)
-        return
-    if isinstance(node, PyListPattern):
-        proc(node.open_bracket)
-        for (element_0, separator_0) in node.elements:
-            proc(element_0)
-        proc(node.close_bracket)
-        return
-    if isinstance(node, PyTuplePattern):
-        proc(node.open_paren)
-        for (element_0, separator_0) in node.elements:
-            proc(element_0)
-        proc(node.close_paren)
-        return
-    if isinstance(node, PyGuard):
-        proc(node.if_keyword)
-        proc(node.expr)
-        return
-    if isinstance(node, PyComprehension):
-        if isinstance(node.async_keyword, PyAsyncKeyword):
-            proc(node.async_keyword)
-        elif node.async_keyword is None:
-            pass
-        else:
-            raise ValueError()
-        proc(node.for_keyword)
-        proc(node.pattern)
-        proc(node.in_keyword)
-        proc(node.target)
-        for element_0 in node.guards:
-            proc(element_0)
-        return
-    if isinstance(node, PyGeneratorExpr):
-        proc(node.element)
-        for element_0 in node.generators:
-            proc(element_0)
-        return
-    if isinstance(node, PyConstExpr):
-        if isinstance(node.literal, PyString):
-            proc(node.literal)
-        elif isinstance(node.literal, PyFloat):
-            proc(node.literal)
-        elif isinstance(node.literal, PyInteger):
-            proc(node.literal)
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyNestExpr):
-        proc(node.open_paren)
-        proc(node.expr)
-        proc(node.close_paren)
-        return
-    if isinstance(node, PyNamedExpr):
-        proc(node.name)
-        return
-    if isinstance(node, PyAttrExpr):
-        proc(node.expr)
-        proc(node.dot)
-        proc(node.name)
-        return
-    if isinstance(node, PySubscriptExpr):
-        proc(node.expr)
-        proc(node.open_bracket)
-        for (element_0, separator_0) in node.slices:
-            if is_py_expr(element_0):
-                proc(element_0)
-            elif isinstance(element_0, PySlice):
-                proc(element_0)
-            else:
-                raise ValueError()
-        proc(node.close_bracket)
-        return
-    if isinstance(node, PyStarredExpr):
-        proc(node.asterisk)
-        proc(node.expr)
-        return
-    if isinstance(node, PyListExpr):
-        proc(node.open_bracket)
-        for (element_0, separator_0) in node.elements:
-            proc(element_0)
-        proc(node.close_bracket)
-        return
-    if isinstance(node, PyTupleExpr):
-        proc(node.open_paren)
-        for (element_0, separator_0) in node.elements:
-            proc(element_0)
-        proc(node.close_paren)
-        return
-    if isinstance(node, PyKeywordArg):
-        proc(node.name)
-        proc(node.equals)
-        proc(node.expr)
-        return
-    if isinstance(node, PyCallExpr):
-        proc(node.operator)
-        proc(node.open_paren)
-        for (element_0, separator_0) in node.args:
-            proc(element_0)
-        proc(node.close_paren)
-        return
-    if isinstance(node, PyPrefixExpr):
-        proc(node.prefix_op)
-        proc(node.expr)
-        return
-    if isinstance(node, PyInfixExpr):
-        proc(node.left)
-        proc(node.op)
-        proc(node.right)
-        return
-    if isinstance(node, PyQualName):
-        for element_0 in node.modules:
-            element_1 = element_0[0]
-            proc(element_1)
-            element_2 = element_0[1]
-            proc(element_2)
-        proc(node.name)
-        return
-    if isinstance(node, PyAbsolutePath):
-        proc(node.name)
-        return
-    if isinstance(node, PyRelativePath):
-        for element_0 in node.dots:
-            proc(element_0)
-        if isinstance(node.name, PyQualName):
-            proc(node.name)
-        elif node.name is None:
-            pass
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyAlias):
-        proc(node.path)
-        if isinstance(node.asname, tuple):
-            element_0 = node.asname[0]
-            proc(element_0)
-            element_1 = node.asname[1]
-            proc(element_1)
-        elif node.asname is None:
-            pass
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyImportStmt):
-        proc(node.import_keyword)
-        for (element_0, separator_0) in node.aliases:
-            proc(element_0)
-        return
-    if isinstance(node, PyImportFromStmt):
-        proc(node.from_keyword)
-        proc(node.path)
-        proc(node.import_keyword)
-        for (element_0, separator_0) in node.aliases:
-            proc(element_0)
-        return
-    if isinstance(node, PyRetStmt):
-        proc(node.return_keyword)
-        if is_py_expr(node.expr):
-            proc(node.expr)
-        elif node.expr is None:
-            pass
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyExprStmt):
-        proc(node.expr)
-        return
-    if isinstance(node, PyAssignStmt):
-        proc(node.pattern)
-        if isinstance(node.annotation, tuple):
-            element_0 = node.annotation[0]
-            proc(element_0)
-            element_1 = node.annotation[1]
-            proc(element_1)
-        elif node.annotation is None:
-            pass
-        else:
-            raise ValueError()
-        proc(node.equals)
-        proc(node.expr)
-        return
-    if isinstance(node, PyPassStmt):
-        proc(node.pass_keyword)
-        return
-    if isinstance(node, PyIfCase):
-        proc(node.if_keyword)
-        proc(node.test)
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element_0 in node.body:
-                proc(element_0)
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyElifCase):
-        proc(node.elif_keyword)
-        proc(node.test)
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element_0 in node.body:
-                proc(element_0)
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyElseCase):
-        proc(node.else_keyword)
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element_0 in node.body:
-                proc(element_0)
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyIfStmt):
-        proc(node.first)
-        for element_0 in node.alternatives:
-            proc(element_0)
-        if isinstance(node.last, PyElseCase):
-            proc(node.last)
-        elif node.last is None:
-            pass
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyDeleteStmt):
-        proc(node.del_keyword)
-        proc(node.pattern)
-        return
-    if isinstance(node, PyRaiseStmt):
-        proc(node.raise_keyword)
-        proc(node.expr)
-        if isinstance(node.cause, tuple):
-            element_0 = node.cause[0]
-            proc(element_0)
-            element_1 = node.cause[1]
-            proc(element_1)
-        elif node.cause is None:
-            pass
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyForStmt):
-        proc(node.for_keyword)
-        proc(node.pattern)
-        proc(node.in_keyword)
-        proc(node.expr)
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element_0 in node.body:
-                proc(element_0)
-        else:
-            raise ValueError()
-        if isinstance(node.else_clause, tuple):
-            element_1 = node.else_clause[0]
-            proc(element_1)
-            element_2 = node.else_clause[1]
-            proc(element_2)
-            element_3 = node.else_clause[2]
-            if is_py_stmt(element_3):
-                proc(element_3)
-            elif isinstance(element_3, list):
-                for element_4 in element_3:
-                    proc(element_4)
-            else:
-                raise ValueError()
-        elif node.else_clause is None:
-            pass
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyWhileStmt):
-        proc(node.while_keyword)
-        proc(node.expr)
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element_0 in node.body:
-                proc(element_0)
-        else:
-            raise ValueError()
-        if isinstance(node.else_clause, tuple):
-            element_1 = node.else_clause[0]
-            proc(element_1)
-            element_2 = node.else_clause[1]
-            proc(element_2)
-            element_3 = node.else_clause[2]
-            if is_py_stmt(element_3):
-                proc(element_3)
-            elif isinstance(element_3, list):
-                for element_4 in element_3:
-                    proc(element_4)
-            else:
-                raise ValueError()
-        elif node.else_clause is None:
-            pass
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyBreakStmt):
-        proc(node.break_keyword)
-        return
-    if isinstance(node, PyContinueStmt):
-        proc(node.continue_keyword)
-        return
-    if isinstance(node, PyTypeAliasStmt):
-        proc(node.type_keyword)
-        proc(node.name)
-        if isinstance(node.type_params, tuple):
-            element_0 = node.type_params[0]
-            proc(element_0)
-            element_1 = node.type_params[1]
-            for (element_2, separator_0) in element_1:
-                proc(element_2)
-            element_3 = node.type_params[2]
-            proc(element_3)
-        elif node.type_params is None:
-            pass
-        else:
-            raise ValueError()
-        proc(node.equals)
-        proc(node.expr)
-        return
-    if isinstance(node, PyExceptHandler):
-        proc(node.except_keyword)
-        proc(node.expr)
-        if isinstance(node.binder, tuple):
-            element_0 = node.binder[0]
-            proc(element_0)
-            element_1 = node.binder[1]
-            proc(element_1)
-        elif node.binder is None:
-            pass
-        else:
-            raise ValueError()
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element_2 in node.body:
-                proc(element_2)
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyTryStmt):
-        proc(node.try_keyword)
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element_0 in node.body:
-                proc(element_0)
-        else:
-            raise ValueError()
-        for element_1 in node.handlers:
-            proc(element_1)
-        if isinstance(node.else_clause, tuple):
-            element_2 = node.else_clause[0]
-            proc(element_2)
-            element_3 = node.else_clause[1]
-            proc(element_3)
-            element_4 = node.else_clause[2]
-            if is_py_stmt(element_4):
-                proc(element_4)
-            elif isinstance(element_4, list):
-                for element_5 in element_4:
-                    proc(element_5)
-            else:
-                raise ValueError()
-        elif node.else_clause is None:
-            pass
-        else:
-            raise ValueError()
-        if isinstance(node.finally_clause, tuple):
-            element_6 = node.finally_clause[0]
-            proc(element_6)
-            element_7 = node.finally_clause[1]
-            proc(element_7)
-            element_8 = node.finally_clause[2]
-            if is_py_stmt(element_8):
-                proc(element_8)
-            elif isinstance(element_8, list):
-                for element_9 in element_8:
-                    proc(element_9)
-            else:
-                raise ValueError()
-        elif node.finally_clause is None:
-            pass
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyClassDef):
-        proc(node.class_keyword)
-        proc(node.name)
-        if isinstance(node.bases, tuple):
-            element_0 = node.bases[0]
-            proc(element_0)
-            element_1 = node.bases[1]
-            for (element_2, separator_0) in element_1:
-                proc(element_2)
-            element_3 = node.bases[2]
-            proc(element_3)
-        elif node.bases is None:
-            pass
-        else:
-            raise ValueError()
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element_4 in node.body:
-                proc(element_4)
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyNamedParam):
-        proc(node.pattern)
-        if isinstance(node.annotation, tuple):
-            element_0 = node.annotation[0]
-            proc(element_0)
-            element_1 = node.annotation[1]
-            proc(element_1)
-        elif node.annotation is None:
-            pass
-        else:
-            raise ValueError()
-        if isinstance(node.default, tuple):
-            element_2 = node.default[0]
-            proc(element_2)
-            element_3 = node.default[1]
-            proc(element_3)
-        elif node.default is None:
-            pass
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyRestPosParam):
-        proc(node.asterisk)
-        proc(node.name)
-        return
-    if isinstance(node, PyRestKeywordParam):
-        proc(node.asterisk_asterisk)
-        proc(node.name)
-        return
-    if isinstance(node, PySepParam):
-        proc(node.asterisk)
-        return
-    if isinstance(node, PyDecorator):
-        proc(node.at_sign)
-        proc(node.expr)
-        return
-    if isinstance(node, PyFuncDef):
-        for element_0 in node.decorators:
-            proc(element_0)
-        if isinstance(node.async_keyword, PyAsyncKeyword):
-            proc(node.async_keyword)
-        elif node.async_keyword is None:
-            pass
-        else:
-            raise ValueError()
-        proc(node.def_keyword)
-        proc(node.name)
-        proc(node.open_paren)
-        for (element_1, separator_0) in node.params:
-            proc(element_1)
-        proc(node.close_paren)
-        if isinstance(node.return_type, tuple):
-            element_2 = node.return_type[0]
-            proc(element_2)
-            element_3 = node.return_type[1]
-            proc(element_3)
-        elif node.return_type is None:
-            pass
-        else:
-            raise ValueError()
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element_4 in node.body:
-                proc(element_4)
-        else:
-            raise ValueError()
-        return
-    if isinstance(node, PyModule):
-        for element_0 in node.stmts:
-            proc(element_0)
-        return

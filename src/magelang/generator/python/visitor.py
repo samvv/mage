@@ -1,9 +1,10 @@
 
 from typing import assert_never
+
 from magelang.ast import Grammar
 from magelang.repr import *
 from magelang.lang.python.cst import *
-from magelang.util import NameGenerator, to_snake_case
+from magelang.util import NameGenerator
 from .util import build_cond, Case, gen_shallow_test, namespaced, to_class_name
 
 def generate_visitor(
@@ -106,12 +107,13 @@ def generate_visitor(
         assert_never(spec)
 
     return PyModule(stmts=[
-        PyImportFromStmt(PyAbsolutePath(PyQualName('typing')), aliases=[
-            PyAlias(PyAbsolutePath(PyQualName('Callable'))),
-        ]),
+        PyImportFromStmt(
+            PyAbsolutePath(PyQualName('typing')),
+            aliases=[ PyFromAlias('Callable'), ]
+        ),
         PyImportFromStmt(
             PyRelativePath(dots=[ PyDot() ], name=PyQualName('cst')),
-            aliases=[ PyAlias(PyAbsolutePath(PyQualName('*'))) ]
+            aliases=[ PyFromAlias(PyAsterisk()) ]
         ),
         PyFuncDef(
             name=for_each_child_name,

@@ -30,7 +30,7 @@ def generate_cst(
     def get_parent_type(name: str) -> Type:
         if name not in parent_nodes:
             return NeverType()
-        # FIXMe NodeType does not correctly represent the parent
+        # FIXME NodeType does not correctly represent the parent. It could be a VariantType or TokenType.
         return UnionType(list(NodeType(name) for name in parent_nodes[name]))
 
     def add_to_parent_nodes(name: str, ty: Type) -> None:
@@ -508,15 +508,15 @@ def generate_cst(
 
     stmts: list[PyStmt] = [
         PyImportFromStmt(PyAbsolutePath(PyQualName('typing')), aliases=[
-            PyAlias(PyAbsolutePath(PyQualName('Any'))),
-            PyAlias(PyAbsolutePath(PyQualName('TypeGuard'))),
-            PyAlias(PyAbsolutePath(PyQualName('Never'))),
+            PyFromAlias('Any'),
+            PyFromAlias('TypeGuard'),
+            PyFromAlias('Never'),
         ]),
         PyImportFromStmt(PyAbsolutePath(PyQualName(modules=[ 'magelang' ], name='runtime')), aliases=[
-            PyAlias(PyAbsolutePath(PyQualName('BaseNode'))),
-            PyAlias(PyAbsolutePath(PyQualName('BaseToken'))),
-            PyAlias(PyAbsolutePath(PyQualName('Punctuated'))),
-            PyAlias(PyAbsolutePath(PyQualName('Span'))),
+            PyFromAlias('BaseNode'),
+            PyFromAlias('BaseToken'),
+            PyFromAlias('Punctuated'),
+            PyFromAlias('Span'),
         ]),
         PyClassDef(base_node_class_name, bases=[ 'BaseNode' ], body=[
             PyPassStmt(),
