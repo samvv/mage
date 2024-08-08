@@ -251,15 +251,15 @@ def generate_cst(
                 new_separator_name = f'new_{in_name}_separator'
 
                 value_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_value_name: PyAssignStmt(pattern=PyNamedPattern(name), expr=value)
-                value_type, value_stmts = collect(ty.element_type, value_name, value_assign, False)
+                value_type, value_stmts = collect(ty.element_type, value_name, value_assign, True)
 
                 separator_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_separator_name: PyAssignStmt(pattern=PyNamedPattern(name), expr=value)
-                separator_type, separator_stmts = collect(ty.separator_type, separator_name, separator_assign, False)
+                separator_type, separator_stmts = collect(ty.separator_type, separator_name, separator_assign, True)
 
                 coerced_ty = UnionType([
                     ListType(value_type),
                     ListType(TupleType([ value_type, make_optional(separator_type) ])),
-                    PunctType(value_type, separator_type),
+                    PunctType(value_type, make_optional(separator_type)),
                 ])
 
                 yield coerced_ty, [
@@ -403,7 +403,7 @@ def generate_cst(
                 new_element_name = f'new_{in_name}_element'
 
                 element_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name), expr=value)
-                element_type, element_stmts = collect(ty.element_type, element_name, element_assign, False)
+                element_type, element_stmts = collect(ty.element_type, element_name, element_assign, True)
 
                 yield ListType(element_type), [
                     PyAssignStmt(
