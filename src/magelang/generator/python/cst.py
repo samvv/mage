@@ -16,9 +16,9 @@ def generate_cst(
     is_token_name = f'is_{namespaced('token', prefix)}'
     is_syntax_name = f'is_{namespaced('syntax', prefix)}'
 
-    base_syntax_class_name = to_class_name('base_syntax', prefix)
-    base_node_class_name = to_class_name('base_node', prefix)
-    base_token_class_name = to_class_name('base_token', prefix)
+    base_syntax_class_name = '_' + to_class_name('base_syntax', prefix)
+    base_node_class_name = '_' + to_class_name('base_node', prefix)
+    base_token_class_name = '_' + to_class_name('base_token', prefix)
     token_type_name = to_class_name('token', prefix)
     node_type_name = to_class_name('node', prefix)
     syntax_type_name = to_class_name('syntax', prefix)
