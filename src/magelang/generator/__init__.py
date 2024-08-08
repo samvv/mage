@@ -10,8 +10,8 @@ here = Path(__file__).parent.resolve()
 
 class _GenerateFn(Protocol):
 
-    @staticmethod
     def __call__(
+        self,
         grammar: Grammar,
         prefix: str = '',
         cst_parent_pointers: bool = False,
