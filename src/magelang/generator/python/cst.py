@@ -1,9 +1,10 @@
 
 from typing import assert_never
+
 from .util import Case, build_cond, build_is_none, build_isinstance, build_or, build_union, gen_deep_test, gen_py_type, gen_shallow_test, namespaced, rule_type_to_py_type, to_class_name
-from ...repr import *
-from ...lang.python.cst import *
-from ...lang.python.emitter import emit
+from magelang.repr import *
+from magelang.lang.python.cst import *
+from magelang.lang.python.emitter import emit
 
 def generate_cst(
     grammar: Grammar,
