@@ -91,7 +91,7 @@ pub attr_pattern
   = pattern '.' name:ident
 
 pub subscript_pattern
-  = pattern '[' slices:((pattern | slice) % ',') ']'
+  = pattern '[' slices:((pattern | slice) %% ',') ']'
 
 pub starred_pattern
   = '*' expr
@@ -122,7 +122,7 @@ pub guard
   = 'if' expr
 
 pub comprehension
-  = 'async'? 'for' pattern 'in' target:expr guards:guard+
+  = 'async'? 'for' pattern 'in' target:expr guards:guard*
 
 pub generator_expr
   = element:expr generators:comprehension+
@@ -305,7 +305,7 @@ pub try_stmt
 
 # TODO add keyworded bases
 pub class_def
-  = 'class' name:ident bases:('(' (ident % ',') ')')? ':' body
+  = decorator* 'class' name:ident bases:('(' (ident % ',') ')')? ':' body
 
 pub param
   = named_param
@@ -329,7 +329,7 @@ pub decorator
   = '@' expr
 
 pub func_def
-  = decorator+ 'async'? 'def' name:ident '(' params:(param % ',') ')' return_type:('->' expr)? ':' body
+  = decorator* 'async'? 'def' name:ident '(' params:(param % ',') ')' return_type:('->' expr)? ':' body
 
 # Toplevel expressions
 
