@@ -4,24 +4,22 @@ from pathlib import Path
 from sweetener.logging import error
 from sweetener.visual import visualize
 
-import templaty
-
 from .util import pipe
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser
 from .transforms import extract_literals, inline
+from .generator import generate, get_generator_languages
 
 project_dir = Path(__file__).parent.parent.parent
 modules_dir = Path(__file__).parent
-templates_dir = project_dir / 'templates'
 
 def _do_generate(args) -> int:
 
     file = args.file[0]
     dest_dir = Path(args.out_dir)
     prefix = args.prefix
-    template_name = args.template
+    lang = args.lang
     enable_linecol = True
 
     with open(file, 'r') as f:
@@ -36,27 +34,15 @@ def _do_generate(args) -> int:
 
     cst_parent_pointers = args.feat_all or args.feat_cst_parent_pointers
 
-    ctx = {
-        'prefix': prefix + '_' if prefix else '',
-        'grammar': grammar,
-        'enable_linecol': enable_linecol,
-        'cst_parent_pointers': cst_parent_pointers,
-    }
+    prefix = prefix + '_' if prefix else ''
 
-    indentation = None
-    if template_name == 'python':
-        indentation = '    '
-
-    templaty.execute_dir(templates_dir / template_name, dest_dir=dest_dir, ctx=ctx, force=args.force, indentation=indentation)
+    for fname, text in generate(grammar, lang, prefix=prefix, cst_parent_pointers=cst_parent_pointers):
+        with open(dest_dir / fname, 'w') as f:
+            f.write(text)
 
     return 0
 
 def main() -> int:
-
-    template_names = []
-    for path in templates_dir.iterdir():
-        if path.is_dir() and not str(path).startswith('_'):
-            template_names.append(path.name)
 
     arg_parser = argparse.ArgumentParser()
 
@@ -64,9 +50,10 @@ def main() -> int:
 
     generate_parser = subparsers.add_parser('generate', help='Generate programming code from a grammar')
 
-    generate_parser.add_argument('template', choices=template_names, help='The name of the template to use')
+    generate_parser.add_argument('lang', choices=get_generator_languages(), help='The name of the template to use')
     generate_parser.add_argument('file', nargs=1, help='A path to a grammar file')
     generate_parser.add_argument('--feat-all', action=argparse.BooleanOptionalAction, default=False, help='Enable all output features (off by default)')
+    generate_parser.add_argument('--feat-linecol', action=argparse.BooleanOptionalAction, default=False, help='Track line/column information during lexing (unless grammar requires it off by default)')
     generate_parser.add_argument('--feat-cst-parent-pointers', action=argparse.BooleanOptionalAction, default=False, help='Generate references to the parent of a CST node (off by default)')
     generate_parser.add_argument('--force', action=argparse.BooleanOptionalAction, default=False, help='Add this flag to always overwrite files that already exist')
     generate_parser.add_argument('--out-dir', default='output', help='Where to place the generated files')

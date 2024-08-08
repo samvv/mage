@@ -18,13 +18,19 @@ class ExternType(Type):
 
 class NodeType(Type):
     """
-    Matches the type of a certain CST node.
+    Matches a leaf node in the AST/CST.
     """
     name: str
 
 class TokenType(Type):
     """
-    Matches the type of a certain token.
+    Matches a token type in the CST.
+    """
+    name: str
+
+class VariantType(Type):
+    """
+    Matches a union of different nodes in the AST/CST.
     """
     name: str
 
@@ -151,10 +157,14 @@ def infer_type(grammar: Grammar, expr: Expr) -> Type:
     if isinstance(expr, RefExpr):
         rule = grammar.lookup(expr.name)
         if rule.is_extern:
-            return TokenType(rule.name) if rule.is_token else NodeType(rule.name)
+            return ExternType(rule.type_name) #TokenType(rule.name) if rule.is_token else NodeType(rule.name)
         if not rule.is_public:
             return infer_type(grammar, nonnull(rule.expr))
-        return TokenType(expr.name) if grammar.is_token_rule(rule) else NodeType(expr.name)
+        if grammar.is_token_rule(rule):
+            return TokenType(rule.name) 
+        if grammar.is_variant(rule):
+            return VariantType(rule.name)
+        return NodeType(rule.name)
 
     if isinstance(expr, LitExpr) or isinstance(expr, CharSetExpr):
         assert(False) # literals should already have been eliminated

@@ -104,7 +104,6 @@ classifiers = [  # Optional
 # https://packaging.python.org/discussions/install-requires-vs-requirements/
 dependencies = [ # Optional
   "sweetener",
-  "templaty",
   "marko"
 ]
 

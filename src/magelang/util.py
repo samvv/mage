@@ -2,6 +2,8 @@
 from typing import Callable, TypeVar, overload
 import re
 
+type Files = list[tuple[str, str]]
+
 def to_camel_case(snake_str: str):
     return "".join(x.capitalize() for x in snake_str.lower().split("_"))
 
