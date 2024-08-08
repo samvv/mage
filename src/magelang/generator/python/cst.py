@@ -199,17 +199,35 @@ def generate_cst(
                 spec = specs.lookup(ty.name)
                 assert(isinstance(spec, NodeSpec))
 
-                if len(spec.members) == 1 and not forbid_none:
-                    # TODO maybe also coerce spec.members[0].ty recursively?
-                    single_ty = spec.members[0].ty
-                    yield single_ty, [
-                        assign(
+                optional_fields: list[Field] = []
+                required_fields: list[Field] = []
+
+                for field in spec.members:
+                    if is_default_constructible(field.ty):
+                        optional_fields.append(field)
+                    else:
+                        required_fields.append(field)
+
+                if len(required_fields) == 0:
+
+                    if not forbid_none:
+                        yield NoneType(), [
+                            assign(PyCallExpr(PyNamedExpr(to_class_name(ty.name, prefix))))
+                        ]
+
+                elif len(required_fields) == 1:
+
+                    required_type = required_fields[0].ty
+
+                    def new_assign(value):
+                        return assign(
                             PyCallExpr(
                                 operator=PyNamedExpr(to_class_name(ty.name, prefix)),
-                                args=[ PyNamedExpr(in_name) ]
+                                args=[ value ]
                             )
                         )
-                    ]
+
+                    yield from coercions(required_type, in_name, new_assign, forbid_none)
 
                 yield ty, [ assign(PyNamedExpr(in_name)) ]
 
