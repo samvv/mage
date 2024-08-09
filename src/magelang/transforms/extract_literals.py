@@ -23,6 +23,10 @@ def extract_literals(grammar: Grammar) -> Grammar:
         if text[0].isalpha() and all(ch.isalnum() for ch in text[1:]):
             return f'{text}_keyword'
         elif len(text) <= 4:
+            # First try to name the entire word
+            if text in names:
+                return names[text]
+            # Fall back to naming the individual characters
             return '_'.join(names[ch] for ch in text)
 
     def rewriter(expr: Expr) -> Expr | None:

@@ -124,6 +124,9 @@
     "|": "vertical_bar",
     "}": "close_brace",
     "~": "tilde",
-    "\u007F": "delete"
+    "\u007F": "delete",
+    "->": "r_arrow",
+    "<-": "l_arrow",
+    "=>": "r_arrow_alt"
   }
 
