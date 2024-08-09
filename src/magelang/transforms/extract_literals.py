@@ -1,6 +1,8 @@
 from pathlib import Path
 import json
 
+from magelang.eval import accepts
+
 from ..ast import *
 
 def extract_literals(grammar: Grammar) -> Grammar:
@@ -20,9 +22,17 @@ def extract_literals(grammar: Grammar) -> Grammar:
         return name
 
     def str_to_name(text: str) -> str | None:
-        if text[0].isalpha() and all(ch.isalnum() for ch in text[1:]):
+        # If it's a single letter
+        if len(text) == 1 and text.isalpha():
+            # Letters such as 'i' and 'D' are not really keywords
+            # They are represented with the lower_ or upper_ prefix
+            return f'lower_{text}' if text.islower() else f'upper_{text.lower()}'
+        # If the evaluation engine matches it as a keyword
+        # FIXME Keyword detection should work with the @keyword decorator
+        keyword_rule = grammar.keyword_rule
+        if keyword_rule is not None and keyword_rule.expr is not None and accepts(keyword_rule.expr, text, grammar):
             return f'{text}_keyword'
-        elif len(text) <= 4:
+        if len(text) <= 4:
             # First try to name the entire word
             if text in names:
                 return names[text]

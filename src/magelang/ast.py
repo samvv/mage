@@ -120,6 +120,10 @@ class Rule(Node):
     def is_wrap(self) -> bool:
         return self.has_decorator('wrap')
 
+    @property
+    def is_keyword(self) -> bool:
+        return self.has_decorator('keyword')
+
 class Grammar(Node):
 
     rules: list[Rule]
@@ -222,6 +226,13 @@ class Grammar(Node):
         for rule in self.rules:
             if self.is_parse_rule(rule):
                 yield rule
+
+    @property
+    @cache
+    def keyword_rule(self) -> Rule | None:
+        for rule in self.rules:
+            if rule.is_keyword:
+                return rule
 
     def lookup(self, name: str) -> Rule:
         if name not in self._rules_by_name:
