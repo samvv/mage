@@ -37,18 +37,36 @@ def accepts(expr: Expr, text: str, grammar: Grammar) -> bool:
 
         if isinstance(expr, CharSetExpr):
             ch = peek()
-            for element in expr.elements:
-                if isinstance(element, str):
-                    assert(len(element) == 1)
-                    if ch == element:
-                        offset += 1
-                        return True
-                else:
-                    (low, high) = element
+            if expr.invert:
+                for element in expr.elements:
+                    if isinstance(element, str):
+                        low = element
+                        high = element
+                    else:
+                        low, high = element
+                    if expr.ci:
+                        ch = ch.lower()
+                        low = low.lower()
+                        high = high.lower()
+                    if ord(ch) >= ord(low) and ord(ch) <= ord(high):
+                        return False
+                offset += 1
+                return True
+            else:
+                for element in expr.elements:
+                    if isinstance(element, str):
+                        low = element
+                        high = element
+                    else:
+                        low, high = element
+                    if expr.ci:
+                        ch = ch.lower()
+                        low = low.lower()
+                        high = high.lower()
                     if ord(ch) >= ord(low) and ord(ch) <= ord(high):
                         offset += 1
                         return True
-            return False
+                return False
 
         if isinstance(expr, SeqExpr):
             keep = offset
