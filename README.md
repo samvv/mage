@@ -1,7 +1,7 @@
 Mage: Text Analysis Made Easy
 =============================
 
-Mage is tool for performing text analysis. It does so by generating a _lexer_,
+Mage is a tool for performing text analysis. It does so by generating a _lexer_,
 _parser_ and _parse tree_ for you. Whether it is a piece of programming code or
 some tabular data in a fringe format, Mage has got you covered!
 
