@@ -45,6 +45,7 @@ $ pip3 install --user -U magelang
 Generate a parser for the given grammar in a language that you specify.
 
 **Example**
+
 ```
 mage generate python foo.mage --prefix foo --out-dir src/foolang
 ```
