@@ -56,7 +56,7 @@ def generate_cst(
         elif isinstance(ty, NoneType) or isinstance(ty, ExternType) or isinstance(ty, NeverType):
             pass
         else:
-            raise NotImplementedError()
+            assert_never(ty)
 
     if gen_parent_pointers:
         for spec in specs:
@@ -68,6 +68,10 @@ def generate_cst(
     def is_default_constructible(ty: Type, allow_empty_sequences: bool = True) -> bool:
         visited = set()
         def visit(ty: Type, allow_empty_sequences: bool) -> bool:
+            if isinstance(ty, ExternType):
+                return False
+            if isinstance(ty, NeverType):
+                return False
             if isinstance(ty, ListType):
                 return allow_empty_sequences and not ty.required
             if isinstance(ty, PunctType):
@@ -97,7 +101,7 @@ def generate_cst(
                 # union types do not occur. Otherwise, we did have to recurse
                 # on the single union type member.
                 return False
-            raise RuntimeError(f'unexpected {ty}')
+            assert_never(ty)
         return visit(ty, allow_empty_sequences)
 
     def gen_default_constructor(ty: Type) -> PyExpr:
