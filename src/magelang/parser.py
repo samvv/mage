@@ -16,9 +16,6 @@ class ParseError(RuntimeError):
 def is_prefix_operator(tt: TokenType) -> bool:
     return tt in [ TT_EXCL, TT_AMP, TT_SLASH ]
 
-def is_suffix_operator(tt: TokenType) -> bool:
-    return tt in [ TT_PLUS, TT_STAR, TT_QUEST ]
-
 class Parser:
 
     def __init__(self, scanner: Scanner) -> None:
@@ -120,8 +117,6 @@ class Parser:
         expr = self._parse_expr_with_prefixes()
         while True:
             t1 = self._peek_token()
-            if not is_suffix_operator(t1.type):
-                break
             if t1.type == TT_PLUS:
                 self._get_token()
                 expr = RepeatExpr(1, POSINF, expr)
@@ -131,8 +126,22 @@ class Parser:
             elif t1.type == TT_QUEST:
                 self._get_token()
                 expr = RepeatExpr(0, 1, expr)
+            elif t1.type == TT_LBRACE:
+                self._get_token()
+                min = self._expect_token(TT_INT).value
+                t2 = self._peek_token()
+                max = min
+                if t2.type == TT_COMMA:
+                    max = POSINF
+                    self._get_token()
+                    t3 = self._peek_token()
+                    if t3.type == TT_INT:
+                        self._get_token()
+                        max = t3.value
+                self._expect_token(TT_RBRACE)
+                expr = RepeatExpr(min, max, expr)
             else:
-                raise ParseError(t1, [ TT_PLUS, TT_STAR ])
+                break
         expr.label = label
         return expr
 
