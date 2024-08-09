@@ -37,7 +37,9 @@ def _do_generate(args) -> int:
     prefix = prefix + '_' if prefix else ''
 
     for fname, text in generate(grammar, lang, prefix=prefix, cst_parent_pointers=cst_parent_pointers):
-        with open(dest_dir / fname, 'w') as f:
+        out_path = dest_dir / fname
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, 'w') as f:
             f.write(text)
 
     return 0
