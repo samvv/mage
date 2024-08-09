@@ -124,10 +124,6 @@ def generate_cst(
                     return gen_default_constructor(ty)
         raise RuntimeError(f'unexpected {ty}')
 
-    def is_repeatable(ty: Type) -> bool:
-        return (isinstance(ty, PunctType) or isinstance(ty, ListType)) \
-            and is_static(ty.element_type, grammar)
-
     def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Callable[[PyExpr], PyStmt]) -> tuple[Type, list[PyStmt]]:
 
         def collect(ty: Type, in_name: str, assign: Callable[[PyExpr], PyStmt], forbid_none: bool) -> tuple[Type, list[PyStmt]]:
@@ -642,7 +638,7 @@ def generate_cst(
                         annotation=PyConstExpr(param_type_str),
                     ))
 
-                if is_repeatable(field.ty):
+                if isinstance(field.ty, PunctType) or isinstance(field.ty, ListType):
                     body.append(PyFuncDef(
                         name=f'count_{field.name}',
                         params=[ PyNamedParam(PyNamedPattern('self')) ],

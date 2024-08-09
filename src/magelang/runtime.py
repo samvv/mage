@@ -55,6 +55,9 @@ class Punctuated(Generic[_T, _P]):
         else:
             self.elements.append((element, separator))
 
+    def __len__(self) -> int:
+        return len(self.elements) + 1 if self.last is not None else 0
+
     def __iter__(self) -> Iterator[tuple[_T, _P | None]]:
         for item in self.elements:
             yield item
