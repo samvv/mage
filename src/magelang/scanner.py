@@ -1,20 +1,25 @@
 
 import re
-from typing import Any, NewType, Tuple, Optional
-
-from sweetener import Record
+from typing import Any, NewType
 
 TokenType = NewType('TokenType', int)
 
-class TextPos(Record):
-    offset: int = 0
-    line: int = 1
-    column: int = 1
+class TextPos:
 
-class Token(Record):
-    type: TokenType
-    span: Tuple[TextPos, TextPos]
-    value: Optional[Any] = None
+    def __init__(self, offset = 0, line = 1, column = 1) -> None:
+        self.offset = offset
+        self.line = line
+        self.column = column
+
+    def clone(self) -> 'TextPos':
+        return TextPos(self.offset, self.line, self.column)
+
+class Token:
+
+    def __init__(self, ty: TokenType, span: tuple[TextPos, TextPos], value: Any | None = None) -> None:
+        self.type = ty
+        self.span = span
+        self.value = value
 
 def _is_hex_digit(ch: str) -> bool:
     return ch in [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C' 'D', 'E', 'F', 'a', 'b', 'c', 'd', 'e', 'f' ]

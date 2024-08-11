@@ -1,15 +1,25 @@
 
-from typing import Callable, TypeVar, overload
+import io
+from typing import Any, Callable, Iterator, TextIO, TypeGuard, TypeVar, overload
 import re
 
+
 type Files = list[tuple[str, str]]
+
+
+def is_iterator(value: Any) -> TypeGuard[Iterator[Any]]:
+    return hasattr(value, '__next__') \
+        and callable(getattr(value, '__next__'))
+
 
 def to_camel_case(snake_str: str):
     return "".join(x.capitalize() for x in snake_str.lower().split("_"))
 
+
 def to_lower_camel_case(snake_str):
     camel_string = to_camel_case(snake_str)
     return snake_str[0].lower() + camel_string[1:]
+
 
 def to_snake_case(name: str) -> str:
     if '-' in name:
@@ -18,11 +28,47 @@ def to_snake_case(name: str) -> str:
         s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
+
 T = TypeVar('T')
+
 
 def nonnull(value: T | None) -> T:
     assert(value is not None)
     return value
+
+
+class IndentWriter:
+
+    def __init__(self, out: TextIO | None = None, indentation='  '):
+        if out is None:
+            out = io.StringIO()
+        self.output = out
+        self.at_blank_line = True
+        self.newline_count = 0
+        self.indent_level = 0
+        self.indentation = indentation
+        self._re_whitespace = re.compile('[\n\r\t ]')
+
+    def indent(self):
+        self.indent_level += 1
+
+    def dedent(self):
+        self.indent_level -= 1
+
+    def ensure_trailing_lines(self, count):
+        self.write('\n' * max(0, count - self.newline_count))
+
+    def write(self, text: str) -> None:
+        for ch in text:
+            if ch == '\n':
+                self.newline_count = self.newline_count + 1 if self.at_blank_line else 1
+                self.at_blank_line = True
+            elif self.at_blank_line and not self._re_whitespace.match(ch):
+                self.newline_count = 0
+                self.output.write(self.indentation * self.indent_level)
+                self.at_blank_line = False
+            self.output.write(ch)
+
 
 class NameGenerator:
 

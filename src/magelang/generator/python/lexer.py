@@ -1,7 +1,6 @@
 
 from typing import assert_never
 
-from sweetener import warn
 from magelang.ast import *
 from magelang.lang.python.cst import *
 from magelang.ast import Grammar

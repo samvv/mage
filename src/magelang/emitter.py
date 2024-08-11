@@ -1,7 +1,7 @@
 
 from io import StringIO
-from sweetener import IndentWriter
 
+from .util import IndentWriter
 from .ast import *
 
 def emit(node: Node) -> str:

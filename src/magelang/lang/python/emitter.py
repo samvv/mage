@@ -1,7 +1,7 @@
 
 from io import StringIO
 from typing import NewType, assert_never
-from sweetener import IndentWriter
+from magelang.util import IndentWriter
 
 from .cst import *
 

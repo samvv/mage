@@ -1,9 +1,8 @@
 
 import argparse
 from pathlib import Path
-from sweetener.logging import error
-from sweetener.visual import visualize
 
+from .logging import error
 from .util import pipe
 from .ast import *
 from .scanner import Scanner
