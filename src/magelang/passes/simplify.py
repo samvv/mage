@@ -31,9 +31,9 @@ def simplify(grammar: Grammar) -> Grammar:
 
     def flatten(expr: Expr) -> Expr:
         if isinstance(expr, ChoiceExpr):
-            return ChoiceExpr(flatten_choice(expr.elements))
+            return ChoiceExpr(list(flatten_choice(expr.elements)))
         if isinstance(expr, SeqExpr):
-            return SeqExpr(flatten_seq(expr.elements))
+            return SeqExpr(list(flatten_seq(expr.elements)))
         return expr
 
     def visit(expr: Expr) -> Expr:
