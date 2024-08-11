@@ -200,26 +200,47 @@ def make_unit() -> Type:
 def is_unit(ty: Type) -> bool:
     return isinstance(ty, TupleType) and len(ty.element_types) == 0
 
-def is_static(ty: Type, grammar: Grammar) -> bool:
-    if isinstance(ty, ExternType):
-        return False
-    if isinstance(ty, NeverType):
-        return False
-    if isinstance(ty, UnionType):
-        return all(is_static(ty_2, grammar) for ty_2 in ty.types)
-    if isinstance(ty, RuleType):
-        rule = grammar.lookup(ty.name)
-        if rule.expr is None:
+def is_static(ty: Type, specs: Specs) -> bool:
+    visited = set[str]()
+    def visit(ty: Type) -> bool:
+        if isinstance(ty, ExternType):
             return False
-        return grammar.is_static_token(rule.expr)
-    if isinstance(ty, TupleType):
-        return all(is_static(ty_2, grammar) for ty_2 in ty.element_types)
-    if isinstance(ty, ListType):
-        # This assumes that repetitions of a fixed size have been eliminated.
-        return False
-    if isinstance(ty, PunctType):
-        return False
-    assert_never(ty)
+        if isinstance(ty, NeverType):
+            return False
+        if isinstance(ty, NoneType):
+            return True
+        if isinstance(ty, UnionType):
+            return all(visit(ty_2) for ty_2 in ty.types)
+        if isinstance(ty, VariantType):
+            if ty.name in visited:
+                return False
+            visited.add(ty.name)
+            spec = specs.lookup(ty.name)
+            assert(isinstance(spec, VariantSpec))
+            return all(visit(ty_2) for _, ty_2 in spec.members)
+        if isinstance(ty, NodeType):
+            if ty.name in visited:
+                return False
+            visited.add(ty.name)
+            spec = specs.lookup(ty.name)
+            assert(isinstance(spec, NodeSpec))
+            return all(visit(field.ty) for field in spec.members)
+        if isinstance(ty, TokenType):
+            if ty.name in visited:
+                return False
+            visited.add(ty.name)
+            spec = specs.lookup(ty.name)
+            assert(isinstance(spec, TokenSpec))
+            return spec.is_static
+        if isinstance(ty, TupleType):
+            return all(visit(ty_2) for ty_2 in ty.element_types)
+        if isinstance(ty, ListType):
+            # This assumes that repetitions of a fixed size have been eliminated.
+            return False
+        if isinstance(ty, PunctType):
+            return False
+        assert_never(ty)
+    return visit(ty)
 
 def infer_type(expr: Expr, grammar: Grammar) -> Type:
 
