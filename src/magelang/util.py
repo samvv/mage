@@ -26,20 +26,34 @@ def nonnull(value: T | None) -> T:
 
 class NameGenerator:
 
-    def __init__(self, default_prefix = 'tmp_') -> None:
-        self._mapping: dict[str, int] = {}
+    def __init__(self, namespace: str | None = None, default_prefix: str | None= 'tmp') -> None:
+        self._counts: dict[str, int] = {}
+        self.namespace = namespace
         self._default_prefix = default_prefix
 
-    def __call__(self, prefix: str | None = None) -> str:
+    def __call__(self, prefix: str | None = None, hide: bool = False) -> str:
         if prefix is None:
             prefix = self._default_prefix
-        count = self._mapping.get(prefix, 0)
-        name = prefix + str(count)
-        self._mapping[prefix] = count + 1
+        name = ''
+        if hide:
+            name += '_'
+        if self.namespace is not None:
+            if name and not name.endswith('_'):
+                name += '_'
+            name += self.namespace
+        if prefix is not None:
+            if name and not name.endswith('_'):
+                name += '_'
+            name += prefix
+        assert(len(name) > 0)
+        count = self._counts.get(name, 0)
+        self._counts[name] = count + 1
+        if count > 0:
+            name += '_' + str(count)
         return name
 
     def reset(self) -> None:
-        self._mapping = {}
+        self._counts = {}
 
 
 _T0 = TypeVar('_T0')
