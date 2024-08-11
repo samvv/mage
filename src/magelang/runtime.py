@@ -1,5 +1,5 @@
 
-from typing import Generic, Iterable, Iterator, TypeVar
+from typing import Any, Generic, Iterable, Iterator, TypeVar
 
 EOF = '\uFFFF'
 
@@ -28,7 +28,12 @@ class BaseSyntax:
         return self._parent is not None
 
 class BaseNode(BaseSyntax):
-    pass
+
+    def derive(self, **kwargs: Any) -> Any:
+        for k, v in self.items():
+            if k not in kwargs:
+                kwargs[k] = v
+        return self.__class__(**kwargs)
 
 class BaseToken(BaseSyntax):
 
