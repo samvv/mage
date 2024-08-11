@@ -2,38 +2,64 @@
 @skip
 pub whitespace = [\n\r\t ]+
 
+@keyword
 pub token ident
   = [a-z_]i [a-z0-9_]i*
 
-pub token integer
+pub token integer -> Integer
   = [0-9]+
 
+hex_digit
+  = [0-9a-f]i+
+
+escape_sequence
+  = 'u' '{' hex_digit{4} '}'
+  | 'x' hex_digit{2}
+  | escaped_ascii_char
+
+escaped_ascii_char
+  = 'a'
+  | 'b'
+  | 'f'
+  | 'n'
+  | 'r'
+  | 't'
+  | 'v'
+  | '\\'
+  | '\''
+  | '"'
+
 pub token char
-  = ~[\]]
+  = '\\' escape_sequence
+  | ~[\]]
 
 pub expr
-  = ref_expr
-  | list_expr
-  | some_expr
-  | many_expr
-  | lookahead_expr
+  = char_set_expr
   | choice_expr
+  | list_expr
+  | lookahead_expr
+  | many_expr
+  | negative_lookahead_expr
+  | opt_expr
+  | ref_expr
+  | repeat_expr
   | seq_expr
+  | some_expr
 
 pub ref_expr
-  = ident
+  = name:ident
 
 pub char_set_expr
-  = '~'* '[' elements:(char | char '-' char)* ']' 'i'?
+  = '~'? '[' elements:(char | char '-' char)* ']' 'i'?
 
 pub seq_expr
-  = expr expr
+  = elements:expr{2,}
 
 pub choice_expr
-  = expr '|' expr
+  = elements:(expr %%% '|')
 
 pub repeat_expr
-  = expr '{' min:integer ',' max:integer '}'
+  = expr '{' min:integer max:(',' integer?)? '}'
 
 pub some_expr
   = expr '+'
@@ -41,13 +67,25 @@ pub some_expr
 pub many_expr
   = expr '*'
 
+pub opt_expr
+  = expr '?'
+
 pub lookahead_expr
   = '&' expr
 
+pub negative_lookahead_expr
+  = '!' expr
+
 pub list_expr
-  = element:expr '%' separator:expr
+  = element:expr '%'+ separator:expr
 
 # Rules
 
+pub decorator
+  = '@' name:ident
+
 pub rule
-  = 'pub'? 'extern'? 'token'? name:ident '=' expr
+  = decorator* 'pub'? 'extern'? 'token'? name:ident '=' expr
+
+pub grammar
+  = rule*
