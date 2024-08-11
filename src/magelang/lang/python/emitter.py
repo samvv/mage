@@ -90,6 +90,9 @@ def emit_token(node: PyToken) -> str:
     if isinstance(node, PyDot):
         return '.'
 
+    if isinstance(node, PyDotDotDot):
+        return '...'
+
     if isinstance(node, PyEquals):
         return '='
 
