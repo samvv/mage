@@ -53,17 +53,19 @@ class Parser:
                 t2 = self._peek_token()
             self._get_token()
             elements, ci = cast(tuple[list, bool], t2.value)
-            expr = CharSetExpr(elements, ci, invert)
+            expr = CharSetExpr(elements=elements, ci=ci, invert=invert)
         elif t2.type == TT_LPAREN:
             self._get_token()
             expr = self.parse_expr()
             self._expect_token(TT_RPAREN)
         elif t2.type == TT_IDENT:
             self._get_token()
-            expr = RefExpr(t2.value)
+            assert(isinstance(t2.value, str))
+            expr = RefExpr(name=t2.value)
         elif t2.type == TT_STR:
             self._get_token()
-            expr = LitExpr(t2.value)
+            assert(isinstance(t2.value, str))
+            expr = LitExpr(text=t2.value)
         else:
             raise ParseError(t2, [ TT_LBRACE, TT_LPAREN, TT_IDENT, TT_STR ])
         if label is not None:
@@ -83,7 +85,7 @@ class Parser:
                 self._get_token()
                 count += 1
             separator = self._parse_prim_expr()
-            return ListExpr(element, separator, count)
+            return ListExpr(element=element, separator=separator, min_count=count)
         return element
 
     def _parse_expr_with_prefixes(self) -> Expr:
@@ -97,11 +99,11 @@ class Parser:
         expr = self._parse_maybe_list_expr()
         for ty in reversed(tokens):
             if ty == TT_EXCL:
-                expr = LookaheadExpr(expr, True)
+                expr = LookaheadExpr(expr=expr, is_negated=True)
             elif ty == TT_EXCL:
-                expr = LookaheadExpr(expr, False)
+                expr = LookaheadExpr(expr=expr, is_negated=False)
             elif ty == TT_SLASH:
-                expr = HideExpr(expr)
+                expr = HideExpr(expr=expr)
             else:
                 raise RuntimeError(f'unexpected token type {token_type_descriptions[ty]}')
         return expr
@@ -119,16 +121,16 @@ class Parser:
             t1 = self._peek_token()
             if t1.type == TT_PLUS:
                 self._get_token()
-                expr = RepeatExpr(1, POSINF, expr)
+                expr = RepeatExpr(min=1, max=POSINF, expr=expr)
             elif t1.type == TT_STAR:
                 self._get_token()
-                expr = RepeatExpr(0, POSINF, expr)
+                expr = RepeatExpr(min=0, max=POSINF, expr=expr)
             elif t1.type == TT_QUEST:
                 self._get_token()
-                expr = RepeatExpr(0, 1, expr)
+                expr = RepeatExpr(min=0, max=1, expr=expr)
             elif t1.type == TT_LBRACE:
                 self._get_token()
-                min = self._expect_token(TT_INT).value
+                min = cast(int, self._expect_token(TT_INT).value)
                 t2 = self._peek_token()
                 max = min
                 if t2.type == TT_COMMA:
@@ -137,9 +139,9 @@ class Parser:
                     t3 = self._peek_token()
                     if t3.type == TT_INT:
                         self._get_token()
-                        max = t3.value
+                        max = cast(int, t3.value)
                 self._expect_token(TT_RBRACE)
-                expr = RepeatExpr(min, max, expr)
+                expr = RepeatExpr(min=min, max=max, expr=expr)
             else:
                 break
         expr.label = label
@@ -155,7 +157,7 @@ class Parser:
             elements.append(self._parse_expr_with_suffixes())
         if len(elements) == 1:
             return elements[0]
-        return SeqExpr(elements)
+        return SeqExpr(elements=elements)
 
     def parse_expr(self) -> Expr:
         elements = [ self._parse_expr_sequence() ]
@@ -167,7 +169,7 @@ class Parser:
             elements.append(self._parse_expr_sequence())
         if len(elements) == 1:
             return elements[0]
-        return ChoiceExpr(elements)
+        return ChoiceExpr(elements=elements)
 
     def parse_rule(self) -> Rule:
         comment = self.scanner.take_comment()
@@ -178,7 +180,8 @@ class Parser:
                 break
             self._get_token()
             name = self._expect_token(TT_IDENT).value
-            decorators.append(Decorator(name))
+            assert(isinstance(name, str))
+            decorators.append(Decorator(name=name))
         flags = 0
         t0 = self._get_token()
         if t0.type == TT_PUB:
@@ -192,16 +195,17 @@ class Parser:
             t0 = self._get_token()
         if t0.type != TT_IDENT:
             raise ParseError(t0, [ TT_IDENT ])
+        assert(isinstance(t0.value, str))
         t3 = self._peek_token()
         type_name = string_rule_type
         if t3.type == TT_RARROW:
             self._get_token()
-            type_name = self._expect_token(TT_IDENT).value
+            type_name = cast(str, self._expect_token(TT_IDENT).value)
         if flags & EXTERN:
-            return Rule(comment, decorators, flags, t0.value, type_name,  None)
+            return Rule(name=t0.value, expr=None, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
         self._expect_token(TT_EQUAL)
         expr = self.parse_expr()
-        return Rule(comment, decorators, flags, t0.value, type_name, expr)
+        return Rule(name=t0.value, expr=expr, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
 
     def parse_grammar(self) -> Grammar:
         elements = []
@@ -211,3 +215,4 @@ class Parser:
                 break
             elements.append(self.parse_rule())
         return Grammar(elements)
+
