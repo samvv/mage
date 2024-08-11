@@ -660,7 +660,9 @@ def emit(node: PyNode) -> str:
             visit(node.path)
             if node.asname is not None:
                 as_kw, name = node.asname
+                out.write(' ')
                 visit_token(as_kw)
+                out.write(' ')
                 visit_token(name)
             return
 
@@ -668,7 +670,9 @@ def emit(node: PyNode) -> str:
             visit_token(node.name)
             if node.asname is not None:
                 as_kw, name = node.asname
+                out.write(' ')
                 visit_token(as_kw)
+                out.write(' ')
                 visit_token(name)
             return
 
