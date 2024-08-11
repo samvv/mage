@@ -252,9 +252,8 @@ pub ret_stmt
 pub expr_stmt
   = expr
 
-# TODO make '= expr' optional 
 pub assign_stmt
-  = pattern annotation:(':' expr)? '=' expr
+  = pattern annotation:(':' expr)? value:('=' expr)?
 
 pub pass_stmt
   = 'pass'
