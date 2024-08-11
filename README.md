@@ -167,11 +167,7 @@ body = stmt+
 Escape an expression by making it hidden. The expression will be parsed, but
 not be visible in the resulting CST/AST.
 
-### 🚧 `expr{n,m}`
-
-> [!WARNING]
->
-> This expression is under construction.
+### `expr{n,m}`
 
 Parse the expression at least `n` times and at most `m` times.
 
