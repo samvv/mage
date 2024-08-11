@@ -733,7 +733,7 @@ def generate_cst(
                 params=params,
                 return_type=PySubscriptExpr(expr=PyNamedExpr('TypeGuard'), slices=[ PyNamedExpr(cls_name) ]),
                 body=[
-                    PyRetStmt(expr=build_or(gen_deep_test(ty, PyNamedExpr('value'), prefix) for _, ty in spec.members))
+                    PyRetStmt(expr=build_or(gen_deep_test(ty, PyNamedExpr('value'), prefix=prefix) for _, ty in spec.members))
                 ],
             ))
 
