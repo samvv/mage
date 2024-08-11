@@ -186,8 +186,8 @@ def make_optional(ty: Type) -> Type:
     return UnionType([ ty, NoneType() ])
 
 def is_optional(ty: Type) -> bool:
-    # if isinstance(ty, NoneType):
-    #     return True
+    if isinstance(ty, NoneType):
+        return True
     if isinstance(ty, UnionType):
         for ty_2 in flatten_union(ty):
             if isinstance(ty_2, NoneType):
