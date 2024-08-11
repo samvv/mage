@@ -65,7 +65,7 @@ def gen_py_type(ty: Type, prefix: str) -> PyExpr:
     if isinstance(ty, NodeType) or isinstance(ty, VariantType) or isinstance(ty, TokenType):
         return PyNamedExpr(to_class_name(ty.name, prefix))
     if isinstance(ty, ListType):
-        return PySubscriptExpr(expr=PyNamedExpr('list'), slices=[ gen_py_type(ty.element_type, prefix) ])
+        return PySubscriptExpr(expr=PyNamedExpr('Sequence'), slices=[ gen_py_type(ty.element_type, prefix) ])
     if isinstance(ty, PunctType):
         return PySubscriptExpr(expr=PyNamedExpr('Punctuated'), slices=[ gen_py_type(ty.element_type, prefix), gen_py_type(ty.separator_type, prefix) ])
     if isinstance(ty, TupleType):
