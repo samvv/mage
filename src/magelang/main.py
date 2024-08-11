@@ -2,16 +2,26 @@
 import argparse
 from pathlib import Path
 
+from magelang.emitter import emit
+from magelang.passes import simplify
+
 from .logging import error
 from .util import pipe
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser
-from .passes import extract_literals, inline, overlapping_charsets
+from .passes import extract_literals, inline, overlapping_charsets, extract_prefixes
 from .generator import generate, get_generator_languages
 
 project_dir = Path(__file__).parent.parent.parent
 modules_dir = Path(__file__).parent
+
+def _load_grammar(filename: str) -> Grammar:
+    with open(filename, 'r') as f:
+        text = f.read()
+    scanner = Scanner(text, filename=filename)
+    parser = Parser(scanner)
+    return parser.parse_grammar()
 
 def _run_checks(grammar: Grammar) -> Grammar:
     return pipe(grammar, overlapping_charsets)
@@ -19,23 +29,20 @@ def _run_checks(grammar: Grammar) -> Grammar:
 def _do_generate(args) -> int:
 
     filename = args.file[0]
-    skip_checks = args.skip_checks
-    dest_dir = Path(args.out_dir)
-    prefix = args.prefix
     lang = args.lang
+    opt = not args.no_opt
+    skip_checks = args.skip_checks
+    prefix = args.prefix
+    dest_dir = Path(args.out_dir)
     enable_linecol = True
 
-    with open(filename, 'r') as f:
-        text = f.read()
-    scanner = Scanner(text, filename=filename)
-    parser = Parser(scanner)
-    grammar = parser.parse_grammar()
-
-    #grammar = transform_prefix(grammar)
-    #grammar = transform_reduce(grammar)
+    grammar = _load_grammar(filename)
     if not skip_checks:
         grammar = _run_checks(grammar)
     grammar = pipe(grammar, inline, extract_literals)
+    # FIXME should only happen in the parser generator and lexer generator
+    #if opt:
+    #    grammar = pipe(grammar, extract_prefixes, simplify)
     #visualize(grammar, format='png')
 
     cst_parent_pointers = args.feat_all or args.feat_cst_parent_pointers
@@ -60,12 +67,37 @@ def _do_check(args) -> int:
     _run_checks(grammar)
     return 0
 
+_passes = {
+    'inline': inline,
+    'simplify': simplify,
+    'extract_prefixes': extract_prefixes,
+    'extract_literals': extract_literals,
+}
+
+def _do_dump(args) -> int:
+    filename = args.file[0]
+    with open(filename, 'r') as f:
+        text = f.read()
+    scanner = Scanner(text, filename=filename)
+    parser = Parser(scanner)
+    grammar = parser.parse_grammar()
+    for name in args.name:
+        grammar = _passes[name](grammar)
+    print(emit(grammar))
+    return 0
+
 
 def main() -> int:
 
     arg_parser = argparse.ArgumentParser()
 
     subparsers = arg_parser.add_subparsers()
+
+    dump_parser = subparsers.add_parser('dump', help='Dump specific transformations on a grammar')
+
+    dump_parser.add_argument('file', nargs=1, help='A path to a grammar file')
+    dump_parser.add_argument('name', nargs='*', help='Name of the pass to apply')
+    dump_parser.set_defaults(func=_do_dump)
 
     check_parser = subparsers.add_parser('check', help='Check the given grammar for common mistakes')
 
@@ -77,6 +109,7 @@ def main() -> int:
     generate_parser.add_argument('lang', choices=get_generator_languages(), help='The name of the template to use')
     generate_parser.add_argument('file', nargs=1, help='A path to a grammar file')
     generate_parser.add_argument('--skip-checks', action=argparse.BooleanOptionalAction, help='Skip all sanity checks for the given grammar')
+    generate_parser.add_argument('--no-opt', action=argparse.BooleanOptionalAction, help='Disable any optimisations')
     generate_parser.add_argument('--feat-all', action=argparse.BooleanOptionalAction, help='Enable all output features (off by default)')
     generate_parser.add_argument('--feat-linecol', action=argparse.BooleanOptionalAction, help='Track line/column information during lexing (unless grammar requires it off by default)')
     generate_parser.add_argument('--feat-cst-parent-pointers', action=argparse.BooleanOptionalAction, help='Generate references to the parent of a CST node (off by default)')
