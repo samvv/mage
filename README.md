@@ -18,7 +18,7 @@ Here is the status of the various languages supported by Mage:
 |--------|-------------|--------|
 | CST    | Create a parse tree from a grammar | ✅ |
 | AST    | Create an AST that is derived from a CST | ⏳ |
-| Lexer  | Create a fully functioning lexer from a grammar | ⏳ |
+| Lexer  | Create a fully functioning lexer from a grammar | 🚧 |
 | Parser | Create a fully functioning parser from a grammmar | ⏳ |
 
 **Rust**
