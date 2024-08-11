@@ -1,6 +1,6 @@
 
 from io import StringIO
-from typing import NewType, assert_never
+from typing import NewType, Sequence, assert_never
 from magelang.util import IndentWriter
 
 from .cst import *
@@ -78,7 +78,7 @@ def emit_token(node: PyToken) -> str:
     if isinstance(node, PyColon):
         return ':'
 
-    if isinstance(node, PyHyphenGreaterThan):
+    if isinstance(node, PyRArrow):
         return '->'
 
     if isinstance(node, PyComma):
@@ -232,7 +232,7 @@ def emit(node: PyNode) -> str:
     string = StringIO()
     out = IndentWriter(string, indentation='    ')
 
-    def visit_body(body: 'PyStmt | list[PyStmt]', newline = '\n') -> None:
+    def visit_body(body: 'PyStmt | Sequence[PyStmt]', newline = '\n') -> None:
         if is_py_stmt(body):
             out.write(' ')
             visit(body)
@@ -475,9 +475,11 @@ def emit(node: PyNode) -> str:
                 out.write(' ')
                 visit_expr(expr)
             out.write(' ')
-            visit_token(node.equals)
-            out.write(' ')
-            visit_expr(node.expr)
+            if node.value is not None:
+                equals, expr = node.value
+                visit_token(equals)
+                out.write(' ')
+                visit_expr(expr)
             return
 
         if isinstance(node, PyPassStmt):

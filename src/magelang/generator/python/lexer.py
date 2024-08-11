@@ -5,7 +5,7 @@ from magelang.ast import *
 from magelang.lang.python.cst import *
 from magelang.ast import Grammar
 from magelang.repr import TokenSpec, grammar_to_specs
-from magelang.util import NameGenerator, to_snake_case
+from magelang.util import NameGenerator
 from .util import build_cond, build_or, rule_type_to_py_type, to_class_name
 
 
@@ -60,9 +60,9 @@ def generate_lexer(
     def lex_visit_backtrack_on_fail(expr: Expr, success: Callable[[], list[PyStmt]]) -> list[PyStmt]:
         keep_name = generate_temporary(prefix='keep_')
         return [
-            PyAssignStmt(PyNamedPattern(keep_name), PyNamedExpr(char_offset_name)),
+            PyAssignStmt(PyNamedPattern(keep_name), value=PyNamedExpr(char_offset_name)),
             *lex_visit(expr, success),
-            PyAssignStmt(PyNamedPattern(char_offset_name), PyNamedExpr(keep_name)),
+            PyAssignStmt(PyNamedPattern(char_offset_name), value=PyNamedExpr(keep_name)),
         ]
 
     def lex_visit(expr: Expr, success: Callable[[], list[PyStmt]]) -> list[PyStmt]:
@@ -88,7 +88,7 @@ def generate_lexer(
                 )
             success = lambda: [
                 *old_success(),
-                PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), '_curr_offset'), PyNamedExpr(char_offset_name)),
+                PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), '_curr_offset'), value=PyNamedExpr(char_offset_name)),
                 PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(to_class_name(rule.name, prefix)), args=token_args))
             ]
 
@@ -102,22 +102,22 @@ def generate_lexer(
             matches_name = generate_temporary(prefix='matches_')
             if expr.is_negated:
                 return [
-                    PyAssignStmt(PyNamedPattern(keep_name), PyNamedExpr(char_offset_name)),
-                    PyAssignStmt(PyNamedPattern(matches_name), PyNamedExpr('True')),
+                    PyAssignStmt(PyNamedPattern(keep_name), value=PyNamedExpr(char_offset_name)),
+                    PyAssignStmt(PyNamedPattern(matches_name), value=PyNamedExpr('True')),
                     *lex_visit(expr.expr, lambda: [
-                        PyAssignStmt(PyNamedPattern(char_offset_name), PyNamedExpr(keep_name)),
-                        PyAssignStmt(PyNamedPattern(matches_name), PyNamedExpr('False'))
+                        PyAssignStmt(PyNamedPattern(char_offset_name), value=PyNamedExpr(keep_name)),
+                        PyAssignStmt(PyNamedPattern(matches_name), value=PyNamedExpr('False'))
                     ]),
-                    PyAssignStmt(PyNamedPattern(char_offset_name), PyNamedExpr(keep_name)),
+                    PyAssignStmt(PyNamedPattern(char_offset_name), value=PyNamedExpr(keep_name)),
                     *build_cond([ (PyNamedExpr(matches_name), success()) ])
                 ]
             return [
-                PyAssignStmt(PyNamedPattern(keep_name), PyNamedExpr(char_offset_name)),
+                PyAssignStmt(PyNamedPattern(keep_name), value=PyNamedExpr(char_offset_name)),
                 *lex_visit(expr.expr, lambda: [
-                    PyAssignStmt(PyNamedPattern(char_offset_name), PyNamedExpr(keep_name)),
+                    PyAssignStmt(PyNamedPattern(char_offset_name), value=PyNamedExpr(keep_name)),
                     *success()
                 ]),
-                PyAssignStmt(PyNamedPattern(char_offset_name), PyNamedExpr(keep_name)),
+                PyAssignStmt(PyNamedPattern(char_offset_name), value=PyNamedExpr(keep_name)),
             ]
 
         if isinstance(expr, LitExpr):
@@ -128,11 +128,17 @@ def generate_lexer(
                 ch_name = generate_temporary(prefix='ch_')
                 ch = expr.text[k]
                 return [
-                    PyAssignStmt(pattern=PyNamedPattern(ch_name), expr=PyCallExpr(operator=PyAttrExpr(expr=PyNamedExpr('self'), name='_char_at'), args=[ PyNamedExpr(char_offset_name) ])),
+                    PyAssignStmt(
+                        pattern=PyNamedPattern(ch_name),
+                        value=PyCallExpr(
+                            operator=PyAttrExpr(expr=PyNamedExpr('self'), name='_char_at'),
+                            args=[ PyNamedExpr(char_offset_name) ]
+                        )
+                    ),
                     *build_cond([(
                         PyInfixExpr(left=PyNamedExpr(ch_name), op=PyEqualsEquals(), right=PyConstExpr(literal=ch)),
                         [
-                            PyAssignStmt(PyNamedPattern(char_offset_name), PyInfixExpr(PyNamedExpr(char_offset_name), PyPlus(), PyConstExpr(1))),
+                            PyAssignStmt(PyNamedPattern(char_offset_name), value=PyInfixExpr(PyNamedExpr(char_offset_name), PyPlus(), PyConstExpr(1))),
                             *next_char(k+1)
                         ]
                     )])
@@ -154,11 +160,17 @@ def generate_lexer(
             ch_name = generate_temporary(prefix='ch_')
 
             return [
-                PyAssignStmt(pattern=PyNamedPattern(ch_name), expr=PyCallExpr(operator=PyAttrExpr(expr=PyNamedExpr('self'), name='_char_at'), args=[ PyNamedExpr(char_offset_name) ])),
+                PyAssignStmt(
+                    pattern=PyNamedPattern(ch_name),
+                    value=PyCallExpr(
+                        operator=PyAttrExpr(expr=PyNamedExpr('self'), name='_char_at'),
+                        args=[ PyNamedExpr(char_offset_name) ]
+                    )
+                ),
                 *build_cond([(
                     build_or(make_charset_predicate(element, PyNamedExpr(ch_name)) for element in expr.elements),
                     [
-                        PyAssignStmt(PyNamedPattern(char_offset_name), PyInfixExpr(PyNamedExpr(char_offset_name), PyPlus(), PyConstExpr(1))),
+                        PyAssignStmt(PyNamedPattern(char_offset_name), value=PyInfixExpr(PyNamedExpr(char_offset_name), PyPlus(), PyConstExpr(1))),
                         *success()
                     ]
                 )]),
@@ -171,13 +183,13 @@ def generate_lexer(
 
             out: list[PyStmt] = []
 
-            out.append(PyAssignStmt(PyNamedPattern('matches'), PyNamedExpr('True')))
+            out.append(PyAssignStmt(PyNamedPattern('matches'), value=PyNamedExpr('True')))
             out.append(PyForStmt(
                 pattern=PyNamedPattern('_'),
                 expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
                 body=[
                     *lex_visit(expr.expr, contin),
-                    PyAssignStmt(PyNamedPattern('matches'), PyNamedExpr('False')),
+                    PyAssignStmt(PyNamedPattern('matches'), value=PyNamedExpr('False')),
                     PyBreakStmt(),
                 ]
             ))
@@ -214,14 +226,14 @@ def generate_lexer(
 
         assert_never(expr)
 
-    body.append(PyAssignStmt(PyNamedPattern(char_offset_name), PyAttrExpr(PyNamedExpr('self'), '_curr_offset')))
+    body.append(PyAssignStmt(PyNamedPattern(char_offset_name), value=PyAttrExpr(PyNamedExpr('self'), '_curr_offset')))
 
     if grammar.skip_rule:
         assert(grammar.skip_rule.expr is not None)
         # FIXME success() might assume termination of lexing procedure
         body.extend(lex_visit(grammar.skip_rule.expr, noop))
 
-    body.append(PyAssignStmt(PyNamedPattern('start'), PyNamedExpr(char_offset_name)))
+    body.append(PyAssignStmt(PyNamedPattern('start'), value=PyNamedExpr(char_offset_name)))
 
     choices = []
     for rule in grammar.rules:

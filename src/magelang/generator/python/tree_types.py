@@ -52,7 +52,6 @@ def generate_tree_types(
                 body.append(PyAssignStmt(
                     PyNamedPattern(field.name),
                     annotation=quote_py_type(gen_py_type(field.ty, prefix=prefix)),
-                    expr=PyConstExpr('delme')
                 ))
                 if is_optional(param_type):
                     optional.append(PyNamedParam(
@@ -107,7 +106,7 @@ def generate_tree_types(
             ]
 
             if not spec.is_static:
-                body.append(PyAssignStmt(PyNamedPattern('value'), annotation=rule_type_to_py_type(spec.field_type), expr=PyConstExpr('delme')))
+                body.append(PyAssignStmt(PyNamedPattern('value'), annotation=rule_type_to_py_type(spec.field_type)))
 
             stmts.append(PyClassDef(
                 name=to_class_name(spec.name, prefix),

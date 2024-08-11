@@ -35,8 +35,8 @@ def generate_test_lexer(
             if isinstance(child, marko.block.FencedCode):
                 input = get_marko_element_text(child.children[0]).strip()
                 body: list[PyStmt] = [
-                    PyAssignStmt(PyNamedPattern('lexer'), PyCallExpr(PyNamedExpr(lexer_class_name), args=[ PyConstExpr(input) ])),
-                    PyAssignStmt(PyNamedPattern(f't{i}'), PyCallExpr(PyAttrExpr(PyNamedExpr('lexer'), 'lex'))),
+                    PyAssignStmt(PyNamedPattern('lexer'), value=PyCallExpr(PyNamedExpr(lexer_class_name), args=[ PyConstExpr(input) ])),
+                    PyAssignStmt(PyNamedPattern(f't{i}'), value=PyCallExpr(PyAttrExpr(PyNamedExpr('lexer'), 'lex'))),
                     PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ PyCallExpr(PyAttrExpr(PyNamedExpr('lexer'), 'at_eof')) ])),
                     PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ build_isinstance(PyNamedExpr(f't{i}'), PyNamedExpr(this_class_name)) ])),
                 ]

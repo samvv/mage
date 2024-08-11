@@ -1,7 +1,7 @@
 
 from typing import assert_never
 
-from .util import Case, build_cond, build_is_none, build_isinstance, build_or, build_union, gen_deep_test, gen_default_constructor, gen_initializers, gen_py_type, gen_shallow_test, is_default_constructible, namespaced, rule_type_to_py_type, to_class_name
+from .util import build_isinstance, build_or, build_union, gen_deep_test, gen_initializers, gen_py_type, namespaced, rule_type_to_py_type, to_class_name
 from magelang.repr import *
 from magelang.lang.python.cst import *
 from magelang.lang.python.emitter import emit
@@ -141,9 +141,16 @@ def generate_tree(
             for field in spec.members:
 
                 out_name = f'{field.name}_out'
-                assign: Callable[[PyExpr], PyStmt] = lambda value, name=out_name: PyAssignStmt(PyNamedPattern(name), value)
+                assign: Callable[[PyExpr], PyStmt] = lambda value, name=out_name: PyAssignStmt(PyNamedPattern(name), value=value)
                 param_type, param_stmts = gen_initializers(field.name, field.ty, field.name, assign, specs=specs, prefix=prefix)
-                param_stmts.append(PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern('self'), name=field.name), annotation=gen_py_type(field.ty, prefix), expr=PyNamedExpr(out_name)))
+                param_stmts.append(PyAssignStmt(
+                    pattern=PyAttrPattern(
+                        pattern=PyNamedPattern('self'),
+                        name=field.name
+                    ),
+                    annotation=gen_py_type(field.ty, prefix),
+                    value=PyNamedExpr(out_name)
+                ))
 
                 init_body.extend(param_stmts)
 
@@ -231,7 +238,7 @@ def generate_tree(
                 params.append(PyNamedParam(pattern=PyNamedPattern('span'), annotation=build_union([ PyNamedExpr('Span'), PyNamedExpr('None') ]), default=PyNamedExpr('None')))
 
                 # self.value = value
-                init_body.append(PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern('self'), name='value'), expr=PyNamedExpr('value')))
+                init_body.append(PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern('self'), name='value'), value=PyNamedExpr('value')))
 
                 body.append(PyFuncDef(name='__init__', params=params, body=init_body))
 
@@ -278,7 +285,7 @@ def generate_tree(
     stmts.append(
         PyAssignStmt(
             pattern=PyNamedPattern(token_type_name),
-            expr=build_union(PyNamedExpr(to_class_name(name, prefix)) for name in token_names)
+            value=build_union(PyNamedExpr(to_class_name(name, prefix)) for name in token_names)
         )
     )
 
@@ -288,7 +295,7 @@ def generate_tree(
     stmts.append(
         PyAssignStmt(
             pattern=PyNamedPattern(node_type_name),
-            expr=build_union(PyNamedExpr(to_class_name(name, prefix)) for name in node_names)
+            value=build_union(PyNamedExpr(to_class_name(name, prefix)) for name in node_names)
         )
     )
 
@@ -298,7 +305,7 @@ def generate_tree(
     stmts.append(
         PyAssignStmt(
             pattern=PyNamedPattern(syntax_type_name),
-            expr=build_union([ PyNamedExpr(token_type_name), PyNamedExpr(node_type_name) ])
+            value=build_union([ PyNamedExpr(token_type_name), PyNamedExpr(node_type_name) ])
         )
     )
 

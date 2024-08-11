@@ -34,7 +34,7 @@ def generate_visitor(
         if isinstance(ty, TupleType):
             for i, element_type in enumerate(ty.element_types):
                 tmp = generate_temporary(prefix='element_')
-                yield PyAssignStmt(pattern=PyNamedPattern(tmp), expr=PySubscriptExpr(expr=target, slices=[ PyConstExpr(literal=i) ]))
+                yield PyAssignStmt(pattern=PyNamedPattern(tmp), value=PySubscriptExpr(expr=target, slices=[ PyConstExpr(literal=i) ]))
                 yield from gen_proc_call(element_type, PyNamedExpr(tmp))
             return
         if isinstance(ty, ListType):

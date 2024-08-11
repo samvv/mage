@@ -418,7 +418,7 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
 
             if is_static(ty.element_type, specs=specs):
                 yield ExternType(integer_rule_type), [
-                    PyAssignStmt(PyNamedPattern(new_elements_name), expr=PyCallExpr(PyNamedExpr('Punctuated'))),
+                    PyAssignStmt(PyNamedPattern(new_elements_name), value=PyCallExpr(PyNamedExpr('Punctuated'))),
                     PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyNamedExpr(in_name) ]), body= [
                         PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(new_elements_name), 'append'), args=[ gen_default_constructor(ty.element_type, specs=specs, prefix=prefix) ])),
                     ]),
@@ -434,10 +434,10 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
             separator_name = f'{in_name}_separator'
             new_separator_name = f'new_{in_name}_separator'
 
-            value_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_value_name: PyAssignStmt(pattern=PyNamedPattern(name), expr=value)
+            value_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_value_name: PyAssignStmt(pattern=PyNamedPattern(name), value=value)
             value_type, value_stmts = collect(ty.element_type, value_name, value_assign, True)
 
-            separator_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_separator_name: PyAssignStmt(pattern=PyNamedPattern(name), expr=value)
+            separator_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_separator_name: PyAssignStmt(pattern=PyNamedPattern(name), value=value)
             separator_type, separator_stmts = collect(ty.separator_type, separator_name, separator_assign, True)
 
             coerced_ty = UnionType([
@@ -449,17 +449,17 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
             yield coerced_ty, [
                 PyAssignStmt(
                     pattern=PyNamedPattern(new_elements_name),
-                    expr=PyCallExpr(operator=PyNamedExpr('Punctuated'))
+                    value=PyCallExpr(operator=PyNamedExpr('Punctuated'))
                 ),
                 PyAssignStmt(
                     pattern=PyNamedPattern(elements_iter_name),
-                    expr=PyCallExpr(operator=PyNamedExpr('iter'), args=[ PyNamedExpr(in_name) ]),
+                    value=PyCallExpr(operator=PyNamedExpr('iter'), args=[ PyNamedExpr(in_name) ]),
                 ),
                 PyTryStmt(
                     body=[
                         PyAssignStmt(
                             pattern=PyNamedPattern(first_element_name),
-                            expr=PyCallExpr(operator=PyNamedExpr('next'), args=[ PyNamedExpr(elements_iter_name) ])
+                            value=PyCallExpr(operator=PyNamedExpr('next'), args=[ PyNamedExpr(elements_iter_name) ])
                         ),
                         PyWhileStmt(
                             expr=PyNamedExpr('True'),
@@ -468,7 +468,7 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
                                     body=[
                                         PyAssignStmt(
                                             pattern=PyNamedPattern(second_element_name),
-                                            expr=PyCallExpr(operator=PyNamedExpr('next'), args=[ PyNamedExpr(elements_iter_name) ])
+                                            value=PyCallExpr(operator=PyNamedExpr('next'), args=[ PyNamedExpr(elements_iter_name) ])
                                         ),
                                         *build_cond([
                                             (
@@ -477,11 +477,11 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
                                                 [
                                                     PyAssignStmt(
                                                         pattern=PyNamedPattern(value_name),
-                                                        expr=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(literal=0) ]),
+                                                        value=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(literal=0) ]),
                                                     ),
                                                     PyAssignStmt(
                                                         pattern=PyNamedPattern(separator_name),
-                                                        expr=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(literal=1) ]),
+                                                        value=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(literal=1) ]),
                                                     ),
                                                 ]
                                             ),
@@ -490,11 +490,11 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
                                                 [
                                                     PyAssignStmt(
                                                         pattern=PyNamedPattern(value_name),
-                                                        expr=PyNamedExpr(first_element_name),
+                                                        value=PyNamedExpr(first_element_name),
                                                     ),
                                                     PyAssignStmt(
                                                         pattern=PyNamedPattern(separator_name),
-                                                        expr=gen_default_constructor(ty.separator_type, specs=specs, prefix=prefix),
+                                                        value=gen_default_constructor(ty.separator_type, specs=specs, prefix=prefix),
                                                     ),
                                                 ]
                                             )
@@ -512,7 +512,7 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
                                         ),
                                         PyAssignStmt(
                                             pattern=PyNamedPattern(first_element_name),
-                                            expr=PyNamedExpr(second_element_name),
+                                            value=PyNamedExpr(second_element_name),
                                         ),
                                     ],
                                     handlers=[
@@ -526,10 +526,10 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
                                                         [
                                                             PyAssignStmt(
                                                                 pattern=PyNamedPattern(value_name),
-                                                                expr=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(0) ]),
+                                                                value=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(0) ]),
                                                             ),
                                                             PyExprStmt(
-                                                                expr=PyCallExpr(
+                                                                PyCallExpr(
                                                                     operator=PyNamedExpr('assert'),
                                                                     args=[ build_is_none(PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(1) ])) ]
                                                                 )
@@ -541,7 +541,7 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
                                                         [
                                                             PyAssignStmt(
                                                                 pattern=PyNamedPattern(value_name),
-                                                                expr=PyNamedExpr(first_element_name),
+                                                                value=PyNamedExpr(first_element_name),
                                                             )
                                                         ]
                                                     )
@@ -586,7 +586,7 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
 
             if is_static(ty.element_type, specs=specs):
                 yield ExternType(integer_rule_type), [
-                    PyAssignStmt(PyNamedPattern(new_elements_name), expr=PyCallExpr(PyNamedExpr('list'))),
+                    PyAssignStmt(PyNamedPattern(new_elements_name), value=PyCallExpr(PyNamedExpr('list'))),
                     PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyNamedExpr(in_name) ]), body= [
                         PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(new_elements_name), 'append'), args=[ gen_default_constructor(ty.element_type, specs=specs, prefix=prefix) ])),
                     ]),
@@ -596,13 +596,13 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
             element_name = f'{in_name}_element'
             new_element_name = f'new_{in_name}_element'
 
-            element_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name), expr=value)
+            element_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name), value=value)
             element_type, element_stmts = collect(ty.element_type, element_name, element_assign, True)
 
             yield ListType(element_type, ty.required), [
                 PyAssignStmt(
                     pattern=PyNamedPattern(new_elements_name),
-                    expr=PyCallExpr(operator=PyNamedExpr('list'))
+                    value=PyCallExpr(operator=PyNamedExpr('list'))
                 ),
                 PyForStmt(
                     pattern=PyNamedPattern(element_name),
@@ -672,14 +672,14 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
 
                 element_name = f'{in_name}_{i}'
                 new_element_name = f'new_{in_name}_{i}'
-                element_assign = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name), expr=value)
+                element_assign = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name), value=value)
 
                 new_elements.append(PyNamedExpr(new_element_name))
 
                 orelse.append(
                     PyAssignStmt(
                         pattern=PyNamedPattern(element_name),
-                        expr=PySubscriptExpr(
+                        value=PySubscriptExpr(
                             expr=PyNamedExpr(in_name),
                             slices=[ PyConstExpr(literal=i) ]
                         )
