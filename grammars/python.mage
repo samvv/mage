@@ -108,6 +108,7 @@ pub expr
   = attr_expr
   | call_expr
   | const_expr
+  | ellipsis_expr
   | generator_expr
   | infix_expr
   | list_expr
@@ -117,6 +118,9 @@ pub expr
   | starred_expr
   | subscript_expr
   | tuple_expr
+
+pub ellipsis_expr
+  = '...'
 
 pub guard
   = 'if' expr
