@@ -286,6 +286,21 @@ class Rule(Node):
         self.expr = expr
         self._references_public_rule = False
 
+    def derive(self, comment: str | None = None, decorators: list[Decorator] | None = None, flags: int | None = None, name: str | None = None, type_name: str | None = None, expr: Expr | None = None) -> 'Rule':
+        if name is None:
+            name = self.name
+        if expr is None:
+            expr = self.expr
+        if comment is None:
+            comment = self.comment
+        if decorators is None:
+            decorators = self.decorators
+        if flags is None:
+            flags = self.flags
+        if type_name is None:
+            type_name = self.type_name
+        return Rule(name=name, expr=expr, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
+
     @property
     def is_public(self) -> bool:
         return (self.flags & PUBLIC) > 0
