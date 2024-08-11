@@ -3,6 +3,7 @@ from typing import Iterator, Iterable
 import marko.inline
 from magelang.repr import *
 from magelang.lang.python.cst import *
+from magelang.logging import warn
 from magelang.util import to_camel_case, is_iterator
 
 type Case = tuple[PyExpr | None, list[PyStmt]]
