@@ -328,25 +328,53 @@ def do_types_shallow_overlap(a: Type, b: Type) -> bool:
     return False
 
 def simplify_type(ty: Type) -> Type:
+    if isinstance(ty, NoneType) \
+        or isinstance(ty, NeverType) \
+        or isinstance(ty, VariantType) \
+        or isinstance(ty, NodeType) \
+        or isinstance(ty, ExternType) \
+        or isinstance(ty, TokenType):
+        return ty
+    if isinstance(ty, ListType):
+        return ListType(
+            simplify_type(ty.element_type),
+            ty.required
+        )
+    if isinstance(ty, TupleType):
+        return TupleType(
+            list(simplify_type(ty) for ty in ty.element_types)
+        )
+    if isinstance(ty, PunctType):
+        return PunctType(
+            simplify_type(ty.element_type),
+            simplify_type(ty.separator_type),
+            ty.required
+        )
     if isinstance(ty, UnionType):
         types = []
-        has_none = False
         for ty in flatten_union(ty):
             if isinstance(ty, NeverType):
                 continue
-            if  isinstance(ty, NoneType):
-                has_none = True
+            types.append(simplify_type(ty))
+        types.sort()
+        iterator = iter(types)
+        prev = next(iterator)
+        dedup_types = [ prev ]
+        while True:
+            try:
+                curr = next(iterator)
+            except StopIteration:
+                break
+            if prev == curr:
                 continue
-            types.append(ty)
-        if has_none:
-            types.append(NoneType())
-        if len(types) == 0:
+            dedup_types.append(curr)
+            prev = curr
+        if len(dedup_types) == 0:
             return NeverType()
-        if len(types) == 1:
+        if len(dedup_types) == 1:
             return types[0]
         return UnionType(types)
-    else:
-        return ty
+    assert_never(ty)
 
 def grammar_to_specs(grammar: Grammar) -> Specs:
 
