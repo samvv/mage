@@ -60,7 +60,7 @@ def simplify(grammar: Grammar) -> Grammar:
             if len(new_elements) == 1:
                 new_elements[0].rules.extend(expr.rules)
                 return new_elements[0]
-            return ChoiceExpr(new_elements, rules=expr.rules)
+            return expr.derive(elements=new_elements)
         if isinstance(expr, SeqExpr):
             new_elements = []
             has_fail = False
@@ -78,15 +78,50 @@ def simplify(grammar: Grammar) -> Grammar:
             if len(new_elements) == 1:
                 new_elements[0].rules.extend(expr.rules)
                 return new_elements[0]
-            return SeqExpr(new_elements, rules=expr.rules)
+            return expr.derive(elements=new_elements)
+
         if isinstance(expr, CharSetExpr):
-            # TODO remove overlapping ranges
-            return expr
-        if isinstance(expr, RepeatExpr):
-            return RepeatExpr(expr.min, expr.max, expr.expr, rules=expr.rules)
+
+            assert(len(expr.elements) > 0)
+
+            normalized = []
+            for element in expr.elements:
+                if isinstance(element, tuple):
+                    low, high = element
+                else:
+                    low = element
+                    high = element
+                normalized.append((ord(low), ord(high)))
+
+            normalized.sort()
+
+            new_elements = []
+
+            # The list is now strongly sorted on the first key. Go from left to
+            # right over the list, incrementing max_h each time the interval
+            # stretches. When it doesn't stretch, put wherever we started
+            # combined with the maximum value we encountered in the output.
+            prev_l, prev_h = normalized[0]
+            max_h = prev_h
+            for l, h in normalized[1:]:
+                if l <= prev_h:
+                    prev_h = h
+                    continue
+                new_elements.append((prev_l, max_h))
+                prev_l = l
+                prev_h = h
+                max_h = max(h, max_h)
+
+            return expr.derive(elements=new_elements)
+
         if isinstance(expr, RefExpr):
+            # We visit each rule so no need to lookup the rule in the grammar
             return expr
-        raise RuntimeError(f'unexpected node {expr}')
+        if isinstance(expr, RepeatExpr) or isinstance(expr, HideExpr) or isinstance(expr, LookaheadExpr):
+            return expr.derive(expr=visit(expr.expr))
+        if isinstance(expr, ListExpr):
+            return expr.derive(element=visit(expr.element))
+        assert_never(expr)
 
     new_rules = []
     for rule in grammar.rules:
@@ -96,7 +131,7 @@ def simplify(grammar: Grammar) -> Grammar:
         assert(rule.expr is not None)
         # FIXME not sure why this call to flatten is necessary for good output
         new_expr = flatten(visit(rule.expr))
-        new_rules.append(Rule(rule.flags, rule.name, new_expr))
+        new_rules.append(rule.derive(expr=new_expr))
 
     return Grammar(rules=new_rules)
 
