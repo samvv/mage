@@ -33,7 +33,7 @@ def generate_tree_types(
             name=f'is_{namespaced(name, prefix)}',
             params=[ PyNamedParam(PyNamedPattern('value'), annotation=PyNamedExpr('Any')) ],
             return_type=PySubscriptExpr(PyNamedExpr('TypeGuard'), [ PyNamedExpr(to_class_name(name, prefix)) ]),
-            body=PyExprStmt(PyNamedExpr('...')), # FIXME
+            body=PyExprStmt(PyEllipsisExpr()),
         )
 
     for spec in specs:
@@ -78,7 +78,7 @@ def generate_tree_types(
                 PyFuncDef(
                     name='__init__',
                     params=init_params,
-                    body=PyExprStmt(PyNamedExpr('...')), # FIXME
+                    body=PyExprStmt(PyEllipsisExpr()),
                 )
             )
 
@@ -106,7 +106,7 @@ def generate_tree_types(
                 PyFuncDef(
                     name='__init__',
                     params=init_params,
-                    body=PyExprStmt(PyNamedExpr('...')), # FIXME
+                    body=PyExprStmt(PyEllipsisExpr()),
                 ),
             ]
 
