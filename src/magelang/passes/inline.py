@@ -11,8 +11,7 @@ def inline(grammar: Grammar) -> Grammar:
             if rule.is_public or rule.is_extern:
                 return
             assert(rule.expr is not None)
-            new_expr = rule.expr.clone()
-            new_expr.label = rule.name
+            new_expr = rule.expr.derive(label=rule.name)
             return rewrite_expr(new_expr, rewriter)
 
     for rule in grammar.rules:

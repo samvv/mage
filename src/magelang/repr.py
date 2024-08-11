@@ -1,56 +1,76 @@
 
-from typing import Iterator, assert_never
-from sweetener import Record
+from abc import abstractmethod
+from dataclasses import dataclass
+from typing import Any, Iterator, assert_never
 
 from magelang.eval import accepts
-from magelang.util import nonnull
+from magelang.util import nonnull, to_snake_case
 
 from .ast import *
 
 type Type = ExternType | NodeType | TokenType | VariantType | NeverType | TupleType | ListType | PunctType | UnionType | NoneType
 
-class TypeBase(Record):
-    pass
+@dataclass
+class TypeBase:
 
-class ExternType(TypeBase):
-    """
-    A type that is directly representing the Foo part in a `pub foo -> Foo = bar` 
-    """
-    name: str
+    @abstractmethod
+    def encode(self) -> Any: ...
 
+    def __lt__(self, other: Type) -> bool:
+        assert(isinstance(other, TypeBase))
+        return self.encode() < other.encode()
+
+@dataclass
 class RuleType(TypeBase):
     name: str
 
+@dataclass
 class NodeType(RuleType):
     """
     Matches a leaf node in the AST/CST.
     """
-    pass
 
+    def encode(self) -> Any:
+        return (1, self.name)
+
+@dataclass
 class TokenType(RuleType):
     """
     Matches a token type in the CST.
     """
-    pass
 
+    def encode(self) -> Any:
+        return (2, self.name)
+
+@dataclass
 class VariantType(RuleType):
     """
     Matches a union of different nodes in the AST/CST.
     """
-    pass
 
+    def encode(self) -> Any:
+        return (3, self.name)
+
+@dataclass
 class NeverType(TypeBase):
     """
     Represents a type that never matches. Mostly useful to close off a union type when generating types.
     """
-    pass
 
+    def encode(self) -> Any:
+        return (4,)
+
+@dataclass
 class TupleType(TypeBase):
     """
     A type that allows values to contain a specific sequence of types.
     """
     element_types: list[Type]
 
+    def encode(self) -> Any:
+        return (5, list(ty.encode() for ty in self.element_types))
+
+@dataclass
 class ListType(TypeBase):
     """
     A type that allows multiple values of the same underlying type.
@@ -58,6 +78,10 @@ class ListType(TypeBase):
     element_type: Type
     required: bool
 
+    def encode(self) -> Any:
+        return (6, self.element_type.encode(), self.required)
+
+@dataclass
 class PunctType(TypeBase):
     """
     A type that is like a list but where values are seperated by another type.
@@ -66,39 +90,64 @@ class PunctType(TypeBase):
     separator_type: Type
     required: bool
 
+    def encode(self) -> Any:
+        return (7, self.element_type.encode(), self.separator_type.encode(), self.required)
+
+@dataclass
 class UnionType(TypeBase):
     """
     A type where any of the member types are valid.
     """
     types: list[Type]
 
+    def encode(self) -> Any:
+        return (8, list(ty.encode() for ty in self.types))
+
+@dataclass
 class NoneType(TypeBase):
     """
     A type that indicates that the value is empty.
 
     This type is usually created in conjunction with a union type.
     """
-    pass
 
-class Field(Record):
+    def encode(self) -> Any:
+        return (9,)
+
+@dataclass
+class ExternType(TypeBase):
+    """
+    A type that is directly representing the Foo part in a `pub foo -> Foo = bar` 
+    """
+    name: str
+
+    def encode(self) -> Any:
+        return (10, self.name)
+
+@dataclass
+class Field:
     """
     Not a type, but represents exactly one field of a data structure/CST node. 
     """
     name: str
     ty: Type
 
-class SpecBase(Record):
+@dataclass
+class SpecBase:
     pass
 
+@dataclass
 class TokenSpec(SpecBase):
     name: str
     field_type: str
     is_static: bool
 
+@dataclass
 class NodeSpec(SpecBase):
     name: str
     members: list[Field]
 
+@dataclass
 class VariantSpec(SpecBase):
     name: str
     members: list[tuple[str, Type]]

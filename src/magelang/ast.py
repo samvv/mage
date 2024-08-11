@@ -1,72 +1,262 @@
 
 from functools import cache
 import math
-from typing import TYPE_CHECKING, Callable, Generator
+from typing import TYPE_CHECKING, Callable, Generator, assert_never
 
-from sweetener import BaseNode
 
 if TYPE_CHECKING:
     from .repr import Type
 
-class Node(BaseNode):
+
+class Node:
     pass
+
 
 type Expr = LitExpr | RefExpr | CharSetExpr | LookaheadExpr | ChoiceExpr | SeqExpr | HideExpr | ListExpr | RepeatExpr
 
+
 class ExprBase(Node):
 
-    label: str | None = None
-
-    def __init__(self, *args, rules: list['Rule'] | None = None, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
         if rules is None:
             rules = []
-        self.rules: list['Rule'] = rules
-        self.field_name: str | None = None
-        self.field_type: Type | None = None
-        self.action: Rule | None = None
+        self.label = label
+        self.rules = rules
+        self.field_name = field_name
+        self.field_type = field_type
+        self.action = action # FIXME merge with `self.rules`
+
 
 class LitExpr(ExprBase):
-    text: str
+
+    def __init__(self, text: str, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
+        super().__init__(label, rules, field_name, field_type, action)
+        self.text = text
+
+    def derive(self, text: str | None = None, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> 'LitExpr':
+        if text is None:
+            text = self.text
+        if label is None:
+            label = self.label
+        if rules is None:
+            rules = self.rules
+        if field_name is None:
+            field_name = self.field_name
+        if field_type is None:
+            field_type = self.field_type
+        if action is None:
+            action = self.action
+        return LitExpr(text=text, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
 
 class RefExpr(ExprBase):
-    name: str
+
+    def __init__(self, name: str, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
+        super().__init__(label, rules, field_name, field_type, action)
+        self.name = name
+
+    def derive(self, name: str | None = None, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> 'RefExpr':
+        if name is None:
+            name = self.name
+        if label is None:
+            label = self.label
+        if rules is None:
+            rules = self.rules
+        if field_name is None:
+            field_name = self.field_name
+        if field_type is None:
+            field_type = self.field_type
+        if action is None:
+            action = self.action
+        return RefExpr(name=name, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+
 
 class LookaheadExpr(ExprBase):
-    expr: Expr
-    is_negated: bool
+
+    def __init__(self, expr: Expr, is_negated: bool, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
+        super().__init__(label, rules, field_name, field_type, action)
+        self.expr = expr
+        self.is_negated = is_negated
+
+    def derive(self, expr: Expr | None = None, is_negated: bool | None = None, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> 'LookaheadExpr':
+        if expr is None:
+            expr = self.expr
+        if is_negated is None:
+            is_negated = self.is_negated
+        if label is None:
+            label = self.label
+        if rules is None:
+            rules = self.rules
+        if field_name is None:
+            field_name = self.field_name
+        if field_type is None:
+            field_type = self.field_type
+        if action is None:
+            action = self.action
+        return LookaheadExpr(expr=expr, is_negated=is_negated, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+
 
 type CharSetElement = str | tuple[str, str]
 
+
 class CharSetExpr(ExprBase):
-    elements: list[CharSetElement]
-    ci: bool
-    invert: bool
+
+    def __init__(self, elements: list[CharSetElement], ci: bool, invert: bool, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
+        super().__init__(label, rules, field_name, field_type, action)
+        self.elements = elements
+        self.ci = ci
+        self.invert = invert
+
+    def derive(self, elements: list[CharSetElement] | None = None, ci: bool | None = None, invert: bool | None = None, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> 'CharSetExpr':
+        if elements is None:
+            elements = self.elements
+        if ci is None:
+            ci = self.ci
+        if invert is None:
+            invert = self.invert
+        if label is None:
+            label = self.label
+        if rules is None:
+            rules = self.rules
+        if field_name is None:
+            field_name = self.field_name
+        if field_type is None:
+            field_type = self.field_type
+        if action is None:
+            action = self.action
+        return CharSetExpr(elements=elements, ci=ci, invert=invert, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+
 
 class ChoiceExpr(ExprBase):
-    elements: list[Expr]
+
+    def __init__(self, elements: list[Expr], label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
+        super().__init__(label, rules, field_name, field_type, action)
+        self.elements = elements
+
+    def derive(self, elements: list[Expr] | None = None, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> 'ChoiceExpr':
+        if elements is None:
+            elements = self.elements
+        if label is None:
+            label = self.label
+        if rules is None:
+            rules = self.rules
+        if field_name is None:
+            field_name = self.field_name
+        if field_type is None:
+            field_type = self.field_type
+        if action is None:
+            action = self.action
+        return ChoiceExpr(elements=elements, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+
 
 class SeqExpr(ExprBase):
-    elements: list[Expr]
+
+    def __init__(self, elements: list[Expr], label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
+        super().__init__(label, rules, field_name, field_type, action)
+        self.elements = elements
+
+    def derive(self, elements: list[Expr] | None = None, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> 'SeqExpr':
+        if elements is None:
+            elements = self.elements
+        if label is None:
+            label = self.label
+        if rules is None:
+            rules = self.rules
+        if field_name is None:
+            field_name = self.field_name
+        if field_type is None:
+            field_type = self.field_type
+        if action is None:
+            action = self.action
+        return SeqExpr(elements=elements, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+
 
 class ListExpr(ExprBase):
-    element: Expr
-    separator: Expr
-    min_count: int
+
+    def __init__(self, element: Expr, separator: Expr, min_count: int, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
+        super().__init__(label, rules, field_name, field_type, action)
+        self.element = element
+        self.separator = separator
+        self.min_count = min_count
+
+    def derive(self, element: Expr | None = None, separator: Expr | None = None, min_count: int | None = None, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> 'ListExpr':
+        if element is None:
+            element = self.element
+        if separator is None:
+            separator = self.separator
+        if min_count is None:
+            min_count = self.min_count
+        if label is None:
+            label = self.label
+        if rules is None:
+            rules = self.rules
+        if field_name is None:
+            field_name = self.field_name
+        if field_type is None:
+            field_type = self.field_type
+        if action is None:
+            action = self.action
+        return ListExpr(element=element, separator=separator, min_count=min_count, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+
 
 class HideExpr(ExprBase):
-    expr: Expr
+
+    def __init__(self, expr: Expr, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
+        super().__init__(label, rules, field_name, field_type, action)
+        self.expr = expr
+
+    def derive(self, expr: Expr | None = None, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> 'HideExpr':
+        if expr is None:
+            expr = self.expr
+        if label is None:
+            label = self.label
+        if rules is None:
+            rules = self.rules
+        if field_name is None:
+            field_name = self.field_name
+        if field_type is None:
+            field_type = self.field_type
+        if action is None:
+            action = self.action
+        return HideExpr(expr=expr, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
 
 POSINF = math.inf
 
 class RepeatExpr(ExprBase):
-    min: int
-    max: int | float
-    expr: Expr
+
+    def __init__(self, expr: Expr, min: int, max: int, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
+        super().__init__(label, rules, field_name, field_type, action)
+        self.expr = expr
+        self.min = min 
+        self.max = max
+
+    def derive(self, expr: Expr | None = None, min: int | None = None, max: int | None = None, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> 'RepeatExpr':
+        if expr is None:
+            expr = self.expr
+        if min is None:
+            min = self.min
+        if max is None:
+            max = self.max
+        if label is None:
+            label = self.label
+        if rules is None:
+            rules = self.rules
+        if field_name is None:
+            field_name = self.field_name
+        if field_type is None:
+            field_type = self.field_type
+        if action is None:
+            action = self.action
+        return RepeatExpr(expr=expr, min=min, max=max, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+
 
 class Decorator(Node):
-    name: str
-    args: list[str | int]
+
+    def __init__(self, name: str, args: list[str | int] | None = None) -> None:
+        super().__init__()
+        if args is None:
+            args = []
+        self.name = name
+        self.args = args
 
 EXTERN = 1
 PUBLIC = 2
@@ -83,15 +273,17 @@ builtin_types = {
 }
 
 class Rule(Node):
-    comment: str | None
-    decorators: list[Decorator]
-    flags: int
-    name: str
-    type_name: str | None
-    expr: Expr | None
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, name: str, expr: Expr | None, comment: str | None = None, decorators: list[Decorator] | None = None, flags: int = 0, type_name: str = string_rule_type) -> None:
+        super().__init__()
+        if decorators is None:
+            decorators = []
+        self.comment = comment
+        self.decorators = decorators
+        self.flags = flags
+        self.name = name
+        self.type_name = type_name
+        self.expr = expr
         self._references_public_rule = False
 
     @property
@@ -126,12 +318,13 @@ class Rule(Node):
 
 class Grammar(Node):
 
-    rules: list[Rule]
-
-    def __init__(self, rules):
-        super().__init__(rules)
+    def __init__(self, rules: list[Rule] | None = None) -> None:
+        super().__init__()
+        if rules is None:
+            rules = []
+        self.rules = rules
         self._rules_by_name = dict[str, Rule]()
-        for rule in rules:
+        for rule in self.rules:
             self._rules_by_name[rule.name] = rule
 
     def is_fragment(self, rule: Rule) -> bool:
@@ -169,7 +362,6 @@ class Grammar(Node):
             if rule.is_skip:
                 return rule
 
-    @cache
     def is_token_rule(self, rule: Rule) -> bool:
         return rule.is_token
         # if rule.is_extern:
@@ -292,7 +484,7 @@ def rewrite_expr(expr: Expr, proc: Callable[[Expr], Expr | None]) -> Expr:
             if not changed:
                 return expr
             return SeqExpr(elements=new_elements, rules=expr.rules, label=expr.label)
-        raise RuntimeError(f'unexpected {expr}')
+        assert_never(expr)
 
     return visit(expr)
 
@@ -310,4 +502,4 @@ def for_each_expr(node: Expr, proc: Callable[[Expr], None]) -> None:
         for element in node.elements:
             proc(element)
         return
-    raise RuntimeError(f'unexpected {node}')
+    assert_never(node)
