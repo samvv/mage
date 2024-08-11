@@ -259,6 +259,10 @@ def emit(node: PyNode) -> str:
             visit_token(node.name)
             return
 
+        if isinstance(node, PyEllipsisExpr):
+            visit_token(node.dot_dot_dot)
+            return
+
         if isinstance(node, PyInfixExpr):
             new_prec, new_assoc = _describe_infix_operator(node.op)
             should_nest = info is not None and (new_prec < info[0] or (new_prec == info[0] and new_assoc != info[1]))
