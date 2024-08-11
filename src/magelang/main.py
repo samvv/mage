@@ -8,7 +8,7 @@ from .util import pipe
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser
-from .transforms import extract_literals, inline
+from .passes import extract_literals, inline
 from .generator import generate, get_generator_languages
 
 project_dir = Path(__file__).parent.parent.parent
