@@ -57,7 +57,8 @@ def extract_prefixes(grammar: Grammar) -> Grammar:
                 or isinstance(expr, RefExpr):
                 return False
             raise RuntimeError(f'unexpected {expr}')
-        visit(rule.expr, True)
+        if rule.expr is not None:
+            visit(rule.expr, True)
 
     def char_at(expr: Expr, i: int) -> str | None:
         if isinstance(expr, SeqExpr):
@@ -74,7 +75,7 @@ def extract_prefixes(grammar: Grammar) -> Grammar:
 
     def build_expr(edge: Edge) -> Expr:
         if isinstance(edge, str):
-            return LitExpr(edge)
+            return LitExpr(text=edge)
         assert_never(edge)
 
     def generate(prefixes: Prefixes) -> Expr:
@@ -88,9 +89,9 @@ def extract_prefixes(grammar: Grammar) -> Grammar:
             if data.prefixes is not None and len(data.prefixes) > 0:
                 seq_elements.append(generate(data.prefixes))
             # seq_elements.append(ChoiceExpr(choice_elements))
-            expr = SeqExpr(seq_elements)
+            expr = SeqExpr(elements=seq_elements)
             expr.rules = data.rules
             elements.append(expr)
-        return ChoiceExpr(elements)
+        return ChoiceExpr(elements=elements)
 
-    return Grammar([ Rule(None, True, True, '$token', generate(global_prefixes))])
+    return Grammar([ Rule(flags=PUBLIC | FORCE_TOKEN, name='$token', expr=generate(global_prefixes))])
