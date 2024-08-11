@@ -81,7 +81,7 @@ def gen_py_type(ty: Type, prefix: str) -> PyExpr:
         return PyNamedExpr('None')
     if isinstance(ty, NeverType):
         return PyNamedExpr('Never')
-    raise RuntimeError(f'unexpected {ty}')
+    assert_never(ty)
 
 def rule_type_to_py_type(type_name: str) -> PyExpr:
     if type_name == 'String':
@@ -93,7 +93,7 @@ def rule_type_to_py_type(type_name: str) -> PyExpr:
         return PyNamedExpr('float')
     if type_name == 'Float' or type_name == 'Float64':
         return PyNamedExpr('float')
-    raise RuntimeError(f"unexpected rule type '{type_name}'")
+    raise AssertionError(f"unexpected rule type '{type_name}'")
 
 def gen_rule_type_test(type_name: str, target: PyExpr) -> PyExpr:
     if type_name == 'String':
@@ -105,7 +105,7 @@ def gen_rule_type_test(type_name: str, target: PyExpr) -> PyExpr:
         return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('float') ])
     if type_name == 'Float' or type_name == 'Float64':
         return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('float') ])
-    raise RuntimeError(f"unexpected rule type '{type_name}'")
+    raise AssertionError(f"unexpected rule type '{type_name}'")
 
 def gen_shallow_test(ty: Type, target: PyExpr, prefix: str) -> PyExpr:
     if isinstance(ty, VariantType):
@@ -126,9 +126,9 @@ def gen_shallow_test(ty: Type, target: PyExpr, prefix: str) -> PyExpr:
         return gen_rule_type_test(ty.name, target)
     if isinstance(ty, NeverType):
         return PyNamedExpr('False')
-    raise RuntimeError(f'unexpected {ty}')
+    assert_never(ty)
 
-def gen_deep_test(ty: Type, target: PyExpr, prefix: str) -> PyExpr:
+def gen_deep_test(ty: Type, target: PyExpr, *, prefix: str) -> PyExpr:
     if isinstance(ty, VariantType):
         return PyCallExpr(operator=PyNamedExpr(f'is_{namespaced(ty.name, prefix)}'), args=[ target ])
     if isinstance(ty, NodeType) or isinstance(ty, TokenType):
@@ -138,7 +138,7 @@ def gen_deep_test(ty: Type, target: PyExpr, prefix: str) -> PyExpr:
     if isinstance(ty, TupleType):
         return build_and([
             PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('tuple') ]),
-            *(gen_deep_test(element, PySubscriptExpr(target, slices=[ PyConstExpr(i) ]), prefix) for i, element in enumerate(ty.element_types))
+            *(gen_deep_test(element, PySubscriptExpr(target, slices=[ PyConstExpr(i) ]), prefix=prefix) for i, element in enumerate(ty.element_types))
         ])
     if isinstance(ty, ListType):
         return PyInfixExpr(
@@ -148,7 +148,7 @@ def gen_deep_test(ty: Type, target: PyExpr, prefix: str) -> PyExpr:
                 PyNamedExpr('all'),
                 args=[
                     PyGeneratorExpr(
-                        gen_deep_test(ty.element_type, PyNamedExpr('element'), prefix),
+                        gen_deep_test(ty.element_type, PyNamedExpr('element'), prefix=prefix),
                         generators=[ PyComprehension(PyNamedPattern('element'), target) ]
                     )
                 ]
@@ -162,19 +162,19 @@ def gen_deep_test(ty: Type, target: PyExpr, prefix: str) -> PyExpr:
                 PyNamedExpr('all'),
                 args=[
                     PyGeneratorExpr(
-                        gen_deep_test(ty.element_type, PyNamedExpr('element'), prefix),
+                        gen_deep_test(ty.element_type, PyNamedExpr('element'), prefix=prefix),
                         generators=[ PyComprehension(PyNamedPattern('element'), target) ]
                     )
                 ]
             ),
         )
     if isinstance(ty, UnionType):
-        return build_or(gen_deep_test(element, target, prefix) for element in ty.types)
+        return build_or(gen_deep_test(element, target, prefix=prefix) for element in ty.types)
     if isinstance(ty, ExternType):
         return gen_rule_type_test(ty.name, target)
     if isinstance(ty, NeverType):
         return PyNamedExpr('False')
-    raise RuntimeError(f'unexpected {ty}')
+    assert_never(ty)
 
 
 def get_marko_element_text(el: Any) -> str:
