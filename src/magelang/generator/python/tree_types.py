@@ -65,14 +65,19 @@ def generate_tree_types(
                         annotation=PyConstExpr(param_type_str),
                     ))
 
+            init_params = [
+                PyNamedParam(PyNamedPattern('self')),
+                *required,
+            ]
+
+            if optional:
+                init_params.append(PySepParam())
+                init_params.extend(optional)
+
             body.append(
                 PyFuncDef(
                     name='__init__',
-                    params=[
-                        PyNamedParam(PyNamedPattern('self')),
-                        *required,
-                        *optional,
-                    ],
+                    params=init_params,
                     body=PyExprStmt(PyNamedExpr('...')), # FIXME
                 )
             )
