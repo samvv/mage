@@ -232,7 +232,7 @@ class Scanner:
         c0 = self._peek_char()
 
         while True:
-            if c0 == '#':  # Handle Python-style comments
+            if c0 == '#': 
                 self._get_char()
                 if self._last_comment_line != self.curr_pos.line-1:
                     self._reset_comment()
@@ -247,10 +247,10 @@ class Scanner:
                 c0 = self._peek_char()
                 continue
 
-            if c0 == '/':  # Handle C++/JavaScript-style comments
+            if c0 == '/':  
                 if self._peek_char(1) == '/':
-                    self._get_char()  # consume the first '/'
-                    self._get_char()  # consume the second '/'
+                    self._get_char()  
+                    self._get_char()  
                     if self._last_comment_line != self.curr_pos.line-1:
                         self._reset_comment()
                     self._last_comment_line = self.curr_pos.line
