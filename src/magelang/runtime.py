@@ -1,7 +1,9 @@
 
-from typing import Any, Generic, Iterable, Iterator, TypeVar
+from typing import Generic, Iterable, Iterator, TypeVar
+
 
 EOF = '\uFFFF'
+
 
 class TextPos:
 
@@ -9,6 +11,7 @@ class TextPos:
         self.offset = offset
         self.line = line
         self.column = column
+
 
 class Span:
 
@@ -19,6 +22,7 @@ class Span:
     def __len__(self) -> int:
         return self.end_offset - self.start_offset
 
+
 class BaseSyntax:
 
     def __init__(self) -> None:
@@ -26,6 +30,7 @@ class BaseSyntax:
 
     def has_parent(self) -> bool:
         return self._parent is not None
+
 
 class BaseNode(BaseSyntax):
 
@@ -35,14 +40,18 @@ class BaseNode(BaseSyntax):
                 kwargs[k] = v
         return self.__class__(**kwargs)
 
+
+
 class BaseToken(BaseSyntax):
 
     def __init__(self, span: Span | None = None) -> None:
         super().__init__()
         self.span = span
 
+
 _T = TypeVar('_T')
 _P = TypeVar('_P')
+
 
 class Punctuated(Generic[_T, _P]):
 
@@ -69,14 +78,17 @@ class Punctuated(Generic[_T, _P]):
         if self.last is not None:
             yield self.last, None
 
+
 class ScanError(RuntimeError):
     pass
+
 
 class LineColumn:
 
     def __init__(self, line: int, column: int) -> None:
         self.line = line
         self.column = column
+
 
 class AbstractLexer:
 
