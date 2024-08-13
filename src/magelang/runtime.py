@@ -49,20 +49,20 @@ class BaseToken(BaseSyntax):
         self.span = span
 
 
-_T = TypeVar('_T')
-_P = TypeVar('_P')
+_E_contra = TypeVar('_E_contra', contravariant=True)
+_P_contra = TypeVar('_P_contra', contravariant=True)
 
 
-class Punctuated(Generic[_T, _P]):
+class Punctuated(Generic[_E_contra, _P_contra]):
 
-    def __init__(self, elements: Iterable[tuple[_T, _P | None]] | None = None) -> None:
+    def __init__(self, elements: Iterable[tuple[_E_contra, _P_contra | None]] | None = None) -> None:
         self.elements = []
         self.last = None
         if elements is not None:
           for element, sep  in elements:
               self.append(element, sep)
 
-    def append(self, element: _T, separator: _P | None = None) -> None:
+    def append(self, element: _E_contra, separator: _P_contra | None = None) -> None:
         if separator is None:
             assert(self.last is None)
             self.last = element
@@ -72,7 +72,7 @@ class Punctuated(Generic[_T, _P]):
     def __len__(self) -> int:
         return len(self.elements) + 1 if self.last is not None else 0
 
-    def __iter__(self) -> Iterator[tuple[_T, _P | None]]:
+    def __iter__(self) -> Iterator[tuple[_E_contra, _P_contra | None]]:
         for item in self.elements:
             yield item
         if self.last is not None:
