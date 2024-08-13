@@ -25,7 +25,7 @@ def test_check_undefined_no_error():
 def test_check_undefined_with_error():
     invalid_grammar = """
     pub start = expr
-    expr = foo // 'foo' is not defined
+    expr = foo # 'foo' is not defined
     """
     grammar = parse_grammar(invalid_grammar)
     print("Parsed Grammar Rules:", grammar.rules)  

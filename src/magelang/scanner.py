@@ -246,24 +246,6 @@ class Scanner:
                 self._comment += text + '\n'
                 c0 = self._peek_char()
                 continue
-
-            if c0 == '/':  
-                if self._peek_char(1) == '/':
-                    self._get_char()  
-                    self._get_char()  
-                    if self._last_comment_line != self.curr_pos.line-1:
-                        self._reset_comment()
-                    self._last_comment_line = self.curr_pos.line
-                    text = ''
-                    while True:
-                        c1 = self._get_char()
-                        if c1 == '\n' or c1 == EOF:
-                            break
-                        text += c1
-                    self._comment += text + '\n'
-                    c0 = self._peek_char()
-                    continue
-
             if not is_space(c0):
                 break
 
