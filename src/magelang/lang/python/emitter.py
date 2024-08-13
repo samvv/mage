@@ -481,8 +481,8 @@ def emit(node: PyNode) -> str:
                 visit_token(colon)
                 out.write(' ')
                 visit_expr(expr)
-            out.write(' ')
             if node.value is not None:
+                out.write(' ')
                 equals, expr = node.value
                 visit_token(equals)
                 out.write(' ')
