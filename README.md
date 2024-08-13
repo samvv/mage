@@ -49,6 +49,8 @@ $ pip3 install --user -U magelang
 
 ## Usage
 
+Currently requires at least Python version 3.12 to run.
+
 ### `mage generate <filename>`
 
 Generate a parser for the given grammar in a language that you specify.
