@@ -311,10 +311,11 @@ pub class_def
   = decorator* 'class' name:ident bases:('(' (ident % ',') ')')? ':' body
 
 pub param
-  = named_param
-  | rest_pos_param
+  = rest_pos_param
   | rest_keyword_param
-  | sep_param
+  | arg_sep_param
+  | kw_sep_param
+  | named_param
 
 pub named_param
   = pattern annotation:(':' expr)? default:('=' expr)?
@@ -325,8 +326,11 @@ pub rest_pos_param
 pub rest_keyword_param
   = '**' name:ident
 
-pub sep_param
+pub arg_sep_param
   = '*'
+
+pub kw_sep_param
+  = '/'
 
 pub decorator
   = '@' expr
