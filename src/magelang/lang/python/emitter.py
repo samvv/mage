@@ -187,7 +187,7 @@ def emit_token(node: PyToken) -> str:
         return 'as'
 
     if isinstance(node, PyAtSign):
-        return '*'
+        return '@'
 
     if isinstance(node, PyGreaterThan):
         return '>'
