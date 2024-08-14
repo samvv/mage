@@ -8,7 +8,7 @@ from magelang.util import nonnull, to_snake_case
 
 from .ast import *
 
-type Type = ExternType | NodeType | TokenType | VariantType | NeverType | TupleType | ListType | PunctType | UnionType | NoneType
+type Type = ExternType | NodeType | TokenType | VariantType | NeverType | TupleType | ListType | PunctType | UnionType | NoneType | AnyType
 
 @dataclass
 class TypeBase:
@@ -125,6 +125,15 @@ class ExternType(TypeBase):
         return (10, self.name)
 
 @dataclass
+class AnyType(TypeBase):
+    """
+    A type that is used as a placeholder when no more specific type is known.
+    """
+
+    def encode(self) -> Any:
+        return (10,)
+
+@dataclass
 class Field:
     """
     Not a type, but represents exactly one field of a data structure/CST node. 
@@ -239,6 +248,8 @@ def is_static(ty: Type, specs: Specs) -> bool:
             return False
         if isinstance(ty, PunctType):
             return False
+        if isinstance(ty, AnyType):
+            return False
         assert_never(ty)
     return visit(ty)
 
@@ -275,6 +286,8 @@ def mangle_type(ty: Type) -> str:
         if ty.required:
             out += '_required'
         return out
+    if isinstance(ty, AnyType):
+        return 'any'
     assert_never(ty)
 
 def infer_type(expr: Expr, grammar: Grammar) -> Type:
@@ -289,6 +302,8 @@ def infer_type(expr: Expr, grammar: Grammar) -> Type:
 
     if isinstance(expr, RefExpr):
         rule = grammar.lookup(expr.name)
+        if rule is None:
+            return AnyType()
         if rule.is_extern:
             return ExternType(rule.type_name) #TokenType(rule.name) if rule.is_token else NodeType(rule.name)
         if not rule.is_public:
@@ -389,6 +404,7 @@ def simplify_type(ty: Type) -> Type:
         or isinstance(ty, VariantType) \
         or isinstance(ty, NodeType) \
         or isinstance(ty, ExternType) \
+        or isinstance(ty, AnyType) \
         or isinstance(ty, TokenType):
         return ty
     if isinstance(ty, ListType):
@@ -411,6 +427,8 @@ def simplify_type(ty: Type) -> Type:
         for ty in flatten_union(ty):
             if isinstance(ty, NeverType):
                 continue
+            if isinstance(ty, AnyType):
+                return AnyType()
             types.append(simplify_type(ty))
         types.sort()
         iterator = iter(types)

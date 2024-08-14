@@ -85,6 +85,8 @@ def gen_py_type(ty: Type, prefix: str) -> PyExpr:
         return PyNamedExpr('None')
     if isinstance(ty, NeverType):
         return PyNamedExpr('Never')
+    if isinstance(ty, AnyType):
+        return PyNamedExpr('Any')
     assert_never(ty)
 
 def rule_type_to_py_type(type_name: str) -> PyExpr:
@@ -130,6 +132,8 @@ def gen_shallow_test(ty: Type, target: PyExpr, prefix: str) -> PyExpr:
         return gen_rule_type_test(ty.name, target)
     if isinstance(ty, NeverType):
         return PyNamedExpr('False')
+    if isinstance(ty, AnyType):
+        return PyNamedExpr('True')
     assert_never(ty)
 
 def gen_deep_test(ty: Type, target: PyExpr, *, prefix: str) -> PyExpr:
@@ -178,6 +182,8 @@ def gen_deep_test(ty: Type, target: PyExpr, *, prefix: str) -> PyExpr:
         return gen_rule_type_test(ty.name, target)
     if isinstance(ty, NeverType):
         return PyNamedExpr('False')
+    if isinstance(ty, AnyType):
+        return PyNamedExpr('True')
     assert_never(ty)
 
 
@@ -196,6 +202,8 @@ def is_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences: b
         if isinstance(ty, ExternType):
             return False
         if isinstance(ty, NeverType):
+            return False
+        if isinstance(ty, AnyType):
             return False
         if isinstance(ty, ListType):
             return allow_empty_sequences and not ty.required
