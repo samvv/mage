@@ -227,7 +227,6 @@ class Scanner:
         self._comment = ''
         return keep
 
-
     def _scan_whitespace_and_comments(self) -> None:
         c0 = self._peek_char()
         while True:
