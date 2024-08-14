@@ -1,12 +1,13 @@
 
-from typing import Iterator, Iterable
+from typing import Iterator, Iterable, Sequence
 import marko.inline
+from magelang.lang.python.emitter import emit
 from magelang.repr import *
 from magelang.lang.python.cst import *
 from magelang.logging import warn
 from magelang.util import to_camel_case, is_iterator
 
-type Case = tuple[PyExpr | None, list[PyStmt]]
+type Case = tuple[PyExpr | None, Sequence[PyStmt]]
 
 def namespaced(name: str, prefix: str) -> str:
     return prefix + name if prefix else name
@@ -14,12 +15,12 @@ def namespaced(name: str, prefix: str) -> str:
 def to_class_name(name: str, prefix: str) -> str:
     return to_camel_case(namespaced(name, prefix))
 
-def build_cond(cases: list[Case]) -> list[PyStmt]:
+def build_cond(cases: Sequence[Case]) -> list[PyStmt]:
     if len(cases) == 0:
         return []
     test, body = cases[0]
     if len(cases) == 1 and test is None:
-        return body
+        return list(body)
     assert(test is not None)
     first = PyIfCase(test=test, body=body)
     alternatives: list[PyElifCase] = []
@@ -60,6 +61,9 @@ def build_union(it: list[PyExpr] | Iterator[PyExpr]) -> PyExpr:
 
 def build_isinstance(expr: PyExpr, ty: PyExpr) -> PyExpr:
     return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ expr, ty ])
+
+def quote_py_type(expr: PyExpr) -> PyExpr:
+    return PyConstExpr(emit(expr))
 
 def gen_py_type(ty: Type, prefix: str) -> PyExpr:
     if isinstance(ty, NodeType) or isinstance(ty, VariantType) or isinstance(ty, TokenType):
@@ -274,38 +278,51 @@ def merge_similar_types(ty: Type) -> Type:
         types.append(PunctType(UnionType(punct_value_types), UnionType(punct_sep_types), punct_required))
     return simplify_type(UnionType(types))
 
-def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Callable[[PyExpr], PyStmt], *, specs: Specs, prefix: str) -> tuple[Type, list[PyStmt]]:
+def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: str, defs: dict[str, PyFuncDef]) -> tuple[Type, PyExpr]:
 
-    def collect(ty: Type, in_name: str, assign: Callable[[PyExpr], PyStmt], forbid_none: bool) -> tuple[Type, list[PyStmt]]:
+    param_name = 'value'
+
+    def gen_coerce_call(ty: Type, value: PyExpr, forbid_none: bool) -> tuple[Type, PyExpr]:
 
         cases: list[Case] = []
         types: list[Type] = []
-        for coerce_ty, coerce_body in coercions(ty, in_name, assign, forbid_none):
-            cases.append((gen_shallow_test(coerce_ty, PyNamedExpr(in_name), prefix), coerce_body))
+        for coerce_ty, coerce_body in gen_coerce_body(ty, forbid_none):
+            cases.append((gen_shallow_test(coerce_ty, PyNamedExpr(param_name), prefix), coerce_body))
             types.append(coerce_ty)
 
-        res_ty = simplify_type(UnionType(types))
+        coerced_type = simplify_type(UnionType(types))
 
-        # For very simple fields, there's no need to do any checks. We
-        # assume the type checker catches whatever error the user makes.
-        if len(cases) == 1:
-            return res_ty, cases[0][1]
+        id = f'{mangle_type(coerced_type)}_to_{mangle_type(ty)}'
+        coerce_fn_name = f'_coerce_{id}'
 
-        cases.append((
-            None,
-            [
-                PyRaiseStmt(
-                    expr=PyCallExpr(
-                        operator=PyNamedExpr('ValueError'),
-                        args=[ PyConstExpr(f"the field '{field_name}' received an unrecognised value'") ]
+        if id not in defs:
+            defs[id] = PyFuncDef(
+                decorators=[ PyNamedExpr('no_type_check') ],
+                name=coerce_fn_name,
+                params=[ PyNamedParam(PyNamedPattern(param_name), annotation=quote_py_type(gen_py_type(coerced_type, prefix=prefix))) ],
+                return_type=quote_py_type(gen_py_type(ty, prefix=prefix)),
+                # For very simple fields, there's no need to do any checks. We
+                # assume the type checker catches whatever error the user makes.
+                body=cases[0][1] if len(cases) == 1 else build_cond([
+                    *cases,
+                    (
+                        None,
+                        [
+                            PyRaiseStmt(
+                                expr=PyCallExpr(
+                                    operator=PyNamedExpr('ValueError'),
+                                    # TODO inerpolate with `in_name`
+                                    args=[ PyConstExpr(f"the coercion from {emit(gen_py_type(coerced_type, prefix=prefix))} to {emit(gen_py_type(ty, prefix=prefix))} failed") ]
+                                )
+                            )
+                        ]
                     )
-                )
-            ]
-        ))
+                ])
+            )
 
-        return res_ty, build_cond(cases)
+        return coerced_type, PyCallExpr(PyNamedExpr(coerce_fn_name), args=[ value ])
 
-    def coercions(ty: Type, in_name: str, assign: Callable[[PyExpr], PyStmt], forbid_none: bool) -> Generator[tuple[Type, list[PyStmt]], None, None]:
+    def gen_coerce_body(ty: Type, forbid_none: bool) -> Generator[tuple[Type, list[PyStmt]], None, None]:
 
         if isinstance(ty, UnionType):
 
@@ -318,7 +335,7 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
             rejected = set()
             out = []
             for element_type in types:
-                for coerced_type, coerced_stmts in coercions(element_type, in_name, assign, True):
+                for coerced_type, coerced_stmts in gen_coerce_body(element_type, True):
                     for i, (ty, _) in enumerate(out):
                         if do_types_shallow_overlap(ty, coerced_type):
                             rejected.add(i)
@@ -333,7 +350,7 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
             return
 
         if isinstance(ty, NoneType):
-            yield NoneType(), [ assign(gen_default_constructor(ty, specs=specs, prefix=prefix)) ]
+            yield NoneType(), [ PyRetStmt(expr=gen_default_constructor(ty, specs=specs, prefix=prefix)) ]
             return
 
         # Now that we've handled union types and empty types, we can
@@ -342,16 +359,18 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
         # itself. We continue processing the other types after this
         # operation.
         if not forbid_none and is_default_constructible(ty, specs=specs):
-            yield NoneType(), [ assign(gen_default_constructor(ty, specs=specs, prefix=prefix)) ]
+            yield NoneType(), [ PyRetStmt(expr=gen_default_constructor(ty, specs=specs, prefix=prefix)) ]
 
         if isinstance(ty, VariantType):
-            yield ty, [ assign(PyNamedExpr(in_name)) ]
+            yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
             return
 
         if isinstance(ty, NodeType):
 
             spec = specs.lookup(ty.name)
             assert(isinstance(spec, NodeSpec))
+
+            this_class_name = to_class_name(ty.name, prefix)
 
             optional_fields: list[Field] = []
             required_fields: list[Field] = []
@@ -366,24 +385,23 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
 
                 if not forbid_none:
                     yield NoneType(), [
-                        assign(PyCallExpr(PyNamedExpr(to_class_name(ty.name, prefix))))
+                        PyRetStmt(expr=PyCallExpr(PyNamedExpr(this_class_name)))
                     ]
 
             elif len(required_fields) == 1:
 
                 required_type = required_fields[0].ty
 
-                def new_assign(value):
-                    return assign(
-                        PyCallExpr(
-                            operator=PyNamedExpr(to_class_name(ty.name, prefix)),
-                            args=[ value ]
-                        )
-                    )
+                coerce_type, coerce_expr = gen_coerce_call(required_type, PyNamedExpr(param_name), forbid_none)
 
-                yield from coercions(required_type, in_name, new_assign, forbid_none)
+                yield coerce_type, [
+                    PyRetStmt(expr=PyCallExpr(
+                        operator=PyNamedExpr(this_class_name),
+                        args=[ coerce_expr ]
+                    )),
+                ]
 
-            yield ty, [ assign(PyNamedExpr(in_name)) ]
+            yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
 
             return
 
@@ -398,15 +416,15 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
             if not spec.is_static:
 
                 yield ExternType(spec.field_type), [
-                    assign(
-                        PyCallExpr(
+                    PyRetStmt(
+                        expr=PyCallExpr(
                             operator=PyNamedExpr(to_class_name(ty.name, prefix)),
-                            args=[ PyNamedExpr(in_name) ]
+                            args=[ PyNamedExpr(param_name) ]
                         )
                     )
                 ]
 
-            yield ty, [ assign(PyNamedExpr(in_name)) ]
+            yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
 
             return
 
@@ -414,37 +432,88 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
 
             assert(is_default_constructible(ty.separator_type, specs=specs))
 
-            new_elements_name = f'new_{in_name}'
+            new_elements_name = f'new_{param_name}'
 
             if is_static(ty.element_type, specs=specs):
                 yield ExternType(integer_rule_type), [
                     PyAssignStmt(PyNamedPattern(new_elements_name), value=PyCallExpr(PyNamedExpr('Punctuated'))),
-                    PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyNamedExpr(in_name) ]), body= [
+                    PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyNamedExpr(param_name) ]), body= [
                         PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(new_elements_name), 'append'), args=[ gen_default_constructor(ty.element_type, specs=specs, prefix=prefix) ])),
                     ]),
-                    assign(PyNamedExpr(new_elements_name)),
+                    PyRetStmt(expr=PyNamedExpr(new_elements_name)),
                 ]
 
-            first_element_name = f'first_{in_name}_element'
-            second_element_name = f'second_{in_name}_element'
-            element_name = f'{in_name}_element'
-            elements_iter_name = f'{in_name}_iter'
-            value_name = f'{in_name}_value'
-            new_value_name = f'new_{in_name}_value'
-            separator_name = f'{in_name}_separator'
-            new_separator_name = f'new_{in_name}_separator'
+            first_element_name = f'first_element'
+            second_element_name = f'second_element'
+            element_name = f'element'
+            elements_iter_name = f'iterator'
+            value_name = f'element_value'
+            new_value_name = f'new_element_value'
+            separator_name = f'element_separator'
+            new_separator_name = f'new_element_separator'
 
-            value_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_value_name: PyAssignStmt(pattern=PyNamedPattern(name), value=value)
-            value_type, value_stmts = collect(ty.element_type, value_name, value_assign, True)
+            value_type, value_expr = gen_coerce_call(ty.element_type, PyNamedExpr(value_name), True)
 
-            separator_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_separator_name: PyAssignStmt(pattern=PyNamedPattern(name), value=value)
-            separator_type, separator_stmts = collect(ty.separator_type, separator_name, separator_assign, True)
+            separator_type, separator_expr = gen_coerce_call(ty.separator_type, PyNamedExpr(separator_name), True)
 
             coerced_ty = UnionType([
                 ListType(value_type, ty.required),
                 ListType(TupleType([ value_type, make_optional(separator_type) ]), ty.required),
-                PunctType(value_type, make_optional(separator_type), ty.required),
+                PunctType(value_type, separator_type, ty.required),
             ])
+
+            def gen_unwrap(last = False) -> list[PyStmt]:
+                tuple_then: list[PyStmt] = [
+                    PyAssignStmt(
+                        pattern=PyNamedPattern(value_name),
+                        value=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(literal=0) ]),
+                    ),
+                ]
+                plain_then: list[PyStmt] = [
+                    PyAssignStmt(
+                        pattern=PyNamedPattern(value_name),
+                        value=PyNamedExpr(first_element_name),
+                    ),
+                ]
+                if last:
+                    tuple_then.append(
+                        PyExprStmt(
+                            PyCallExpr(
+                                operator=PyNamedExpr('assert'),
+                                args=[ build_is_none(PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(1) ])) ]
+                            )
+                        )
+                    )
+                else:
+                    tuple_then.append(
+                        PyAssignStmt(
+                            pattern=PyNamedPattern(separator_name),
+                            value=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(literal=1) ])
+                        )
+                    )
+                    tuple_then.append(
+                        PyExprStmt(PyCallExpr(
+                            operator=PyNamedExpr('assert'),
+                            args=[ PyInfixExpr(PyNamedExpr(separator_name), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')) ]
+                        ))
+                    )
+                    plain_then.append(
+                        PyAssignStmt(
+                            pattern=PyNamedPattern(separator_name),
+                            value=gen_default_constructor(ty.separator_type, specs=specs, prefix=prefix),
+                        )
+                    )
+                return build_cond([
+                    (
+                        # FIXME does not handle nested tuples
+                        build_isinstance(PyNamedExpr(first_element_name), PyNamedExpr('tuple')),
+                        tuple_then
+                    ),
+                    (
+                        None,
+                        plain_then
+                    )
+                ])
 
             yield coerced_ty, [
                 PyAssignStmt(
@@ -453,7 +522,7 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
                 ),
                 PyAssignStmt(
                     pattern=PyNamedPattern(elements_iter_name),
-                    value=PyCallExpr(operator=PyNamedExpr('iter'), args=[ PyNamedExpr(in_name) ]),
+                    value=PyCallExpr(operator=PyNamedExpr('iter'), args=[ PyNamedExpr(param_name) ]),
                 ),
                 PyTryStmt(
                     body=[
@@ -470,37 +539,9 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
                                             pattern=PyNamedPattern(second_element_name),
                                             value=PyCallExpr(operator=PyNamedExpr('next'), args=[ PyNamedExpr(elements_iter_name) ])
                                         ),
-                                        *build_cond([
-                                            (
-                                                # FIXME does not handle nested tuples
-                                                build_isinstance(PyNamedExpr(first_element_name), PyNamedExpr('tuple')),
-                                                [
-                                                    PyAssignStmt(
-                                                        pattern=PyNamedPattern(value_name),
-                                                        value=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(literal=0) ]),
-                                                    ),
-                                                    PyAssignStmt(
-                                                        pattern=PyNamedPattern(separator_name),
-                                                        value=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(literal=1) ]),
-                                                    ),
-                                                ]
-                                            ),
-                                            (
-                                                None,
-                                                [
-                                                    PyAssignStmt(
-                                                        pattern=PyNamedPattern(value_name),
-                                                        value=PyNamedExpr(first_element_name),
-                                                    ),
-                                                    PyAssignStmt(
-                                                        pattern=PyNamedPattern(separator_name),
-                                                        value=gen_default_constructor(ty.separator_type, specs=specs, prefix=prefix),
-                                                    ),
-                                                ]
-                                            )
-                                        ]),
-                                        *value_stmts,
-                                        *separator_stmts,
+                                        *gen_unwrap(),
+                                        PyAssignStmt(PyNamedPattern(new_value_name), value=value_expr),
+                                        PyAssignStmt(PyNamedPattern(new_separator_name), value=separator_expr),
                                         PyExprStmt(
                                             expr=PyCallExpr(
                                                 operator=PyAttrExpr(PyNamedExpr(new_elements_name), 'append'),
@@ -519,34 +560,8 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
                                         PyExceptHandler(
                                             expr=PyNamedExpr('StopIteration'),
                                             body=[
-                                                *build_cond([
-                                                    (
-                                                        # FIXME does not handle nested tuples
-                                                        build_isinstance(PyNamedExpr(first_element_name), PyNamedExpr('tuple')),
-                                                        [
-                                                            PyAssignStmt(
-                                                                pattern=PyNamedPattern(value_name),
-                                                                value=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(0) ]),
-                                                            ),
-                                                            PyExprStmt(
-                                                                PyCallExpr(
-                                                                    operator=PyNamedExpr('assert'),
-                                                                    args=[ build_is_none(PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(1) ])) ]
-                                                                )
-                                                            )
-                                                        ]
-                                                    ),
-                                                    (
-                                                        None,
-                                                        [
-                                                            PyAssignStmt(
-                                                                pattern=PyNamedPattern(value_name),
-                                                                value=PyNamedExpr(first_element_name),
-                                                            )
-                                                        ]
-                                                    )
-                                                ]),
-                                                *value_stmts,
+                                                *gen_unwrap(last=True),
+                                                PyAssignStmt(PyNamedPattern(new_value_name), value=value_expr),
                                                 PyExprStmt(
                                                     expr=PyCallExpr(
                                                         operator=PyAttrExpr(PyNamedExpr(new_elements_name), 'append'),
@@ -568,7 +583,7 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
                         )
                     ]
                 ),
-                assign(PyNamedExpr(new_elements_name))
+                PyRetStmt(expr=PyNamedExpr(new_elements_name))
             ]
 
             return
@@ -582,22 +597,20 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
             #     ...
             #     out_name.append(new_element_name)
 
-            new_elements_name = f'new_{in_name}'
+            new_elements_name = f'new_elements'
 
             if is_static(ty.element_type, specs=specs):
                 yield ExternType(integer_rule_type), [
                     PyAssignStmt(PyNamedPattern(new_elements_name), value=PyCallExpr(PyNamedExpr('list'))),
-                    PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyNamedExpr(in_name) ]), body= [
+                    PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyNamedExpr(param_name) ]), body= [
                         PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(new_elements_name), 'append'), args=[ gen_default_constructor(ty.element_type, specs=specs, prefix=prefix) ])),
                     ]),
-                    assign(PyNamedExpr(new_elements_name)),
+                    PyRetStmt(expr=PyNamedExpr(new_elements_name)),
                 ]
 
-            element_name = f'{in_name}_element'
-            new_element_name = f'new_{in_name}_element'
+            element_name = f'{param_name}_element'
 
-            element_assign: Callable[[PyExpr], PyStmt] = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name), value=value)
-            element_type, element_stmts = collect(ty.element_type, element_name, element_assign, True)
+            element_type, element_expr = gen_coerce_call(ty.element_type, PyNamedExpr(element_name), True)
 
             yield ListType(element_type, ty.required), [
                 PyAssignStmt(
@@ -606,33 +619,25 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
                 ),
                 PyForStmt(
                     pattern=PyNamedPattern(element_name),
-                    expr=PyNamedExpr(in_name),
+                    expr=PyNamedExpr(param_name),
                     body=[
-                        *element_stmts,
                         PyExprStmt(
                             expr=PyCallExpr(
                                 operator=PyAttrExpr(
                                     expr=PyNamedExpr(new_elements_name),
                                     name='append'
                                 ),
-                                args=[ PyNamedExpr(new_element_name) ]
+                                args=[ element_expr ]
                             )
                         )
                     ]
                 ),
-                assign(PyNamedExpr(new_elements_name))
+                PyRetStmt(expr=PyNamedExpr(new_elements_name))
             ]
 
             return
 
         if isinstance(ty, TupleType):
-
-            # Generates:
-            #
-            # element_0 = field[0]
-            # new_element_0 = ...
-            # ...
-            # out_name = (new_element_0, new_element_1, ...)
 
             required: list[Type] = []
 
@@ -641,62 +646,42 @@ def gen_initializers(field_name: str, field_type: Type, in_name: str, assign: Ca
                     required.append(element_type)
 
             if len(required) == 1:
-
                 main_type = required[0]
-
-                def first_assign(value: PyExpr):
-                    assert(isinstance(ty, TupleType)) # Needed to keep Pyright happy
-                    # Generates for example: self.field = (Dot(), $value, Dot())
-                    return assign(
-                        PyTupleExpr(
-                            elements=list(value if el_ty == main_type else gen_default_constructor(el_ty, specs=specs, prefix=prefix) for el_ty in ty.element_types)
-                        )
-                    )
-
-                yield from coercions(main_type, in_name, first_assign, True)
+                coerced_type, coerce_expr = gen_coerce_call(main_type, PyNamedExpr(param_name), True)
+                yield coerced_type, [
+                    PyRetStmt(expr=PyTupleExpr(
+                        elements=list(coerce_expr if el_ty == main_type else gen_default_constructor(el_ty, specs=specs, prefix=prefix) for el_ty in ty.element_types)
+                    )),
+                ]
 
             new_elements: list[PyExpr] = []
             new_element_types: list[Type] = []
 
-            # Generates for example: assert(isinstance(in_name, ty))
-            orelse: list[PyStmt] = [
-                PyExprStmt(
-                    expr=PyCallExpr(
-                        operator=PyNamedExpr('assert'),
-                        args=[ gen_shallow_test(ty, PyNamedExpr(in_name), prefix) ]
-                    )
-                )
-            ]
+            # Generates:
+            #
+            # return (_coerce_foo(value[0]), _coerce_bar(value[1]), ...)
 
             for i, element_type in enumerate(ty.element_types):
 
-                element_name = f'{in_name}_{i}'
-                new_element_name = f'new_{in_name}_{i}'
-                element_assign = lambda value, name=new_element_name: PyAssignStmt(pattern=PyNamedPattern(name), value=value)
+                element_name = f'{param_name}_{i}'
 
-                new_elements.append(PyNamedExpr(new_element_name))
-
-                orelse.append(
-                    PyAssignStmt(
-                        pattern=PyNamedPattern(element_name),
-                        value=PySubscriptExpr(
-                            expr=PyNamedExpr(in_name),
-                            slices=[ PyConstExpr(literal=i) ]
-                        )
-                    )
+                new_element_type, new_element_expr = gen_coerce_call(
+                    element_type,
+                    PySubscriptExpr(
+                        expr=PyNamedExpr(param_name),
+                        slices=[ PyConstExpr(literal=i) ]
+                    ),
+                    False
                 )
 
-                new_element_type, new_element_stmts = collect(element_type, element_name, element_assign, False)
-
-                orelse.extend(new_element_stmts)
-
+                new_elements.append(new_element_expr)
                 new_element_types.append(new_element_type)
 
-            orelse.append(assign(PyTupleExpr(elements=new_elements)))
-
-            yield TupleType(new_element_types), orelse
+            yield TupleType(new_element_types), [
+                PyRetStmt(expr=PyTupleExpr(elements=new_elements)),
+            ]
 
             return
 
-    return collect(field_type, in_name, assign, False)
+    return gen_coerce_call(field_type, value, False)
 

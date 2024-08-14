@@ -242,6 +242,41 @@ def is_static(ty: Type, specs: Specs) -> bool:
         assert_never(ty)
     return visit(ty)
 
+def mangle_type(ty: Type) -> str:
+    if isinstance(ty, NodeType):
+        return f'node_{ty.name}'
+    if isinstance(ty, VariantType):
+        return f'variant_{ty.name}'
+    if isinstance(ty, TokenType):
+        return f'token_{ty.name}'
+    if isinstance(ty, TupleType):
+        out = f'tuple_{len(ty.element_types)}'
+        for ty in ty.element_types:
+            out += '_' + mangle_type(ty)
+        return out
+    if isinstance(ty, ListType):
+        out = f'list_{mangle_type(ty.element_type)}'
+        if ty.required:
+            out += '_required'
+        return out
+    if isinstance(ty, ExternType):
+        return f'extern_{to_snake_case(ty.name)}'
+    if isinstance(ty, NeverType):
+        return 'never'
+    if isinstance(ty, NoneType):
+        return 'none'
+    if isinstance(ty, UnionType):
+        out = f'union_{len(ty.types)}'
+        for ty in ty.types:
+            out += '_' + mangle_type(ty)
+        return out
+    if isinstance(ty, PunctType):
+        out = f'punct_{mangle_type(ty.element_type)}_{mangle_type(ty.separator_type)}'
+        if ty.required:
+            out += '_required'
+        return out
+    assert_never(ty)
+
 def infer_type(expr: Expr, grammar: Grammar) -> Type:
 
     if isinstance(expr, HideExpr):
