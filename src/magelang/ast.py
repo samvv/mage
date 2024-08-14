@@ -284,7 +284,6 @@ class Rule(Node):
         self.name = name
         self.type_name = type_name
         self.expr = expr
-        self._references_public_rule = False
 
     def derive(self, comment: str | None = None, decorators: list[Decorator] | None = None, flags: int | None = None, name: str | None = None, type_name: str | None = None, expr: Expr | None = None) -> 'Rule':
         if name is None:
