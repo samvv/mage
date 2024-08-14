@@ -10,7 +10,7 @@ from .util import pipe
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser
-from .passes import extract_literals, inline, overlapping_charsets, extract_prefixes,check_undefined 
+from .passes import extract_literals, inline, overlapping_charsets, extract_prefixes, check_undefined 
 from .generator import generate, get_generator_languages
 
 project_dir = Path(__file__).parent.parent.parent
@@ -24,7 +24,7 @@ def _load_grammar(filename: str) -> Grammar:
     return parser.parse_grammar()
 
 def _run_checks(grammar: Grammar) -> Grammar:
-    return pipe(grammar, overlapping_charsets)
+    return pipe(grammar, check_undefined, overlapping_charsets)
 
 def _do_generate(args) -> int:
 
@@ -39,7 +39,7 @@ def _do_generate(args) -> int:
     grammar = _load_grammar(filename)
     if not skip_checks:
         grammar = _run_checks(grammar)
-    grammar = pipe(grammar,check_undefined, inline, extract_literals)
+    grammar = pipe(grammar, inline, extract_literals)
     # FIXME should only happen in the parser generator and lexer generator
     #if opt:
     #    grammar = pipe(grammar, extract_prefixes, simplify)
