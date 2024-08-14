@@ -229,10 +229,9 @@ class Scanner:
 
 
     def _scan_whitespace_and_comments(self) -> None:
-        c0 = self._peek_char()
-
+        c0 = self._peek_char()w
         while True:
-            if c0 == '#': 
+            if c0 == '#':
                 self._get_char()
                 if self._last_comment_line != self.curr_pos.line-1:
                     self._reset_comment()
@@ -248,7 +247,6 @@ class Scanner:
                 continue
             if not is_space(c0):
                 break
-
             self._get_char()
             c0 = self._peek_char()
 
