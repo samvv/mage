@@ -229,7 +229,7 @@ class Scanner:
 
 
     def _scan_whitespace_and_comments(self) -> None:
-        c0 = self._peek_char()w
+        c0 = self._peek_char()
         while True:
             if c0 == '#':
                 self._get_char()
