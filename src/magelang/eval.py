@@ -25,6 +25,7 @@ def accepts(expr: Expr, text: str, grammar: Grammar) -> bool:
 
         if isinstance(expr, RefExpr):
             rule = grammar.lookup(expr.name)
+            assert(rule is not None)
             assert(rule.expr is not None)
             return visit(rule.expr)
 

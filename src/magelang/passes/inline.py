@@ -8,7 +8,7 @@ def inline(grammar: Grammar) -> Grammar:
     def rewriter(expr: Expr) -> Expr | None:
         if isinstance(expr, RefExpr):
             rule = grammar.lookup(expr.name)
-            if rule.is_public or rule.is_extern:
+            if rule is None or rule.is_public or rule.is_extern:
                 return
             assert(rule.expr is not None)
             new_expr = rule.expr.derive(label=rule.name)

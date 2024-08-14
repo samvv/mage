@@ -5,7 +5,7 @@ from magelang.ast import *
 from magelang.lang.python.cst import *
 from magelang.ast import Grammar
 from magelang.repr import TokenSpec, grammar_to_specs
-from magelang.util import NameGenerator
+from magelang.util import NameGenerator, nonnull
 from .util import build_cond, build_or, rule_type_to_py_type, to_class_name
 
 
@@ -89,11 +89,12 @@ def generate_lexer(
             success = lambda: [
                 *old_success(),
                 PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), '_curr_offset'), value=PyNamedExpr(char_offset_name)),
-                PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(to_class_name(rule.name, prefix)), args=token_args))
+                PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(to_class_name(nonnull(rule).name, prefix)), args=token_args))
             ]
 
         if isinstance(expr, RefExpr):
             rule = grammar.lookup(expr.name)
+            assert(rule is not None)
             assert(rule.expr is not None)
             return lex_visit(rule.expr, success)
 

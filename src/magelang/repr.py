@@ -463,8 +463,9 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         if expr.label is not None:
             return expr.label
         if isinstance(expr, RefExpr):
-            rule = grammar.lookup(expr.name)
-            assert(rule.is_public)
+            # rule = grammar.lookup(expr.name)
+            # assert(rule is not None)
+            # assert(rule.is_public)
             return expr.name
         raise NotImplementedError()
 

@@ -342,32 +342,7 @@ class Grammar(Node):
             self._rules_by_name[rule.name] = rule
 
     def is_fragment(self, rule: Rule) -> bool:
-        return not rule.is_public #and (rule.is_extern or not self._references_pub_rule(nonnull(rule.expr)))
-
-    def _references_pub_rule(self, expr: Expr) -> bool:
-        if isinstance(expr, RefExpr):
-            rule = self.lookup(expr.name)
-            if rule.is_public:
-                return True
-            if rule.is_extern:
-                return False
-            assert(rule.expr is not None)
-            return self._references_pub_rule(rule.expr)
-        if isinstance(expr, SeqExpr) \
-                or isinstance(expr, ChoiceExpr):
-            for element in expr.elements:
-                if self._references_pub_rule(element):
-                    return True
-            return False
-        if isinstance(expr, ListExpr):
-            return self._references_pub_rule(expr.element) \
-                or self._references_pub_rule(expr.separator)
-        if isinstance(expr, RepeatExpr) or isinstance(expr, LookaheadExpr):
-            return self._references_pub_rule(expr.expr)
-        if isinstance(expr, LitExpr) \
-                or isinstance(expr, CharSetExpr):
-            return False
-        raise RuntimeError(f'unexpected node {expr}')
+        return not rule.is_public
 
     @property
     @cache
@@ -378,14 +353,12 @@ class Grammar(Node):
 
     def is_token_rule(self, rule: Rule) -> bool:
         return rule.is_token
-        # if rule.is_extern:
-        #     return rule.is_token
-        # assert(rule.expr is not None)
-        # return rule.is_public and not self._references_pub_rule(rule.expr)
 
     def is_static_token(self, expr: Expr):
         if isinstance(expr, RefExpr):
             rule = self.lookup(expr.name)
+            if rule is None:
+                return False
             if rule.is_extern:
                 return False
             assert(rule.expr is not None)
@@ -440,10 +413,8 @@ class Grammar(Node):
             if rule.is_keyword:
                 return rule
 
-    def lookup(self, name: str) -> Rule:
-        if name not in self._rules_by_name:
-            raise RuntimeError(f"a rule named '{name}' was not found in the current grammar")
-        return self._rules_by_name[name]
+    def lookup(self, name: str) -> Rule | None:
+        return self._rules_by_name.get(name)
 
 def rewrite_expr(expr: Expr, proc: Callable[[Expr], Expr | None]) -> Expr:
 
