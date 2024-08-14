@@ -216,6 +216,9 @@ def emit_token(node: PyToken) -> str:
     if isinstance(node, PySemicolon):
         return ';'
 
+    if isinstance(node, PySlash):
+        return '/'
+
     if isinstance(node, PyPlus):
         return '+'
 
@@ -623,8 +626,12 @@ def emit(node: PyNode) -> str:
                 visit_expr(expr)
             return
 
-        if isinstance(node, PySepParam):
+        if isinstance(node, PyArgSepParam):
             visit_token(node.asterisk)
+            return
+
+        if isinstance(node, PyKwSepParam):
+            visit_token(node.slash)
             return
 
         if isinstance(node, PySlice):

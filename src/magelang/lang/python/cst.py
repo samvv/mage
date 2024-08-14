@@ -1,4 +1,4 @@
-from typing import Any, TypeGuard, Never, Sequence
+from typing import Any, TypeGuard, Never, Sequence, no_type_check
 
 
 from magelang.runtime import BaseNode, BaseToken, Punctuated, Span
@@ -52,2603 +52,6 @@ class PyString(_PyBaseToken):
     def __init__(self, value: str, span: Span | None = None):
         super().__init__(span=span)
         self.value = value
-
-
-type PySliceParent = PySubscriptExpr | PySubscriptPattern
-
-
-class PySlice(_PyBaseNode):
-
-    def __init__(self, *, lower: 'PyExpr | None' = None, colon: 'PyColon | None' = None, upper: 'PyExpr | None' = None, step: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None) -> None:
-        if is_py_expr(lower):
-            lower_out = lower
-        elif lower is None:
-            lower_out = None
-        else:
-            raise ValueError("the field 'lower' received an unrecognised value'")
-        self.lower: PyExpr | None = lower_out
-        if colon is None:
-            colon_out = PyColon()
-        elif isinstance(colon, PyColon):
-            colon_out = colon
-        else:
-            raise ValueError("the field 'colon' received an unrecognised value'")
-        self.colon: PyColon = colon_out
-        if is_py_expr(upper):
-            upper_out = upper
-        elif upper is None:
-            upper_out = None
-        else:
-            raise ValueError("the field 'upper' received an unrecognised value'")
-        self.upper: PyExpr | None = upper_out
-        if is_py_expr(step):
-            step_out = (PyColon(), step)
-        elif isinstance(step, tuple):
-            assert(isinstance(step, tuple))
-            step_0 = step[0]
-            if step_0 is None:
-                new_step_0 = PyColon()
-            elif isinstance(step_0, PyColon):
-                new_step_0 = step_0
-            else:
-                raise ValueError("the field 'step' received an unrecognised value'")
-            step_1 = step[1]
-            new_step_1 = step_1
-            step_out = (new_step_0, new_step_1)
-        elif step is None:
-            step_out = None
-        else:
-            raise ValueError("the field 'step' received an unrecognised value'")
-        self.step: tuple[PyColon, PyExpr] | None = step_out
-
-    def parent(self) -> PySliceParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyPattern = PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern
-
-
-def is_py_pattern(value: Any) -> TypeGuard[PyPattern]:
-    return isinstance(value, PyNamedPattern) or isinstance(value, PyAttrPattern) or isinstance(value, PySubscriptPattern) or isinstance(value, PyStarredPattern) or isinstance(value, PyListPattern) or isinstance(value, PyTuplePattern)
-
-
-type PyNamedPatternParent = PyTuplePattern | PyAssignStmt | PyForStmt | PyNamedParam | PySubscriptPattern | PyAttrPattern | PyComprehension | PyDeleteStmt | PyListPattern
-
-
-class PyNamedPattern(_PyBaseNode):
-
-    def __init__(self, name: 'PyIdent | str') -> None:
-        if isinstance(name, str):
-            name_out = PyIdent(name)
-        elif isinstance(name, PyIdent):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyIdent = name_out
-
-    def parent(self) -> PyNamedPatternParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyAttrPatternParent = PyTuplePattern | PyAssignStmt | PyForStmt | PyNamedParam | PySubscriptPattern | PyAttrPattern | PyComprehension | PyDeleteStmt | PyListPattern
-
-
-class PyAttrPattern(_PyBaseNode):
-
-    def __init__(self, pattern: 'PyPattern', name: 'PyIdent | str', *, dot: 'PyDot | None' = None) -> None:
-        pattern_out = pattern
-        self.pattern: PyPattern = pattern_out
-        if dot is None:
-            dot_out = PyDot()
-        elif isinstance(dot, PyDot):
-            dot_out = dot
-        else:
-            raise ValueError("the field 'dot' received an unrecognised value'")
-        self.dot: PyDot = dot_out
-        if isinstance(name, str):
-            name_out = PyIdent(name)
-        elif isinstance(name, PyIdent):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyIdent = name_out
-
-    def parent(self) -> PyAttrPatternParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PySubscriptPatternParent = PyTuplePattern | PyAssignStmt | PyForStmt | PyNamedParam | PySubscriptPattern | PyAttrPattern | PyComprehension | PyDeleteStmt | PyListPattern
-
-
-class PySubscriptPattern(_PyBaseNode):
-
-    def count_slices(self) -> int:
-        return len(self.slices)
-
-    def __init__(self, pattern: 'PyPattern', slices: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | Punctuated[PySlice | PyPattern, PyComma | None]', *, open_bracket: 'PyOpenBracket | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
-        pattern_out = pattern
-        self.pattern: PyPattern = pattern_out
-        if open_bracket is None:
-            open_bracket_out = PyOpenBracket()
-        elif isinstance(open_bracket, PyOpenBracket):
-            open_bracket_out = open_bracket
-        else:
-            raise ValueError("the field 'open_bracket' received an unrecognised value'")
-        self.open_bracket: PyOpenBracket = open_bracket_out
-        new_slices = Punctuated()
-        slices_iter = iter(slices)
-        try:
-            first_slices_element = next(slices_iter)
-            while True:
-                try:
-                    second_slices_element = next(slices_iter)
-                    if isinstance(first_slices_element, tuple):
-                        slices_value = first_slices_element[0]
-                        slices_separator = first_slices_element[1]
-                    else:
-                        slices_value = first_slices_element
-                        slices_separator = PyComma()
-                    if isinstance(slices_value, PySlice):
-                        new_slices_value = slices_value
-                    elif is_py_pattern(slices_value):
-                        new_slices_value = slices_value
-                    else:
-                        raise ValueError("the field 'slices' received an unrecognised value'")
-                    new_slices_separator = slices_separator
-                    new_slices.append(new_slices_value, new_slices_separator)
-                    first_slices_element = second_slices_element
-                except StopIteration:
-                    if isinstance(first_slices_element, tuple):
-                        slices_value = first_slices_element[0]
-                        assert(first_slices_element[1] is None)
-                    else:
-                        slices_value = first_slices_element
-                    if isinstance(slices_value, PySlice):
-                        new_slices_value = slices_value
-                    elif is_py_pattern(slices_value):
-                        new_slices_value = slices_value
-                    else:
-                        raise ValueError("the field 'slices' received an unrecognised value'")
-                    new_slices.append(new_slices_value)
-                    break
-        except StopIteration:
-            pass
-        slices_out = new_slices
-        self.slices: Punctuated[PySlice | PyPattern, PyComma] = slices_out
-        if close_bracket is None:
-            close_bracket_out = PyCloseBracket()
-        elif isinstance(close_bracket, PyCloseBracket):
-            close_bracket_out = close_bracket
-        else:
-            raise ValueError("the field 'close_bracket' received an unrecognised value'")
-        self.close_bracket: PyCloseBracket = close_bracket_out
-
-    def parent(self) -> PySubscriptPatternParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyStarredPatternParent = PyTuplePattern | PyAssignStmt | PyForStmt | PyNamedParam | PySubscriptPattern | PyAttrPattern | PyComprehension | PyDeleteStmt | PyListPattern
-
-
-class PyStarredPattern(_PyBaseNode):
-
-    def __init__(self, expr: 'PyExpr', *, asterisk: 'PyAsterisk | None' = None) -> None:
-        if asterisk is None:
-            asterisk_out = PyAsterisk()
-        elif isinstance(asterisk, PyAsterisk):
-            asterisk_out = asterisk
-        else:
-            raise ValueError("the field 'asterisk' received an unrecognised value'")
-        self.asterisk: PyAsterisk = asterisk_out
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-
-    def parent(self) -> PyStarredPatternParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyListPatternParent = PyTuplePattern | PyAssignStmt | PyForStmt | PyNamedParam | PySubscriptPattern | PyAttrPattern | PyComprehension | PyDeleteStmt | PyListPattern
-
-
-class PyListPattern(_PyBaseNode):
-
-    def count_elements(self) -> int:
-        return len(self.elements)
-
-    def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma | None] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
-        if open_bracket is None:
-            open_bracket_out = PyOpenBracket()
-        elif isinstance(open_bracket, PyOpenBracket):
-            open_bracket_out = open_bracket
-        else:
-            raise ValueError("the field 'open_bracket' received an unrecognised value'")
-        self.open_bracket: PyOpenBracket = open_bracket_out
-        if elements is None:
-            elements_out = Punctuated()
-        elif isinstance(elements, list) or isinstance(elements, list) or isinstance(elements, Punctuated):
-            new_elements = Punctuated()
-            elements_iter = iter(elements)
-            try:
-                first_elements_element = next(elements_iter)
-                while True:
-                    try:
-                        second_elements_element = next(elements_iter)
-                        if isinstance(first_elements_element, tuple):
-                            elements_value = first_elements_element[0]
-                            elements_separator = first_elements_element[1]
-                        else:
-                            elements_value = first_elements_element
-                            elements_separator = PyComma()
-                        new_elements_value = elements_value
-                        new_elements_separator = elements_separator
-                        new_elements.append(new_elements_value, new_elements_separator)
-                        first_elements_element = second_elements_element
-                    except StopIteration:
-                        if isinstance(first_elements_element, tuple):
-                            elements_value = first_elements_element[0]
-                            assert(first_elements_element[1] is None)
-                        else:
-                            elements_value = first_elements_element
-                        new_elements_value = elements_value
-                        new_elements.append(new_elements_value)
-                        break
-            except StopIteration:
-                pass
-            elements_out = new_elements
-        else:
-            raise ValueError("the field 'elements' received an unrecognised value'")
-        self.elements: Punctuated[PyPattern, PyComma] = elements_out
-        if close_bracket is None:
-            close_bracket_out = PyCloseBracket()
-        elif isinstance(close_bracket, PyCloseBracket):
-            close_bracket_out = close_bracket
-        else:
-            raise ValueError("the field 'close_bracket' received an unrecognised value'")
-        self.close_bracket: PyCloseBracket = close_bracket_out
-
-    def parent(self) -> PyListPatternParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyTuplePatternParent = PyTuplePattern | PyAssignStmt | PyForStmt | PyNamedParam | PySubscriptPattern | PyAttrPattern | PyComprehension | PyDeleteStmt | PyListPattern
-
-
-class PyTuplePattern(_PyBaseNode):
-
-    def count_elements(self) -> int:
-        return len(self.elements)
-
-    def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
-        if open_paren is None:
-            open_paren_out = PyOpenParen()
-        elif isinstance(open_paren, PyOpenParen):
-            open_paren_out = open_paren
-        else:
-            raise ValueError("the field 'open_paren' received an unrecognised value'")
-        self.open_paren: PyOpenParen = open_paren_out
-        if elements is None:
-            elements_out = Punctuated()
-        elif isinstance(elements, list) or isinstance(elements, list) or isinstance(elements, Punctuated):
-            new_elements = Punctuated()
-            elements_iter = iter(elements)
-            try:
-                first_elements_element = next(elements_iter)
-                while True:
-                    try:
-                        second_elements_element = next(elements_iter)
-                        if isinstance(first_elements_element, tuple):
-                            elements_value = first_elements_element[0]
-                            elements_separator = first_elements_element[1]
-                        else:
-                            elements_value = first_elements_element
-                            elements_separator = PyComma()
-                        new_elements_value = elements_value
-                        new_elements_separator = elements_separator
-                        new_elements.append(new_elements_value, new_elements_separator)
-                        first_elements_element = second_elements_element
-                    except StopIteration:
-                        if isinstance(first_elements_element, tuple):
-                            elements_value = first_elements_element[0]
-                            assert(first_elements_element[1] is None)
-                        else:
-                            elements_value = first_elements_element
-                        new_elements_value = elements_value
-                        new_elements.append(new_elements_value)
-                        break
-            except StopIteration:
-                pass
-            elements_out = new_elements
-        else:
-            raise ValueError("the field 'elements' received an unrecognised value'")
-        self.elements: Punctuated[PyPattern, PyComma] = elements_out
-        if close_paren is None:
-            close_paren_out = PyCloseParen()
-        elif isinstance(close_paren, PyCloseParen):
-            close_paren_out = close_paren
-        else:
-            raise ValueError("the field 'close_paren' received an unrecognised value'")
-        self.close_paren: PyCloseParen = close_paren_out
-
-    def parent(self) -> PyTuplePatternParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyExpr = PyAttrExpr | PyCallExpr | PyConstExpr | PyEllipsisExpr | PyGeneratorExpr | PyInfixExpr | PyListExpr | PyNamedExpr | PyNestExpr | PyPrefixExpr | PyStarredExpr | PySubscriptExpr | PyTupleExpr
-
-
-def is_py_expr(value: Any) -> TypeGuard[PyExpr]:
-    return isinstance(value, PyAttrExpr) or isinstance(value, PyCallExpr) or isinstance(value, PyConstExpr) or isinstance(value, PyEllipsisExpr) or isinstance(value, PyGeneratorExpr) or isinstance(value, PyInfixExpr) or isinstance(value, PyListExpr) or isinstance(value, PyNamedExpr) or isinstance(value, PyNestExpr) or isinstance(value, PyPrefixExpr) or isinstance(value, PyStarredExpr) or isinstance(value, PySubscriptExpr) or isinstance(value, PyTupleExpr)
-
-
-type PyEllipsisExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PyEllipsisExpr(_PyBaseNode):
-
-    def __init__(self, *, dot_dot_dot: 'PyDotDotDot | None' = None) -> None:
-        if dot_dot_dot is None:
-            dot_dot_dot_out = PyDotDotDot()
-        elif isinstance(dot_dot_dot, PyDotDotDot):
-            dot_dot_dot_out = dot_dot_dot
-        else:
-            raise ValueError("the field 'dot_dot_dot' received an unrecognised value'")
-        self.dot_dot_dot: PyDotDotDot = dot_dot_dot_out
-
-    def parent(self) -> PyEllipsisExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyGuardParent = PyComprehension
-
-
-class PyGuard(_PyBaseNode):
-
-    def __init__(self, expr: 'PyExpr', *, if_keyword: 'PyIfKeyword | None' = None) -> None:
-        if if_keyword is None:
-            if_keyword_out = PyIfKeyword()
-        elif isinstance(if_keyword, PyIfKeyword):
-            if_keyword_out = if_keyword
-        else:
-            raise ValueError("the field 'if_keyword' received an unrecognised value'")
-        self.if_keyword: PyIfKeyword = if_keyword_out
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-
-    def parent(self) -> PyGuardParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyComprehensionParent = PyGeneratorExpr
-
-
-class PyComprehension(_PyBaseNode):
-
-    def count_guards(self) -> int:
-        return len(self.guards)
-
-    def __init__(self, pattern: 'PyPattern', target: 'PyExpr', *, async_keyword: 'PyAsyncKeyword | None' = None, for_keyword: 'PyForKeyword | None' = None, in_keyword: 'PyInKeyword | None' = None, guards: 'Sequence[PyGuard | PyExpr] | None' = None) -> None:
-        if isinstance(async_keyword, PyAsyncKeyword):
-            async_keyword_out = async_keyword
-        elif async_keyword is None:
-            async_keyword_out = None
-        else:
-            raise ValueError("the field 'async_keyword' received an unrecognised value'")
-        self.async_keyword: PyAsyncKeyword | None = async_keyword_out
-        if for_keyword is None:
-            for_keyword_out = PyForKeyword()
-        elif isinstance(for_keyword, PyForKeyword):
-            for_keyword_out = for_keyword
-        else:
-            raise ValueError("the field 'for_keyword' received an unrecognised value'")
-        self.for_keyword: PyForKeyword = for_keyword_out
-        pattern_out = pattern
-        self.pattern: PyPattern = pattern_out
-        if in_keyword is None:
-            in_keyword_out = PyInKeyword()
-        elif isinstance(in_keyword, PyInKeyword):
-            in_keyword_out = in_keyword
-        else:
-            raise ValueError("the field 'in_keyword' received an unrecognised value'")
-        self.in_keyword: PyInKeyword = in_keyword_out
-        target_out = target
-        self.target: PyExpr = target_out
-        if guards is None:
-            guards_out = list()
-        elif isinstance(guards, list):
-            new_guards = list()
-            for guards_element in guards:
-                if is_py_expr(guards_element):
-                    new_guards_element = PyGuard(guards_element)
-                elif isinstance(guards_element, PyGuard):
-                    new_guards_element = guards_element
-                else:
-                    raise ValueError("the field 'guards' received an unrecognised value'")
-                new_guards.append(new_guards_element)
-            guards_out = new_guards
-        else:
-            raise ValueError("the field 'guards' received an unrecognised value'")
-        self.guards: Sequence[PyGuard] = guards_out
-
-    def parent(self) -> PyComprehensionParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyGeneratorExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PyGeneratorExpr(_PyBaseNode):
-
-    def count_generators(self) -> int:
-        return len(self.generators)
-
-    def __init__(self, element: 'PyExpr', generators: 'Sequence[PyComprehension]') -> None:
-        element_out = element
-        self.element: PyExpr = element_out
-        new_generators = list()
-        for generators_element in generators:
-            new_generators_element = generators_element
-            new_generators.append(new_generators_element)
-        generators_out = new_generators
-        self.generators: Sequence[PyComprehension] = generators_out
-
-    def parent(self) -> PyGeneratorExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyConstExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PyConstExpr(_PyBaseNode):
-
-    def __init__(self, literal: 'PyFloat | PyInteger | PyString | float | int | str') -> None:
-        if isinstance(literal, float):
-            literal_out = PyFloat(literal)
-        elif isinstance(literal, PyFloat):
-            literal_out = literal
-        elif isinstance(literal, int):
-            literal_out = PyInteger(literal)
-        elif isinstance(literal, PyInteger):
-            literal_out = literal
-        elif isinstance(literal, str):
-            literal_out = PyString(literal)
-        elif isinstance(literal, PyString):
-            literal_out = literal
-        else:
-            raise ValueError("the field 'literal' received an unrecognised value'")
-        self.literal: PyFloat | PyInteger | PyString = literal_out
-
-    def parent(self) -> PyConstExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyNestExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PyNestExpr(_PyBaseNode):
-
-    def __init__(self, expr: 'PyExpr', *, open_paren: 'PyOpenParen | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
-        if open_paren is None:
-            open_paren_out = PyOpenParen()
-        elif isinstance(open_paren, PyOpenParen):
-            open_paren_out = open_paren
-        else:
-            raise ValueError("the field 'open_paren' received an unrecognised value'")
-        self.open_paren: PyOpenParen = open_paren_out
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-        if close_paren is None:
-            close_paren_out = PyCloseParen()
-        elif isinstance(close_paren, PyCloseParen):
-            close_paren_out = close_paren
-        else:
-            raise ValueError("the field 'close_paren' received an unrecognised value'")
-        self.close_paren: PyCloseParen = close_paren_out
-
-    def parent(self) -> PyNestExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyNamedExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PyNamedExpr(_PyBaseNode):
-
-    def __init__(self, name: 'PyIdent | str') -> None:
-        if isinstance(name, str):
-            name_out = PyIdent(name)
-        elif isinstance(name, PyIdent):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyIdent = name_out
-
-    def parent(self) -> PyNamedExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyAttrExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PyAttrExpr(_PyBaseNode):
-
-    def __init__(self, expr: 'PyExpr', name: 'PyIdent | str', *, dot: 'PyDot | None' = None) -> None:
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-        if dot is None:
-            dot_out = PyDot()
-        elif isinstance(dot, PyDot):
-            dot_out = dot
-        else:
-            raise ValueError("the field 'dot' received an unrecognised value'")
-        self.dot: PyDot = dot_out
-        if isinstance(name, str):
-            name_out = PyIdent(name)
-        elif isinstance(name, PyIdent):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyIdent = name_out
-
-    def parent(self) -> PyAttrExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PySubscriptExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PySubscriptExpr(_PyBaseNode):
-
-    def count_slices(self) -> int:
-        return len(self.slices)
-
-    def __init__(self, expr: 'PyExpr', slices: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | Punctuated[PySlice | PyExpr, PyComma | None]', *, open_bracket: 'PyOpenBracket | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-        if open_bracket is None:
-            open_bracket_out = PyOpenBracket()
-        elif isinstance(open_bracket, PyOpenBracket):
-            open_bracket_out = open_bracket
-        else:
-            raise ValueError("the field 'open_bracket' received an unrecognised value'")
-        self.open_bracket: PyOpenBracket = open_bracket_out
-        new_slices = Punctuated()
-        slices_iter = iter(slices)
-        try:
-            first_slices_element = next(slices_iter)
-            while True:
-                try:
-                    second_slices_element = next(slices_iter)
-                    if isinstance(first_slices_element, tuple):
-                        slices_value = first_slices_element[0]
-                        slices_separator = first_slices_element[1]
-                    else:
-                        slices_value = first_slices_element
-                        slices_separator = PyComma()
-                    if isinstance(slices_value, PySlice):
-                        new_slices_value = slices_value
-                    elif is_py_expr(slices_value):
-                        new_slices_value = slices_value
-                    else:
-                        raise ValueError("the field 'slices' received an unrecognised value'")
-                    new_slices_separator = slices_separator
-                    new_slices.append(new_slices_value, new_slices_separator)
-                    first_slices_element = second_slices_element
-                except StopIteration:
-                    if isinstance(first_slices_element, tuple):
-                        slices_value = first_slices_element[0]
-                        assert(first_slices_element[1] is None)
-                    else:
-                        slices_value = first_slices_element
-                    if isinstance(slices_value, PySlice):
-                        new_slices_value = slices_value
-                    elif is_py_expr(slices_value):
-                        new_slices_value = slices_value
-                    else:
-                        raise ValueError("the field 'slices' received an unrecognised value'")
-                    new_slices.append(new_slices_value)
-                    break
-        except StopIteration:
-            pass
-        slices_out = new_slices
-        self.slices: Punctuated[PySlice | PyExpr, PyComma] = slices_out
-        if close_bracket is None:
-            close_bracket_out = PyCloseBracket()
-        elif isinstance(close_bracket, PyCloseBracket):
-            close_bracket_out = close_bracket
-        else:
-            raise ValueError("the field 'close_bracket' received an unrecognised value'")
-        self.close_bracket: PyCloseBracket = close_bracket_out
-
-    def parent(self) -> PySubscriptExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyStarredExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PyStarredExpr(_PyBaseNode):
-
-    def __init__(self, expr: 'PyExpr', *, asterisk: 'PyAsterisk | None' = None) -> None:
-        if asterisk is None:
-            asterisk_out = PyAsterisk()
-        elif isinstance(asterisk, PyAsterisk):
-            asterisk_out = asterisk
-        else:
-            raise ValueError("the field 'asterisk' received an unrecognised value'")
-        self.asterisk: PyAsterisk = asterisk_out
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-
-    def parent(self) -> PyStarredExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyListExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PyListExpr(_PyBaseNode):
-
-    def count_elements(self) -> int:
-        return len(self.elements)
-
-    def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma | None] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
-        if open_bracket is None:
-            open_bracket_out = PyOpenBracket()
-        elif isinstance(open_bracket, PyOpenBracket):
-            open_bracket_out = open_bracket
-        else:
-            raise ValueError("the field 'open_bracket' received an unrecognised value'")
-        self.open_bracket: PyOpenBracket = open_bracket_out
-        if elements is None:
-            elements_out = Punctuated()
-        elif isinstance(elements, list) or isinstance(elements, list) or isinstance(elements, Punctuated):
-            new_elements = Punctuated()
-            elements_iter = iter(elements)
-            try:
-                first_elements_element = next(elements_iter)
-                while True:
-                    try:
-                        second_elements_element = next(elements_iter)
-                        if isinstance(first_elements_element, tuple):
-                            elements_value = first_elements_element[0]
-                            elements_separator = first_elements_element[1]
-                        else:
-                            elements_value = first_elements_element
-                            elements_separator = PyComma()
-                        new_elements_value = elements_value
-                        new_elements_separator = elements_separator
-                        new_elements.append(new_elements_value, new_elements_separator)
-                        first_elements_element = second_elements_element
-                    except StopIteration:
-                        if isinstance(first_elements_element, tuple):
-                            elements_value = first_elements_element[0]
-                            assert(first_elements_element[1] is None)
-                        else:
-                            elements_value = first_elements_element
-                        new_elements_value = elements_value
-                        new_elements.append(new_elements_value)
-                        break
-            except StopIteration:
-                pass
-            elements_out = new_elements
-        else:
-            raise ValueError("the field 'elements' received an unrecognised value'")
-        self.elements: Punctuated[PyExpr, PyComma] = elements_out
-        if close_bracket is None:
-            close_bracket_out = PyCloseBracket()
-        elif isinstance(close_bracket, PyCloseBracket):
-            close_bracket_out = close_bracket
-        else:
-            raise ValueError("the field 'close_bracket' received an unrecognised value'")
-        self.close_bracket: PyCloseBracket = close_bracket_out
-
-    def parent(self) -> PyListExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyTupleExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PyTupleExpr(_PyBaseNode):
-
-    def count_elements(self) -> int:
-        return len(self.elements)
-
-    def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
-        if open_paren is None:
-            open_paren_out = PyOpenParen()
-        elif isinstance(open_paren, PyOpenParen):
-            open_paren_out = open_paren
-        else:
-            raise ValueError("the field 'open_paren' received an unrecognised value'")
-        self.open_paren: PyOpenParen = open_paren_out
-        if elements is None:
-            elements_out = Punctuated()
-        elif isinstance(elements, list) or isinstance(elements, list) or isinstance(elements, Punctuated):
-            new_elements = Punctuated()
-            elements_iter = iter(elements)
-            try:
-                first_elements_element = next(elements_iter)
-                while True:
-                    try:
-                        second_elements_element = next(elements_iter)
-                        if isinstance(first_elements_element, tuple):
-                            elements_value = first_elements_element[0]
-                            elements_separator = first_elements_element[1]
-                        else:
-                            elements_value = first_elements_element
-                            elements_separator = PyComma()
-                        new_elements_value = elements_value
-                        new_elements_separator = elements_separator
-                        new_elements.append(new_elements_value, new_elements_separator)
-                        first_elements_element = second_elements_element
-                    except StopIteration:
-                        if isinstance(first_elements_element, tuple):
-                            elements_value = first_elements_element[0]
-                            assert(first_elements_element[1] is None)
-                        else:
-                            elements_value = first_elements_element
-                        new_elements_value = elements_value
-                        new_elements.append(new_elements_value)
-                        break
-            except StopIteration:
-                pass
-            elements_out = new_elements
-        else:
-            raise ValueError("the field 'elements' received an unrecognised value'")
-        self.elements: Punctuated[PyExpr, PyComma] = elements_out
-        if close_paren is None:
-            close_paren_out = PyCloseParen()
-        elif isinstance(close_paren, PyCloseParen):
-            close_paren_out = close_paren
-        else:
-            raise ValueError("the field 'close_paren' received an unrecognised value'")
-        self.close_paren: PyCloseParen = close_paren_out
-
-    def parent(self) -> PyTupleExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyArg = PyKeywordArg | PyExpr
-
-
-def is_py_arg(value: Any) -> TypeGuard[PyArg]:
-    return isinstance(value, PyKeywordArg) or is_py_expr(value)
-
-
-type PyKeywordArgParent = PyCallExpr
-
-
-class PyKeywordArg(_PyBaseNode):
-
-    def __init__(self, name: 'PyIdent | str', expr: 'PyExpr', *, equals: 'PyEquals | None' = None) -> None:
-        if isinstance(name, str):
-            name_out = PyIdent(name)
-        elif isinstance(name, PyIdent):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyIdent = name_out
-        if equals is None:
-            equals_out = PyEquals()
-        elif isinstance(equals, PyEquals):
-            equals_out = equals
-        else:
-            raise ValueError("the field 'equals' received an unrecognised value'")
-        self.equals: PyEquals = equals_out
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-
-    def parent(self) -> PyKeywordArgParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyCallExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PyCallExpr(_PyBaseNode):
-
-    def count_args(self) -> int:
-        return len(self.args)
-
-    def __init__(self, operator: 'PyExpr', *, open_paren: 'PyOpenParen | None' = None, args: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | Punctuated[PyArg, PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
-        operator_out = operator
-        self.operator: PyExpr = operator_out
-        if open_paren is None:
-            open_paren_out = PyOpenParen()
-        elif isinstance(open_paren, PyOpenParen):
-            open_paren_out = open_paren
-        else:
-            raise ValueError("the field 'open_paren' received an unrecognised value'")
-        self.open_paren: PyOpenParen = open_paren_out
-        if args is None:
-            args_out = Punctuated()
-        elif isinstance(args, list) or isinstance(args, list) or isinstance(args, Punctuated):
-            new_args = Punctuated()
-            args_iter = iter(args)
-            try:
-                first_args_element = next(args_iter)
-                while True:
-                    try:
-                        second_args_element = next(args_iter)
-                        if isinstance(first_args_element, tuple):
-                            args_value = first_args_element[0]
-                            args_separator = first_args_element[1]
-                        else:
-                            args_value = first_args_element
-                            args_separator = PyComma()
-                        new_args_value = args_value
-                        new_args_separator = args_separator
-                        new_args.append(new_args_value, new_args_separator)
-                        first_args_element = second_args_element
-                    except StopIteration:
-                        if isinstance(first_args_element, tuple):
-                            args_value = first_args_element[0]
-                            assert(first_args_element[1] is None)
-                        else:
-                            args_value = first_args_element
-                        new_args_value = args_value
-                        new_args.append(new_args_value)
-                        break
-            except StopIteration:
-                pass
-            args_out = new_args
-        else:
-            raise ValueError("the field 'args' received an unrecognised value'")
-        self.args: Punctuated[PyArg, PyComma] = args_out
-        if close_paren is None:
-            close_paren_out = PyCloseParen()
-        elif isinstance(close_paren, PyCloseParen):
-            close_paren_out = close_paren
-        else:
-            raise ValueError("the field 'close_paren' received an unrecognised value'")
-        self.close_paren: PyCloseParen = close_paren_out
-
-    def parent(self) -> PyCallExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyPrefixOp = PyNotKeyword | PyPlus | PyHyphen | PyTilde
-
-
-def is_py_prefix_op(value: Any) -> TypeGuard[PyPrefixOp]:
-    return isinstance(value, PyNotKeyword) or isinstance(value, PyPlus) or isinstance(value, PyHyphen) or isinstance(value, PyTilde)
-
-
-type PyPrefixExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PyPrefixExpr(_PyBaseNode):
-
-    def __init__(self, prefix_op: 'PyPrefixOp', expr: 'PyExpr') -> None:
-        prefix_op_out = prefix_op
-        self.prefix_op: PyPrefixOp = prefix_op_out
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-
-    def parent(self) -> PyPrefixExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyInfixOp = PyPlus | PyHyphen | PyAsterisk | PySlash | PySlashSlash | PyPercent | PyLessThanLessThan | PyGreaterThanGreaterThan | PyVerticalBar | PyCaret | PyAmpersand | PyAtSign | PyOrKeyword | PyAndKeyword | PyEqualsEquals | PyExclamationMarkEquals | PyLessThan | PyLessThanEquals | PyGreaterThan | PyGreaterThanEquals | PyIsKeyword | tuple[PyIsKeyword, PyNotKeyword] | PyInKeyword | tuple[PyNotKeyword, PyInKeyword]
-
-
-def is_py_infix_op(value: Any) -> TypeGuard[PyInfixOp]:
-    return isinstance(value, PyPlus) or isinstance(value, PyHyphen) or isinstance(value, PyAsterisk) or isinstance(value, PySlash) or isinstance(value, PySlashSlash) or isinstance(value, PyPercent) or isinstance(value, PyLessThanLessThan) or isinstance(value, PyGreaterThanGreaterThan) or isinstance(value, PyVerticalBar) or isinstance(value, PyCaret) or isinstance(value, PyAmpersand) or isinstance(value, PyAtSign) or isinstance(value, PyOrKeyword) or isinstance(value, PyAndKeyword) or isinstance(value, PyEqualsEquals) or isinstance(value, PyExclamationMarkEquals) or isinstance(value, PyLessThan) or isinstance(value, PyLessThanEquals) or isinstance(value, PyGreaterThan) or isinstance(value, PyGreaterThanEquals) or isinstance(value, PyIsKeyword) or (isinstance(value, tuple) and isinstance(value[0], PyIsKeyword) and isinstance(value[1], PyNotKeyword)) or isinstance(value, PyInKeyword) or (isinstance(value, tuple) and isinstance(value[0], PyNotKeyword) and isinstance(value[1], PyInKeyword))
-
-
-type PyInfixExprParent = PyExprStmt | PyNamedParam | PyKeywordArg | PyStarredExpr | PyRaiseStmt | PyElifCase | PyTypeAliasStmt | PyCallExpr | PyForStmt | PyNestExpr | PyPrefixExpr | PyAttrExpr | PyComprehension | PyWhileStmt | PyFuncDef | PySlice | PyGeneratorExpr | PyListExpr | PyDecorator | PyGuard | PyAssignStmt | PyExceptHandler | PyInfixExpr | PyRetStmt | PyIfCase | PyStarredPattern | PySubscriptExpr | PyTupleExpr
-
-
-class PyInfixExpr(_PyBaseNode):
-
-    def __init__(self, left: 'PyExpr', op: 'PyInfixOp', right: 'PyExpr') -> None:
-        left_out = left
-        self.left: PyExpr = left_out
-        op_out = op
-        self.op: PyInfixOp = op_out
-        right_out = right
-        self.right: PyExpr = right_out
-
-    def parent(self) -> PyInfixExprParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyQualNameParent = PyAbsolutePath | PyRelativePath
-
-
-class PyQualName(_PyBaseNode):
-
-    def count_modules(self) -> int:
-        return len(self.modules)
-
-    def __init__(self, name: 'PyIdent | str', *, modules: 'Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None' = None) -> None:
-        if modules is None:
-            modules_out = list()
-        elif isinstance(modules, list):
-            new_modules = list()
-            for modules_element in modules:
-                if isinstance(modules_element, str):
-                    new_modules_element = (PyIdent(modules_element), PyDot())
-                elif isinstance(modules_element, PyIdent):
-                    new_modules_element = (modules_element, PyDot())
-                elif isinstance(modules_element, tuple):
-                    assert(isinstance(modules_element, tuple))
-                    modules_element_0 = modules_element[0]
-                    if isinstance(modules_element_0, str):
-                        new_modules_element_0 = PyIdent(modules_element_0)
-                    elif isinstance(modules_element_0, PyIdent):
-                        new_modules_element_0 = modules_element_0
-                    else:
-                        raise ValueError("the field 'modules' received an unrecognised value'")
-                    modules_element_1 = modules_element[1]
-                    if modules_element_1 is None:
-                        new_modules_element_1 = PyDot()
-                    elif isinstance(modules_element_1, PyDot):
-                        new_modules_element_1 = modules_element_1
-                    else:
-                        raise ValueError("the field 'modules' received an unrecognised value'")
-                    new_modules_element = (new_modules_element_0, new_modules_element_1)
-                else:
-                    raise ValueError("the field 'modules' received an unrecognised value'")
-                new_modules.append(new_modules_element)
-            modules_out = new_modules
-        else:
-            raise ValueError("the field 'modules' received an unrecognised value'")
-        self.modules: Sequence[tuple[PyIdent, PyDot]] = modules_out
-        if isinstance(name, str):
-            name_out = PyIdent(name)
-        elif isinstance(name, PyIdent):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyIdent = name_out
-
-    def parent(self) -> PyQualNameParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyAbsolutePathParent = PyAlias | PyImportFromStmt
-
-
-class PyAbsolutePath(_PyBaseNode):
-
-    def __init__(self, name: 'PyQualName | PyIdent | str') -> None:
-        if isinstance(name, str):
-            name_out = PyQualName(PyIdent(name))
-        elif isinstance(name, PyIdent):
-            name_out = PyQualName(name)
-        elif isinstance(name, PyQualName):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyQualName = name_out
-
-    def parent(self) -> PyAbsolutePathParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyRelativePathParent = PyAlias | PyImportFromStmt
-
-
-class PyRelativePath(_PyBaseNode):
-
-    def count_dots(self) -> int:
-        return len(self.dots)
-
-    def __init__(self, dots: 'Sequence[PyDot] | int', *, name: 'PyQualName | PyIdent | None | str' = None) -> None:
-        if isinstance(dots, int):
-            new_dots = list()
-            for _ in range(0, dots):
-                new_dots.append(PyDot())
-            dots_out = new_dots
-        elif isinstance(dots, list):
-            new_dots = list()
-            for dots_element in dots:
-                new_dots_element = dots_element
-                new_dots.append(new_dots_element)
-            dots_out = new_dots
-        else:
-            raise ValueError("the field 'dots' received an unrecognised value'")
-        self.dots: Sequence[PyDot] = dots_out
-        if isinstance(name, str):
-            name_out = PyQualName(PyIdent(name))
-        elif isinstance(name, PyIdent):
-            name_out = PyQualName(name)
-        elif isinstance(name, PyQualName):
-            name_out = name
-        elif name is None:
-            name_out = None
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyQualName | None = name_out
-
-    def parent(self) -> PyRelativePathParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyPath = PyAbsolutePath | PyRelativePath
-
-
-def is_py_path(value: Any) -> TypeGuard[PyPath]:
-    return isinstance(value, PyAbsolutePath) or isinstance(value, PyRelativePath)
-
-
-type PyAliasParent = PyImportStmt
-
-
-class PyAlias(_PyBaseNode):
-
-    def __init__(self, path: 'PyPath', *, asname: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str' = None) -> None:
-        path_out = path
-        self.path: PyPath = path_out
-        if isinstance(asname, str):
-            asname_out = (PyAsKeyword(), PyIdent(asname))
-        elif isinstance(asname, PyIdent):
-            asname_out = (PyAsKeyword(), asname)
-        elif isinstance(asname, tuple):
-            assert(isinstance(asname, tuple))
-            asname_0 = asname[0]
-            if asname_0 is None:
-                new_asname_0 = PyAsKeyword()
-            elif isinstance(asname_0, PyAsKeyword):
-                new_asname_0 = asname_0
-            else:
-                raise ValueError("the field 'asname' received an unrecognised value'")
-            asname_1 = asname[1]
-            if isinstance(asname_1, str):
-                new_asname_1 = PyIdent(asname_1)
-            elif isinstance(asname_1, PyIdent):
-                new_asname_1 = asname_1
-            else:
-                raise ValueError("the field 'asname' received an unrecognised value'")
-            asname_out = (new_asname_0, new_asname_1)
-        elif asname is None:
-            asname_out = None
-        else:
-            raise ValueError("the field 'asname' received an unrecognised value'")
-        self.asname: tuple[PyAsKeyword, PyIdent] | None = asname_out
-
-    def parent(self) -> PyAliasParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyFromAliasParent = PyImportFromStmt
-
-
-class PyFromAlias(_PyBaseNode):
-
-    def __init__(self, name: 'PyAsterisk | PyIdent | str', *, asname: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str' = None) -> None:
-        if isinstance(name, PyAsterisk):
-            name_out = name
-        elif isinstance(name, str):
-            name_out = PyIdent(name)
-        elif isinstance(name, PyIdent):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyAsterisk | PyIdent = name_out
-        if isinstance(asname, str):
-            asname_out = (PyAsKeyword(), PyIdent(asname))
-        elif isinstance(asname, PyIdent):
-            asname_out = (PyAsKeyword(), asname)
-        elif isinstance(asname, tuple):
-            assert(isinstance(asname, tuple))
-            asname_0 = asname[0]
-            if asname_0 is None:
-                new_asname_0 = PyAsKeyword()
-            elif isinstance(asname_0, PyAsKeyword):
-                new_asname_0 = asname_0
-            else:
-                raise ValueError("the field 'asname' received an unrecognised value'")
-            asname_1 = asname[1]
-            if isinstance(asname_1, str):
-                new_asname_1 = PyIdent(asname_1)
-            elif isinstance(asname_1, PyIdent):
-                new_asname_1 = asname_1
-            else:
-                raise ValueError("the field 'asname' received an unrecognised value'")
-            asname_out = (new_asname_0, new_asname_1)
-        elif asname is None:
-            asname_out = None
-        else:
-            raise ValueError("the field 'asname' received an unrecognised value'")
-        self.asname: tuple[PyAsKeyword, PyIdent] | None = asname_out
-
-    def parent(self) -> PyFromAliasParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyImportStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyImportStmt(_PyBaseNode):
-
-    def count_aliases(self) -> int:
-        return len(self.aliases)
-
-    def __init__(self, aliases: 'Sequence[PyAlias] | Sequence[tuple[PyAlias, PyComma | None]] | Punctuated[PyAlias, PyComma | None]', *, import_keyword: 'PyImportKeyword | None' = None) -> None:
-        if import_keyword is None:
-            import_keyword_out = PyImportKeyword()
-        elif isinstance(import_keyword, PyImportKeyword):
-            import_keyword_out = import_keyword
-        else:
-            raise ValueError("the field 'import_keyword' received an unrecognised value'")
-        self.import_keyword: PyImportKeyword = import_keyword_out
-        new_aliases = Punctuated()
-        aliases_iter = iter(aliases)
-        try:
-            first_aliases_element = next(aliases_iter)
-            while True:
-                try:
-                    second_aliases_element = next(aliases_iter)
-                    if isinstance(first_aliases_element, tuple):
-                        aliases_value = first_aliases_element[0]
-                        aliases_separator = first_aliases_element[1]
-                    else:
-                        aliases_value = first_aliases_element
-                        aliases_separator = PyComma()
-                    new_aliases_value = aliases_value
-                    new_aliases_separator = aliases_separator
-                    new_aliases.append(new_aliases_value, new_aliases_separator)
-                    first_aliases_element = second_aliases_element
-                except StopIteration:
-                    if isinstance(first_aliases_element, tuple):
-                        aliases_value = first_aliases_element[0]
-                        assert(first_aliases_element[1] is None)
-                    else:
-                        aliases_value = first_aliases_element
-                    new_aliases_value = aliases_value
-                    new_aliases.append(new_aliases_value)
-                    break
-        except StopIteration:
-            pass
-        aliases_out = new_aliases
-        self.aliases: Punctuated[PyAlias, PyComma] = aliases_out
-
-    def parent(self) -> PyImportStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyImportFromStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyImportFromStmt(_PyBaseNode):
-
-    def count_aliases(self) -> int:
-        return len(self.aliases)
-
-    def __init__(self, path: 'PyPath', aliases: 'Sequence[PyFromAlias] | Sequence[tuple[PyFromAlias, PyComma | None]] | Punctuated[PyFromAlias, PyComma | None]', *, from_keyword: 'PyFromKeyword | None' = None, import_keyword: 'PyImportKeyword | None' = None) -> None:
-        if from_keyword is None:
-            from_keyword_out = PyFromKeyword()
-        elif isinstance(from_keyword, PyFromKeyword):
-            from_keyword_out = from_keyword
-        else:
-            raise ValueError("the field 'from_keyword' received an unrecognised value'")
-        self.from_keyword: PyFromKeyword = from_keyword_out
-        path_out = path
-        self.path: PyPath = path_out
-        if import_keyword is None:
-            import_keyword_out = PyImportKeyword()
-        elif isinstance(import_keyword, PyImportKeyword):
-            import_keyword_out = import_keyword
-        else:
-            raise ValueError("the field 'import_keyword' received an unrecognised value'")
-        self.import_keyword: PyImportKeyword = import_keyword_out
-        new_aliases = Punctuated()
-        aliases_iter = iter(aliases)
-        try:
-            first_aliases_element = next(aliases_iter)
-            while True:
-                try:
-                    second_aliases_element = next(aliases_iter)
-                    if isinstance(first_aliases_element, tuple):
-                        aliases_value = first_aliases_element[0]
-                        aliases_separator = first_aliases_element[1]
-                    else:
-                        aliases_value = first_aliases_element
-                        aliases_separator = PyComma()
-                    new_aliases_value = aliases_value
-                    new_aliases_separator = aliases_separator
-                    new_aliases.append(new_aliases_value, new_aliases_separator)
-                    first_aliases_element = second_aliases_element
-                except StopIteration:
-                    if isinstance(first_aliases_element, tuple):
-                        aliases_value = first_aliases_element[0]
-                        assert(first_aliases_element[1] is None)
-                    else:
-                        aliases_value = first_aliases_element
-                    new_aliases_value = aliases_value
-                    new_aliases.append(new_aliases_value)
-                    break
-        except StopIteration:
-            pass
-        aliases_out = new_aliases
-        self.aliases: Punctuated[PyFromAlias, PyComma] = aliases_out
-
-    def parent(self) -> PyImportFromStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyStmt = PyAssignStmt | PyBreakStmt | PyClassDef | PyContinueStmt | PyDeleteStmt | PyExprStmt | PyForStmt | PyFuncDef | PyIfStmt | PyImportStmt | PyImportFromStmt | PyPassStmt | PyRaiseStmt | PyRetStmt | PyTryStmt | PyTypeAliasStmt | PyWhileStmt
-
-
-def is_py_stmt(value: Any) -> TypeGuard[PyStmt]:
-    return isinstance(value, PyAssignStmt) or isinstance(value, PyBreakStmt) or isinstance(value, PyClassDef) or isinstance(value, PyContinueStmt) or isinstance(value, PyDeleteStmt) or isinstance(value, PyExprStmt) or isinstance(value, PyForStmt) or isinstance(value, PyFuncDef) or isinstance(value, PyIfStmt) or isinstance(value, PyImportStmt) or isinstance(value, PyImportFromStmt) or isinstance(value, PyPassStmt) or isinstance(value, PyRaiseStmt) or isinstance(value, PyRetStmt) or isinstance(value, PyTryStmt) or isinstance(value, PyTypeAliasStmt) or isinstance(value, PyWhileStmt)
-
-
-type PyRetStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyRetStmt(_PyBaseNode):
-
-    def __init__(self, *, return_keyword: 'PyReturnKeyword | None' = None, expr: 'PyExpr | None' = None) -> None:
-        if return_keyword is None:
-            return_keyword_out = PyReturnKeyword()
-        elif isinstance(return_keyword, PyReturnKeyword):
-            return_keyword_out = return_keyword
-        else:
-            raise ValueError("the field 'return_keyword' received an unrecognised value'")
-        self.return_keyword: PyReturnKeyword = return_keyword_out
-        if is_py_expr(expr):
-            expr_out = expr
-        elif expr is None:
-            expr_out = None
-        else:
-            raise ValueError("the field 'expr' received an unrecognised value'")
-        self.expr: PyExpr | None = expr_out
-
-    def parent(self) -> PyRetStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyExprStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyExprStmt(_PyBaseNode):
-
-    def __init__(self, expr: 'PyExpr') -> None:
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-
-    def parent(self) -> PyExprStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyAssignStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyAssignStmt(_PyBaseNode):
-
-    def __init__(self, pattern: 'PyPattern', *, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None, value: 'PyExpr | tuple[PyEquals | None, PyExpr] | None' = None) -> None:
-        pattern_out = pattern
-        self.pattern: PyPattern = pattern_out
-        if is_py_expr(annotation):
-            annotation_out = (PyColon(), annotation)
-        elif isinstance(annotation, tuple):
-            assert(isinstance(annotation, tuple))
-            annotation_0 = annotation[0]
-            if annotation_0 is None:
-                new_annotation_0 = PyColon()
-            elif isinstance(annotation_0, PyColon):
-                new_annotation_0 = annotation_0
-            else:
-                raise ValueError("the field 'annotation' received an unrecognised value'")
-            annotation_1 = annotation[1]
-            new_annotation_1 = annotation_1
-            annotation_out = (new_annotation_0, new_annotation_1)
-        elif annotation is None:
-            annotation_out = None
-        else:
-            raise ValueError("the field 'annotation' received an unrecognised value'")
-        self.annotation: tuple[PyColon, PyExpr] | None = annotation_out
-        if is_py_expr(value):
-            value_out = (PyEquals(), value)
-        elif isinstance(value, tuple):
-            assert(isinstance(value, tuple))
-            value_0 = value[0]
-            if value_0 is None:
-                new_value_0 = PyEquals()
-            elif isinstance(value_0, PyEquals):
-                new_value_0 = value_0
-            else:
-                raise ValueError("the field 'value' received an unrecognised value'")
-            value_1 = value[1]
-            new_value_1 = value_1
-            value_out = (new_value_0, new_value_1)
-        elif value is None:
-            value_out = None
-        else:
-            raise ValueError("the field 'value' received an unrecognised value'")
-        self.value: tuple[PyEquals, PyExpr] | None = value_out
-
-    def parent(self) -> PyAssignStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyPassStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyPassStmt(_PyBaseNode):
-
-    def __init__(self, *, pass_keyword: 'PyPassKeyword | None' = None) -> None:
-        if pass_keyword is None:
-            pass_keyword_out = PyPassKeyword()
-        elif isinstance(pass_keyword, PyPassKeyword):
-            pass_keyword_out = pass_keyword
-        else:
-            raise ValueError("the field 'pass_keyword' received an unrecognised value'")
-        self.pass_keyword: PyPassKeyword = pass_keyword_out
-
-    def parent(self) -> PyPassStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyIfCaseParent = PyIfStmt
-
-
-class PyIfCase(_PyBaseNode):
-
-    def __init__(self, test: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, if_keyword: 'PyIfKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
-        if if_keyword is None:
-            if_keyword_out = PyIfKeyword()
-        elif isinstance(if_keyword, PyIfKeyword):
-            if_keyword_out = if_keyword
-        else:
-            raise ValueError("the field 'if_keyword' received an unrecognised value'")
-        self.if_keyword: PyIfKeyword = if_keyword_out
-        test_out = test
-        self.test: PyExpr = test_out
-        if colon is None:
-            colon_out = PyColon()
-        elif isinstance(colon, PyColon):
-            colon_out = colon
-        else:
-            raise ValueError("the field 'colon' received an unrecognised value'")
-        self.colon: PyColon = colon_out
-        if is_py_stmt(body):
-            body_out = body
-        elif isinstance(body, list):
-            new_body = list()
-            for body_element in body:
-                new_body_element = body_element
-                new_body.append(new_body_element)
-            body_out = new_body
-        else:
-            raise ValueError("the field 'body' received an unrecognised value'")
-        self.body: PyStmt | Sequence[PyStmt] = body_out
-
-    def parent(self) -> PyIfCaseParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyElifCaseParent = PyIfStmt
-
-
-class PyElifCase(_PyBaseNode):
-
-    def __init__(self, test: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, elif_keyword: 'PyElifKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
-        if elif_keyword is None:
-            elif_keyword_out = PyElifKeyword()
-        elif isinstance(elif_keyword, PyElifKeyword):
-            elif_keyword_out = elif_keyword
-        else:
-            raise ValueError("the field 'elif_keyword' received an unrecognised value'")
-        self.elif_keyword: PyElifKeyword = elif_keyword_out
-        test_out = test
-        self.test: PyExpr = test_out
-        if colon is None:
-            colon_out = PyColon()
-        elif isinstance(colon, PyColon):
-            colon_out = colon
-        else:
-            raise ValueError("the field 'colon' received an unrecognised value'")
-        self.colon: PyColon = colon_out
-        if is_py_stmt(body):
-            body_out = body
-        elif isinstance(body, list):
-            new_body = list()
-            for body_element in body:
-                new_body_element = body_element
-                new_body.append(new_body_element)
-            body_out = new_body
-        else:
-            raise ValueError("the field 'body' received an unrecognised value'")
-        self.body: PyStmt | Sequence[PyStmt] = body_out
-
-    def parent(self) -> PyElifCaseParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyElseCaseParent = PyIfStmt
-
-
-class PyElseCase(_PyBaseNode):
-
-    def __init__(self, body: 'PyStmt | Sequence[PyStmt]', *, else_keyword: 'PyElseKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
-        if else_keyword is None:
-            else_keyword_out = PyElseKeyword()
-        elif isinstance(else_keyword, PyElseKeyword):
-            else_keyword_out = else_keyword
-        else:
-            raise ValueError("the field 'else_keyword' received an unrecognised value'")
-        self.else_keyword: PyElseKeyword = else_keyword_out
-        if colon is None:
-            colon_out = PyColon()
-        elif isinstance(colon, PyColon):
-            colon_out = colon
-        else:
-            raise ValueError("the field 'colon' received an unrecognised value'")
-        self.colon: PyColon = colon_out
-        if is_py_stmt(body):
-            body_out = body
-        elif isinstance(body, list):
-            new_body = list()
-            for body_element in body:
-                new_body_element = body_element
-                new_body.append(new_body_element)
-            body_out = new_body
-        else:
-            raise ValueError("the field 'body' received an unrecognised value'")
-        self.body: PyStmt | Sequence[PyStmt] = body_out
-
-    def parent(self) -> PyElseCaseParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyIfStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyIfStmt(_PyBaseNode):
-
-    def count_alternatives(self) -> int:
-        return len(self.alternatives)
-
-    def __init__(self, first: 'PyIfCase', *, alternatives: 'Sequence[PyElifCase] | None' = None, last: 'PyElseCase | PyStmt | Sequence[PyStmt] | None' = None) -> None:
-        first_out = first
-        self.first: PyIfCase = first_out
-        if alternatives is None:
-            alternatives_out = list()
-        elif isinstance(alternatives, list):
-            new_alternatives = list()
-            for alternatives_element in alternatives:
-                new_alternatives_element = alternatives_element
-                new_alternatives.append(new_alternatives_element)
-            alternatives_out = new_alternatives
-        else:
-            raise ValueError("the field 'alternatives' received an unrecognised value'")
-        self.alternatives: Sequence[PyElifCase] = alternatives_out
-        if is_py_stmt(last):
-            last_out = PyElseCase(last)
-        elif isinstance(last, list):
-            new_last = list()
-            for last_element in last:
-                new_last_element = last_element
-                new_last.append(new_last_element)
-            last_out = PyElseCase(new_last)
-        elif isinstance(last, PyElseCase):
-            last_out = last
-        elif last is None:
-            last_out = None
-        else:
-            raise ValueError("the field 'last' received an unrecognised value'")
-        self.last: PyElseCase | None = last_out
-
-    def parent(self) -> PyIfStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyDeleteStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyDeleteStmt(_PyBaseNode):
-
-    def __init__(self, pattern: 'PyPattern', *, del_keyword: 'PyDelKeyword | None' = None) -> None:
-        if del_keyword is None:
-            del_keyword_out = PyDelKeyword()
-        elif isinstance(del_keyword, PyDelKeyword):
-            del_keyword_out = del_keyword
-        else:
-            raise ValueError("the field 'del_keyword' received an unrecognised value'")
-        self.del_keyword: PyDelKeyword = del_keyword_out
-        pattern_out = pattern
-        self.pattern: PyPattern = pattern_out
-
-    def parent(self) -> PyDeleteStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyRaiseStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyRaiseStmt(_PyBaseNode):
-
-    def __init__(self, expr: 'PyExpr', *, raise_keyword: 'PyRaiseKeyword | None' = None, cause: 'PyExpr | tuple[PyFromKeyword | None, PyExpr] | None' = None) -> None:
-        if raise_keyword is None:
-            raise_keyword_out = PyRaiseKeyword()
-        elif isinstance(raise_keyword, PyRaiseKeyword):
-            raise_keyword_out = raise_keyword
-        else:
-            raise ValueError("the field 'raise_keyword' received an unrecognised value'")
-        self.raise_keyword: PyRaiseKeyword = raise_keyword_out
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-        if is_py_expr(cause):
-            cause_out = (PyFromKeyword(), cause)
-        elif isinstance(cause, tuple):
-            assert(isinstance(cause, tuple))
-            cause_0 = cause[0]
-            if cause_0 is None:
-                new_cause_0 = PyFromKeyword()
-            elif isinstance(cause_0, PyFromKeyword):
-                new_cause_0 = cause_0
-            else:
-                raise ValueError("the field 'cause' received an unrecognised value'")
-            cause_1 = cause[1]
-            new_cause_1 = cause_1
-            cause_out = (new_cause_0, new_cause_1)
-        elif cause is None:
-            cause_out = None
-        else:
-            raise ValueError("the field 'cause' received an unrecognised value'")
-        self.cause: tuple[PyFromKeyword, PyExpr] | None = cause_out
-
-    def parent(self) -> PyRaiseStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyForStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyForStmt(_PyBaseNode):
-
-    def __init__(self, pattern: 'PyPattern', expr: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, for_keyword: 'PyForKeyword | None' = None, in_keyword: 'PyInKeyword | None' = None, colon: 'PyColon | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> None:
-        if for_keyword is None:
-            for_keyword_out = PyForKeyword()
-        elif isinstance(for_keyword, PyForKeyword):
-            for_keyword_out = for_keyword
-        else:
-            raise ValueError("the field 'for_keyword' received an unrecognised value'")
-        self.for_keyword: PyForKeyword = for_keyword_out
-        pattern_out = pattern
-        self.pattern: PyPattern = pattern_out
-        if in_keyword is None:
-            in_keyword_out = PyInKeyword()
-        elif isinstance(in_keyword, PyInKeyword):
-            in_keyword_out = in_keyword
-        else:
-            raise ValueError("the field 'in_keyword' received an unrecognised value'")
-        self.in_keyword: PyInKeyword = in_keyword_out
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-        if colon is None:
-            colon_out = PyColon()
-        elif isinstance(colon, PyColon):
-            colon_out = colon
-        else:
-            raise ValueError("the field 'colon' received an unrecognised value'")
-        self.colon: PyColon = colon_out
-        if is_py_stmt(body):
-            body_out = body
-        elif isinstance(body, list):
-            new_body = list()
-            for body_element in body:
-                new_body_element = body_element
-                new_body.append(new_body_element)
-            body_out = new_body
-        else:
-            raise ValueError("the field 'body' received an unrecognised value'")
-        self.body: PyStmt | Sequence[PyStmt] = body_out
-        if is_py_stmt(else_clause):
-            else_clause_out = (PyElseKeyword(), PyColon(), else_clause)
-        elif isinstance(else_clause, list):
-            new_else_clause = list()
-            for else_clause_element in else_clause:
-                new_else_clause_element = else_clause_element
-                new_else_clause.append(new_else_clause_element)
-            else_clause_out = (PyElseKeyword(), PyColon(), new_else_clause)
-        elif isinstance(else_clause, tuple):
-            assert(isinstance(else_clause, tuple))
-            else_clause_0 = else_clause[0]
-            if else_clause_0 is None:
-                new_else_clause_0 = PyElseKeyword()
-            elif isinstance(else_clause_0, PyElseKeyword):
-                new_else_clause_0 = else_clause_0
-            else:
-                raise ValueError("the field 'else_clause' received an unrecognised value'")
-            else_clause_1 = else_clause[1]
-            if else_clause_1 is None:
-                new_else_clause_1 = PyColon()
-            elif isinstance(else_clause_1, PyColon):
-                new_else_clause_1 = else_clause_1
-            else:
-                raise ValueError("the field 'else_clause' received an unrecognised value'")
-            else_clause_2 = else_clause[2]
-            if is_py_stmt(else_clause_2):
-                new_else_clause_2 = else_clause_2
-            elif isinstance(else_clause_2, list):
-                new_else_clause_2 = list()
-                for else_clause_2_element in else_clause_2:
-                    new_else_clause_2_element = else_clause_2_element
-                    new_else_clause_2.append(new_else_clause_2_element)
-                new_else_clause_2 = new_else_clause_2
-            else:
-                raise ValueError("the field 'else_clause' received an unrecognised value'")
-            else_clause_out = (new_else_clause_0, new_else_clause_1, new_else_clause_2)
-        elif else_clause is None:
-            else_clause_out = None
-        else:
-            raise ValueError("the field 'else_clause' received an unrecognised value'")
-        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = else_clause_out
-
-    def parent(self) -> PyForStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyWhileStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyWhileStmt(_PyBaseNode):
-
-    def __init__(self, expr: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, while_keyword: 'PyWhileKeyword | None' = None, colon: 'PyColon | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> None:
-        if while_keyword is None:
-            while_keyword_out = PyWhileKeyword()
-        elif isinstance(while_keyword, PyWhileKeyword):
-            while_keyword_out = while_keyword
-        else:
-            raise ValueError("the field 'while_keyword' received an unrecognised value'")
-        self.while_keyword: PyWhileKeyword = while_keyword_out
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-        if colon is None:
-            colon_out = PyColon()
-        elif isinstance(colon, PyColon):
-            colon_out = colon
-        else:
-            raise ValueError("the field 'colon' received an unrecognised value'")
-        self.colon: PyColon = colon_out
-        if is_py_stmt(body):
-            body_out = body
-        elif isinstance(body, list):
-            new_body = list()
-            for body_element in body:
-                new_body_element = body_element
-                new_body.append(new_body_element)
-            body_out = new_body
-        else:
-            raise ValueError("the field 'body' received an unrecognised value'")
-        self.body: PyStmt | Sequence[PyStmt] = body_out
-        if is_py_stmt(else_clause):
-            else_clause_out = (PyElseKeyword(), PyColon(), else_clause)
-        elif isinstance(else_clause, list):
-            new_else_clause = list()
-            for else_clause_element in else_clause:
-                new_else_clause_element = else_clause_element
-                new_else_clause.append(new_else_clause_element)
-            else_clause_out = (PyElseKeyword(), PyColon(), new_else_clause)
-        elif isinstance(else_clause, tuple):
-            assert(isinstance(else_clause, tuple))
-            else_clause_0 = else_clause[0]
-            if else_clause_0 is None:
-                new_else_clause_0 = PyElseKeyword()
-            elif isinstance(else_clause_0, PyElseKeyword):
-                new_else_clause_0 = else_clause_0
-            else:
-                raise ValueError("the field 'else_clause' received an unrecognised value'")
-            else_clause_1 = else_clause[1]
-            if else_clause_1 is None:
-                new_else_clause_1 = PyColon()
-            elif isinstance(else_clause_1, PyColon):
-                new_else_clause_1 = else_clause_1
-            else:
-                raise ValueError("the field 'else_clause' received an unrecognised value'")
-            else_clause_2 = else_clause[2]
-            if is_py_stmt(else_clause_2):
-                new_else_clause_2 = else_clause_2
-            elif isinstance(else_clause_2, list):
-                new_else_clause_2 = list()
-                for else_clause_2_element in else_clause_2:
-                    new_else_clause_2_element = else_clause_2_element
-                    new_else_clause_2.append(new_else_clause_2_element)
-                new_else_clause_2 = new_else_clause_2
-            else:
-                raise ValueError("the field 'else_clause' received an unrecognised value'")
-            else_clause_out = (new_else_clause_0, new_else_clause_1, new_else_clause_2)
-        elif else_clause is None:
-            else_clause_out = None
-        else:
-            raise ValueError("the field 'else_clause' received an unrecognised value'")
-        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = else_clause_out
-
-    def parent(self) -> PyWhileStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyBreakStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyBreakStmt(_PyBaseNode):
-
-    def __init__(self, *, break_keyword: 'PyBreakKeyword | None' = None) -> None:
-        if break_keyword is None:
-            break_keyword_out = PyBreakKeyword()
-        elif isinstance(break_keyword, PyBreakKeyword):
-            break_keyword_out = break_keyword
-        else:
-            raise ValueError("the field 'break_keyword' received an unrecognised value'")
-        self.break_keyword: PyBreakKeyword = break_keyword_out
-
-    def parent(self) -> PyBreakStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyContinueStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyContinueStmt(_PyBaseNode):
-
-    def __init__(self, *, continue_keyword: 'PyContinueKeyword | None' = None) -> None:
-        if continue_keyword is None:
-            continue_keyword_out = PyContinueKeyword()
-        elif isinstance(continue_keyword, PyContinueKeyword):
-            continue_keyword_out = continue_keyword
-        else:
-            raise ValueError("the field 'continue_keyword' received an unrecognised value'")
-        self.continue_keyword: PyContinueKeyword = continue_keyword_out
-
-    def parent(self) -> PyContinueStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyTypeAliasStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyTypeAliasStmt(_PyBaseNode):
-
-    def __init__(self, name: 'PyIdent | str', expr: 'PyExpr', *, type_keyword: 'PyTypeKeyword | None' = None, type_params: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma | None] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma | None] | None' = None, equals: 'PyEquals | None' = None) -> None:
-        if type_keyword is None:
-            type_keyword_out = PyTypeKeyword()
-        elif isinstance(type_keyword, PyTypeKeyword):
-            type_keyword_out = type_keyword
-        else:
-            raise ValueError("the field 'type_keyword' received an unrecognised value'")
-        self.type_keyword: PyTypeKeyword = type_keyword_out
-        if isinstance(name, str):
-            name_out = PyIdent(name)
-        elif isinstance(name, PyIdent):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyIdent = name_out
-        if isinstance(type_params, list) or isinstance(type_params, list) or isinstance(type_params, Punctuated):
-            new_type_params = Punctuated()
-            type_params_iter = iter(type_params)
-            try:
-                first_type_params_element = next(type_params_iter)
-                while True:
-                    try:
-                        second_type_params_element = next(type_params_iter)
-                        if isinstance(first_type_params_element, tuple):
-                            type_params_value = first_type_params_element[0]
-                            type_params_separator = first_type_params_element[1]
-                        else:
-                            type_params_value = first_type_params_element
-                            type_params_separator = PyComma()
-                        new_type_params_value = type_params_value
-                        new_type_params_separator = type_params_separator
-                        new_type_params.append(new_type_params_value, new_type_params_separator)
-                        first_type_params_element = second_type_params_element
-                    except StopIteration:
-                        if isinstance(first_type_params_element, tuple):
-                            type_params_value = first_type_params_element[0]
-                            assert(first_type_params_element[1] is None)
-                        else:
-                            type_params_value = first_type_params_element
-                        new_type_params_value = type_params_value
-                        new_type_params.append(new_type_params_value)
-                        break
-            except StopIteration:
-                pass
-            type_params_out = (PyOpenBracket(), new_type_params, PyCloseBracket())
-        elif isinstance(type_params, tuple):
-            assert(isinstance(type_params, tuple))
-            type_params_0 = type_params[0]
-            if type_params_0 is None:
-                new_type_params_0 = PyOpenBracket()
-            elif isinstance(type_params_0, PyOpenBracket):
-                new_type_params_0 = type_params_0
-            else:
-                raise ValueError("the field 'type_params' received an unrecognised value'")
-            type_params_1 = type_params[1]
-            if type_params_1 is None:
-                new_type_params_1 = Punctuated()
-            elif isinstance(type_params_1, list) or isinstance(type_params_1, list) or isinstance(type_params_1, Punctuated):
-                new_type_params_1 = Punctuated()
-                type_params_1_iter = iter(type_params_1)
-                try:
-                    first_type_params_1_element = next(type_params_1_iter)
-                    while True:
-                        try:
-                            second_type_params_1_element = next(type_params_1_iter)
-                            if isinstance(first_type_params_1_element, tuple):
-                                type_params_1_value = first_type_params_1_element[0]
-                                type_params_1_separator = first_type_params_1_element[1]
-                            else:
-                                type_params_1_value = first_type_params_1_element
-                                type_params_1_separator = PyComma()
-                            new_type_params_1_value = type_params_1_value
-                            new_type_params_1_separator = type_params_1_separator
-                            new_type_params_1.append(new_type_params_1_value, new_type_params_1_separator)
-                            first_type_params_1_element = second_type_params_1_element
-                        except StopIteration:
-                            if isinstance(first_type_params_1_element, tuple):
-                                type_params_1_value = first_type_params_1_element[0]
-                                assert(first_type_params_1_element[1] is None)
-                            else:
-                                type_params_1_value = first_type_params_1_element
-                            new_type_params_1_value = type_params_1_value
-                            new_type_params_1.append(new_type_params_1_value)
-                            break
-                except StopIteration:
-                    pass
-                new_type_params_1 = new_type_params_1
-            else:
-                raise ValueError("the field 'type_params' received an unrecognised value'")
-            type_params_2 = type_params[2]
-            if type_params_2 is None:
-                new_type_params_2 = PyCloseBracket()
-            elif isinstance(type_params_2, PyCloseBracket):
-                new_type_params_2 = type_params_2
-            else:
-                raise ValueError("the field 'type_params' received an unrecognised value'")
-            type_params_out = (new_type_params_0, new_type_params_1, new_type_params_2)
-        elif type_params is None:
-            type_params_out = None
-        else:
-            raise ValueError("the field 'type_params' received an unrecognised value'")
-        self.type_params: tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None = type_params_out
-        if equals is None:
-            equals_out = PyEquals()
-        elif isinstance(equals, PyEquals):
-            equals_out = equals
-        else:
-            raise ValueError("the field 'equals' received an unrecognised value'")
-        self.equals: PyEquals = equals_out
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-
-    def parent(self) -> PyTypeAliasStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyExceptHandlerParent = PyTryStmt
-
-
-class PyExceptHandler(_PyBaseNode):
-
-    def __init__(self, expr: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, except_keyword: 'PyExceptKeyword | None' = None, binder: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str' = None, colon: 'PyColon | None' = None) -> None:
-        if except_keyword is None:
-            except_keyword_out = PyExceptKeyword()
-        elif isinstance(except_keyword, PyExceptKeyword):
-            except_keyword_out = except_keyword
-        else:
-            raise ValueError("the field 'except_keyword' received an unrecognised value'")
-        self.except_keyword: PyExceptKeyword = except_keyword_out
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-        if isinstance(binder, str):
-            binder_out = (PyAsKeyword(), PyIdent(binder))
-        elif isinstance(binder, PyIdent):
-            binder_out = (PyAsKeyword(), binder)
-        elif isinstance(binder, tuple):
-            assert(isinstance(binder, tuple))
-            binder_0 = binder[0]
-            if binder_0 is None:
-                new_binder_0 = PyAsKeyword()
-            elif isinstance(binder_0, PyAsKeyword):
-                new_binder_0 = binder_0
-            else:
-                raise ValueError("the field 'binder' received an unrecognised value'")
-            binder_1 = binder[1]
-            if isinstance(binder_1, str):
-                new_binder_1 = PyIdent(binder_1)
-            elif isinstance(binder_1, PyIdent):
-                new_binder_1 = binder_1
-            else:
-                raise ValueError("the field 'binder' received an unrecognised value'")
-            binder_out = (new_binder_0, new_binder_1)
-        elif binder is None:
-            binder_out = None
-        else:
-            raise ValueError("the field 'binder' received an unrecognised value'")
-        self.binder: tuple[PyAsKeyword, PyIdent] | None = binder_out
-        if colon is None:
-            colon_out = PyColon()
-        elif isinstance(colon, PyColon):
-            colon_out = colon
-        else:
-            raise ValueError("the field 'colon' received an unrecognised value'")
-        self.colon: PyColon = colon_out
-        if is_py_stmt(body):
-            body_out = body
-        elif isinstance(body, list):
-            new_body = list()
-            for body_element in body:
-                new_body_element = body_element
-                new_body.append(new_body_element)
-            body_out = new_body
-        else:
-            raise ValueError("the field 'body' received an unrecognised value'")
-        self.body: PyStmt | Sequence[PyStmt] = body_out
-
-    def parent(self) -> PyExceptHandlerParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyTryStmtParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyTryStmt(_PyBaseNode):
-
-    def count_handlers(self) -> int:
-        return len(self.handlers)
-
-    def __init__(self, body: 'PyStmt | Sequence[PyStmt]', *, try_keyword: 'PyTryKeyword | None' = None, colon: 'PyColon | None' = None, handlers: 'Sequence[PyExceptHandler] | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None, finally_clause: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> None:
-        if try_keyword is None:
-            try_keyword_out = PyTryKeyword()
-        elif isinstance(try_keyword, PyTryKeyword):
-            try_keyword_out = try_keyword
-        else:
-            raise ValueError("the field 'try_keyword' received an unrecognised value'")
-        self.try_keyword: PyTryKeyword = try_keyword_out
-        if colon is None:
-            colon_out = PyColon()
-        elif isinstance(colon, PyColon):
-            colon_out = colon
-        else:
-            raise ValueError("the field 'colon' received an unrecognised value'")
-        self.colon: PyColon = colon_out
-        if is_py_stmt(body):
-            body_out = body
-        elif isinstance(body, list):
-            new_body = list()
-            for body_element in body:
-                new_body_element = body_element
-                new_body.append(new_body_element)
-            body_out = new_body
-        else:
-            raise ValueError("the field 'body' received an unrecognised value'")
-        self.body: PyStmt | Sequence[PyStmt] = body_out
-        if handlers is None:
-            handlers_out = list()
-        elif isinstance(handlers, list):
-            new_handlers = list()
-            for handlers_element in handlers:
-                new_handlers_element = handlers_element
-                new_handlers.append(new_handlers_element)
-            handlers_out = new_handlers
-        else:
-            raise ValueError("the field 'handlers' received an unrecognised value'")
-        self.handlers: Sequence[PyExceptHandler] = handlers_out
-        if is_py_stmt(else_clause):
-            else_clause_out = (PyElseKeyword(), PyColon(), else_clause)
-        elif isinstance(else_clause, list):
-            new_else_clause = list()
-            for else_clause_element in else_clause:
-                new_else_clause_element = else_clause_element
-                new_else_clause.append(new_else_clause_element)
-            else_clause_out = (PyElseKeyword(), PyColon(), new_else_clause)
-        elif isinstance(else_clause, tuple):
-            assert(isinstance(else_clause, tuple))
-            else_clause_0 = else_clause[0]
-            if else_clause_0 is None:
-                new_else_clause_0 = PyElseKeyword()
-            elif isinstance(else_clause_0, PyElseKeyword):
-                new_else_clause_0 = else_clause_0
-            else:
-                raise ValueError("the field 'else_clause' received an unrecognised value'")
-            else_clause_1 = else_clause[1]
-            if else_clause_1 is None:
-                new_else_clause_1 = PyColon()
-            elif isinstance(else_clause_1, PyColon):
-                new_else_clause_1 = else_clause_1
-            else:
-                raise ValueError("the field 'else_clause' received an unrecognised value'")
-            else_clause_2 = else_clause[2]
-            if is_py_stmt(else_clause_2):
-                new_else_clause_2 = else_clause_2
-            elif isinstance(else_clause_2, list):
-                new_else_clause_2 = list()
-                for else_clause_2_element in else_clause_2:
-                    new_else_clause_2_element = else_clause_2_element
-                    new_else_clause_2.append(new_else_clause_2_element)
-                new_else_clause_2 = new_else_clause_2
-            else:
-                raise ValueError("the field 'else_clause' received an unrecognised value'")
-            else_clause_out = (new_else_clause_0, new_else_clause_1, new_else_clause_2)
-        elif else_clause is None:
-            else_clause_out = None
-        else:
-            raise ValueError("the field 'else_clause' received an unrecognised value'")
-        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = else_clause_out
-        if is_py_stmt(finally_clause):
-            finally_clause_out = (PyFinallyKeyword(), PyColon(), finally_clause)
-        elif isinstance(finally_clause, list):
-            new_finally_clause = list()
-            for finally_clause_element in finally_clause:
-                new_finally_clause_element = finally_clause_element
-                new_finally_clause.append(new_finally_clause_element)
-            finally_clause_out = (PyFinallyKeyword(), PyColon(), new_finally_clause)
-        elif isinstance(finally_clause, tuple):
-            assert(isinstance(finally_clause, tuple))
-            finally_clause_0 = finally_clause[0]
-            if finally_clause_0 is None:
-                new_finally_clause_0 = PyFinallyKeyword()
-            elif isinstance(finally_clause_0, PyFinallyKeyword):
-                new_finally_clause_0 = finally_clause_0
-            else:
-                raise ValueError("the field 'finally_clause' received an unrecognised value'")
-            finally_clause_1 = finally_clause[1]
-            if finally_clause_1 is None:
-                new_finally_clause_1 = PyColon()
-            elif isinstance(finally_clause_1, PyColon):
-                new_finally_clause_1 = finally_clause_1
-            else:
-                raise ValueError("the field 'finally_clause' received an unrecognised value'")
-            finally_clause_2 = finally_clause[2]
-            if is_py_stmt(finally_clause_2):
-                new_finally_clause_2 = finally_clause_2
-            elif isinstance(finally_clause_2, list):
-                new_finally_clause_2 = list()
-                for finally_clause_2_element in finally_clause_2:
-                    new_finally_clause_2_element = finally_clause_2_element
-                    new_finally_clause_2.append(new_finally_clause_2_element)
-                new_finally_clause_2 = new_finally_clause_2
-            else:
-                raise ValueError("the field 'finally_clause' received an unrecognised value'")
-            finally_clause_out = (new_finally_clause_0, new_finally_clause_1, new_finally_clause_2)
-        elif finally_clause is None:
-            finally_clause_out = None
-        else:
-            raise ValueError("the field 'finally_clause' received an unrecognised value'")
-        self.finally_clause: tuple[PyFinallyKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = finally_clause_out
-
-    def parent(self) -> PyTryStmtParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyClassDefParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyClassDef(_PyBaseNode):
-
-    def count_decorators(self) -> int:
-        return len(self.decorators)
-
-    def __init__(self, name: 'PyIdent | str', body: 'PyStmt | Sequence[PyStmt]', *, decorators: 'Sequence[PyDecorator | PyExpr] | None' = None, class_keyword: 'PyClassKeyword | None' = None, bases: 'tuple[PyOpenParen | None, Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma | None] | None, PyCloseParen | None] | Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma | None] | None' = None, colon: 'PyColon | None' = None) -> None:
-        if decorators is None:
-            decorators_out = list()
-        elif isinstance(decorators, list):
-            new_decorators = list()
-            for decorators_element in decorators:
-                if is_py_expr(decorators_element):
-                    new_decorators_element = PyDecorator(decorators_element)
-                elif isinstance(decorators_element, PyDecorator):
-                    new_decorators_element = decorators_element
-                else:
-                    raise ValueError("the field 'decorators' received an unrecognised value'")
-                new_decorators.append(new_decorators_element)
-            decorators_out = new_decorators
-        else:
-            raise ValueError("the field 'decorators' received an unrecognised value'")
-        self.decorators: Sequence[PyDecorator] = decorators_out
-        if class_keyword is None:
-            class_keyword_out = PyClassKeyword()
-        elif isinstance(class_keyword, PyClassKeyword):
-            class_keyword_out = class_keyword
-        else:
-            raise ValueError("the field 'class_keyword' received an unrecognised value'")
-        self.class_keyword: PyClassKeyword = class_keyword_out
-        if isinstance(name, str):
-            name_out = PyIdent(name)
-        elif isinstance(name, PyIdent):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyIdent = name_out
-        if isinstance(bases, list) or isinstance(bases, list) or isinstance(bases, Punctuated):
-            new_bases = Punctuated()
-            bases_iter = iter(bases)
-            try:
-                first_bases_element = next(bases_iter)
-                while True:
-                    try:
-                        second_bases_element = next(bases_iter)
-                        if isinstance(first_bases_element, tuple):
-                            bases_value = first_bases_element[0]
-                            bases_separator = first_bases_element[1]
-                        else:
-                            bases_value = first_bases_element
-                            bases_separator = PyComma()
-                        if isinstance(bases_value, str):
-                            new_bases_value = PyIdent(bases_value)
-                        elif isinstance(bases_value, PyIdent):
-                            new_bases_value = bases_value
-                        else:
-                            raise ValueError("the field 'bases' received an unrecognised value'")
-                        new_bases_separator = bases_separator
-                        new_bases.append(new_bases_value, new_bases_separator)
-                        first_bases_element = second_bases_element
-                    except StopIteration:
-                        if isinstance(first_bases_element, tuple):
-                            bases_value = first_bases_element[0]
-                            assert(first_bases_element[1] is None)
-                        else:
-                            bases_value = first_bases_element
-                        if isinstance(bases_value, str):
-                            new_bases_value = PyIdent(bases_value)
-                        elif isinstance(bases_value, PyIdent):
-                            new_bases_value = bases_value
-                        else:
-                            raise ValueError("the field 'bases' received an unrecognised value'")
-                        new_bases.append(new_bases_value)
-                        break
-            except StopIteration:
-                pass
-            bases_out = (PyOpenParen(), new_bases, PyCloseParen())
-        elif isinstance(bases, tuple):
-            assert(isinstance(bases, tuple))
-            bases_0 = bases[0]
-            if bases_0 is None:
-                new_bases_0 = PyOpenParen()
-            elif isinstance(bases_0, PyOpenParen):
-                new_bases_0 = bases_0
-            else:
-                raise ValueError("the field 'bases' received an unrecognised value'")
-            bases_1 = bases[1]
-            if bases_1 is None:
-                new_bases_1 = Punctuated()
-            elif isinstance(bases_1, list) or isinstance(bases_1, list) or isinstance(bases_1, Punctuated):
-                new_bases_1 = Punctuated()
-                bases_1_iter = iter(bases_1)
-                try:
-                    first_bases_1_element = next(bases_1_iter)
-                    while True:
-                        try:
-                            second_bases_1_element = next(bases_1_iter)
-                            if isinstance(first_bases_1_element, tuple):
-                                bases_1_value = first_bases_1_element[0]
-                                bases_1_separator = first_bases_1_element[1]
-                            else:
-                                bases_1_value = first_bases_1_element
-                                bases_1_separator = PyComma()
-                            if isinstance(bases_1_value, str):
-                                new_bases_1_value = PyIdent(bases_1_value)
-                            elif isinstance(bases_1_value, PyIdent):
-                                new_bases_1_value = bases_1_value
-                            else:
-                                raise ValueError("the field 'bases' received an unrecognised value'")
-                            new_bases_1_separator = bases_1_separator
-                            new_bases_1.append(new_bases_1_value, new_bases_1_separator)
-                            first_bases_1_element = second_bases_1_element
-                        except StopIteration:
-                            if isinstance(first_bases_1_element, tuple):
-                                bases_1_value = first_bases_1_element[0]
-                                assert(first_bases_1_element[1] is None)
-                            else:
-                                bases_1_value = first_bases_1_element
-                            if isinstance(bases_1_value, str):
-                                new_bases_1_value = PyIdent(bases_1_value)
-                            elif isinstance(bases_1_value, PyIdent):
-                                new_bases_1_value = bases_1_value
-                            else:
-                                raise ValueError("the field 'bases' received an unrecognised value'")
-                            new_bases_1.append(new_bases_1_value)
-                            break
-                except StopIteration:
-                    pass
-                new_bases_1 = new_bases_1
-            else:
-                raise ValueError("the field 'bases' received an unrecognised value'")
-            bases_2 = bases[2]
-            if bases_2 is None:
-                new_bases_2 = PyCloseParen()
-            elif isinstance(bases_2, PyCloseParen):
-                new_bases_2 = bases_2
-            else:
-                raise ValueError("the field 'bases' received an unrecognised value'")
-            bases_out = (new_bases_0, new_bases_1, new_bases_2)
-        elif bases is None:
-            bases_out = None
-        else:
-            raise ValueError("the field 'bases' received an unrecognised value'")
-        self.bases: tuple[PyOpenParen, Punctuated[PyIdent, PyComma], PyCloseParen] | None = bases_out
-        if colon is None:
-            colon_out = PyColon()
-        elif isinstance(colon, PyColon):
-            colon_out = colon
-        else:
-            raise ValueError("the field 'colon' received an unrecognised value'")
-        self.colon: PyColon = colon_out
-        if is_py_stmt(body):
-            body_out = body
-        elif isinstance(body, list):
-            new_body = list()
-            for body_element in body:
-                new_body_element = body_element
-                new_body.append(new_body_element)
-            body_out = new_body
-        else:
-            raise ValueError("the field 'body' received an unrecognised value'")
-        self.body: PyStmt | Sequence[PyStmt] = body_out
-
-    def parent(self) -> PyClassDefParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyParam = PyNamedParam | PyRestPosParam | PyRestKeywordParam | PySepParam
-
-
-def is_py_param(value: Any) -> TypeGuard[PyParam]:
-    return isinstance(value, PyNamedParam) or isinstance(value, PyRestPosParam) or isinstance(value, PyRestKeywordParam) or isinstance(value, PySepParam)
-
-
-type PyNamedParamParent = PyFuncDef
-
-
-class PyNamedParam(_PyBaseNode):
-
-    def __init__(self, pattern: 'PyPattern', *, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None, default: 'PyExpr | tuple[PyEquals | None, PyExpr] | None' = None) -> None:
-        pattern_out = pattern
-        self.pattern: PyPattern = pattern_out
-        if is_py_expr(annotation):
-            annotation_out = (PyColon(), annotation)
-        elif isinstance(annotation, tuple):
-            assert(isinstance(annotation, tuple))
-            annotation_0 = annotation[0]
-            if annotation_0 is None:
-                new_annotation_0 = PyColon()
-            elif isinstance(annotation_0, PyColon):
-                new_annotation_0 = annotation_0
-            else:
-                raise ValueError("the field 'annotation' received an unrecognised value'")
-            annotation_1 = annotation[1]
-            new_annotation_1 = annotation_1
-            annotation_out = (new_annotation_0, new_annotation_1)
-        elif annotation is None:
-            annotation_out = None
-        else:
-            raise ValueError("the field 'annotation' received an unrecognised value'")
-        self.annotation: tuple[PyColon, PyExpr] | None = annotation_out
-        if is_py_expr(default):
-            default_out = (PyEquals(), default)
-        elif isinstance(default, tuple):
-            assert(isinstance(default, tuple))
-            default_0 = default[0]
-            if default_0 is None:
-                new_default_0 = PyEquals()
-            elif isinstance(default_0, PyEquals):
-                new_default_0 = default_0
-            else:
-                raise ValueError("the field 'default' received an unrecognised value'")
-            default_1 = default[1]
-            new_default_1 = default_1
-            default_out = (new_default_0, new_default_1)
-        elif default is None:
-            default_out = None
-        else:
-            raise ValueError("the field 'default' received an unrecognised value'")
-        self.default: tuple[PyEquals, PyExpr] | None = default_out
-
-    def parent(self) -> PyNamedParamParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyRestPosParamParent = PyFuncDef
-
-
-class PyRestPosParam(_PyBaseNode):
-
-    def __init__(self, name: 'PyIdent | str', *, asterisk: 'PyAsterisk | None' = None) -> None:
-        if asterisk is None:
-            asterisk_out = PyAsterisk()
-        elif isinstance(asterisk, PyAsterisk):
-            asterisk_out = asterisk
-        else:
-            raise ValueError("the field 'asterisk' received an unrecognised value'")
-        self.asterisk: PyAsterisk = asterisk_out
-        if isinstance(name, str):
-            name_out = PyIdent(name)
-        elif isinstance(name, PyIdent):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyIdent = name_out
-
-    def parent(self) -> PyRestPosParamParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyRestKeywordParamParent = PyFuncDef
-
-
-class PyRestKeywordParam(_PyBaseNode):
-
-    def __init__(self, name: 'PyIdent | str', *, asterisk_asterisk: 'PyAsteriskAsterisk | None' = None) -> None:
-        if asterisk_asterisk is None:
-            asterisk_asterisk_out = PyAsteriskAsterisk()
-        elif isinstance(asterisk_asterisk, PyAsteriskAsterisk):
-            asterisk_asterisk_out = asterisk_asterisk
-        else:
-            raise ValueError("the field 'asterisk_asterisk' received an unrecognised value'")
-        self.asterisk_asterisk: PyAsteriskAsterisk = asterisk_asterisk_out
-        if isinstance(name, str):
-            name_out = PyIdent(name)
-        elif isinstance(name, PyIdent):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyIdent = name_out
-
-    def parent(self) -> PyRestKeywordParamParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PySepParamParent = PyFuncDef
-
-
-class PySepParam(_PyBaseNode):
-
-    def __init__(self, *, asterisk: 'PyAsterisk | None' = None) -> None:
-        if asterisk is None:
-            asterisk_out = PyAsterisk()
-        elif isinstance(asterisk, PyAsterisk):
-            asterisk_out = asterisk
-        else:
-            raise ValueError("the field 'asterisk' received an unrecognised value'")
-        self.asterisk: PyAsterisk = asterisk_out
-
-    def parent(self) -> PySepParamParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyDecoratorParent = PyClassDef | PyFuncDef
-
-
-class PyDecorator(_PyBaseNode):
-
-    def __init__(self, expr: 'PyExpr', *, at_sign: 'PyAtSign | None' = None) -> None:
-        if at_sign is None:
-            at_sign_out = PyAtSign()
-        elif isinstance(at_sign, PyAtSign):
-            at_sign_out = at_sign
-        else:
-            raise ValueError("the field 'at_sign' received an unrecognised value'")
-        self.at_sign: PyAtSign = at_sign_out
-        expr_out = expr
-        self.expr: PyExpr = expr_out
-
-    def parent(self) -> PyDecoratorParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyFuncDefParent = PyTryStmt | PyForStmt | PyExceptHandler | PyElseCase | PyClassDef | PyFuncDef | PyModule | PyIfCase | PyWhileStmt | PyElifCase
-
-
-class PyFuncDef(_PyBaseNode):
-
-    def count_decorators(self) -> int:
-        return len(self.decorators)
-
-    def count_params(self) -> int:
-        return len(self.params)
-
-    def __init__(self, name: 'PyIdent | str', body: 'PyStmt | Sequence[PyStmt]', *, decorators: 'Sequence[PyDecorator | PyExpr] | None' = None, async_keyword: 'PyAsyncKeyword | None' = None, def_keyword: 'PyDefKeyword | None' = None, open_paren: 'PyOpenParen | None' = None, params: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | Punctuated[PyParam, PyComma | None] | None' = None, close_paren: 'PyCloseParen | None' = None, return_type: 'PyExpr | tuple[PyRArrow | None, PyExpr] | None' = None, colon: 'PyColon | None' = None) -> None:
-        if decorators is None:
-            decorators_out = list()
-        elif isinstance(decorators, list):
-            new_decorators = list()
-            for decorators_element in decorators:
-                if is_py_expr(decorators_element):
-                    new_decorators_element = PyDecorator(decorators_element)
-                elif isinstance(decorators_element, PyDecorator):
-                    new_decorators_element = decorators_element
-                else:
-                    raise ValueError("the field 'decorators' received an unrecognised value'")
-                new_decorators.append(new_decorators_element)
-            decorators_out = new_decorators
-        else:
-            raise ValueError("the field 'decorators' received an unrecognised value'")
-        self.decorators: Sequence[PyDecorator] = decorators_out
-        if isinstance(async_keyword, PyAsyncKeyword):
-            async_keyword_out = async_keyword
-        elif async_keyword is None:
-            async_keyword_out = None
-        else:
-            raise ValueError("the field 'async_keyword' received an unrecognised value'")
-        self.async_keyword: PyAsyncKeyword | None = async_keyword_out
-        if def_keyword is None:
-            def_keyword_out = PyDefKeyword()
-        elif isinstance(def_keyword, PyDefKeyword):
-            def_keyword_out = def_keyword
-        else:
-            raise ValueError("the field 'def_keyword' received an unrecognised value'")
-        self.def_keyword: PyDefKeyword = def_keyword_out
-        if isinstance(name, str):
-            name_out = PyIdent(name)
-        elif isinstance(name, PyIdent):
-            name_out = name
-        else:
-            raise ValueError("the field 'name' received an unrecognised value'")
-        self.name: PyIdent = name_out
-        if open_paren is None:
-            open_paren_out = PyOpenParen()
-        elif isinstance(open_paren, PyOpenParen):
-            open_paren_out = open_paren
-        else:
-            raise ValueError("the field 'open_paren' received an unrecognised value'")
-        self.open_paren: PyOpenParen = open_paren_out
-        if params is None:
-            params_out = Punctuated()
-        elif isinstance(params, list) or isinstance(params, list) or isinstance(params, Punctuated):
-            new_params = Punctuated()
-            params_iter = iter(params)
-            try:
-                first_params_element = next(params_iter)
-                while True:
-                    try:
-                        second_params_element = next(params_iter)
-                        if isinstance(first_params_element, tuple):
-                            params_value = first_params_element[0]
-                            params_separator = first_params_element[1]
-                        else:
-                            params_value = first_params_element
-                            params_separator = PyComma()
-                        new_params_value = params_value
-                        new_params_separator = params_separator
-                        new_params.append(new_params_value, new_params_separator)
-                        first_params_element = second_params_element
-                    except StopIteration:
-                        if isinstance(first_params_element, tuple):
-                            params_value = first_params_element[0]
-                            assert(first_params_element[1] is None)
-                        else:
-                            params_value = first_params_element
-                        new_params_value = params_value
-                        new_params.append(new_params_value)
-                        break
-            except StopIteration:
-                pass
-            params_out = new_params
-        else:
-            raise ValueError("the field 'params' received an unrecognised value'")
-        self.params: Punctuated[PyParam, PyComma] = params_out
-        if close_paren is None:
-            close_paren_out = PyCloseParen()
-        elif isinstance(close_paren, PyCloseParen):
-            close_paren_out = close_paren
-        else:
-            raise ValueError("the field 'close_paren' received an unrecognised value'")
-        self.close_paren: PyCloseParen = close_paren_out
-        if is_py_expr(return_type):
-            return_type_out = (PyRArrow(), return_type)
-        elif isinstance(return_type, tuple):
-            assert(isinstance(return_type, tuple))
-            return_type_0 = return_type[0]
-            if return_type_0 is None:
-                new_return_type_0 = PyRArrow()
-            elif isinstance(return_type_0, PyRArrow):
-                new_return_type_0 = return_type_0
-            else:
-                raise ValueError("the field 'return_type' received an unrecognised value'")
-            return_type_1 = return_type[1]
-            new_return_type_1 = return_type_1
-            return_type_out = (new_return_type_0, new_return_type_1)
-        elif return_type is None:
-            return_type_out = None
-        else:
-            raise ValueError("the field 'return_type' received an unrecognised value'")
-        self.return_type: tuple[PyRArrow, PyExpr] | None = return_type_out
-        if colon is None:
-            colon_out = PyColon()
-        elif isinstance(colon, PyColon):
-            colon_out = colon
-        else:
-            raise ValueError("the field 'colon' received an unrecognised value'")
-        self.colon: PyColon = colon_out
-        if is_py_stmt(body):
-            body_out = body
-        elif isinstance(body, list):
-            new_body = list()
-            for body_element in body:
-                new_body_element = body_element
-                new_body.append(new_body_element)
-            body_out = new_body
-        else:
-            raise ValueError("the field 'body' received an unrecognised value'")
-        self.body: PyStmt | Sequence[PyStmt] = body_out
-
-    def parent(self) -> PyFuncDefParent:
-        assert(self._parent is not None)
-        return self._parent
-
-
-type PyModuleParent = Never
-
-
-class PyModule(_PyBaseNode):
-
-    def count_stmts(self) -> int:
-        return len(self.stmts)
-
-    def __init__(self, *, stmts: 'Sequence[PyStmt] | None' = None) -> None:
-        if stmts is None:
-            stmts_out = list()
-        elif isinstance(stmts, list):
-            new_stmts = list()
-            for stmts_element in stmts:
-                new_stmts_element = stmts_element
-                new_stmts.append(new_stmts_element)
-            stmts_out = new_stmts
-        else:
-            raise ValueError("the field 'stmts' received an unrecognised value'")
-        self.stmts: Sequence[PyStmt] = stmts_out
-
-    def parent(self) -> PyModuleParent:
-        raise AssertionError('trying to access the parent node of a top-level node')
 
 
 class PyTilde(_PyBaseToken):
@@ -2951,12 +354,2692 @@ class PyLineFeed(_PyBaseToken):
     pass
 
 
+class PySlice(_PyBaseNode):
+
+    def __init__(self, *, lower: 'PyExpr | None' = None, colon: 'PyColon | None' = None, upper: 'PyExpr | None' = None, step: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None) -> None:
+        self.lower: PyExpr | None = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(lower)
+        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
+        self.upper: PyExpr | None = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(upper)
+        self.step: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(step)
+
+    @no_type_check
+    def derive(self, lower: 'PyExpr | None | None' = None, colon: 'PyColon | None | None' = None, upper: 'PyExpr | None | None' = None, step: 'PyExpr | tuple[PyColon | None, PyExpr] | None | None' = None) -> 'PySlice':
+        if lower is None:
+            lower = self.lower
+        if colon is None:
+            colon = self.colon
+        if upper is None:
+            upper = self.upper
+        if step is None:
+            step = self.step
+        return PySlice(lower=lower, colon=colon, upper=upper, step=step)
+
+    def parent(self) -> 'PySliceParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyNamedPattern(_PyBaseNode):
+
+    def __init__(self, name: 'PyIdent | str') -> None:
+        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+
+    @no_type_check
+    def derive(self, name: 'PyIdent | None | str' = None) -> 'PyNamedPattern':
+        if name is None:
+            name = self.name
+        return PyNamedPattern(name=name)
+
+    def parent(self) -> 'PyNamedPatternParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyAttrPattern(_PyBaseNode):
+
+    def __init__(self, pattern: 'PyPattern', name: 'PyIdent | str', *, dot: 'PyDot | None' = None) -> None:
+        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
+        self.dot: PyDot = _coerce_union_2_token_dot_none_to_token_dot(dot)
+        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+
+    @no_type_check
+    def derive(self, pattern: 'PyPattern | None' = None, dot: 'PyDot | None | None' = None, name: 'PyIdent | None | str' = None) -> 'PyAttrPattern':
+        if pattern is None:
+            pattern = self.pattern
+        if dot is None:
+            dot = self.dot
+        if name is None:
+            name = self.name
+        return PyAttrPattern(pattern=pattern, dot=dot, name=name)
+
+    def parent(self) -> 'PyAttrPatternParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PySubscriptPattern(_PyBaseNode):
+
+    def count_slices(self) -> int:
+        return len(self.slices)
+
+    def __init__(self, pattern: 'PyPattern', slices: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | Punctuated[PySlice | PyPattern, PyComma]', *, open_bracket: 'PyOpenBracket | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
+        self.open_bracket: PyOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
+        self.slices: Punctuated[PySlice | PyPattern, PyComma] = _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_token_comma_none_required_list_union_2_node_slice_variant_pattern_required_punct_union_2_node_slice_variant_pattern_token_comma_required_to_punct_union_2_node_slice_variant_pattern_token_comma_required(slices)
+        self.close_bracket: PyCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
+
+    @no_type_check
+    def derive(self, pattern: 'PyPattern | None' = None, open_bracket: 'PyOpenBracket | None | None' = None, slices: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | Punctuated[PySlice | PyPattern, PyComma] | None' = None, close_bracket: 'PyCloseBracket | None | None' = None) -> 'PySubscriptPattern':
+        if pattern is None:
+            pattern = self.pattern
+        if open_bracket is None:
+            open_bracket = self.open_bracket
+        if slices is None:
+            slices = self.slices
+        if close_bracket is None:
+            close_bracket = self.close_bracket
+        return PySubscriptPattern(pattern=pattern, open_bracket=open_bracket, slices=slices, close_bracket=close_bracket)
+
+    def parent(self) -> 'PySubscriptPatternParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyStarredPattern(_PyBaseNode):
+
+    def __init__(self, expr: 'PyExpr', *, asterisk: 'PyAsterisk | None' = None) -> None:
+        self.asterisk: PyAsterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(asterisk)
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+
+    @no_type_check
+    def derive(self, asterisk: 'PyAsterisk | None | None' = None, expr: 'PyExpr | None' = None) -> 'PyStarredPattern':
+        if asterisk is None:
+            asterisk = self.asterisk
+        if expr is None:
+            expr = self.expr
+        return PyStarredPattern(asterisk=asterisk, expr=expr)
+
+    def parent(self) -> 'PyStarredPatternParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyListPattern(_PyBaseNode):
+
+    def count_elements(self) -> int:
+        return len(self.elements)
+
+    def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+        self.open_bracket: PyOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
+        self.elements: Punctuated[PyPattern, PyComma] = _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(elements)
+        self.close_bracket: PyCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
+
+    @no_type_check
+    def derive(self, open_bracket: 'PyOpenBracket | None | None' = None, elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma] | None | None' = None, close_bracket: 'PyCloseBracket | None | None' = None) -> 'PyListPattern':
+        if open_bracket is None:
+            open_bracket = self.open_bracket
+        if elements is None:
+            elements = self.elements
+        if close_bracket is None:
+            close_bracket = self.close_bracket
+        return PyListPattern(open_bracket=open_bracket, elements=elements, close_bracket=close_bracket)
+
+    def parent(self) -> 'PyListPatternParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyTuplePattern(_PyBaseNode):
+
+    def count_elements(self) -> int:
+        return len(self.elements)
+
+    def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
+        self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
+        self.elements: Punctuated[PyPattern, PyComma] = _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(elements)
+        self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
+
+    @no_type_check
+    def derive(self, open_paren: 'PyOpenParen | None | None' = None, elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma] | None | None' = None, close_paren: 'PyCloseParen | None | None' = None) -> 'PyTuplePattern':
+        if open_paren is None:
+            open_paren = self.open_paren
+        if elements is None:
+            elements = self.elements
+        if close_paren is None:
+            close_paren = self.close_paren
+        return PyTuplePattern(open_paren=open_paren, elements=elements, close_paren=close_paren)
+
+    def parent(self) -> 'PyTuplePatternParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyEllipsisExpr(_PyBaseNode):
+
+    def __init__(self, *, dot_dot_dot: 'PyDotDotDot | None' = None) -> None:
+        self.dot_dot_dot: PyDotDotDot = _coerce_union_2_token_dot_dot_dot_none_to_token_dot_dot_dot(dot_dot_dot)
+
+    @no_type_check
+    def derive(self, dot_dot_dot: 'PyDotDotDot | None | None' = None) -> 'PyEllipsisExpr':
+        if dot_dot_dot is None:
+            dot_dot_dot = self.dot_dot_dot
+        return PyEllipsisExpr(dot_dot_dot=dot_dot_dot)
+
+    def parent(self) -> 'PyEllipsisExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyGuard(_PyBaseNode):
+
+    def __init__(self, expr: 'PyExpr', *, if_keyword: 'PyIfKeyword | None' = None) -> None:
+        self.if_keyword: PyIfKeyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(if_keyword)
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+
+    @no_type_check
+    def derive(self, if_keyword: 'PyIfKeyword | None | None' = None, expr: 'PyExpr | None' = None) -> 'PyGuard':
+        if if_keyword is None:
+            if_keyword = self.if_keyword
+        if expr is None:
+            expr = self.expr
+        return PyGuard(if_keyword=if_keyword, expr=expr)
+
+    def parent(self) -> 'PyGuardParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyComprehension(_PyBaseNode):
+
+    def count_guards(self) -> int:
+        return len(self.guards)
+
+    def __init__(self, pattern: 'PyPattern', target: 'PyExpr', *, async_keyword: 'PyAsyncKeyword | None' = None, for_keyword: 'PyForKeyword | None' = None, in_keyword: 'PyInKeyword | None' = None, guards: 'Sequence[PyGuard | PyExpr] | None' = None) -> None:
+        self.async_keyword: PyAsyncKeyword | None = _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none(async_keyword)
+        self.for_keyword: PyForKeyword = _coerce_union_2_token_for_keyword_none_to_token_for_keyword(for_keyword)
+        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
+        self.in_keyword: PyInKeyword = _coerce_union_2_token_in_keyword_none_to_token_in_keyword(in_keyword)
+        self.target: PyExpr = _coerce_variant_expr_to_variant_expr(target)
+        self.guards: Sequence[PyGuard] = _coerce_union_2_list_union_2_node_guard_variant_expr_none_to_list_node_guard(guards)
+
+    @no_type_check
+    def derive(self, async_keyword: 'PyAsyncKeyword | None | None' = None, for_keyword: 'PyForKeyword | None | None' = None, pattern: 'PyPattern | None' = None, in_keyword: 'PyInKeyword | None | None' = None, target: 'PyExpr | None' = None, guards: 'Sequence[PyGuard | PyExpr] | None | None' = None) -> 'PyComprehension':
+        if async_keyword is None:
+            async_keyword = self.async_keyword
+        if for_keyword is None:
+            for_keyword = self.for_keyword
+        if pattern is None:
+            pattern = self.pattern
+        if in_keyword is None:
+            in_keyword = self.in_keyword
+        if target is None:
+            target = self.target
+        if guards is None:
+            guards = self.guards
+        return PyComprehension(async_keyword=async_keyword, for_keyword=for_keyword, pattern=pattern, in_keyword=in_keyword, target=target, guards=guards)
+
+    def parent(self) -> 'PyComprehensionParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyGeneratorExpr(_PyBaseNode):
+
+    def count_generators(self) -> int:
+        return len(self.generators)
+
+    def __init__(self, element: 'PyExpr', generators: 'Sequence[PyComprehension]') -> None:
+        self.element: PyExpr = _coerce_variant_expr_to_variant_expr(element)
+        self.generators: Sequence[PyComprehension] = _coerce_list_node_comprehension_required_to_list_node_comprehension_required(generators)
+
+    @no_type_check
+    def derive(self, element: 'PyExpr | None' = None, generators: 'Sequence[PyComprehension] | None' = None) -> 'PyGeneratorExpr':
+        if element is None:
+            element = self.element
+        if generators is None:
+            generators = self.generators
+        return PyGeneratorExpr(element=element, generators=generators)
+
+    def parent(self) -> 'PyGeneratorExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyConstExpr(_PyBaseNode):
+
+    def __init__(self, literal: 'PyFloat | PyInteger | PyString | float | int | str') -> None:
+        self.literal: PyFloat | PyInteger | PyString = _coerce_union_6_token_float_token_integer_token_string_extern_float_extern_integer_extern_string_to_union_3_token_float_token_integer_token_string(literal)
+
+    @no_type_check
+    def derive(self, literal: 'PyFloat | PyInteger | PyString | None | float | int | str' = None) -> 'PyConstExpr':
+        if literal is None:
+            literal = self.literal
+        return PyConstExpr(literal=literal)
+
+    def parent(self) -> 'PyConstExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyNestExpr(_PyBaseNode):
+
+    def __init__(self, expr: 'PyExpr', *, open_paren: 'PyOpenParen | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
+        self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
+
+    @no_type_check
+    def derive(self, open_paren: 'PyOpenParen | None | None' = None, expr: 'PyExpr | None' = None, close_paren: 'PyCloseParen | None | None' = None) -> 'PyNestExpr':
+        if open_paren is None:
+            open_paren = self.open_paren
+        if expr is None:
+            expr = self.expr
+        if close_paren is None:
+            close_paren = self.close_paren
+        return PyNestExpr(open_paren=open_paren, expr=expr, close_paren=close_paren)
+
+    def parent(self) -> 'PyNestExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyNamedExpr(_PyBaseNode):
+
+    def __init__(self, name: 'PyIdent | str') -> None:
+        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+
+    @no_type_check
+    def derive(self, name: 'PyIdent | None | str' = None) -> 'PyNamedExpr':
+        if name is None:
+            name = self.name
+        return PyNamedExpr(name=name)
+
+    def parent(self) -> 'PyNamedExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyAttrExpr(_PyBaseNode):
+
+    def __init__(self, expr: 'PyExpr', name: 'PyIdent | str', *, dot: 'PyDot | None' = None) -> None:
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.dot: PyDot = _coerce_union_2_token_dot_none_to_token_dot(dot)
+        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+
+    @no_type_check
+    def derive(self, expr: 'PyExpr | None' = None, dot: 'PyDot | None | None' = None, name: 'PyIdent | None | str' = None) -> 'PyAttrExpr':
+        if expr is None:
+            expr = self.expr
+        if dot is None:
+            dot = self.dot
+        if name is None:
+            name = self.name
+        return PyAttrExpr(expr=expr, dot=dot, name=name)
+
+    def parent(self) -> 'PyAttrExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PySubscriptExpr(_PyBaseNode):
+
+    def count_slices(self) -> int:
+        return len(self.slices)
+
+    def __init__(self, expr: 'PyExpr', slices: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | Punctuated[PySlice | PyExpr, PyComma]', *, open_bracket: 'PyOpenBracket | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.open_bracket: PyOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
+        self.slices: Punctuated[PySlice | PyExpr, PyComma] = _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_comma_none_required_list_union_2_node_slice_variant_expr_required_punct_union_2_node_slice_variant_expr_token_comma_required_to_punct_union_2_node_slice_variant_expr_token_comma_required(slices)
+        self.close_bracket: PyCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
+
+    @no_type_check
+    def derive(self, expr: 'PyExpr | None' = None, open_bracket: 'PyOpenBracket | None | None' = None, slices: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | Punctuated[PySlice | PyExpr, PyComma] | None' = None, close_bracket: 'PyCloseBracket | None | None' = None) -> 'PySubscriptExpr':
+        if expr is None:
+            expr = self.expr
+        if open_bracket is None:
+            open_bracket = self.open_bracket
+        if slices is None:
+            slices = self.slices
+        if close_bracket is None:
+            close_bracket = self.close_bracket
+        return PySubscriptExpr(expr=expr, open_bracket=open_bracket, slices=slices, close_bracket=close_bracket)
+
+    def parent(self) -> 'PySubscriptExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyStarredExpr(_PyBaseNode):
+
+    def __init__(self, expr: 'PyExpr', *, asterisk: 'PyAsterisk | None' = None) -> None:
+        self.asterisk: PyAsterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(asterisk)
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+
+    @no_type_check
+    def derive(self, asterisk: 'PyAsterisk | None | None' = None, expr: 'PyExpr | None' = None) -> 'PyStarredExpr':
+        if asterisk is None:
+            asterisk = self.asterisk
+        if expr is None:
+            expr = self.expr
+        return PyStarredExpr(asterisk=asterisk, expr=expr)
+
+    def parent(self) -> 'PyStarredExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyListExpr(_PyBaseNode):
+
+    def count_elements(self) -> int:
+        return len(self.elements)
+
+    def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+        self.open_bracket: PyOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
+        self.elements: Punctuated[PyExpr, PyComma] = _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(elements)
+        self.close_bracket: PyCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
+
+    @no_type_check
+    def derive(self, open_bracket: 'PyOpenBracket | None | None' = None, elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None | None' = None, close_bracket: 'PyCloseBracket | None | None' = None) -> 'PyListExpr':
+        if open_bracket is None:
+            open_bracket = self.open_bracket
+        if elements is None:
+            elements = self.elements
+        if close_bracket is None:
+            close_bracket = self.close_bracket
+        return PyListExpr(open_bracket=open_bracket, elements=elements, close_bracket=close_bracket)
+
+    def parent(self) -> 'PyListExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyTupleExpr(_PyBaseNode):
+
+    def count_elements(self) -> int:
+        return len(self.elements)
+
+    def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
+        self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
+        self.elements: Punctuated[PyExpr, PyComma] = _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(elements)
+        self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
+
+    @no_type_check
+    def derive(self, open_paren: 'PyOpenParen | None | None' = None, elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None | None' = None, close_paren: 'PyCloseParen | None | None' = None) -> 'PyTupleExpr':
+        if open_paren is None:
+            open_paren = self.open_paren
+        if elements is None:
+            elements = self.elements
+        if close_paren is None:
+            close_paren = self.close_paren
+        return PyTupleExpr(open_paren=open_paren, elements=elements, close_paren=close_paren)
+
+    def parent(self) -> 'PyTupleExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyKeywordArg(_PyBaseNode):
+
+    def __init__(self, name: 'PyIdent | str', expr: 'PyExpr', *, equals: 'PyEquals | None' = None) -> None:
+        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+        self.equals: PyEquals = _coerce_union_2_token_equals_none_to_token_equals(equals)
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+
+    @no_type_check
+    def derive(self, name: 'PyIdent | None | str' = None, equals: 'PyEquals | None | None' = None, expr: 'PyExpr | None' = None) -> 'PyKeywordArg':
+        if name is None:
+            name = self.name
+        if equals is None:
+            equals = self.equals
+        if expr is None:
+            expr = self.expr
+        return PyKeywordArg(name=name, equals=equals, expr=expr)
+
+    def parent(self) -> 'PyKeywordArgParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyCallExpr(_PyBaseNode):
+
+    def count_args(self) -> int:
+        return len(self.args)
+
+    def __init__(self, operator: 'PyExpr', *, open_paren: 'PyOpenParen | None' = None, args: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | Punctuated[PyArg, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
+        self.operator: PyExpr = _coerce_variant_expr_to_variant_expr(operator)
+        self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
+        self.args: Punctuated[PyArg, PyComma] = _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comma_none_punct_variant_arg_token_comma_none_to_punct_variant_arg_token_comma(args)
+        self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
+
+    @no_type_check
+    def derive(self, operator: 'PyExpr | None' = None, open_paren: 'PyOpenParen | None | None' = None, args: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | Punctuated[PyArg, PyComma] | None | None' = None, close_paren: 'PyCloseParen | None | None' = None) -> 'PyCallExpr':
+        if operator is None:
+            operator = self.operator
+        if open_paren is None:
+            open_paren = self.open_paren
+        if args is None:
+            args = self.args
+        if close_paren is None:
+            close_paren = self.close_paren
+        return PyCallExpr(operator=operator, open_paren=open_paren, args=args, close_paren=close_paren)
+
+    def parent(self) -> 'PyCallExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyPrefixExpr(_PyBaseNode):
+
+    def __init__(self, prefix_op: 'PyPrefixOp', expr: 'PyExpr') -> None:
+        self.prefix_op: PyPrefixOp = _coerce_variant_prefix_op_to_variant_prefix_op(prefix_op)
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+
+    @no_type_check
+    def derive(self, prefix_op: 'PyPrefixOp | None' = None, expr: 'PyExpr | None' = None) -> 'PyPrefixExpr':
+        if prefix_op is None:
+            prefix_op = self.prefix_op
+        if expr is None:
+            expr = self.expr
+        return PyPrefixExpr(prefix_op=prefix_op, expr=expr)
+
+    def parent(self) -> 'PyPrefixExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyInfixExpr(_PyBaseNode):
+
+    def __init__(self, left: 'PyExpr', op: 'PyInfixOp', right: 'PyExpr') -> None:
+        self.left: PyExpr = _coerce_variant_expr_to_variant_expr(left)
+        self.op: PyInfixOp = _coerce_variant_infix_op_to_variant_infix_op(op)
+        self.right: PyExpr = _coerce_variant_expr_to_variant_expr(right)
+
+    @no_type_check
+    def derive(self, left: 'PyExpr | None' = None, op: 'PyInfixOp | None' = None, right: 'PyExpr | None' = None) -> 'PyInfixExpr':
+        if left is None:
+            left = self.left
+        if op is None:
+            op = self.op
+        if right is None:
+            right = self.right
+        return PyInfixExpr(left=left, op=op, right=right)
+
+    def parent(self) -> 'PyInfixExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyQualName(_PyBaseNode):
+
+    def count_modules(self) -> int:
+        return len(self.modules)
+
+    def __init__(self, name: 'PyIdent | str', *, modules: 'Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None' = None) -> None:
+        self.modules: Sequence[tuple[PyIdent, PyDot]] = _coerce_union_2_list_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_none_to_list_tuple_2_token_ident_token_dot(modules)
+        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+
+    @no_type_check
+    def derive(self, modules: 'Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None | None' = None, name: 'PyIdent | None | str' = None) -> 'PyQualName':
+        if modules is None:
+            modules = self.modules
+        if name is None:
+            name = self.name
+        return PyQualName(modules=modules, name=name)
+
+    def parent(self) -> 'PyQualNameParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyAbsolutePath(_PyBaseNode):
+
+    def __init__(self, name: 'PyQualName | PyIdent | str') -> None:
+        self.name: PyQualName = _coerce_union_3_node_qual_name_token_ident_extern_string_to_node_qual_name(name)
+
+    @no_type_check
+    def derive(self, name: 'PyQualName | PyIdent | None | str' = None) -> 'PyAbsolutePath':
+        if name is None:
+            name = self.name
+        return PyAbsolutePath(name=name)
+
+    def parent(self) -> 'PyAbsolutePathParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyRelativePath(_PyBaseNode):
+
+    def count_dots(self) -> int:
+        return len(self.dots)
+
+    def __init__(self, dots: 'Sequence[PyDot] | int', *, name: 'PyQualName | PyIdent | None | str' = None) -> None:
+        self.dots: Sequence[PyDot] = _coerce_union_2_list_token_dot_required_extern_integer_to_list_token_dot_required(dots)
+        self.name: PyQualName | None = _coerce_union_4_node_qual_name_token_ident_none_extern_string_to_union_2_node_qual_name_none(name)
+
+    @no_type_check
+    def derive(self, dots: 'Sequence[PyDot] | None | int' = None, name: 'PyQualName | PyIdent | None | None | str' = None) -> 'PyRelativePath':
+        if dots is None:
+            dots = self.dots
+        if name is None:
+            name = self.name
+        return PyRelativePath(dots=dots, name=name)
+
+    def parent(self) -> 'PyRelativePathParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyAlias(_PyBaseNode):
+
+    def __init__(self, path: 'PyPath', *, asname: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str' = None) -> None:
+        self.path: PyPath = _coerce_variant_path_to_variant_path(path)
+        self.asname: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(asname)
+
+    @no_type_check
+    def derive(self, path: 'PyPath | None' = None, asname: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | None | str' = None) -> 'PyAlias':
+        if path is None:
+            path = self.path
+        if asname is None:
+            asname = self.asname
+        return PyAlias(path=path, asname=asname)
+
+    def parent(self) -> 'PyAliasParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyFromAlias(_PyBaseNode):
+
+    def __init__(self, name: 'PyAsterisk | PyIdent | str', *, asname: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str' = None) -> None:
+        self.name: PyAsterisk | PyIdent = _coerce_union_3_token_asterisk_token_ident_extern_string_to_union_2_token_asterisk_token_ident(name)
+        self.asname: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(asname)
+
+    @no_type_check
+    def derive(self, name: 'PyAsterisk | PyIdent | None | str' = None, asname: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | None | str' = None) -> 'PyFromAlias':
+        if name is None:
+            name = self.name
+        if asname is None:
+            asname = self.asname
+        return PyFromAlias(name=name, asname=asname)
+
+    def parent(self) -> 'PyFromAliasParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyImportStmt(_PyBaseNode):
+
+    def count_aliases(self) -> int:
+        return len(self.aliases)
+
+    def __init__(self, aliases: 'Sequence[PyAlias] | Sequence[tuple[PyAlias, PyComma | None]] | Punctuated[PyAlias, PyComma]', *, import_keyword: 'PyImportKeyword | None' = None) -> None:
+        self.import_keyword: PyImportKeyword = _coerce_union_2_token_import_keyword_none_to_token_import_keyword(import_keyword)
+        self.aliases: Punctuated[PyAlias, PyComma] = _coerce_union_3_list_node_alias_required_list_tuple_2_node_alias_union_2_token_comma_none_required_punct_node_alias_token_comma_required_to_punct_node_alias_token_comma_required(aliases)
+
+    @no_type_check
+    def derive(self, import_keyword: 'PyImportKeyword | None | None' = None, aliases: 'Sequence[PyAlias] | Sequence[tuple[PyAlias, PyComma | None]] | Punctuated[PyAlias, PyComma] | None' = None) -> 'PyImportStmt':
+        if import_keyword is None:
+            import_keyword = self.import_keyword
+        if aliases is None:
+            aliases = self.aliases
+        return PyImportStmt(import_keyword=import_keyword, aliases=aliases)
+
+    def parent(self) -> 'PyImportStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyImportFromStmt(_PyBaseNode):
+
+    def count_aliases(self) -> int:
+        return len(self.aliases)
+
+    def __init__(self, path: 'PyPath', aliases: 'Sequence[PyFromAlias] | Sequence[tuple[PyFromAlias, PyComma | None]] | Punctuated[PyFromAlias, PyComma]', *, from_keyword: 'PyFromKeyword | None' = None, import_keyword: 'PyImportKeyword | None' = None) -> None:
+        self.from_keyword: PyFromKeyword = _coerce_union_2_token_from_keyword_none_to_token_from_keyword(from_keyword)
+        self.path: PyPath = _coerce_variant_path_to_variant_path(path)
+        self.import_keyword: PyImportKeyword = _coerce_union_2_token_import_keyword_none_to_token_import_keyword(import_keyword)
+        self.aliases: Punctuated[PyFromAlias, PyComma] = _coerce_union_3_list_node_from_alias_required_list_tuple_2_node_from_alias_union_2_token_comma_none_required_punct_node_from_alias_token_comma_required_to_punct_node_from_alias_token_comma_required(aliases)
+
+    @no_type_check
+    def derive(self, from_keyword: 'PyFromKeyword | None | None' = None, path: 'PyPath | None' = None, import_keyword: 'PyImportKeyword | None | None' = None, aliases: 'Sequence[PyFromAlias] | Sequence[tuple[PyFromAlias, PyComma | None]] | Punctuated[PyFromAlias, PyComma] | None' = None) -> 'PyImportFromStmt':
+        if from_keyword is None:
+            from_keyword = self.from_keyword
+        if path is None:
+            path = self.path
+        if import_keyword is None:
+            import_keyword = self.import_keyword
+        if aliases is None:
+            aliases = self.aliases
+        return PyImportFromStmt(from_keyword=from_keyword, path=path, import_keyword=import_keyword, aliases=aliases)
+
+    def parent(self) -> 'PyImportFromStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyRetStmt(_PyBaseNode):
+
+    def __init__(self, *, return_keyword: 'PyReturnKeyword | None' = None, expr: 'PyExpr | None' = None) -> None:
+        self.return_keyword: PyReturnKeyword = _coerce_union_2_token_return_keyword_none_to_token_return_keyword(return_keyword)
+        self.expr: PyExpr | None = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(expr)
+
+    @no_type_check
+    def derive(self, return_keyword: 'PyReturnKeyword | None | None' = None, expr: 'PyExpr | None | None' = None) -> 'PyRetStmt':
+        if return_keyword is None:
+            return_keyword = self.return_keyword
+        if expr is None:
+            expr = self.expr
+        return PyRetStmt(return_keyword=return_keyword, expr=expr)
+
+    def parent(self) -> 'PyRetStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyExprStmt(_PyBaseNode):
+
+    def __init__(self, expr: 'PyExpr') -> None:
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+
+    @no_type_check
+    def derive(self, expr: 'PyExpr | None' = None) -> 'PyExprStmt':
+        if expr is None:
+            expr = self.expr
+        return PyExprStmt(expr=expr)
+
+    def parent(self) -> 'PyExprStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyAssignStmt(_PyBaseNode):
+
+    def __init__(self, pattern: 'PyPattern', *, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None, value: 'PyExpr | tuple[PyEquals | None, PyExpr] | None' = None) -> None:
+        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
+        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
+        self.value: tuple[PyEquals, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_none_to_union_2_tuple_2_token_equals_variant_expr_none(value)
+
+    @no_type_check
+    def derive(self, pattern: 'PyPattern | None' = None, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None | None' = None, value: 'PyExpr | tuple[PyEquals | None, PyExpr] | None | None' = None) -> 'PyAssignStmt':
+        if pattern is None:
+            pattern = self.pattern
+        if annotation is None:
+            annotation = self.annotation
+        if value is None:
+            value = self.value
+        return PyAssignStmt(pattern=pattern, annotation=annotation, value=value)
+
+    def parent(self) -> 'PyAssignStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyPassStmt(_PyBaseNode):
+
+    def __init__(self, *, pass_keyword: 'PyPassKeyword | None' = None) -> None:
+        self.pass_keyword: PyPassKeyword = _coerce_union_2_token_pass_keyword_none_to_token_pass_keyword(pass_keyword)
+
+    @no_type_check
+    def derive(self, pass_keyword: 'PyPassKeyword | None | None' = None) -> 'PyPassStmt':
+        if pass_keyword is None:
+            pass_keyword = self.pass_keyword
+        return PyPassStmt(pass_keyword=pass_keyword)
+
+    def parent(self) -> 'PyPassStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyIfCase(_PyBaseNode):
+
+    def __init__(self, test: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, if_keyword: 'PyIfKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
+        self.if_keyword: PyIfKeyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(if_keyword)
+        self.test: PyExpr = _coerce_variant_expr_to_variant_expr(test)
+        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+
+    @no_type_check
+    def derive(self, if_keyword: 'PyIfKeyword | None | None' = None, test: 'PyExpr | None' = None, colon: 'PyColon | None | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None) -> 'PyIfCase':
+        if if_keyword is None:
+            if_keyword = self.if_keyword
+        if test is None:
+            test = self.test
+        if colon is None:
+            colon = self.colon
+        if body is None:
+            body = self.body
+        return PyIfCase(if_keyword=if_keyword, test=test, colon=colon, body=body)
+
+    def parent(self) -> 'PyIfCaseParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyElifCase(_PyBaseNode):
+
+    def __init__(self, test: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, elif_keyword: 'PyElifKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
+        self.elif_keyword: PyElifKeyword = _coerce_union_2_token_elif_keyword_none_to_token_elif_keyword(elif_keyword)
+        self.test: PyExpr = _coerce_variant_expr_to_variant_expr(test)
+        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+
+    @no_type_check
+    def derive(self, elif_keyword: 'PyElifKeyword | None | None' = None, test: 'PyExpr | None' = None, colon: 'PyColon | None | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None) -> 'PyElifCase':
+        if elif_keyword is None:
+            elif_keyword = self.elif_keyword
+        if test is None:
+            test = self.test
+        if colon is None:
+            colon = self.colon
+        if body is None:
+            body = self.body
+        return PyElifCase(elif_keyword=elif_keyword, test=test, colon=colon, body=body)
+
+    def parent(self) -> 'PyElifCaseParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyElseCase(_PyBaseNode):
+
+    def __init__(self, body: 'PyStmt | Sequence[PyStmt]', *, else_keyword: 'PyElseKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
+        self.else_keyword: PyElseKeyword = _coerce_union_2_token_else_keyword_none_to_token_else_keyword(else_keyword)
+        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+
+    @no_type_check
+    def derive(self, else_keyword: 'PyElseKeyword | None | None' = None, colon: 'PyColon | None | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None) -> 'PyElseCase':
+        if else_keyword is None:
+            else_keyword = self.else_keyword
+        if colon is None:
+            colon = self.colon
+        if body is None:
+            body = self.body
+        return PyElseCase(else_keyword=else_keyword, colon=colon, body=body)
+
+    def parent(self) -> 'PyElseCaseParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyIfStmt(_PyBaseNode):
+
+    def count_alternatives(self) -> int:
+        return len(self.alternatives)
+
+    def __init__(self, first: 'PyIfCase', *, alternatives: 'Sequence[PyElifCase] | None' = None, last: 'PyElseCase | PyStmt | Sequence[PyStmt] | None' = None) -> None:
+        self.first: PyIfCase = _coerce_node_if_case_to_node_if_case(first)
+        self.alternatives: Sequence[PyElifCase] = _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(alternatives)
+        self.last: PyElseCase | None = _coerce_union_4_node_else_case_variant_stmt_list_variant_stmt_none_to_union_2_node_else_case_none(last)
+
+    @no_type_check
+    def derive(self, first: 'PyIfCase | None' = None, alternatives: 'Sequence[PyElifCase] | None | None' = None, last: 'PyElseCase | PyStmt | Sequence[PyStmt] | None | None' = None) -> 'PyIfStmt':
+        if first is None:
+            first = self.first
+        if alternatives is None:
+            alternatives = self.alternatives
+        if last is None:
+            last = self.last
+        return PyIfStmt(first=first, alternatives=alternatives, last=last)
+
+    def parent(self) -> 'PyIfStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyDeleteStmt(_PyBaseNode):
+
+    def __init__(self, pattern: 'PyPattern', *, del_keyword: 'PyDelKeyword | None' = None) -> None:
+        self.del_keyword: PyDelKeyword = _coerce_union_2_token_del_keyword_none_to_token_del_keyword(del_keyword)
+        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
+
+    @no_type_check
+    def derive(self, del_keyword: 'PyDelKeyword | None | None' = None, pattern: 'PyPattern | None' = None) -> 'PyDeleteStmt':
+        if del_keyword is None:
+            del_keyword = self.del_keyword
+        if pattern is None:
+            pattern = self.pattern
+        return PyDeleteStmt(del_keyword=del_keyword, pattern=pattern)
+
+    def parent(self) -> 'PyDeleteStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyRaiseStmt(_PyBaseNode):
+
+    def __init__(self, expr: 'PyExpr', *, raise_keyword: 'PyRaiseKeyword | None' = None, cause: 'PyExpr | tuple[PyFromKeyword | None, PyExpr] | None' = None) -> None:
+        self.raise_keyword: PyRaiseKeyword = _coerce_union_2_token_raise_keyword_none_to_token_raise_keyword(raise_keyword)
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.cause: tuple[PyFromKeyword, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_from_keyword_none_variant_expr_none_to_union_2_tuple_2_token_from_keyword_variant_expr_none(cause)
+
+    @no_type_check
+    def derive(self, raise_keyword: 'PyRaiseKeyword | None | None' = None, expr: 'PyExpr | None' = None, cause: 'PyExpr | tuple[PyFromKeyword | None, PyExpr] | None | None' = None) -> 'PyRaiseStmt':
+        if raise_keyword is None:
+            raise_keyword = self.raise_keyword
+        if expr is None:
+            expr = self.expr
+        if cause is None:
+            cause = self.cause
+        return PyRaiseStmt(raise_keyword=raise_keyword, expr=expr, cause=cause)
+
+    def parent(self) -> 'PyRaiseStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyForStmt(_PyBaseNode):
+
+    def __init__(self, pattern: 'PyPattern', expr: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, for_keyword: 'PyForKeyword | None' = None, in_keyword: 'PyInKeyword | None' = None, colon: 'PyColon | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> None:
+        self.for_keyword: PyForKeyword = _coerce_union_2_token_for_keyword_none_to_token_for_keyword(for_keyword)
+        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
+        self.in_keyword: PyInKeyword = _coerce_union_2_token_in_keyword_none_to_token_in_keyword(in_keyword)
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_list_variant_stmt_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_none(else_clause)
+
+    @no_type_check
+    def derive(self, for_keyword: 'PyForKeyword | None | None' = None, pattern: 'PyPattern | None' = None, in_keyword: 'PyInKeyword | None | None' = None, expr: 'PyExpr | None' = None, colon: 'PyColon | None | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None | None' = None) -> 'PyForStmt':
+        if for_keyword is None:
+            for_keyword = self.for_keyword
+        if pattern is None:
+            pattern = self.pattern
+        if in_keyword is None:
+            in_keyword = self.in_keyword
+        if expr is None:
+            expr = self.expr
+        if colon is None:
+            colon = self.colon
+        if body is None:
+            body = self.body
+        if else_clause is None:
+            else_clause = self.else_clause
+        return PyForStmt(for_keyword=for_keyword, pattern=pattern, in_keyword=in_keyword, expr=expr, colon=colon, body=body, else_clause=else_clause)
+
+    def parent(self) -> 'PyForStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyWhileStmt(_PyBaseNode):
+
+    def __init__(self, expr: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, while_keyword: 'PyWhileKeyword | None' = None, colon: 'PyColon | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> None:
+        self.while_keyword: PyWhileKeyword = _coerce_union_2_token_while_keyword_none_to_token_while_keyword(while_keyword)
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_list_variant_stmt_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_none(else_clause)
+
+    @no_type_check
+    def derive(self, while_keyword: 'PyWhileKeyword | None | None' = None, expr: 'PyExpr | None' = None, colon: 'PyColon | None | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None | None' = None) -> 'PyWhileStmt':
+        if while_keyword is None:
+            while_keyword = self.while_keyword
+        if expr is None:
+            expr = self.expr
+        if colon is None:
+            colon = self.colon
+        if body is None:
+            body = self.body
+        if else_clause is None:
+            else_clause = self.else_clause
+        return PyWhileStmt(while_keyword=while_keyword, expr=expr, colon=colon, body=body, else_clause=else_clause)
+
+    def parent(self) -> 'PyWhileStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyBreakStmt(_PyBaseNode):
+
+    def __init__(self, *, break_keyword: 'PyBreakKeyword | None' = None) -> None:
+        self.break_keyword: PyBreakKeyword = _coerce_union_2_token_break_keyword_none_to_token_break_keyword(break_keyword)
+
+    @no_type_check
+    def derive(self, break_keyword: 'PyBreakKeyword | None | None' = None) -> 'PyBreakStmt':
+        if break_keyword is None:
+            break_keyword = self.break_keyword
+        return PyBreakStmt(break_keyword=break_keyword)
+
+    def parent(self) -> 'PyBreakStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyContinueStmt(_PyBaseNode):
+
+    def __init__(self, *, continue_keyword: 'PyContinueKeyword | None' = None) -> None:
+        self.continue_keyword: PyContinueKeyword = _coerce_union_2_token_continue_keyword_none_to_token_continue_keyword(continue_keyword)
+
+    @no_type_check
+    def derive(self, continue_keyword: 'PyContinueKeyword | None | None' = None) -> 'PyContinueStmt':
+        if continue_keyword is None:
+            continue_keyword = self.continue_keyword
+        return PyContinueStmt(continue_keyword=continue_keyword)
+
+    def parent(self) -> 'PyContinueStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyTypeAliasStmt(_PyBaseNode):
+
+    def __init__(self, name: 'PyIdent | str', expr: 'PyExpr', *, type_keyword: 'PyTypeKeyword | None' = None, type_params: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None' = None, equals: 'PyEquals | None' = None) -> None:
+        self.type_keyword: PyTypeKeyword = _coerce_union_2_token_type_keyword_none_to_token_type_keyword(type_keyword)
+        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+        self.type_params: tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None = _coerce_union_5_tuple_3_union_2_token_open_bracket_none_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_union_2_token_close_bracket_none_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_union_2_tuple_3_token_open_bracket_punct_variant_expr_token_comma_token_close_bracket_none(type_params)
+        self.equals: PyEquals = _coerce_union_2_token_equals_none_to_token_equals(equals)
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+
+    @no_type_check
+    def derive(self, type_keyword: 'PyTypeKeyword | None | None' = None, name: 'PyIdent | None | str' = None, type_params: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None | None' = None, equals: 'PyEquals | None | None' = None, expr: 'PyExpr | None' = None) -> 'PyTypeAliasStmt':
+        if type_keyword is None:
+            type_keyword = self.type_keyword
+        if name is None:
+            name = self.name
+        if type_params is None:
+            type_params = self.type_params
+        if equals is None:
+            equals = self.equals
+        if expr is None:
+            expr = self.expr
+        return PyTypeAliasStmt(type_keyword=type_keyword, name=name, type_params=type_params, equals=equals, expr=expr)
+
+    def parent(self) -> 'PyTypeAliasStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyExceptHandler(_PyBaseNode):
+
+    def __init__(self, expr: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, except_keyword: 'PyExceptKeyword | None' = None, binder: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str' = None, colon: 'PyColon | None' = None) -> None:
+        self.except_keyword: PyExceptKeyword = _coerce_union_2_token_except_keyword_none_to_token_except_keyword(except_keyword)
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.binder: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(binder)
+        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+
+    @no_type_check
+    def derive(self, except_keyword: 'PyExceptKeyword | None | None' = None, expr: 'PyExpr | None' = None, binder: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | None | str' = None, colon: 'PyColon | None | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None) -> 'PyExceptHandler':
+        if except_keyword is None:
+            except_keyword = self.except_keyword
+        if expr is None:
+            expr = self.expr
+        if binder is None:
+            binder = self.binder
+        if colon is None:
+            colon = self.colon
+        if body is None:
+            body = self.body
+        return PyExceptHandler(except_keyword=except_keyword, expr=expr, binder=binder, colon=colon, body=body)
+
+    def parent(self) -> 'PyExceptHandlerParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyTryStmt(_PyBaseNode):
+
+    def count_handlers(self) -> int:
+        return len(self.handlers)
+
+    def __init__(self, body: 'PyStmt | Sequence[PyStmt]', *, try_keyword: 'PyTryKeyword | None' = None, colon: 'PyColon | None' = None, handlers: 'Sequence[PyExceptHandler] | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None, finally_clause: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> None:
+        self.try_keyword: PyTryKeyword = _coerce_union_2_token_try_keyword_none_to_token_try_keyword(try_keyword)
+        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+        self.handlers: Sequence[PyExceptHandler] = _coerce_union_2_list_node_except_handler_none_to_list_node_except_handler(handlers)
+        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_list_variant_stmt_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_none(else_clause)
+        self.finally_clause: tuple[PyFinallyKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_list_variant_stmt_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_none(finally_clause)
+
+    @no_type_check
+    def derive(self, try_keyword: 'PyTryKeyword | None | None' = None, colon: 'PyColon | None | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None, handlers: 'Sequence[PyExceptHandler] | None | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None | None' = None, finally_clause: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None | None' = None) -> 'PyTryStmt':
+        if try_keyword is None:
+            try_keyword = self.try_keyword
+        if colon is None:
+            colon = self.colon
+        if body is None:
+            body = self.body
+        if handlers is None:
+            handlers = self.handlers
+        if else_clause is None:
+            else_clause = self.else_clause
+        if finally_clause is None:
+            finally_clause = self.finally_clause
+        return PyTryStmt(try_keyword=try_keyword, colon=colon, body=body, handlers=handlers, else_clause=else_clause, finally_clause=finally_clause)
+
+    def parent(self) -> 'PyTryStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyClassDef(_PyBaseNode):
+
+    def count_decorators(self) -> int:
+        return len(self.decorators)
+
+    def __init__(self, name: 'PyIdent | str', body: 'PyStmt | Sequence[PyStmt]', *, decorators: 'Sequence[PyDecorator | PyExpr] | None' = None, class_keyword: 'PyClassKeyword | None' = None, bases: 'tuple[PyOpenParen | None, Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None, PyCloseParen | None] | Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None' = None, colon: 'PyColon | None' = None) -> None:
+        self.decorators: Sequence[PyDecorator] = _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(decorators)
+        self.class_keyword: PyClassKeyword = _coerce_union_2_token_class_keyword_none_to_token_class_keyword(class_keyword)
+        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+        self.bases: tuple[PyOpenParen, Punctuated[PyIdent, PyComma], PyCloseParen] | None = _coerce_union_5_tuple_3_union_2_token_open_paren_none_union_4_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_list_union_2_token_ident_extern_string_punct_union_2_token_ident_extern_string_token_comma_none_union_2_token_close_paren_none_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_list_union_2_token_ident_extern_string_punct_union_2_token_ident_extern_string_token_comma_none_to_union_2_tuple_3_token_open_paren_punct_token_ident_token_comma_token_close_paren_none(bases)
+        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+
+    @no_type_check
+    def derive(self, decorators: 'Sequence[PyDecorator | PyExpr] | None | None' = None, class_keyword: 'PyClassKeyword | None | None' = None, name: 'PyIdent | None | str' = None, bases: 'tuple[PyOpenParen | None, Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None, PyCloseParen | None] | Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None | None' = None, colon: 'PyColon | None | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None) -> 'PyClassDef':
+        if decorators is None:
+            decorators = self.decorators
+        if class_keyword is None:
+            class_keyword = self.class_keyword
+        if name is None:
+            name = self.name
+        if bases is None:
+            bases = self.bases
+        if colon is None:
+            colon = self.colon
+        if body is None:
+            body = self.body
+        return PyClassDef(decorators=decorators, class_keyword=class_keyword, name=name, bases=bases, colon=colon, body=body)
+
+    def parent(self) -> 'PyClassDefParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyNamedParam(_PyBaseNode):
+
+    def __init__(self, pattern: 'PyPattern', *, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None, default: 'PyExpr | tuple[PyEquals | None, PyExpr] | None' = None) -> None:
+        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
+        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
+        self.default: tuple[PyEquals, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_none_to_union_2_tuple_2_token_equals_variant_expr_none(default)
+
+    @no_type_check
+    def derive(self, pattern: 'PyPattern | None' = None, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None | None' = None, default: 'PyExpr | tuple[PyEquals | None, PyExpr] | None | None' = None) -> 'PyNamedParam':
+        if pattern is None:
+            pattern = self.pattern
+        if annotation is None:
+            annotation = self.annotation
+        if default is None:
+            default = self.default
+        return PyNamedParam(pattern=pattern, annotation=annotation, default=default)
+
+    def parent(self) -> 'PyNamedParamParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyRestPosParam(_PyBaseNode):
+
+    def __init__(self, name: 'PyIdent | str', *, asterisk: 'PyAsterisk | None' = None) -> None:
+        self.asterisk: PyAsterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(asterisk)
+        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+
+    @no_type_check
+    def derive(self, asterisk: 'PyAsterisk | None | None' = None, name: 'PyIdent | None | str' = None) -> 'PyRestPosParam':
+        if asterisk is None:
+            asterisk = self.asterisk
+        if name is None:
+            name = self.name
+        return PyRestPosParam(asterisk=asterisk, name=name)
+
+    def parent(self) -> 'PyRestPosParamParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyRestKeywordParam(_PyBaseNode):
+
+    def __init__(self, name: 'PyIdent | str', *, asterisk_asterisk: 'PyAsteriskAsterisk | None' = None) -> None:
+        self.asterisk_asterisk: PyAsteriskAsterisk = _coerce_union_2_token_asterisk_asterisk_none_to_token_asterisk_asterisk(asterisk_asterisk)
+        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+
+    @no_type_check
+    def derive(self, asterisk_asterisk: 'PyAsteriskAsterisk | None | None' = None, name: 'PyIdent | None | str' = None) -> 'PyRestKeywordParam':
+        if asterisk_asterisk is None:
+            asterisk_asterisk = self.asterisk_asterisk
+        if name is None:
+            name = self.name
+        return PyRestKeywordParam(asterisk_asterisk=asterisk_asterisk, name=name)
+
+    def parent(self) -> 'PyRestKeywordParamParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyArgSepParam(_PyBaseNode):
+
+    def __init__(self, *, asterisk: 'PyAsterisk | None' = None) -> None:
+        self.asterisk: PyAsterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(asterisk)
+
+    @no_type_check
+    def derive(self, asterisk: 'PyAsterisk | None | None' = None) -> 'PyArgSepParam':
+        if asterisk is None:
+            asterisk = self.asterisk
+        return PyArgSepParam(asterisk=asterisk)
+
+    def parent(self) -> 'PyArgSepParamParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyKwSepParam(_PyBaseNode):
+
+    def __init__(self, *, slash: 'PySlash | None' = None) -> None:
+        self.slash: PySlash = _coerce_union_2_token_slash_none_to_token_slash(slash)
+
+    @no_type_check
+    def derive(self, slash: 'PySlash | None | None' = None) -> 'PyKwSepParam':
+        if slash is None:
+            slash = self.slash
+        return PyKwSepParam(slash=slash)
+
+    def parent(self) -> 'PyKwSepParamParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyDecorator(_PyBaseNode):
+
+    def __init__(self, expr: 'PyExpr', *, at_sign: 'PyAtSign | None' = None) -> None:
+        self.at_sign: PyAtSign = _coerce_union_2_token_at_sign_none_to_token_at_sign(at_sign)
+        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+
+    @no_type_check
+    def derive(self, at_sign: 'PyAtSign | None | None' = None, expr: 'PyExpr | None' = None) -> 'PyDecorator':
+        if at_sign is None:
+            at_sign = self.at_sign
+        if expr is None:
+            expr = self.expr
+        return PyDecorator(at_sign=at_sign, expr=expr)
+
+    def parent(self) -> 'PyDecoratorParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyFuncDef(_PyBaseNode):
+
+    def count_decorators(self) -> int:
+        return len(self.decorators)
+
+    def count_params(self) -> int:
+        return len(self.params)
+
+    def __init__(self, name: 'PyIdent | str', body: 'PyStmt | Sequence[PyStmt]', *, decorators: 'Sequence[PyDecorator | PyExpr] | None' = None, async_keyword: 'PyAsyncKeyword | None' = None, def_keyword: 'PyDefKeyword | None' = None, open_paren: 'PyOpenParen | None' = None, params: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | Punctuated[PyParam, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None, return_type: 'PyExpr | tuple[PyRArrow | None, PyExpr] | None' = None, colon: 'PyColon | None' = None) -> None:
+        self.decorators: Sequence[PyDecorator] = _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(decorators)
+        self.async_keyword: PyAsyncKeyword | None = _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none(async_keyword)
+        self.def_keyword: PyDefKeyword = _coerce_union_2_token_def_keyword_none_to_token_def_keyword(def_keyword)
+        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+        self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
+        self.params: Punctuated[PyParam, PyComma] = _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_comma_none_punct_variant_param_token_comma_none_to_punct_variant_param_token_comma(params)
+        self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
+        self.return_type: tuple[PyRArrow, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_r_arrow_none_variant_expr_none_to_union_2_tuple_2_token_r_arrow_variant_expr_none(return_type)
+        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+
+    @no_type_check
+    def derive(self, decorators: 'Sequence[PyDecorator | PyExpr] | None | None' = None, async_keyword: 'PyAsyncKeyword | None | None' = None, def_keyword: 'PyDefKeyword | None | None' = None, name: 'PyIdent | None | str' = None, open_paren: 'PyOpenParen | None | None' = None, params: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | Punctuated[PyParam, PyComma] | None | None' = None, close_paren: 'PyCloseParen | None | None' = None, return_type: 'PyExpr | tuple[PyRArrow | None, PyExpr] | None | None' = None, colon: 'PyColon | None | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None) -> 'PyFuncDef':
+        if decorators is None:
+            decorators = self.decorators
+        if async_keyword is None:
+            async_keyword = self.async_keyword
+        if def_keyword is None:
+            def_keyword = self.def_keyword
+        if name is None:
+            name = self.name
+        if open_paren is None:
+            open_paren = self.open_paren
+        if params is None:
+            params = self.params
+        if close_paren is None:
+            close_paren = self.close_paren
+        if return_type is None:
+            return_type = self.return_type
+        if colon is None:
+            colon = self.colon
+        if body is None:
+            body = self.body
+        return PyFuncDef(decorators=decorators, async_keyword=async_keyword, def_keyword=def_keyword, name=name, open_paren=open_paren, params=params, close_paren=close_paren, return_type=return_type, colon=colon, body=body)
+
+    def parent(self) -> 'PyFuncDefParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyModule(_PyBaseNode):
+
+    def count_stmts(self) -> int:
+        return len(self.stmts)
+
+    def __init__(self, *, stmts: 'Sequence[PyStmt] | None' = None) -> None:
+        self.stmts: Sequence[PyStmt] = _coerce_union_2_list_variant_stmt_none_to_list_variant_stmt(stmts)
+
+    @no_type_check
+    def derive(self, stmts: 'Sequence[PyStmt] | None | None' = None) -> 'PyModule':
+        if stmts is None:
+            stmts = self.stmts
+        return PyModule(stmts=stmts)
+
+    def parent(self) -> 'PyModuleParent':
+        raise AssertionError('trying to access the parent node of a top-level node')
+
+
+type PyPattern = PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern
+
+
+def is_py_pattern(value: Any) -> TypeGuard[PyPattern]:
+    return isinstance(value, PyNamedPattern) or isinstance(value, PyAttrPattern) or isinstance(value, PySubscriptPattern) or isinstance(value, PyStarredPattern) or isinstance(value, PyListPattern) or isinstance(value, PyTuplePattern)
+
+
+type PyExpr = PyAttrExpr | PyCallExpr | PyConstExpr | PyEllipsisExpr | PyGeneratorExpr | PyInfixExpr | PyListExpr | PyNamedExpr | PyNestExpr | PyPrefixExpr | PyStarredExpr | PySubscriptExpr | PyTupleExpr
+
+
+def is_py_expr(value: Any) -> TypeGuard[PyExpr]:
+    return isinstance(value, PyAttrExpr) or isinstance(value, PyCallExpr) or isinstance(value, PyConstExpr) or isinstance(value, PyEllipsisExpr) or isinstance(value, PyGeneratorExpr) or isinstance(value, PyInfixExpr) or isinstance(value, PyListExpr) or isinstance(value, PyNamedExpr) or isinstance(value, PyNestExpr) or isinstance(value, PyPrefixExpr) or isinstance(value, PyStarredExpr) or isinstance(value, PySubscriptExpr) or isinstance(value, PyTupleExpr)
+
+
+type PyArg = PyKeywordArg | PyExpr
+
+
+def is_py_arg(value: Any) -> TypeGuard[PyArg]:
+    return isinstance(value, PyKeywordArg) or is_py_expr(value)
+
+
+type PyPrefixOp = PyNotKeyword | PyPlus | PyHyphen | PyTilde
+
+
+def is_py_prefix_op(value: Any) -> TypeGuard[PyPrefixOp]:
+    return isinstance(value, PyNotKeyword) or isinstance(value, PyPlus) or isinstance(value, PyHyphen) or isinstance(value, PyTilde)
+
+
+type PyInfixOp = PyPlus | PyHyphen | PyAsterisk | PySlash | PySlashSlash | PyPercent | PyLessThanLessThan | PyGreaterThanGreaterThan | PyVerticalBar | PyCaret | PyAmpersand | PyAtSign | PyOrKeyword | PyAndKeyword | PyEqualsEquals | PyExclamationMarkEquals | PyLessThan | PyLessThanEquals | PyGreaterThan | PyGreaterThanEquals | PyIsKeyword | tuple[PyIsKeyword, PyNotKeyword] | PyInKeyword | tuple[PyNotKeyword, PyInKeyword]
+
+
+def is_py_infix_op(value: Any) -> TypeGuard[PyInfixOp]:
+    return isinstance(value, PyPlus) or isinstance(value, PyHyphen) or isinstance(value, PyAsterisk) or isinstance(value, PySlash) or isinstance(value, PySlashSlash) or isinstance(value, PyPercent) or isinstance(value, PyLessThanLessThan) or isinstance(value, PyGreaterThanGreaterThan) or isinstance(value, PyVerticalBar) or isinstance(value, PyCaret) or isinstance(value, PyAmpersand) or isinstance(value, PyAtSign) or isinstance(value, PyOrKeyword) or isinstance(value, PyAndKeyword) or isinstance(value, PyEqualsEquals) or isinstance(value, PyExclamationMarkEquals) or isinstance(value, PyLessThan) or isinstance(value, PyLessThanEquals) or isinstance(value, PyGreaterThan) or isinstance(value, PyGreaterThanEquals) or isinstance(value, PyIsKeyword) or (isinstance(value, tuple) and isinstance(value[0], PyIsKeyword) and isinstance(value[1], PyNotKeyword)) or isinstance(value, PyInKeyword) or (isinstance(value, tuple) and isinstance(value[0], PyNotKeyword) and isinstance(value[1], PyInKeyword))
+
+
+type PyPath = PyAbsolutePath | PyRelativePath
+
+
+def is_py_path(value: Any) -> TypeGuard[PyPath]:
+    return isinstance(value, PyAbsolutePath) or isinstance(value, PyRelativePath)
+
+
+type PyStmt = PyAssignStmt | PyBreakStmt | PyClassDef | PyContinueStmt | PyDeleteStmt | PyExprStmt | PyForStmt | PyFuncDef | PyIfStmt | PyImportStmt | PyImportFromStmt | PyPassStmt | PyRaiseStmt | PyRetStmt | PyTryStmt | PyTypeAliasStmt | PyWhileStmt
+
+
+def is_py_stmt(value: Any) -> TypeGuard[PyStmt]:
+    return isinstance(value, PyAssignStmt) or isinstance(value, PyBreakStmt) or isinstance(value, PyClassDef) or isinstance(value, PyContinueStmt) or isinstance(value, PyDeleteStmt) or isinstance(value, PyExprStmt) or isinstance(value, PyForStmt) or isinstance(value, PyFuncDef) or isinstance(value, PyIfStmt) or isinstance(value, PyImportStmt) or isinstance(value, PyImportFromStmt) or isinstance(value, PyPassStmt) or isinstance(value, PyRaiseStmt) or isinstance(value, PyRetStmt) or isinstance(value, PyTryStmt) or isinstance(value, PyTypeAliasStmt) or isinstance(value, PyWhileStmt)
+
+
+type PyParam = PyRestPosParam | PyRestKeywordParam | PyArgSepParam | PyKwSepParam | PyNamedParam
+
+
+def is_py_param(value: Any) -> TypeGuard[PyParam]:
+    return isinstance(value, PyRestPosParam) or isinstance(value, PyRestKeywordParam) or isinstance(value, PyArgSepParam) or isinstance(value, PyKwSepParam) or isinstance(value, PyNamedParam)
+
+
+type PySliceParent = PySubscriptPattern | PySubscriptExpr
+
+
+type PyNamedPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyAttrPattern | PyDeleteStmt | PyAssignStmt | PyListPattern | PySubscriptPattern | PyComprehension
+
+
+type PyAttrPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyAttrPattern | PyDeleteStmt | PyAssignStmt | PyListPattern | PySubscriptPattern | PyComprehension
+
+
+type PySubscriptPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyAttrPattern | PyDeleteStmt | PyAssignStmt | PyListPattern | PySubscriptPattern | PyComprehension
+
+
+type PyStarredPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyAttrPattern | PyDeleteStmt | PyAssignStmt | PyListPattern | PySubscriptPattern | PyComprehension
+
+
+type PyListPatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyAttrPattern | PyDeleteStmt | PyAssignStmt | PyListPattern | PySubscriptPattern | PyComprehension
+
+
+type PyTuplePatternParent = PyNamedParam | PyForStmt | PyTuplePattern | PyAttrPattern | PyDeleteStmt | PyAssignStmt | PyListPattern | PySubscriptPattern | PyComprehension
+
+
+type PyEllipsisExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PyGuardParent = PyComprehension
+
+
+type PyComprehensionParent = PyGeneratorExpr
+
+
+type PyGeneratorExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PyConstExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PyNestExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PyNamedExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PyAttrExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PySubscriptExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PyStarredExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PyListExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PyTupleExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PyKeywordArgParent = PyCallExpr
+
+
+type PyCallExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PyPrefixExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PyInfixExprParent = PyStarredPattern | PyListExpr | PySlice | PyNestExpr | PyTypeAliasStmt | PyFuncDef | PyRetStmt | PyPrefixExpr | PyRaiseStmt | PyGeneratorExpr | PyGuard | PyCallExpr | PyAssignStmt | PyKeywordArg | PyElifCase | PyWhileStmt | PyIfCase | PyAttrExpr | PyExceptHandler | PyInfixExpr | PyExprStmt | PyComprehension | PyStarredExpr | PyDecorator | PyForStmt | PyTupleExpr | PySubscriptExpr | PyNamedParam
+
+
+type PyQualNameParent = PyAbsolutePath | PyRelativePath
+
+
+type PyAbsolutePathParent = PyImportFromStmt | PyAlias
+
+
+type PyRelativePathParent = PyImportFromStmt | PyAlias
+
+
+type PyAliasParent = PyImportStmt
+
+
+type PyFromAliasParent = PyImportFromStmt
+
+
+type PyImportStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyImportFromStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyRetStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyExprStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyAssignStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyPassStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyIfCaseParent = PyIfStmt
+
+
+type PyElifCaseParent = PyIfStmt
+
+
+type PyElseCaseParent = PyIfStmt
+
+
+type PyIfStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyDeleteStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyRaiseStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyForStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyWhileStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyBreakStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyContinueStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyTypeAliasStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyExceptHandlerParent = PyTryStmt
+
+
+type PyTryStmtParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyClassDefParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyNamedParamParent = PyFuncDef
+
+
+type PyRestPosParamParent = PyFuncDef
+
+
+type PyRestKeywordParamParent = PyFuncDef
+
+
+type PyArgSepParamParent = PyFuncDef
+
+
+type PyKwSepParamParent = PyFuncDef
+
+
+type PyDecoratorParent = PyClassDef | PyFuncDef
+
+
+type PyFuncDefParent = PyModule | PyClassDef | PyTryStmt | PyForStmt | PyExceptHandler | PyFuncDef | PyElseCase | PyElifCase | PyWhileStmt | PyIfCase
+
+
+type PyModuleParent = Never
+
+
 PyToken = PyIdent | PyFloat | PyInteger | PyString | PyTilde | PyVerticalBar | PyWhileKeyword | PyTypeKeyword | PyTryKeyword | PyReturnKeyword | PyRaiseKeyword | PyPassKeyword | PyOrKeyword | PyNotKeyword | PyIsKeyword | PyInKeyword | PyImportKeyword | PyIfKeyword | PyFromKeyword | PyForKeyword | PyFinallyKeyword | PyExceptKeyword | PyElseKeyword | PyElifKeyword | PyDelKeyword | PyDefKeyword | PyContinueKeyword | PyClassKeyword | PyBreakKeyword | PyAsyncKeyword | PyAsKeyword | PyAndKeyword | PyCaret | PyCloseBracket | PyOpenBracket | PyAtSign | PyGreaterThanGreaterThan | PyGreaterThanEquals | PyGreaterThan | PyEqualsEquals | PyEquals | PyLessThanEquals | PyLessThanLessThan | PyLessThan | PySemicolon | PyColon | PySlashSlash | PySlash | PyDotDotDot | PyDot | PyRArrow | PyHyphen | PyComma | PyPlus | PyAsteriskAsterisk | PyAsterisk | PyCloseParen | PyOpenParen | PyAmpersand | PyPercent | PyHashtag | PyExclamationMarkEquals | PyCarriageReturnLineFeed | PyLineFeed
 
 
-PyNode = PySlice | PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern | PyEllipsisExpr | PyGuard | PyComprehension | PyGeneratorExpr | PyConstExpr | PyNestExpr | PyNamedExpr | PyAttrExpr | PySubscriptExpr | PyStarredExpr | PyListExpr | PyTupleExpr | PyKeywordArg | PyCallExpr | PyPrefixExpr | PyInfixExpr | PyQualName | PyAbsolutePath | PyRelativePath | PyAlias | PyFromAlias | PyImportStmt | PyImportFromStmt | PyRetStmt | PyExprStmt | PyAssignStmt | PyPassStmt | PyIfCase | PyElifCase | PyElseCase | PyIfStmt | PyDeleteStmt | PyRaiseStmt | PyForStmt | PyWhileStmt | PyBreakStmt | PyContinueStmt | PyTypeAliasStmt | PyExceptHandler | PyTryStmt | PyClassDef | PyNamedParam | PyRestPosParam | PyRestKeywordParam | PySepParam | PyDecorator | PyFuncDef | PyModule
+PyNode = PySlice | PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern | PyEllipsisExpr | PyGuard | PyComprehension | PyGeneratorExpr | PyConstExpr | PyNestExpr | PyNamedExpr | PyAttrExpr | PySubscriptExpr | PyStarredExpr | PyListExpr | PyTupleExpr | PyKeywordArg | PyCallExpr | PyPrefixExpr | PyInfixExpr | PyQualName | PyAbsolutePath | PyRelativePath | PyAlias | PyFromAlias | PyImportStmt | PyImportFromStmt | PyRetStmt | PyExprStmt | PyAssignStmt | PyPassStmt | PyIfCase | PyElifCase | PyElseCase | PyIfStmt | PyDeleteStmt | PyRaiseStmt | PyForStmt | PyWhileStmt | PyBreakStmt | PyContinueStmt | PyTypeAliasStmt | PyExceptHandler | PyTryStmt | PyClassDef | PyNamedParam | PyRestPosParam | PyRestKeywordParam | PyArgSepParam | PyKwSepParam | PyDecorator | PyFuncDef | PyModule
 
 
 PySyntax = PyToken | PyNode
+
+
+@no_type_check
+def _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(value: 'PyExpr | None') -> 'PyExpr | None':
+    if is_py_expr(value):
+        return value
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from PyExpr | None to PyExpr | None failed')
+
+
+@no_type_check
+def _coerce_union_2_token_colon_none_to_token_colon(value: 'PyColon | None') -> 'PyColon':
+    if value is None:
+        return PyColon()
+    elif isinstance(value, PyColon):
+        return value
+    else:
+        raise ValueError('the coercion from PyColon | None to PyColon failed')
+
+
+@no_type_check
+def _coerce_variant_expr_to_variant_expr(value: 'PyExpr') -> 'PyExpr':
+    return value
+
+
+@no_type_check
+def _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(value: 'PyExpr | tuple[PyColon | None, PyExpr] | None') -> 'tuple[PyColon, PyExpr] | None':
+    if is_py_expr(value):
+        return (PyColon(), _coerce_variant_expr_to_variant_expr(value))
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_colon_none_to_token_colon(value[0]), _coerce_variant_expr_to_variant_expr(value[1]))
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from PyExpr | tuple[PyColon | None, PyExpr] | None to tuple[PyColon, PyExpr] | None failed')
+
+
+@no_type_check
+def _coerce_union_2_token_ident_extern_string_to_token_ident(value: 'PyIdent | str') -> 'PyIdent':
+    if isinstance(value, str):
+        return PyIdent(value)
+    elif isinstance(value, PyIdent):
+        return value
+    else:
+        raise ValueError('the coercion from PyIdent | str to PyIdent failed')
+
+
+@no_type_check
+def _coerce_variant_pattern_to_variant_pattern(value: 'PyPattern') -> 'PyPattern':
+    return value
+
+
+@no_type_check
+def _coerce_union_2_token_dot_none_to_token_dot(value: 'PyDot | None') -> 'PyDot':
+    if value is None:
+        return PyDot()
+    elif isinstance(value, PyDot):
+        return value
+    else:
+        raise ValueError('the coercion from PyDot | None to PyDot failed')
+
+
+@no_type_check
+def _coerce_union_2_token_open_bracket_none_to_token_open_bracket(value: 'PyOpenBracket | None') -> 'PyOpenBracket':
+    if value is None:
+        return PyOpenBracket()
+    elif isinstance(value, PyOpenBracket):
+        return value
+    else:
+        raise ValueError('the coercion from PyOpenBracket | None to PyOpenBracket failed')
+
+
+@no_type_check
+def _coerce_union_2_node_slice_variant_pattern_to_union_2_node_slice_variant_pattern(value: 'PySlice | PyPattern') -> 'PySlice | PyPattern':
+    if isinstance(value, PySlice):
+        return value
+    elif is_py_pattern(value):
+        return value
+    else:
+        raise ValueError('the coercion from PySlice | PyPattern to PySlice | PyPattern failed')
+
+
+@no_type_check
+def _coerce_token_comma_to_token_comma(value: 'PyComma') -> 'PyComma':
+    return value
+
+
+@no_type_check
+def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_token_comma_none_required_list_union_2_node_slice_variant_pattern_required_punct_union_2_node_slice_variant_pattern_token_comma_required_to_punct_union_2_node_slice_variant_pattern_token_comma_required(value: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | Punctuated[PySlice | PyPattern, PyComma]') -> 'Punctuated[PySlice | PyPattern, PyComma]':
+    new_value = Punctuated()
+    iterator = iter(value)
+    try:
+        first_element = next(iterator)
+        while True:
+            try:
+                second_element = next(iterator)
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    element_separator = first_element[1]
+                    assert(element_separator is not None)
+                else:
+                    element_value = first_element
+                    element_separator = PyComma()
+                new_element_value = _coerce_union_2_node_slice_variant_pattern_to_union_2_node_slice_variant_pattern(element_value)
+                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_value.append(new_element_value, new_element_separator)
+                first_element = second_element
+            except StopIteration:
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    assert(first_element[1] is None)
+                else:
+                    element_value = first_element
+                new_element_value = _coerce_union_2_node_slice_variant_pattern_to_union_2_node_slice_variant_pattern(element_value)
+                new_value.append(new_element_value)
+                break
+    except StopIteration:
+        pass
+    return new_value
+
+
+@no_type_check
+def _coerce_union_2_token_close_bracket_none_to_token_close_bracket(value: 'PyCloseBracket | None') -> 'PyCloseBracket':
+    if value is None:
+        return PyCloseBracket()
+    elif isinstance(value, PyCloseBracket):
+        return value
+    else:
+        raise ValueError('the coercion from PyCloseBracket | None to PyCloseBracket failed')
+
+
+@no_type_check
+def _coerce_union_2_token_asterisk_none_to_token_asterisk(value: 'PyAsterisk | None') -> 'PyAsterisk':
+    if value is None:
+        return PyAsterisk()
+    elif isinstance(value, PyAsterisk):
+        return value
+    else:
+        raise ValueError('the coercion from PyAsterisk | None to PyAsterisk failed')
+
+
+@no_type_check
+def _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(value: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma] | None') -> 'Punctuated[PyPattern, PyComma]':
+    if value is None:
+        return Punctuated()
+    elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
+        new_value = Punctuated()
+        iterator = iter(value)
+        try:
+            first_element = next(iterator)
+            while True:
+                try:
+                    second_element = next(iterator)
+                    if isinstance(first_element, tuple):
+                        element_value = first_element[0]
+                        element_separator = first_element[1]
+                        assert(element_separator is not None)
+                    else:
+                        element_value = first_element
+                        element_separator = PyComma()
+                    new_element_value = _coerce_variant_pattern_to_variant_pattern(element_value)
+                    new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                    new_value.append(new_element_value, new_element_separator)
+                    first_element = second_element
+                except StopIteration:
+                    if isinstance(first_element, tuple):
+                        element_value = first_element[0]
+                        assert(first_element[1] is None)
+                    else:
+                        element_value = first_element
+                    new_element_value = _coerce_variant_pattern_to_variant_pattern(element_value)
+                    new_value.append(new_element_value)
+                    break
+        except StopIteration:
+            pass
+        return new_value
+    else:
+        raise ValueError('the coercion from Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma] | None to Punctuated[PyPattern, PyComma] failed')
+
+
+@no_type_check
+def _coerce_union_2_token_open_paren_none_to_token_open_paren(value: 'PyOpenParen | None') -> 'PyOpenParen':
+    if value is None:
+        return PyOpenParen()
+    elif isinstance(value, PyOpenParen):
+        return value
+    else:
+        raise ValueError('the coercion from PyOpenParen | None to PyOpenParen failed')
+
+
+@no_type_check
+def _coerce_union_2_token_close_paren_none_to_token_close_paren(value: 'PyCloseParen | None') -> 'PyCloseParen':
+    if value is None:
+        return PyCloseParen()
+    elif isinstance(value, PyCloseParen):
+        return value
+    else:
+        raise ValueError('the coercion from PyCloseParen | None to PyCloseParen failed')
+
+
+@no_type_check
+def _coerce_union_2_token_dot_dot_dot_none_to_token_dot_dot_dot(value: 'PyDotDotDot | None') -> 'PyDotDotDot':
+    if value is None:
+        return PyDotDotDot()
+    elif isinstance(value, PyDotDotDot):
+        return value
+    else:
+        raise ValueError('the coercion from PyDotDotDot | None to PyDotDotDot failed')
+
+
+@no_type_check
+def _coerce_union_2_token_if_keyword_none_to_token_if_keyword(value: 'PyIfKeyword | None') -> 'PyIfKeyword':
+    if value is None:
+        return PyIfKeyword()
+    elif isinstance(value, PyIfKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyIfKeyword | None to PyIfKeyword failed')
+
+
+@no_type_check
+def _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none(value: 'PyAsyncKeyword | None') -> 'PyAsyncKeyword | None':
+    if isinstance(value, PyAsyncKeyword):
+        return value
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from PyAsyncKeyword | None to PyAsyncKeyword | None failed')
+
+
+@no_type_check
+def _coerce_union_2_token_for_keyword_none_to_token_for_keyword(value: 'PyForKeyword | None') -> 'PyForKeyword':
+    if value is None:
+        return PyForKeyword()
+    elif isinstance(value, PyForKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyForKeyword | None to PyForKeyword failed')
+
+
+@no_type_check
+def _coerce_union_2_token_in_keyword_none_to_token_in_keyword(value: 'PyInKeyword | None') -> 'PyInKeyword':
+    if value is None:
+        return PyInKeyword()
+    elif isinstance(value, PyInKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyInKeyword | None to PyInKeyword failed')
+
+
+@no_type_check
+def _coerce_union_2_node_guard_variant_expr_to_node_guard(value: 'PyGuard | PyExpr') -> 'PyGuard':
+    if is_py_expr(value):
+        return PyGuard(_coerce_variant_expr_to_variant_expr(value))
+    elif isinstance(value, PyGuard):
+        return value
+    else:
+        raise ValueError('the coercion from PyGuard | PyExpr to PyGuard failed')
+
+
+@no_type_check
+def _coerce_union_2_list_union_2_node_guard_variant_expr_none_to_list_node_guard(value: 'Sequence[PyGuard | PyExpr] | None') -> 'Sequence[PyGuard]':
+    if value is None:
+        return list()
+    elif isinstance(value, list):
+        new_elements = list()
+        for value_element in value:
+            new_elements.append(_coerce_union_2_node_guard_variant_expr_to_node_guard(value_element))
+        return new_elements
+    else:
+        raise ValueError('the coercion from Sequence[PyGuard | PyExpr] | None to Sequence[PyGuard] failed')
+
+
+@no_type_check
+def _coerce_node_comprehension_to_node_comprehension(value: 'PyComprehension') -> 'PyComprehension':
+    return value
+
+
+@no_type_check
+def _coerce_list_node_comprehension_required_to_list_node_comprehension_required(value: 'Sequence[PyComprehension]') -> 'Sequence[PyComprehension]':
+    new_elements = list()
+    for value_element in value:
+        new_elements.append(_coerce_node_comprehension_to_node_comprehension(value_element))
+    return new_elements
+
+
+@no_type_check
+def _coerce_union_6_token_float_token_integer_token_string_extern_float_extern_integer_extern_string_to_union_3_token_float_token_integer_token_string(value: 'PyFloat | PyInteger | PyString | float | int | str') -> 'PyFloat | PyInteger | PyString':
+    if isinstance(value, float):
+        return PyFloat(value)
+    elif isinstance(value, PyFloat):
+        return value
+    elif isinstance(value, int):
+        return PyInteger(value)
+    elif isinstance(value, PyInteger):
+        return value
+    elif isinstance(value, str):
+        return PyString(value)
+    elif isinstance(value, PyString):
+        return value
+    else:
+        raise ValueError('the coercion from PyFloat | PyInteger | PyString | float | int | str to PyFloat | PyInteger | PyString failed')
+
+
+@no_type_check
+def _coerce_union_2_node_slice_variant_expr_to_union_2_node_slice_variant_expr(value: 'PySlice | PyExpr') -> 'PySlice | PyExpr':
+    if isinstance(value, PySlice):
+        return value
+    elif is_py_expr(value):
+        return value
+    else:
+        raise ValueError('the coercion from PySlice | PyExpr to PySlice | PyExpr failed')
+
+
+@no_type_check
+def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_comma_none_required_list_union_2_node_slice_variant_expr_required_punct_union_2_node_slice_variant_expr_token_comma_required_to_punct_union_2_node_slice_variant_expr_token_comma_required(value: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | Punctuated[PySlice | PyExpr, PyComma]') -> 'Punctuated[PySlice | PyExpr, PyComma]':
+    new_value = Punctuated()
+    iterator = iter(value)
+    try:
+        first_element = next(iterator)
+        while True:
+            try:
+                second_element = next(iterator)
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    element_separator = first_element[1]
+                    assert(element_separator is not None)
+                else:
+                    element_value = first_element
+                    element_separator = PyComma()
+                new_element_value = _coerce_union_2_node_slice_variant_expr_to_union_2_node_slice_variant_expr(element_value)
+                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_value.append(new_element_value, new_element_separator)
+                first_element = second_element
+            except StopIteration:
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    assert(first_element[1] is None)
+                else:
+                    element_value = first_element
+                new_element_value = _coerce_union_2_node_slice_variant_expr_to_union_2_node_slice_variant_expr(element_value)
+                new_value.append(new_element_value)
+                break
+    except StopIteration:
+        pass
+    return new_value
+
+
+@no_type_check
+def _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(value: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None') -> 'Punctuated[PyExpr, PyComma]':
+    if value is None:
+        return Punctuated()
+    elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
+        new_value = Punctuated()
+        iterator = iter(value)
+        try:
+            first_element = next(iterator)
+            while True:
+                try:
+                    second_element = next(iterator)
+                    if isinstance(first_element, tuple):
+                        element_value = first_element[0]
+                        element_separator = first_element[1]
+                        assert(element_separator is not None)
+                    else:
+                        element_value = first_element
+                        element_separator = PyComma()
+                    new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
+                    new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                    new_value.append(new_element_value, new_element_separator)
+                    first_element = second_element
+                except StopIteration:
+                    if isinstance(first_element, tuple):
+                        element_value = first_element[0]
+                        assert(first_element[1] is None)
+                    else:
+                        element_value = first_element
+                    new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
+                    new_value.append(new_element_value)
+                    break
+        except StopIteration:
+            pass
+        return new_value
+    else:
+        raise ValueError('the coercion from Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None to Punctuated[PyExpr, PyComma] failed')
+
+
+@no_type_check
+def _coerce_union_2_token_equals_none_to_token_equals(value: 'PyEquals | None') -> 'PyEquals':
+    if value is None:
+        return PyEquals()
+    elif isinstance(value, PyEquals):
+        return value
+    else:
+        raise ValueError('the coercion from PyEquals | None to PyEquals failed')
+
+
+@no_type_check
+def _coerce_variant_arg_to_variant_arg(value: 'PyArg') -> 'PyArg':
+    return value
+
+
+@no_type_check
+def _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comma_none_punct_variant_arg_token_comma_none_to_punct_variant_arg_token_comma(value: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | Punctuated[PyArg, PyComma] | None') -> 'Punctuated[PyArg, PyComma]':
+    if value is None:
+        return Punctuated()
+    elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
+        new_value = Punctuated()
+        iterator = iter(value)
+        try:
+            first_element = next(iterator)
+            while True:
+                try:
+                    second_element = next(iterator)
+                    if isinstance(first_element, tuple):
+                        element_value = first_element[0]
+                        element_separator = first_element[1]
+                        assert(element_separator is not None)
+                    else:
+                        element_value = first_element
+                        element_separator = PyComma()
+                    new_element_value = _coerce_variant_arg_to_variant_arg(element_value)
+                    new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                    new_value.append(new_element_value, new_element_separator)
+                    first_element = second_element
+                except StopIteration:
+                    if isinstance(first_element, tuple):
+                        element_value = first_element[0]
+                        assert(first_element[1] is None)
+                    else:
+                        element_value = first_element
+                    new_element_value = _coerce_variant_arg_to_variant_arg(element_value)
+                    new_value.append(new_element_value)
+                    break
+        except StopIteration:
+            pass
+        return new_value
+    else:
+        raise ValueError('the coercion from Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | Punctuated[PyArg, PyComma] | None to Punctuated[PyArg, PyComma] failed')
+
+
+@no_type_check
+def _coerce_variant_prefix_op_to_variant_prefix_op(value: 'PyPrefixOp') -> 'PyPrefixOp':
+    return value
+
+
+@no_type_check
+def _coerce_variant_infix_op_to_variant_infix_op(value: 'PyInfixOp') -> 'PyInfixOp':
+    return value
+
+
+@no_type_check
+def _coerce_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_to_tuple_2_token_ident_token_dot(value: 'PyIdent | tuple[PyIdent | str, PyDot | None] | str') -> 'tuple[PyIdent, PyDot]':
+    if isinstance(value, PyIdent) or isinstance(value, str):
+        return (_coerce_union_2_token_ident_extern_string_to_token_ident(value), PyDot())
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_ident_extern_string_to_token_ident(value[0]), _coerce_union_2_token_dot_none_to_token_dot(value[1]))
+    else:
+        raise ValueError('the coercion from PyIdent | tuple[PyIdent | str, PyDot | None] | str to tuple[PyIdent, PyDot] failed')
+
+
+@no_type_check
+def _coerce_union_2_list_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_none_to_list_tuple_2_token_ident_token_dot(value: 'Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None') -> 'Sequence[tuple[PyIdent, PyDot]]':
+    if value is None:
+        return list()
+    elif isinstance(value, list):
+        new_elements = list()
+        for value_element in value:
+            new_elements.append(_coerce_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_to_tuple_2_token_ident_token_dot(value_element))
+        return new_elements
+    else:
+        raise ValueError('the coercion from Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None to Sequence[tuple[PyIdent, PyDot]] failed')
+
+
+@no_type_check
+def _coerce_union_3_node_qual_name_token_ident_extern_string_to_node_qual_name(value: 'PyQualName | PyIdent | str') -> 'PyQualName':
+    if isinstance(value, PyIdent) or isinstance(value, str):
+        return PyQualName(_coerce_union_2_token_ident_extern_string_to_token_ident(value))
+    elif isinstance(value, PyQualName):
+        return value
+    else:
+        raise ValueError('the coercion from PyQualName | PyIdent | str to PyQualName failed')
+
+
+@no_type_check
+def _coerce_token_dot_to_token_dot(value: 'PyDot') -> 'PyDot':
+    return value
+
+
+@no_type_check
+def _coerce_union_2_list_token_dot_required_extern_integer_to_list_token_dot_required(value: 'Sequence[PyDot] | int') -> 'Sequence[PyDot]':
+    if isinstance(value, int):
+        new_elements = list()
+        for _ in range(0, value):
+            new_elements.append(PyDot())
+        return new_elements
+    elif isinstance(value, list):
+        new_elements = list()
+        for value_element in value:
+            new_elements.append(_coerce_token_dot_to_token_dot(value_element))
+        return new_elements
+    else:
+        raise ValueError('the coercion from Sequence[PyDot] | int to Sequence[PyDot] failed')
+
+
+@no_type_check
+def _coerce_union_4_node_qual_name_token_ident_none_extern_string_to_union_2_node_qual_name_none(value: 'PyQualName | PyIdent | None | str') -> 'PyQualName | None':
+    if isinstance(value, PyIdent) or isinstance(value, str):
+        return PyQualName(_coerce_union_2_token_ident_extern_string_to_token_ident(value))
+    elif isinstance(value, PyQualName):
+        return value
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from PyQualName | PyIdent | None | str to PyQualName | None failed')
+
+
+@no_type_check
+def _coerce_variant_path_to_variant_path(value: 'PyPath') -> 'PyPath':
+    return value
+
+
+@no_type_check
+def _coerce_union_2_token_as_keyword_none_to_token_as_keyword(value: 'PyAsKeyword | None') -> 'PyAsKeyword':
+    if value is None:
+        return PyAsKeyword()
+    elif isinstance(value, PyAsKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyAsKeyword | None to PyAsKeyword failed')
+
+
+@no_type_check
+def _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(value: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str') -> 'tuple[PyAsKeyword, PyIdent] | None':
+    if isinstance(value, PyIdent) or isinstance(value, str):
+        return (PyAsKeyword(), _coerce_union_2_token_ident_extern_string_to_token_ident(value))
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_as_keyword_none_to_token_as_keyword(value[0]), _coerce_union_2_token_ident_extern_string_to_token_ident(value[1]))
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str to tuple[PyAsKeyword, PyIdent] | None failed')
+
+
+@no_type_check
+def _coerce_union_3_token_asterisk_token_ident_extern_string_to_union_2_token_asterisk_token_ident(value: 'PyAsterisk | PyIdent | str') -> 'PyAsterisk | PyIdent':
+    if isinstance(value, PyAsterisk):
+        return value
+    elif isinstance(value, str):
+        return PyIdent(value)
+    elif isinstance(value, PyIdent):
+        return value
+    else:
+        raise ValueError('the coercion from PyAsterisk | PyIdent | str to PyAsterisk | PyIdent failed')
+
+
+@no_type_check
+def _coerce_union_2_token_import_keyword_none_to_token_import_keyword(value: 'PyImportKeyword | None') -> 'PyImportKeyword':
+    if value is None:
+        return PyImportKeyword()
+    elif isinstance(value, PyImportKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyImportKeyword | None to PyImportKeyword failed')
+
+
+@no_type_check
+def _coerce_node_alias_to_node_alias(value: 'PyAlias') -> 'PyAlias':
+    return value
+
+
+@no_type_check
+def _coerce_union_3_list_node_alias_required_list_tuple_2_node_alias_union_2_token_comma_none_required_punct_node_alias_token_comma_required_to_punct_node_alias_token_comma_required(value: 'Sequence[PyAlias] | Sequence[tuple[PyAlias, PyComma | None]] | Punctuated[PyAlias, PyComma]') -> 'Punctuated[PyAlias, PyComma]':
+    new_value = Punctuated()
+    iterator = iter(value)
+    try:
+        first_element = next(iterator)
+        while True:
+            try:
+                second_element = next(iterator)
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    element_separator = first_element[1]
+                    assert(element_separator is not None)
+                else:
+                    element_value = first_element
+                    element_separator = PyComma()
+                new_element_value = _coerce_node_alias_to_node_alias(element_value)
+                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_value.append(new_element_value, new_element_separator)
+                first_element = second_element
+            except StopIteration:
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    assert(first_element[1] is None)
+                else:
+                    element_value = first_element
+                new_element_value = _coerce_node_alias_to_node_alias(element_value)
+                new_value.append(new_element_value)
+                break
+    except StopIteration:
+        pass
+    return new_value
+
+
+@no_type_check
+def _coerce_union_2_token_from_keyword_none_to_token_from_keyword(value: 'PyFromKeyword | None') -> 'PyFromKeyword':
+    if value is None:
+        return PyFromKeyword()
+    elif isinstance(value, PyFromKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyFromKeyword | None to PyFromKeyword failed')
+
+
+@no_type_check
+def _coerce_node_from_alias_to_node_from_alias(value: 'PyFromAlias') -> 'PyFromAlias':
+    return value
+
+
+@no_type_check
+def _coerce_union_3_list_node_from_alias_required_list_tuple_2_node_from_alias_union_2_token_comma_none_required_punct_node_from_alias_token_comma_required_to_punct_node_from_alias_token_comma_required(value: 'Sequence[PyFromAlias] | Sequence[tuple[PyFromAlias, PyComma | None]] | Punctuated[PyFromAlias, PyComma]') -> 'Punctuated[PyFromAlias, PyComma]':
+    new_value = Punctuated()
+    iterator = iter(value)
+    try:
+        first_element = next(iterator)
+        while True:
+            try:
+                second_element = next(iterator)
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    element_separator = first_element[1]
+                    assert(element_separator is not None)
+                else:
+                    element_value = first_element
+                    element_separator = PyComma()
+                new_element_value = _coerce_node_from_alias_to_node_from_alias(element_value)
+                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_value.append(new_element_value, new_element_separator)
+                first_element = second_element
+            except StopIteration:
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    assert(first_element[1] is None)
+                else:
+                    element_value = first_element
+                new_element_value = _coerce_node_from_alias_to_node_from_alias(element_value)
+                new_value.append(new_element_value)
+                break
+    except StopIteration:
+        pass
+    return new_value
+
+
+@no_type_check
+def _coerce_union_2_token_return_keyword_none_to_token_return_keyword(value: 'PyReturnKeyword | None') -> 'PyReturnKeyword':
+    if value is None:
+        return PyReturnKeyword()
+    elif isinstance(value, PyReturnKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyReturnKeyword | None to PyReturnKeyword failed')
+
+
+@no_type_check
+def _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_none_to_union_2_tuple_2_token_equals_variant_expr_none(value: 'PyExpr | tuple[PyEquals | None, PyExpr] | None') -> 'tuple[PyEquals, PyExpr] | None':
+    if is_py_expr(value):
+        return (PyEquals(), _coerce_variant_expr_to_variant_expr(value))
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_equals_none_to_token_equals(value[0]), _coerce_variant_expr_to_variant_expr(value[1]))
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from PyExpr | tuple[PyEquals | None, PyExpr] | None to tuple[PyEquals, PyExpr] | None failed')
+
+
+@no_type_check
+def _coerce_union_2_token_pass_keyword_none_to_token_pass_keyword(value: 'PyPassKeyword | None') -> 'PyPassKeyword':
+    if value is None:
+        return PyPassKeyword()
+    elif isinstance(value, PyPassKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyPassKeyword | None to PyPassKeyword failed')
+
+
+@no_type_check
+def _coerce_variant_stmt_to_variant_stmt(value: 'PyStmt') -> 'PyStmt':
+    return value
+
+
+@no_type_check
+def _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(value: 'PyStmt | Sequence[PyStmt]') -> 'PyStmt | Sequence[PyStmt]':
+    if is_py_stmt(value):
+        return value
+    elif isinstance(value, list):
+        new_elements = list()
+        for value_element in value:
+            new_elements.append(_coerce_variant_stmt_to_variant_stmt(value_element))
+        return new_elements
+    else:
+        raise ValueError('the coercion from PyStmt | Sequence[PyStmt] to PyStmt | Sequence[PyStmt] failed')
+
+
+@no_type_check
+def _coerce_union_2_token_elif_keyword_none_to_token_elif_keyword(value: 'PyElifKeyword | None') -> 'PyElifKeyword':
+    if value is None:
+        return PyElifKeyword()
+    elif isinstance(value, PyElifKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyElifKeyword | None to PyElifKeyword failed')
+
+
+@no_type_check
+def _coerce_union_2_token_else_keyword_none_to_token_else_keyword(value: 'PyElseKeyword | None') -> 'PyElseKeyword':
+    if value is None:
+        return PyElseKeyword()
+    elif isinstance(value, PyElseKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyElseKeyword | None to PyElseKeyword failed')
+
+
+@no_type_check
+def _coerce_node_if_case_to_node_if_case(value: 'PyIfCase') -> 'PyIfCase':
+    return value
+
+
+@no_type_check
+def _coerce_node_elif_case_to_node_elif_case(value: 'PyElifCase') -> 'PyElifCase':
+    return value
+
+
+@no_type_check
+def _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(value: 'Sequence[PyElifCase] | None') -> 'Sequence[PyElifCase]':
+    if value is None:
+        return list()
+    elif isinstance(value, list):
+        new_elements = list()
+        for value_element in value:
+            new_elements.append(_coerce_node_elif_case_to_node_elif_case(value_element))
+        return new_elements
+    else:
+        raise ValueError('the coercion from Sequence[PyElifCase] | None to Sequence[PyElifCase] failed')
+
+
+@no_type_check
+def _coerce_union_4_node_else_case_variant_stmt_list_variant_stmt_none_to_union_2_node_else_case_none(value: 'PyElseCase | PyStmt | Sequence[PyStmt] | None') -> 'PyElseCase | None':
+    if is_py_stmt(value) or isinstance(value, list):
+        return PyElseCase(_coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(value))
+    elif isinstance(value, PyElseCase):
+        return value
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from PyElseCase | PyStmt | Sequence[PyStmt] | None to PyElseCase | None failed')
+
+
+@no_type_check
+def _coerce_union_2_token_del_keyword_none_to_token_del_keyword(value: 'PyDelKeyword | None') -> 'PyDelKeyword':
+    if value is None:
+        return PyDelKeyword()
+    elif isinstance(value, PyDelKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyDelKeyword | None to PyDelKeyword failed')
+
+
+@no_type_check
+def _coerce_union_2_token_raise_keyword_none_to_token_raise_keyword(value: 'PyRaiseKeyword | None') -> 'PyRaiseKeyword':
+    if value is None:
+        return PyRaiseKeyword()
+    elif isinstance(value, PyRaiseKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyRaiseKeyword | None to PyRaiseKeyword failed')
+
+
+@no_type_check
+def _coerce_union_3_variant_expr_tuple_2_union_2_token_from_keyword_none_variant_expr_none_to_union_2_tuple_2_token_from_keyword_variant_expr_none(value: 'PyExpr | tuple[PyFromKeyword | None, PyExpr] | None') -> 'tuple[PyFromKeyword, PyExpr] | None':
+    if is_py_expr(value):
+        return (PyFromKeyword(), _coerce_variant_expr_to_variant_expr(value))
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_from_keyword_none_to_token_from_keyword(value[0]), _coerce_variant_expr_to_variant_expr(value[1]))
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from PyExpr | tuple[PyFromKeyword | None, PyExpr] | None to tuple[PyFromKeyword, PyExpr] | None failed')
+
+
+@no_type_check
+def _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_list_variant_stmt_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_none(value: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None':
+    if is_py_stmt(value) or isinstance(value, list):
+        return (PyElseKeyword(), PyColon(), _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(value))
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_else_keyword_none_to_token_else_keyword(value[0]), _coerce_union_2_token_colon_none_to_token_colon(value[1]), _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(value[2]))
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None to tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None failed')
+
+
+@no_type_check
+def _coerce_union_2_token_while_keyword_none_to_token_while_keyword(value: 'PyWhileKeyword | None') -> 'PyWhileKeyword':
+    if value is None:
+        return PyWhileKeyword()
+    elif isinstance(value, PyWhileKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyWhileKeyword | None to PyWhileKeyword failed')
+
+
+@no_type_check
+def _coerce_union_2_token_break_keyword_none_to_token_break_keyword(value: 'PyBreakKeyword | None') -> 'PyBreakKeyword':
+    if value is None:
+        return PyBreakKeyword()
+    elif isinstance(value, PyBreakKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyBreakKeyword | None to PyBreakKeyword failed')
+
+
+@no_type_check
+def _coerce_union_2_token_continue_keyword_none_to_token_continue_keyword(value: 'PyContinueKeyword | None') -> 'PyContinueKeyword':
+    if value is None:
+        return PyContinueKeyword()
+    elif isinstance(value, PyContinueKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyContinueKeyword | None to PyContinueKeyword failed')
+
+
+@no_type_check
+def _coerce_union_2_token_type_keyword_none_to_token_type_keyword(value: 'PyTypeKeyword | None') -> 'PyTypeKeyword':
+    if value is None:
+        return PyTypeKeyword()
+    elif isinstance(value, PyTypeKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyTypeKeyword | None to PyTypeKeyword failed')
+
+
+@no_type_check
+def _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_to_punct_variant_expr_token_comma(value: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma]') -> 'Punctuated[PyExpr, PyComma]':
+    new_value = Punctuated()
+    iterator = iter(value)
+    try:
+        first_element = next(iterator)
+        while True:
+            try:
+                second_element = next(iterator)
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    element_separator = first_element[1]
+                    assert(element_separator is not None)
+                else:
+                    element_value = first_element
+                    element_separator = PyComma()
+                new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
+                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_value.append(new_element_value, new_element_separator)
+                first_element = second_element
+            except StopIteration:
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    assert(first_element[1] is None)
+                else:
+                    element_value = first_element
+                new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
+                new_value.append(new_element_value)
+                break
+    except StopIteration:
+        pass
+    return new_value
+
+
+@no_type_check
+def _coerce_union_5_tuple_3_union_2_token_open_bracket_none_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_union_2_token_close_bracket_none_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_union_2_tuple_3_token_open_bracket_punct_variant_expr_token_comma_token_close_bracket_none(value: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None') -> 'tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None':
+    if isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
+        return (PyOpenBracket(), _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_to_punct_variant_expr_token_comma(value), PyCloseBracket())
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_open_bracket_none_to_token_open_bracket(value[0]), _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(value[1]), _coerce_union_2_token_close_bracket_none_to_token_close_bracket(value[2]))
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None to tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None failed')
+
+
+@no_type_check
+def _coerce_union_2_token_except_keyword_none_to_token_except_keyword(value: 'PyExceptKeyword | None') -> 'PyExceptKeyword':
+    if value is None:
+        return PyExceptKeyword()
+    elif isinstance(value, PyExceptKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyExceptKeyword | None to PyExceptKeyword failed')
+
+
+@no_type_check
+def _coerce_union_2_token_try_keyword_none_to_token_try_keyword(value: 'PyTryKeyword | None') -> 'PyTryKeyword':
+    if value is None:
+        return PyTryKeyword()
+    elif isinstance(value, PyTryKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyTryKeyword | None to PyTryKeyword failed')
+
+
+@no_type_check
+def _coerce_node_except_handler_to_node_except_handler(value: 'PyExceptHandler') -> 'PyExceptHandler':
+    return value
+
+
+@no_type_check
+def _coerce_union_2_list_node_except_handler_none_to_list_node_except_handler(value: 'Sequence[PyExceptHandler] | None') -> 'Sequence[PyExceptHandler]':
+    if value is None:
+        return list()
+    elif isinstance(value, list):
+        new_elements = list()
+        for value_element in value:
+            new_elements.append(_coerce_node_except_handler_to_node_except_handler(value_element))
+        return new_elements
+    else:
+        raise ValueError('the coercion from Sequence[PyExceptHandler] | None to Sequence[PyExceptHandler] failed')
+
+
+@no_type_check
+def _coerce_union_2_token_finally_keyword_none_to_token_finally_keyword(value: 'PyFinallyKeyword | None') -> 'PyFinallyKeyword':
+    if value is None:
+        return PyFinallyKeyword()
+    elif isinstance(value, PyFinallyKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyFinallyKeyword | None to PyFinallyKeyword failed')
+
+
+@no_type_check
+def _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_list_variant_stmt_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_none(value: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyFinallyKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None':
+    if is_py_stmt(value) or isinstance(value, list):
+        return (PyFinallyKeyword(), PyColon(), _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(value))
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_finally_keyword_none_to_token_finally_keyword(value[0]), _coerce_union_2_token_colon_none_to_token_colon(value[1]), _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(value[2]))
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None to tuple[PyFinallyKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None failed')
+
+
+@no_type_check
+def _coerce_union_2_node_decorator_variant_expr_to_node_decorator(value: 'PyDecorator | PyExpr') -> 'PyDecorator':
+    if is_py_expr(value):
+        return PyDecorator(_coerce_variant_expr_to_variant_expr(value))
+    elif isinstance(value, PyDecorator):
+        return value
+    else:
+        raise ValueError('the coercion from PyDecorator | PyExpr to PyDecorator failed')
+
+
+@no_type_check
+def _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(value: 'Sequence[PyDecorator | PyExpr] | None') -> 'Sequence[PyDecorator]':
+    if value is None:
+        return list()
+    elif isinstance(value, list):
+        new_elements = list()
+        for value_element in value:
+            new_elements.append(_coerce_union_2_node_decorator_variant_expr_to_node_decorator(value_element))
+        return new_elements
+    else:
+        raise ValueError('the coercion from Sequence[PyDecorator | PyExpr] | None to Sequence[PyDecorator] failed')
+
+
+@no_type_check
+def _coerce_union_2_token_class_keyword_none_to_token_class_keyword(value: 'PyClassKeyword | None') -> 'PyClassKeyword':
+    if value is None:
+        return PyClassKeyword()
+    elif isinstance(value, PyClassKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyClassKeyword | None to PyClassKeyword failed')
+
+
+@no_type_check
+def _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_list_union_2_token_ident_extern_string_punct_union_2_token_ident_extern_string_token_comma_to_punct_token_ident_token_comma(value: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma]') -> 'Punctuated[PyIdent, PyComma]':
+    new_value = Punctuated()
+    iterator = iter(value)
+    try:
+        first_element = next(iterator)
+        while True:
+            try:
+                second_element = next(iterator)
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    element_separator = first_element[1]
+                    assert(element_separator is not None)
+                else:
+                    element_value = first_element
+                    element_separator = PyComma()
+                new_element_value = _coerce_union_2_token_ident_extern_string_to_token_ident(element_value)
+                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_value.append(new_element_value, new_element_separator)
+                first_element = second_element
+            except StopIteration:
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    assert(first_element[1] is None)
+                else:
+                    element_value = first_element
+                new_element_value = _coerce_union_2_token_ident_extern_string_to_token_ident(element_value)
+                new_value.append(new_element_value)
+                break
+    except StopIteration:
+        pass
+    return new_value
+
+
+@no_type_check
+def _coerce_union_4_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_list_union_2_token_ident_extern_string_punct_union_2_token_ident_extern_string_token_comma_none_to_punct_token_ident_token_comma(value: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None') -> 'Punctuated[PyIdent, PyComma]':
+    if value is None:
+        return Punctuated()
+    elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
+        new_value = Punctuated()
+        iterator = iter(value)
+        try:
+            first_element = next(iterator)
+            while True:
+                try:
+                    second_element = next(iterator)
+                    if isinstance(first_element, tuple):
+                        element_value = first_element[0]
+                        element_separator = first_element[1]
+                        assert(element_separator is not None)
+                    else:
+                        element_value = first_element
+                        element_separator = PyComma()
+                    new_element_value = _coerce_union_2_token_ident_extern_string_to_token_ident(element_value)
+                    new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                    new_value.append(new_element_value, new_element_separator)
+                    first_element = second_element
+                except StopIteration:
+                    if isinstance(first_element, tuple):
+                        element_value = first_element[0]
+                        assert(first_element[1] is None)
+                    else:
+                        element_value = first_element
+                    new_element_value = _coerce_union_2_token_ident_extern_string_to_token_ident(element_value)
+                    new_value.append(new_element_value)
+                    break
+        except StopIteration:
+            pass
+        return new_value
+    else:
+        raise ValueError('the coercion from Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None to Punctuated[PyIdent, PyComma] failed')
+
+
+@no_type_check
+def _coerce_union_5_tuple_3_union_2_token_open_paren_none_union_4_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_list_union_2_token_ident_extern_string_punct_union_2_token_ident_extern_string_token_comma_none_union_2_token_close_paren_none_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_list_union_2_token_ident_extern_string_punct_union_2_token_ident_extern_string_token_comma_none_to_union_2_tuple_3_token_open_paren_punct_token_ident_token_comma_token_close_paren_none(value: 'tuple[PyOpenParen | None, Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None, PyCloseParen | None] | Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None') -> 'tuple[PyOpenParen, Punctuated[PyIdent, PyComma], PyCloseParen] | None':
+    if isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
+        return (PyOpenParen(), _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_list_union_2_token_ident_extern_string_punct_union_2_token_ident_extern_string_token_comma_to_punct_token_ident_token_comma(value), PyCloseParen())
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_open_paren_none_to_token_open_paren(value[0]), _coerce_union_4_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_list_union_2_token_ident_extern_string_punct_union_2_token_ident_extern_string_token_comma_none_to_punct_token_ident_token_comma(value[1]), _coerce_union_2_token_close_paren_none_to_token_close_paren(value[2]))
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from tuple[PyOpenParen | None, Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None, PyCloseParen | None] | Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None to tuple[PyOpenParen, Punctuated[PyIdent, PyComma], PyCloseParen] | None failed')
+
+
+@no_type_check
+def _coerce_union_2_token_asterisk_asterisk_none_to_token_asterisk_asterisk(value: 'PyAsteriskAsterisk | None') -> 'PyAsteriskAsterisk':
+    if value is None:
+        return PyAsteriskAsterisk()
+    elif isinstance(value, PyAsteriskAsterisk):
+        return value
+    else:
+        raise ValueError('the coercion from PyAsteriskAsterisk | None to PyAsteriskAsterisk failed')
+
+
+@no_type_check
+def _coerce_union_2_token_slash_none_to_token_slash(value: 'PySlash | None') -> 'PySlash':
+    if value is None:
+        return PySlash()
+    elif isinstance(value, PySlash):
+        return value
+    else:
+        raise ValueError('the coercion from PySlash | None to PySlash failed')
+
+
+@no_type_check
+def _coerce_union_2_token_at_sign_none_to_token_at_sign(value: 'PyAtSign | None') -> 'PyAtSign':
+    if value is None:
+        return PyAtSign()
+    elif isinstance(value, PyAtSign):
+        return value
+    else:
+        raise ValueError('the coercion from PyAtSign | None to PyAtSign failed')
+
+
+@no_type_check
+def _coerce_union_2_token_def_keyword_none_to_token_def_keyword(value: 'PyDefKeyword | None') -> 'PyDefKeyword':
+    if value is None:
+        return PyDefKeyword()
+    elif isinstance(value, PyDefKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyDefKeyword | None to PyDefKeyword failed')
+
+
+@no_type_check
+def _coerce_variant_param_to_variant_param(value: 'PyParam') -> 'PyParam':
+    return value
+
+
+@no_type_check
+def _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_comma_none_punct_variant_param_token_comma_none_to_punct_variant_param_token_comma(value: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | Punctuated[PyParam, PyComma] | None') -> 'Punctuated[PyParam, PyComma]':
+    if value is None:
+        return Punctuated()
+    elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
+        new_value = Punctuated()
+        iterator = iter(value)
+        try:
+            first_element = next(iterator)
+            while True:
+                try:
+                    second_element = next(iterator)
+                    if isinstance(first_element, tuple):
+                        element_value = first_element[0]
+                        element_separator = first_element[1]
+                        assert(element_separator is not None)
+                    else:
+                        element_value = first_element
+                        element_separator = PyComma()
+                    new_element_value = _coerce_variant_param_to_variant_param(element_value)
+                    new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                    new_value.append(new_element_value, new_element_separator)
+                    first_element = second_element
+                except StopIteration:
+                    if isinstance(first_element, tuple):
+                        element_value = first_element[0]
+                        assert(first_element[1] is None)
+                    else:
+                        element_value = first_element
+                    new_element_value = _coerce_variant_param_to_variant_param(element_value)
+                    new_value.append(new_element_value)
+                    break
+        except StopIteration:
+            pass
+        return new_value
+    else:
+        raise ValueError('the coercion from Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | Punctuated[PyParam, PyComma] | None to Punctuated[PyParam, PyComma] failed')
+
+
+@no_type_check
+def _coerce_union_2_token_r_arrow_none_to_token_r_arrow(value: 'PyRArrow | None') -> 'PyRArrow':
+    if value is None:
+        return PyRArrow()
+    elif isinstance(value, PyRArrow):
+        return value
+    else:
+        raise ValueError('the coercion from PyRArrow | None to PyRArrow failed')
+
+
+@no_type_check
+def _coerce_union_3_variant_expr_tuple_2_union_2_token_r_arrow_none_variant_expr_none_to_union_2_tuple_2_token_r_arrow_variant_expr_none(value: 'PyExpr | tuple[PyRArrow | None, PyExpr] | None') -> 'tuple[PyRArrow, PyExpr] | None':
+    if is_py_expr(value):
+        return (PyRArrow(), _coerce_variant_expr_to_variant_expr(value))
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_r_arrow_none_to_token_r_arrow(value[0]), _coerce_variant_expr_to_variant_expr(value[1]))
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from PyExpr | tuple[PyRArrow | None, PyExpr] | None to tuple[PyRArrow, PyExpr] | None failed')
+
+
+@no_type_check
+def _coerce_union_2_list_variant_stmt_none_to_list_variant_stmt(value: 'Sequence[PyStmt] | None') -> 'Sequence[PyStmt]':
+    if value is None:
+        return list()
+    elif isinstance(value, list):
+        new_elements = list()
+        for value_element in value:
+            new_elements.append(_coerce_variant_stmt_to_variant_stmt(value_element))
+        return new_elements
+    else:
+        raise ValueError('the coercion from Sequence[PyStmt] | None to Sequence[PyStmt] failed')
 
 

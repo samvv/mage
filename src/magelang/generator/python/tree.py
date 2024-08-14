@@ -227,7 +227,7 @@ def generate_tree(
 
         params.extend(required)
         if optional:
-            params.append(PySepParam())
+            params.append(PyKwSepParam())
             params.extend(optional)
 
         body.append(PyFuncDef(
