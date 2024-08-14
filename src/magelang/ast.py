@@ -1,6 +1,6 @@
 
 from functools import cache
-import math
+import sys
 from typing import TYPE_CHECKING, Callable, Generator, assert_never
 
 
@@ -219,7 +219,7 @@ class HideExpr(ExprBase):
             action = self.action
         return HideExpr(expr=expr, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
 
-POSINF = math.inf
+POSINF = sys.maxsize
 
 class RepeatExpr(ExprBase):
 
