@@ -506,6 +506,10 @@ def emit(node: PyNode) -> str:
             return
 
         if isinstance(node, PyFuncDef):
+            for decorator in node.decorators:
+                visit_token(decorator.at_sign)
+                visit_expr(decorator.expr)
+                out.write('\n')
             if node.async_keyword is not None:
                 visit_token(node.async_keyword)
             visit_token(node.def_keyword)
