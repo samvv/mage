@@ -567,5 +567,9 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         if rule.expr is not None:
             for_each_expr(rule.expr, lambda expr: visit(expr, rule))
 
+    specs.add(VariantSpec('token', list((spec.name, TokenType(spec.name)) for spec in specs if isinstance(spec, TokenSpec))))
+    specs.add(VariantSpec('node', list((spec.name, NodeType(spec.name)) for spec in specs if isinstance(spec, NodeSpec))))
+    specs.add(VariantSpec('syntax', [ ('node', VariantType('node')), ('token', VariantType('token')) ]))
+
     return specs
 

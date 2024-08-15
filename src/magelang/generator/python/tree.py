@@ -92,40 +92,6 @@ def generate_tree(
         PyClassDef(base_token_class_name, bases=[ 'BaseToken' ], body=[
             PyPassStmt(),
         ]),
-        # def is_foo_token(value: Any) -> TypeGuard[FooToken]:
-        #     return isinstance(value, BaseFooToken)
-        PyFuncDef(
-            is_token_name,
-            params=[ PyNamedParam(PyNamedPattern('value'), annotation=PyNamedExpr('Any')) ],
-            return_type=PySubscriptExpr(PyNamedExpr('TypeGuard'), slices=[ PyConstExpr(token_type_name) ]),
-            body=[
-                PyRetStmt(expr=build_isinstance(PyNamedExpr('value'), PyNamedExpr(base_token_class_name))),
-            ]
-        ),
-        # def is_foo_node(value: Any) -> TypeGuard[FooNode]:
-        #     return isinstance(value, BaseFooNode)
-        PyFuncDef(
-            is_node_name,
-            params=[ PyNamedParam(PyNamedPattern('value'), annotation=PyNamedExpr('Any')) ],
-            return_type=PySubscriptExpr(PyNamedExpr('TypeGuard'), slices=[ PyConstExpr(node_type_name) ]),
-            body=[
-                PyRetStmt(expr=build_isinstance(PyNamedExpr('value'), PyNamedExpr(base_node_class_name))),
-            ]
-        ),
-        # def is_foo_syntax(value: Any) -> TypeGuard[FooSyntax]:
-        #     return isinstance(value, BaseFooSyntax)
-        PyFuncDef(
-            is_syntax_name,
-            params=[ PyNamedParam(PyNamedPattern('value'), annotation=PyNamedExpr('Any')) ],
-            return_type=PySubscriptExpr(PyNamedExpr('TypeGuard'), slices=[ PyConstExpr(syntax_type_name) ]),
-            body=[
-                PyRetStmt(expr=PyInfixExpr(
-                    PyCallExpr(PyNamedExpr(is_node_name), args=[ PyNamedExpr('value') ]),
-                    PyOrKeyword(),
-                    PyCallExpr(PyNamedExpr(is_token_name), args=[ PyNamedExpr('value') ]),
-                )),
-            ]
-        ),
     ]
 
     defs = {}
@@ -315,36 +281,6 @@ def generate_tree(
             parent_type = get_parent_type(spec.name)
             parent_type_name = f'{to_class_name(spec.name, prefix)}Parent'
             stmts.append(PyTypeAliasStmt(parent_type_name, gen_py_type(parent_type, prefix)))
-
-    # Generates:
-    #
-    # Token = Comma | Dot | Ident | ...
-    stmts.append(
-        PyAssignStmt(
-            pattern=PyNamedPattern(token_type_name),
-            value=build_union(PyNamedExpr(to_class_name(name, prefix)) for name in token_names)
-        )
-    )
-
-    # Generates:
-    #
-    # Node = Foo | Bar | ...
-    stmts.append(
-        PyAssignStmt(
-            pattern=PyNamedPattern(node_type_name),
-            value=build_union(PyNamedExpr(to_class_name(name, prefix)) for name in node_names)
-        )
-    )
-
-    # Generates:
-    #
-    # Syntax = Token | Node
-    stmts.append(
-        PyAssignStmt(
-            pattern=PyNamedPattern(syntax_type_name),
-            value=build_union([ PyNamedExpr(token_type_name), PyNamedExpr(node_type_name) ])
-        )
-    )
 
     stmts.extend(defs.values())
 
