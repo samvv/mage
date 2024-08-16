@@ -219,7 +219,7 @@ def is_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences: b
             visited.add(ty.name)
             spec = specs.lookup(ty.name)
             assert(isinstance(spec, NodeSpec))
-            return all(visit(field.ty, allow_empty_sequences) for field in spec.members)
+            return all(visit(field.ty, allow_empty_sequences) for field in spec.fields)
         if isinstance(ty, TokenType):
             if ty.name in visited:
                 return False
@@ -383,7 +383,7 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
             optional_fields: list[Field] = []
             required_fields: list[Field] = []
 
-            for field in spec.members:
+            for field in spec.fields:
                 if is_default_constructible(field.ty, specs=specs):
                     optional_fields.append(field)
                 else:

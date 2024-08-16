@@ -67,7 +67,7 @@ def generate_tree_types(
             init_required = []
             init_optional = []
 
-            for field in spec.members:
+            for field in spec.fields:
                 param_type, _ = gen_initializers(field.ty, PyNamedExpr('_'), defs=defs, specs=specs, prefix=prefix)
                 param_type_str = emit(gen_py_type(param_type, prefix))
                 body.append(PyAssignStmt(

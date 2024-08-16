@@ -154,7 +154,7 @@ class TokenSpec(SpecBase):
 @dataclass
 class NodeSpec(SpecBase):
     name: str
-    members: list[Field]
+    fields: list[Field]
 
 @dataclass
 class VariantSpec(SpecBase):
@@ -233,7 +233,7 @@ def is_static(ty: Type, specs: Specs) -> bool:
             visited.add(ty.name)
             spec = specs.lookup(ty.name)
             assert(isinstance(spec, NodeSpec))
-            return all(visit(field.ty) for field in spec.members)
+            return all(visit(field.ty) for field in spec.fields)
         if isinstance(ty, TokenType):
             if ty.name in visited:
                 return False

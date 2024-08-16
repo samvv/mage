@@ -69,7 +69,7 @@ def generate_tree(
         for spec in specs:
             if not isinstance(spec, NodeSpec):
                 continue
-            for field in spec.members:
+            for field in spec.fields:
                 add_to_parent_nodes(spec.name, field.ty)
 
     stmts: list[PyStmt] = [
@@ -149,7 +149,7 @@ def generate_tree(
         required: list[PyParam] = []
         optional: list[PyParam] = []
 
-        for field in spec.members:
+        for field in spec.fields:
 
             param_type, param_expr = gen_initializers(field.ty, PyNamedExpr(field.name), defs=defs, specs=specs, prefix=prefix)
             init_body.append(PyAssignStmt(
@@ -206,7 +206,7 @@ def generate_tree(
         derive_body = []
         derive_args = []
 
-        for field in spec.members:
+        for field in spec.fields:
             #coerce_type, coerce_expr = gen_initializers(field.ty, PyNamedExpr(field.name), specs=specs, defs=defs, prefix=prefix)
             derive_body.append(PyIfStmt(first=PyIfCase(
                 test=build_is_none(PyNamedExpr(field.name)),
