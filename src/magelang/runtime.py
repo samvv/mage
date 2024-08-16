@@ -50,8 +50,8 @@ _P_contra = TypeVar('_P_contra', contravariant=True)
 class Punctuated(Generic[_E_contra, _P_contra]):
 
     def __init__(self, elements: Iterable[tuple[_E_contra, _P_contra | None]] | None = None) -> None:
-        self.elements = []
-        self.last = None
+        self.elements: list[tuple[_E_contra, _P_contra]] = []
+        self.last: _E_contra | None = None
         if elements is not None:
           for element, sep  in elements:
               self.append(element, sep)
