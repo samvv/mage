@@ -79,9 +79,16 @@ def generate_visitor(
                             PyNamedPattern(separator_name)
                         ],
                     ),
-                    expr=target,
-                    body=list(gen_proc_call(ty.element_type, PyNamedExpr(element_name)))
+                    expr=PyAttrExpr(target, 'elements'),
+                    body=[
+                        *gen_proc_call(ty.element_type, PyNamedExpr(element_name)),
+                        *gen_proc_call(ty.separator_type, PyNamedExpr(separator_name)),
+                    ]
                 )
+                yield PyIfStmt(first=PyIfCase(
+                    test=PyInfixExpr(PyAttrExpr(target, 'last'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')),
+                    body=list(gen_proc_call(ty.element_type, PyAttrExpr(target, 'last')))
+                ))
                 return
             if isinstance(ty, UnionType):
                 cases: list[Case] = []
