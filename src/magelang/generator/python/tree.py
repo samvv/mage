@@ -38,7 +38,7 @@ def generate_tree(
     def get_parent_type(name: str) -> Type:
         if name not in parent_nodes:
             return NeverType()
-        types = FrozenList(name_to_type(name) for name in parent_nodes[name])
+        types = FrozenList(name_to_type(name) for name in sorted(parent_nodes[name]))
         types.freeze()
         return UnionType(types)
 
