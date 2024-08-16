@@ -132,6 +132,9 @@ def generate_visitor(
                 )))
 
         return PyFuncDef(
+            # We add `@typing.no_type_check` to drastically improve the performance of the type checker
+            # Remove the decorator manually if you want to make sure the generated code is correct
+            decorators=[ PyDecorator(PyNamedExpr('no_type_check')) ],
             name=f'for_each_{namespaced(name, prefix)}',
             params=[
                 PyNamedParam(
@@ -150,11 +153,14 @@ def generate_visitor(
 
     return PyModule(stmts=[
         PyImportFromStmt(
-            PyAbsolutePath(PyQualName('typing')),
-            aliases=[ PyFromAlias('Callable'), ]
+            PyAbsolutePath('typing'),
+            aliases=[
+                PyFromAlias('Callable'),
+                PyFromAlias('no_type_check'),
+            ]
         ),
         PyImportFromStmt(
-            PyRelativePath(dots=[ PyDot() ], name=PyQualName('cst')),
+            PyRelativePath(dots=1, name=PyQualName('cst')),
             aliases=[ PyFromAlias(PyAsterisk()) ]
         ),
         *variant_visitors,
