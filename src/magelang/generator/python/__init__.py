@@ -13,6 +13,7 @@ def generate(
     grammar: Grammar,
     prefix = '',
     cst_parent_pointers = False,
+    debug = False,
 ) -> Files:
     specs = grammar_to_specs(grammar)
     return [
@@ -20,6 +21,6 @@ def generate(
         #('cst.pyi', emit(generate_tree_types(specs, prefix=prefix, gen_parent_pointers=cst_parent_pointers))),
         ('lexer.py', emit(generate_lexer(grammar, prefix=prefix))),
         ('test_lexer.py', emit(generate_test_lexer(grammar, prefix=prefix))),
-        ('visitor.py', emit(generate_visitor(grammar, prefix=prefix))),
+        ('visitor.py', emit(generate_visitor(grammar, prefix=prefix, debug=debug))),
     ]
 

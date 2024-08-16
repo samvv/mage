@@ -31,6 +31,7 @@ def _do_generate(args) -> int:
     filename = args.file[0]
     lang = args.lang
     opt = not args.no_opt
+    debug = args.debug
     skip_checks = args.skip_checks
     prefix = args.prefix
     dest_dir = Path(args.out_dir)
@@ -49,7 +50,13 @@ def _do_generate(args) -> int:
 
     prefix = prefix + '_' if prefix else ''
 
-    for fname, text in generate(grammar, lang, prefix=prefix, cst_parent_pointers=cst_parent_pointers):
+    for fname, text in generate(
+        grammar,
+        lang,
+        prefix=prefix,
+        cst_parent_pointers=cst_parent_pointers,
+        debug=debug,
+    ):
         out_path = dest_dir / fname
         out_path.parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, 'w') as f:
@@ -105,9 +112,10 @@ def main() -> int:
     check_parser.set_defaults(func=_do_check)
 
     generate_parser = subparsers.add_parser('generate', help='Generate programming code from a grammar')
-
+ 
     generate_parser.add_argument('lang', choices=get_generator_languages(), help='The name of the template to use')
     generate_parser.add_argument('file', nargs=1, help='A path to a grammar file')
+    generate_parser.add_argument('--debug', action=argparse.BooleanOptionalAction, help='Generate extra checks that may affect performance')
     generate_parser.add_argument('--skip-checks', action=argparse.BooleanOptionalAction, help='Skip all sanity checks for the given grammar')
     generate_parser.add_argument('--no-opt', action=argparse.BooleanOptionalAction, help='Disable any optimisations')
     generate_parser.add_argument('--feat-all', action=argparse.BooleanOptionalAction, help='Enable all output features (off by default)')

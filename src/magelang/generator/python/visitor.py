@@ -8,6 +8,7 @@ from .util import build_cond, Case, build_isinstance, gen_shallow_test, namespac
 def generate_visitor(
     grammar: Grammar,
     prefix='',
+    debug = False,
 ) -> PyModule:
 
     specs = grammar_to_specs(grammar)
@@ -131,10 +132,13 @@ def generate_visitor(
                     ],
                 )))
 
+        decorators = []
+        if not debug:
+            # We add `@typing.no_type_check` to drastically improve the performance of the type checker.
+            decorators.append(PyDecorator(PyNamedExpr('no_type_check')))
+
         return PyFuncDef(
-            # We add `@typing.no_type_check` to drastically improve the performance of the type checker
-            # Remove the decorator manually if you want to make sure the generated code is correct
-            decorators=[ PyDecorator(PyNamedExpr('no_type_check')) ],
+            decorators=decorators,
             name=f'for_each_{namespaced(name, prefix)}',
             params=[
                 PyNamedParam(

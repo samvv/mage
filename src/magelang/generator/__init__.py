@@ -15,6 +15,7 @@ class _GenerateFn(Protocol):
         grammar: Grammar,
         prefix: str = '',
         cst_parent_pointers: bool = False,
+        debug: bool = False,
     ) -> Files: ...
 
 _generate_by_language: dict[str, _GenerateFn] = {}
@@ -32,6 +33,8 @@ def generate(
     lang: str,
     prefix: str = '',
     cst_parent_pointers: bool = False,
+    debug: bool = False,
 ) -> Files:
     generate = _generate_by_language[lang]
-    return generate(grammar, prefix=prefix, cst_parent_pointers=cst_parent_pointers)
+    return generate(grammar, prefix=prefix, cst_parent_pointers=cst_parent_pointers, debug=debug)
+
