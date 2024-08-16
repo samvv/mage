@@ -29,21 +29,40 @@ def generate_visitor(
 
         body: list[PyStmt] = []
 
+        def gen_each_field(spec: NodeSpec, target: PyExpr) -> Generator[PyStmt, None, None]:
+            for field in spec.fields:
+                if contains_type(field.ty, main_type, specs=specs):
+                    yield from gen_proc_call(field.ty, PyAttrExpr(expr=target, name=field.name))
+
         def gen_proc_call(ty: Type, target: PyExpr) -> Generator[PyStmt, None, None]:
+            if is_type_assignable(ty, main_type, specs=specs):
+                yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ target ]))
+                return
             if isinstance(ty, NoneType):
-                yield PyPassStmt()
                 return
             if isinstance(ty, VariantType):
-                yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ target ]))
+                spec = specs.lookup(ty.name)
+                assert(isinstance(spec, VariantSpec))
+                cases = []
+                for _, ty_2 in spec.members:
+                    body = list(gen_proc_call(ty_2, target))
+                    if body:
+                        cases.append((
+                            gen_shallow_test(ty_2, target, prefix),
+                            body
+                        ))
+                yield from build_cond(cases)
                 return
-            if isinstance(ty, TokenType) or isinstance(ty, NodeType):
-                yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ target ]))
+            if isinstance(ty, NodeType):
+                spec = specs.lookup(ty.name)
+                assert(isinstance(spec, NodeSpec))
+                yield from gen_each_field(spec, target)
+                return
+            if isinstance(ty, TokenType):
                 return
             if isinstance(ty, TupleType):
                 for i, element_type in enumerate(ty.element_types):
-                    tmp = generate_temporary(prefix='element')
-                    yield PyAssignStmt(pattern=PyNamedPattern(tmp), value=PySubscriptExpr(expr=target, slices=[ PyConstExpr(literal=i) ]))
-                    yield from gen_proc_call(element_type, PyNamedExpr(tmp))
+                    yield from gen_proc_call(element_type, PySubscriptExpr(expr=target, slices=[ PyConstExpr(literal=i) ]))
                 return
             if isinstance(ty, ListType):
                 element_name = generate_temporary(prefix='element')
@@ -66,11 +85,12 @@ def generate_visitor(
             if isinstance(ty, UnionType):
                 cases: list[Case] = []
                 for element_type in ty.types:
-                    cases.append((
-                        gen_shallow_test(element_type, target, prefix),
-                        list(gen_proc_call(element_type, target))
-                    ))
-                cases.append((None, [ PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr('ValueError'))) ]))
+                    body = list(gen_proc_call(element_type, target))
+                    if body:
+                        cases.append((
+                            gen_shallow_test(element_type, target, prefix),
+                            body
+                        ))
                 yield from build_cond(cases)
                 return
             raise RuntimeError(f'unexpected {ty}')
@@ -85,10 +105,7 @@ def generate_visitor(
                 # We're going to start a new scope, so all previous temporary names may be used once again
                 generate_temporary.reset()
 
-                if_body: list[PyStmt] = []
-                for field in spec.fields:
-                    if contains_type(field.ty, main_type, specs=specs):
-                        if_body.extend(gen_proc_call(field.ty, PyAttrExpr(expr=PyNamedExpr(value_param_name), name=field.name)))
+                if_body = list(gen_each_field(spec, PyNamedExpr(value_param_name)))
                 if_body.append(PyRetStmt())
                 body.append(PyIfStmt(first=PyIfCase(
                     test=PyCallExpr(
