@@ -2,15 +2,17 @@
 from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Any, Iterator, assert_never
+from frozenlist import FrozenList
 
 from magelang.eval import accepts
+from magelang.logging import warn
 from magelang.util import nonnull, to_snake_case
 
 from .ast import *
 
 type Type = ExternType | NodeType | TokenType | VariantType | NeverType | TupleType | ListType | PunctType | UnionType | NoneType | AnyType
 
-@dataclass
+@dataclass(frozen=True)
 class TypeBase:
 
     @abstractmethod
@@ -20,12 +22,12 @@ class TypeBase:
         assert(isinstance(other, TypeBase))
         return self.encode() < other.encode()
 
-@dataclass
-class RuleType(TypeBase):
+@dataclass(frozen=True)
+class SpecType(TypeBase):
     name: str
 
-@dataclass
-class NodeType(RuleType):
+@dataclass(frozen=True)
+class NodeType(SpecType):
     """
     Matches a leaf node in the AST/CST.
     """
@@ -33,8 +35,8 @@ class NodeType(RuleType):
     def encode(self) -> Any:
         return (1, self.name)
 
-@dataclass
-class TokenType(RuleType):
+@dataclass(frozen=True)
+class TokenType(SpecType):
     """
     Matches a token type in the CST.
     """
@@ -42,8 +44,8 @@ class TokenType(RuleType):
     def encode(self) -> Any:
         return (2, self.name)
 
-@dataclass
-class VariantType(RuleType):
+@dataclass(frozen=True)
+class VariantType(SpecType):
     """
     Matches a union of different nodes in the AST/CST.
     """
@@ -51,7 +53,7 @@ class VariantType(RuleType):
     def encode(self) -> Any:
         return (3, self.name)
 
-@dataclass
+@dataclass(frozen=True)
 class NeverType(TypeBase):
     """
     Represents a type that never matches. Mostly useful to close off a union type when generating types.
@@ -60,17 +62,17 @@ class NeverType(TypeBase):
     def encode(self) -> Any:
         return (4,)
 
-@dataclass
+@dataclass(frozen=True)
 class TupleType(TypeBase):
     """
     A type that allows values to contain a specific sequence of types.
     """
-    element_types: list[Type]
+    element_types: FrozenList[Type]
 
     def encode(self) -> Any:
-        return (5, list(ty.encode() for ty in self.element_types))
+        return (5, tuple(ty.encode() for ty in self.element_types))
 
-@dataclass
+@dataclass(frozen=True)
 class ListType(TypeBase):
     """
     A type that allows multiple values of the same underlying type.
@@ -81,7 +83,7 @@ class ListType(TypeBase):
     def encode(self) -> Any:
         return (6, self.element_type.encode(), self.required)
 
-@dataclass
+@dataclass(frozen=True)
 class PunctType(TypeBase):
     """
     A type that is like a list but where values are seperated by another type.
@@ -93,17 +95,17 @@ class PunctType(TypeBase):
     def encode(self) -> Any:
         return (7, self.element_type.encode(), self.separator_type.encode(), self.required)
 
-@dataclass
+@dataclass(frozen=True)
 class UnionType(TypeBase):
     """
     A type where any of the member types are valid.
     """
-    types: list[Type]
+    types: FrozenList[Type]
 
     def encode(self) -> Any:
-        return (8, list(ty.encode() for ty in self.types))
+        return (8, tuple(ty.encode() for ty in self.types))
 
-@dataclass
+@dataclass(frozen=True)
 class NoneType(TypeBase):
     """
     A type that indicates that the value is empty.
@@ -114,7 +116,7 @@ class NoneType(TypeBase):
     def encode(self) -> Any:
         return (9,)
 
-@dataclass
+@dataclass(frozen=True)
 class ExternType(TypeBase):
     """
     A type that is directly representing the Foo part in a `pub foo -> Foo = bar` 
@@ -124,7 +126,7 @@ class ExternType(TypeBase):
     def encode(self) -> Any:
         return (10, self.name)
 
-@dataclass
+@dataclass(frozen=True)
 class AnyType(TypeBase):
     """
     A type that is used as a placeholder when no more specific type is known.
@@ -132,6 +134,54 @@ class AnyType(TypeBase):
 
     def encode(self) -> Any:
         return (10,)
+
+def rewrite_each_type(ty: Type, proc: Callable[[Type], Type | None]) -> Type:
+    updated = proc(ty)
+    if updated is not None:
+        return updated
+    if isinstance(ty, NoneType) \
+        or isinstance(ty, AnyType) \
+        or isinstance(ty, NeverType) \
+        or isinstance(ty, SpecType) \
+        or isinstance(ty, ExternType):
+        return ty
+    if isinstance(ty, ListType):
+        new_element_type = rewrite_each_type(ty.element_type, proc)
+        if new_element_type is ty.element_type:
+            return ty
+        return ListType(new_element_type, ty.required)
+    if isinstance(ty, PunctType):
+        new_element_type = rewrite_each_type(ty.element_type, proc)
+        new_separator_type = rewrite_each_type(ty.separator_type, proc)
+        if new_element_type is ty.element_type and new_separator_type is ty.separator_type:
+            return ty
+        return PunctType(new_element_type, new_separator_type, ty.required)
+    if isinstance(ty, TupleType):
+        new_types = FrozenList[Type]()
+        changed = False
+        for ty_2 in ty.element_types:
+            new_ty_2 = rewrite_each_type(ty_2, proc)
+            if new_ty_2 is not ty_2:
+                changed = True
+            new_types.append(new_ty_2)
+        if not changed:
+            return ty
+        new_types.freeze()
+        return TupleType(new_types)
+    if isinstance(ty, UnionType):
+        new_types = FrozenList[Type]()
+        changed = False
+        for ty_2 in ty.types:
+            new_ty_2 = rewrite_each_type(ty_2, proc)
+            if new_ty_2 is not ty_2:
+                changed = True
+            new_types.append(new_ty_2)
+        if not changed:
+            return ty
+        new_types.freeze()
+        return UnionType(new_types)
+    assert_never(ty)
+
 
 @dataclass
 class Field:
@@ -192,7 +242,9 @@ class Specs:
         return iter(self.mapping.values())
 
 def make_optional(ty: Type) -> Type:
-    return UnionType([ ty, NoneType() ])
+    types = FrozenList([ ty, NoneType() ])
+    types.freeze()
+    return UnionType(types)
 
 def is_optional(ty: Type) -> bool:
     if isinstance(ty, NoneType):
@@ -204,7 +256,7 @@ def is_optional(ty: Type) -> bool:
     return False
 
 def make_unit() -> Type:
-    return TupleType([])
+    return TupleType(FrozenList())
 
 def is_unit(ty: Type) -> bool:
     return isinstance(ty, TupleType) and len(ty.element_types) == 0
@@ -330,7 +382,7 @@ def infer_type(expr: Expr, grammar: Grammar) -> Type:
         return ty
 
     if isinstance(expr, SeqExpr):
-        types = []
+        types = FrozenList()
         for element in expr.elements:
             ty = infer_type(element, grammar)
             if is_unit(ty):
@@ -338,13 +390,16 @@ def infer_type(expr: Expr, grammar: Grammar) -> Type:
             types.append(ty)
         if len(types) == 1:
             return types[0]
+        types.freeze()
         return TupleType(types)
 
     if isinstance(expr, LookaheadExpr):
         return make_unit()
 
     if isinstance(expr, ChoiceExpr):
-        return UnionType(list(infer_type(element, grammar) for element in expr.elements))
+        types = FrozenList(infer_type(element, grammar) for element in expr.elements)
+        types.freeze()
+        return UnionType(types)
 
     assert_never(expr)
 
@@ -354,6 +409,15 @@ def flatten_union(ty: Type) -> Generator[Type, None, None]:
             yield from flatten_union(ty)
     else:
         yield ty
+
+def spec_to_type(spec: Spec) -> Type:
+    if isinstance(spec, TokenSpec):
+        return TokenType(spec.name)
+    if isinstance(spec, NodeSpec):
+        return NodeType(spec.name)
+    if isinstance(spec, VariantSpec):
+        return VariantType(spec.name)
+    assert_never(spec)
 
 def do_types_shallow_overlap(a: Type, b: Type) -> bool:
     """
@@ -365,6 +429,9 @@ def do_types_shallow_overlap(a: Type, b: Type) -> bool:
 
     if isinstance(a, NeverType) or isinstance(b, NeverType):
         return False
+
+    if isinstance(a, AnyType) or isinstance(b, AnyType):
+        return True
 
     if isinstance(a, UnionType):
         return any(do_types_shallow_overlap(element_type, b) for element_type in a.types)
@@ -398,13 +465,25 @@ def do_types_shallow_overlap(a: Type, b: Type) -> bool:
 
     return False
 
+def expand_variant_types(ty: Type, *, specs: Specs) -> Type:
+    def rewriter(ty: Type) -> Type | None:
+        if isinstance(ty, VariantType):
+            types = FrozenList()
+            spec = specs.lookup(ty.name)
+            assert(isinstance(spec, VariantSpec))
+            for _, ty_2 in spec.members:
+                types.append(rewrite_each_type(ty_2, rewriter))
+            types.freeze()
+            return UnionType(types)
+    return rewrite_each_type(ty, rewriter)
+
 def simplify_type(ty: Type) -> Type:
     if isinstance(ty, NoneType) \
         or isinstance(ty, NeverType) \
-        or isinstance(ty, VariantType) \
         or isinstance(ty, NodeType) \
         or isinstance(ty, ExternType) \
         or isinstance(ty, AnyType) \
+        or isinstance(ty, VariantType) \
         or isinstance(ty, TokenType):
         return ty
     if isinstance(ty, ListType):
@@ -413,9 +492,9 @@ def simplify_type(ty: Type) -> Type:
             ty.required
         )
     if isinstance(ty, TupleType):
-        return TupleType(
-            list(simplify_type(ty) for ty in ty.element_types)
-        )
+        new_element_types = FrozenList(simplify_type(ty) for ty in ty.element_types)
+        new_element_types.freeze()
+        return TupleType(new_element_types)
     if isinstance(ty, PunctType):
         return PunctType(
             simplify_type(ty.element_type),
@@ -433,7 +512,7 @@ def simplify_type(ty: Type) -> Type:
         types.sort()
         iterator = iter(types)
         prev = next(iterator)
-        dedup_types = [ prev ]
+        dedup_types = FrozenList([ prev ])
         while True:
             try:
                 curr = next(iterator)
@@ -447,8 +526,199 @@ def simplify_type(ty: Type) -> Type:
             return NeverType()
         if len(dedup_types) == 1:
             return types[0]
-        return UnionType(types)
+        dedup_types.freeze()
+        return UnionType(dedup_types)
     assert_never(ty)
+
+def is_type_assignable(left: Type, right: Type, *, specs: Specs) -> bool:
+    if isinstance(left, NeverType) or isinstance(right, NeverType):
+        return False
+    if isinstance(left, AnyType) or isinstance(right, AnyType):
+        return True
+    if isinstance(left, NoneType) and isinstance(right, NoneType):
+        return True
+    if isinstance(left, ExternType) and isinstance(right, ExternType):
+        return left.name == right.name
+    if isinstance(left, NodeType) and isinstance(right, NodeType):
+        return left.name == right.name
+    if isinstance(left, TokenType) and isinstance(right, TokenType):
+        return left.name == right.name
+    if isinstance(left, VariantType):
+        spec = specs.lookup(left.name)
+        assert(isinstance(spec, VariantSpec))
+        return all(is_type_assignable(ty, right, specs=specs) for _, ty in spec.members)
+    if isinstance(right, VariantType):
+        spec = specs.lookup(right.name)
+        assert(isinstance(spec, VariantSpec))
+        return any(is_type_assignable(left, ty, specs=specs) for _, ty in spec.members)
+    if isinstance(left, ListType) and isinstance(right, ListType):
+        return is_type_assignable(left.element_type, right.element_type, specs=specs)
+    if isinstance(left, PunctType) and isinstance(right, ListType):
+        return is_type_assignable(left.element_type, right.element_type, specs=specs) \
+           and is_type_assignable(left.element_type, right.element_type, specs=specs)
+    if isinstance(left, UnionType):
+        return all(is_type_assignable(ty, right, specs=specs) for ty in left.types)
+    if isinstance(right, UnionType):
+        return any(is_type_assignable(left, ty, specs=specs) for ty in right.types)
+    if isinstance(left, TupleType) and isinstance(right, TupleType):
+        if len(left.element_types) != len(right.element_types):
+            return False
+        for a, b in zip(left.element_types, right.element_types):
+            if not is_type_assignable(a, b, specs=specs):
+                return False
+        return True
+    return False
+
+
+def expand_type(ty: Type):
+    if isinstance(ty, ListType):
+        yield ty.element_type
+    elif isinstance(ty, PunctType):
+        yield ty.element_type
+        yield ty.separator_type
+    elif isinstance(ty, TupleType):
+        for element_type in ty.element_types:
+            yield element_type
+    elif isinstance(ty, UnionType):
+        for ty_2 in ty.types:
+            yield ty_2
+
+def contains_type(ty: Type, target_type: Type, *, specs: Specs) -> bool:
+    if is_type_assignable(ty, target_type, specs=specs):
+        return True
+    for ty_2 in expand_type(ty):
+        if contains_type(ty_2, target_type, specs=specs):
+            return True
+    return False
+
+def is_cyclic(name: str, *, specs: Specs) -> bool:
+
+    visited = set[str]()
+
+    spec = specs.lookup(name)
+    spec_type = expand_variant_types(spec_to_type(spec), specs=specs)
+
+    def check(ty: Type, first = False) -> bool:
+ 
+        # If the type is assignable to our original type, that means we have
+        # detected a cycle.
+        if not first and is_type_assignable(ty, spec_type, specs=specs):
+            return True
+
+        if isinstance(ty, NodeType):
+
+            # We encountered this type before. This means that there is a
+            # cycle, but it's not the cycle we are interested in.
+            if ty.name in visited:
+                return False
+
+            visited.add(ty.name)
+
+            spec = specs.lookup(ty.name)
+            assert(isinstance(spec, NodeSpec))
+
+            return any(check(expand_variant_types(field.ty, specs=specs)) for field in spec.fields)
+
+        for ty_2 in expand_type(ty):
+            if check(ty_2, first):
+                return True
+        return False
+
+    return check(spec_type, first=True)
+
+def merge_similar_types(ty: Type) -> Type:
+    """
+    Merges the elements of similarly structured types to a single type.
+
+    For example, the type `List[int] | List[str]` becomes `List[int | str]`.
+
+    Note that this is semantically incorrect, but some (mostly dynamic)
+    programming languages can use this to write less intensive checks for a
+    value that has this type.
+    """
+
+    # The resulting types that will be part of the output union type
+    types = FrozenList[Type]()
+
+    # Any types that should be inside of a `List[...]` type
+    list_element_types = FrozenList[Type]()
+
+    # `True` if all lists in the original type are required, `False` otherwise
+    list_required = True
+
+    # Any type that should go inside a `PunctType.element_type`
+    punct_value_types = FrozenList[Type]()
+
+    # Any type that should go inside a `PunctType.separator_type`
+    punct_sep_types = FrozenList[Type]()
+
+    # `True` if all punctuated types in the original type are required, `False`
+    # otherwise
+    punct_required = True
+
+    # Holds tuples sorted by length, where each entry in the hash table
+    # corresponds to another table that stores all possible elements for that
+    # index.
+    tuples_by_len = dict[int, list[FrozenList[Type]]]()\
+
+    for ty_2 in flatten_union(ty):
+
+        if isinstance(ty_2, TupleType):
+            n = len(ty_2.element_types)
+            if n not in tuples_by_len:
+                new = list()
+                for _ in range(0, n):
+                    new.append(FrozenList())
+                tuples_by_len[n] = new
+            else:
+                new = tuples_by_len[n]
+            for i, ty_3 in enumerate(ty_2.element_types):
+                new[i].append(merge_similar_types(ty_3))
+
+        if isinstance(ty_2, ListType):
+            list_element_types.append(merge_similar_types(ty_2.element_type))
+            if not ty_2.required:
+                list_required = False
+
+        elif isinstance(ty_2, PunctType):
+            punct_value_types.append(merge_similar_types(ty_2.element_type))
+            punct_sep_types.append(merge_similar_types(ty_2.separator_type))
+            if not ty_2.required:
+                punct_required = False
+
+        else:
+            # If we got here, the type is not structural. In that case, we just
+            # leave it as-is.
+            types.append(ty_2)
+
+    # Gather all list elements under a single `List[...]`, if any
+    if list_element_types:
+        list_element_types.freeze()
+        types.append(ListType(UnionType(list_element_types), list_required))
+
+    # Gather all punctuated types under a single `Punct[..., ....]`, if any
+    if punct_value_types or punct_sep_types:
+        assert(punct_value_types)
+        assert(punct_sep_types)
+        punct_value_types.freeze()
+        punct_sep_types.freeze()
+        types.append(PunctType(UnionType(punct_value_types), UnionType(punct_sep_types), punct_required))
+
+    # Gather all tuples, by traversing the hash table and freezing the elements that are stored together
+    for tuple_elements in tuples_by_len.values():
+        new_tuple_elements = FrozenList[Type]()
+        for elements_at_index in tuple_elements:
+            elements_at_index.freeze()
+            new_tuple_elements.append(UnionType(elements_at_index))
+        new_tuple_elements.freeze()
+        types.append(TupleType(new_tuple_elements))
+
+    # Ready for construction; freeze the types.
+    types.freeze()
+
+    # Some elements might be duplicated by the previous procedure, therefore we
+    # call `simplify_type`.
+    return simplify_type(UnionType(types))
 
 def grammar_to_specs(grammar: Grammar) -> Specs:
 
@@ -476,10 +746,11 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
             return
         if isinstance(expr, SeqExpr):
             names = []
-            types = []
+            types = FrozenList()
             for element in expr.elements:
                 names.append(get_member_name(element))
                 types.append(infer_type(element, grammar))
+            types.freeze()
             yield '_'.join(names), TupleType(types)
             return
         yield get_member_name(expr), infer_type(expr, grammar)

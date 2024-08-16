@@ -258,34 +258,6 @@ def gen_default_constructor(ty: Type, *, specs: Specs, prefix: str) -> PyExpr:
                 return gen_default_constructor(ty, specs=specs, prefix=prefix)
     raise RuntimeError(f'unexpected {ty}')
 
-def merge_similar_types(ty: Type) -> Type:
-    types = []
-    list_element_types = []
-    list_required = True
-    punct_value_types = []
-    punct_sep_types = []
-    punct_required = True
-    # TODO merge tuples of same length
-    for ty_2 in flatten_union(ty):
-        if isinstance(ty_2, ListType):
-            list_element_types.append(merge_similar_types(ty_2.element_type))
-            if not ty_2.required:
-                list_required = False
-        elif isinstance(ty_2, PunctType):
-            punct_value_types.append(merge_similar_types(ty_2.element_type))
-            punct_sep_types.append(merge_similar_types(ty_2.separator_type))
-            if not ty_2.required:
-                punct_required = False
-        else:
-            types.append(ty_2)
-    if list_element_types:
-        types.append(ListType(UnionType(list_element_types), list_required))
-    if punct_value_types or punct_sep_types:
-        assert(punct_value_types)
-        assert(punct_sep_types)
-        types.append(PunctType(UnionType(punct_value_types), UnionType(punct_sep_types), punct_required))
-    return simplify_type(UnionType(types))
-
 def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: str, defs: dict[str, PyFuncDef]) -> tuple[Type, PyExpr]:
 
     param_name = 'value'
@@ -293,11 +265,12 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
     def gen_coerce_call(ty: Type, value: PyExpr, forbid_none: bool) -> tuple[Type, PyExpr]:
 
         cases: list[Case] = []
-        types: list[Type] = []
+        types = FrozenList[Type]()
         for coerce_ty, coerce_body in gen_coerce_body(ty, forbid_none):
             cases.append((gen_shallow_test(coerce_ty, PyNamedExpr(param_name), prefix), coerce_body))
             types.append(coerce_ty)
 
+        types.freeze()
         coerced_type = simplify_type(UnionType(types))
 
         id = f'{mangle_type(coerced_type)}_to_{mangle_type(ty)}'
@@ -464,9 +437,12 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
 
             separator_type, separator_expr = gen_coerce_call(ty.separator_type, PyNamedExpr(separator_name), True)
 
+            value_with_sep = FrozenList([ value_type, make_optional(separator_type) ])
+            value_with_sep.freeze()
+
             coerced_ty = UnionType([
                 ListType(value_type, ty.required),
-                ListType(TupleType([ value_type, make_optional(separator_type) ]), ty.required),
+                ListType(TupleType(value_with_sep), ty.required),
                 PunctType(value_type, separator_type, ty.required),
             ])
 
@@ -663,7 +639,7 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
                 ]
 
             new_elements: list[PyExpr] = []
-            new_element_types: list[Type] = []
+            new_element_types = FrozenList[Type]()
 
             # Generates:
             #
@@ -684,6 +660,8 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
 
                 new_elements.append(new_element_expr)
                 new_element_types.append(new_element_type)
+
+            new_element_types.freeze()
 
             yield TupleType(new_element_types), [
                 PyRetStmt(expr=PyTupleExpr(elements=new_elements)),

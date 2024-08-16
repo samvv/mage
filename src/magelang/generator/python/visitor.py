@@ -5,7 +5,7 @@ from magelang.ast import Grammar
 from magelang.repr import *
 from magelang.lang.python.cst import *
 from magelang.util import NameGenerator
-from .util import build_cond, Case, gen_shallow_test, namespaced, to_class_name
+from .util import build_cond, Case, build_isinstance, gen_shallow_test, namespaced, to_class_name
 
 def generate_visitor(
     grammar: Grammar,
@@ -16,95 +16,122 @@ def generate_visitor(
 
     generate_temporary = NameGenerator()
 
-    proc_name = 'proc'
-    syntax_param_name = 'node'
+    proc_param_name = 'proc'
+    value_param_name = 'node'
     token_type_name = to_class_name('token', prefix)
     node_type_name = to_class_name('node', prefix)
     syntax_type_name = to_class_name('syntax', prefix)
     is_token_name = f'is_{namespaced('token', prefix)}'
-    for_each_child_name = f'for_each_{namespaced('child', prefix)}'
+    for_each_syntax_name = f'for_each_{namespaced('syntax', prefix)}'
 
-    def gen_proc_call(ty: Type, target: PyExpr) -> Generator[PyStmt, None, None]:
-        if isinstance(ty, NoneType):
-            yield PyPassStmt()
-            return
-        if isinstance(ty, TokenType) or isinstance(ty, NodeType) or isinstance(ty, VariantType):
-            yield PyExprStmt(expr=PyCallExpr(operator=PyNamedExpr(proc_name), args=[ target ]))
-            return
-        if isinstance(ty, TupleType):
-            for i, element_type in enumerate(ty.element_types):
-                tmp = generate_temporary(prefix='element_')
-                yield PyAssignStmt(pattern=PyNamedPattern(tmp), value=PySubscriptExpr(expr=target, slices=[ PyConstExpr(literal=i) ]))
-                yield from gen_proc_call(element_type, PyNamedExpr(tmp))
-            return
-        if isinstance(ty, ListType):
-            element_name = generate_temporary(prefix='element_')
-            yield PyForStmt(pattern=PyNamedPattern(element_name), expr=target, body=list(gen_proc_call(ty.element_type, PyNamedExpr(element_name))))
-            return
-        if isinstance(ty, PunctType):
-            element_name = generate_temporary(prefix='element_')
-            separator_name = generate_temporary(prefix='separator_')
-            yield PyForStmt(
-                pattern=PyTuplePattern(
-                    elements=[
-                        PyNamedPattern(element_name),
-                        PyNamedPattern(separator_name)
-                    ],
-                ),
-                expr=target,
-                body=list(gen_proc_call(ty.element_type, PyNamedExpr(element_name)))
-            )
-            return
-        if isinstance(ty, UnionType):
-            cases: list[Case] = []
-            for element_type in ty.types:
-                cases.append((
-                    gen_shallow_test(element_type, target, prefix),
-                    list(gen_proc_call(element_type, target))
-                ))
-            cases.append((None, [ PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr('ValueError'))) ]))
-            yield from build_cond(cases)
-            return
-        raise RuntimeError(f'unexpected {ty}')
+    def gen_visitor(name: str) -> PyFuncDef:
 
-    body: list[PyStmt] = [
-        PyIfStmt(first=PyIfCase(
-            test=PyCallExpr(
-                operator=PyNamedExpr(is_token_name),
-                args=[ PyNamedExpr(syntax_param_name) ]
-            ),
-            body=PyRetStmt(),
-        )),
-    ]
+        main_spec = specs.lookup(name)
+        main_type = spec_to_type(main_spec)
 
+        body: list[PyStmt] = []
 
-    for spec in specs:
+        def gen_proc_call(ty: Type, target: PyExpr) -> Generator[PyStmt, None, None]:
+            if isinstance(ty, NoneType):
+                yield PyPassStmt()
+                return
+            if isinstance(ty, VariantType):
+                yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ target ]))
+                return
+            if isinstance(ty, TokenType) or isinstance(ty, NodeType):
+                yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ target ]))
+                return
+            if isinstance(ty, TupleType):
+                for i, element_type in enumerate(ty.element_types):
+                    tmp = generate_temporary(prefix='element')
+                    yield PyAssignStmt(pattern=PyNamedPattern(tmp), value=PySubscriptExpr(expr=target, slices=[ PyConstExpr(literal=i) ]))
+                    yield from gen_proc_call(element_type, PyNamedExpr(tmp))
+                return
+            if isinstance(ty, ListType):
+                element_name = generate_temporary(prefix='element')
+                yield PyForStmt(pattern=PyNamedPattern(element_name), expr=target, body=list(gen_proc_call(ty.element_type, PyNamedExpr(element_name))))
+                return
+            if isinstance(ty, PunctType):
+                element_name = generate_temporary(prefix='element')
+                separator_name = generate_temporary(prefix='separator')
+                yield PyForStmt(
+                    pattern=PyTuplePattern(
+                        elements=[
+                            PyNamedPattern(element_name),
+                            PyNamedPattern(separator_name)
+                        ],
+                    ),
+                    expr=target,
+                    body=list(gen_proc_call(ty.element_type, PyNamedExpr(element_name)))
+                )
+                return
+            if isinstance(ty, UnionType):
+                cases: list[Case] = []
+                for element_type in ty.types:
+                    cases.append((
+                        gen_shallow_test(element_type, target, prefix),
+                        list(gen_proc_call(element_type, target))
+                    ))
+                cases.append((None, [ PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr('ValueError'))) ]))
+                yield from build_cond(cases)
+                return
+            raise RuntimeError(f'unexpected {ty}')
 
-        # We're going to start a new scope, so all previous temporary names may be used once again
-        generate_temporary.reset()
+        for spec in specs:
 
-        if isinstance(spec, TokenSpec):
-            continue
-        if isinstance(spec, NodeSpec):
-            if_body: list[PyStmt] = []
-            for field in spec.members:
-                if_body.extend(gen_proc_call(field.ty, PyAttrExpr(expr=PyNamedExpr(syntax_param_name), name=field.name)))
-            if_body.append(PyRetStmt())
-            body.append(PyIfStmt(first=PyIfCase(
-                test=PyCallExpr(
-                    operator=PyNamedExpr('isinstance'),
-                    args=[
-                        PyNamedExpr(syntax_param_name),
+            if not is_type_assignable(spec_to_type(spec), main_type, specs=specs):
+                continue
+
+            if isinstance(spec, NodeSpec):
+
+                # We're going to start a new scope, so all previous temporary names may be used once again
+                generate_temporary.reset()
+
+                if_body: list[PyStmt] = []
+                for field in spec.fields:
+                    if contains_type(field.ty, main_type, specs=specs):
+                        if_body.extend(gen_proc_call(field.ty, PyAttrExpr(expr=PyNamedExpr(value_param_name), name=field.name)))
+                if_body.append(PyRetStmt())
+                body.append(PyIfStmt(first=PyIfCase(
+                    test=PyCallExpr(
+                        operator=PyNamedExpr('isinstance'),
+                        args=[
+                            PyNamedExpr(value_param_name),
+                            PyNamedExpr(to_class_name(spec.name, prefix))
+                        ]
+                    ),
+                    body=if_body
+                )))
+
+            elif isinstance(spec, TokenSpec):
+
+                # body.append(PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ PyNamedExpr(value_param_name) ])))
+                body.append(PyIfStmt(first=PyIfCase(
+                    test=build_isinstance(
+                        PyNamedExpr(value_param_name),
                         PyNamedExpr(to_class_name(spec.name, prefix))
-                    ]
-                ),
-                body=if_body
-            )))
-            continue
-        if isinstance(spec, VariantSpec):
-            continue
+                    ),
+                    body=[
+                        PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ PyNamedExpr(value_param_name) ])),
+                    ],
+                )))
 
-        assert_never(spec)
+        return PyFuncDef(
+            name=f'for_each_{namespaced(name, prefix)}',
+            params=[
+                PyNamedParam(
+                    PyNamedPattern(value_param_name),
+                    annotation=PyNamedExpr(to_class_name(name, prefix))
+                ),
+                PyNamedParam(
+                    PyNamedPattern(proc_param_name),
+                    annotation=PySubscriptExpr(expr=PyNamedExpr('Callable'), slices=[ PyListExpr(elements=[ PyNamedExpr(to_class_name(name, prefix)) ]), PyNamedExpr('None') ])
+                ),
+            ],
+            body=body,
+        )
+
+    variant_visitors = list(gen_visitor(spec.name) for spec in specs if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
 
     return PyModule(stmts=[
         PyImportFromStmt(
@@ -115,18 +142,6 @@ def generate_visitor(
             PyRelativePath(dots=[ PyDot() ], name=PyQualName('cst')),
             aliases=[ PyFromAlias(PyAsterisk()) ]
         ),
-        PyFuncDef(
-            name=for_each_child_name,
-            params=[
-                PyNamedParam(
-                    PyNamedPattern(syntax_param_name),
-                    annotation=PyNamedExpr(syntax_type_name)
-                ),
-                PyNamedParam(
-                    PyNamedPattern(proc_name),
-                    annotation=PySubscriptExpr(expr=PyNamedExpr('Callable'), slices=[ PyListExpr(elements=[ PyNamedExpr(syntax_type_name) ]), PyNamedExpr('None') ])
-                )
-            ],
-            body=body,
-        )
+        *variant_visitors,
     ])
+
