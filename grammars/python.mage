@@ -313,7 +313,7 @@ pub class_def
 pub param
   = rest_pos_param
   | rest_keyword_param
-  | arg_sep_param
+  | pos_sep_param
   | kw_sep_param
   | named_param
 
@@ -326,11 +326,11 @@ pub rest_pos_param
 pub rest_keyword_param
   = '**' name:ident
 
-pub arg_sep_param
-  = '*'
+pub pos_sep_param
+  = '/'
 
 pub kw_sep_param
-  = '/'
+  = '*'
 
 pub decorator
   = '@' expr
