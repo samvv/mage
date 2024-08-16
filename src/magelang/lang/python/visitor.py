@@ -13,19 +13,26 @@ def for_each_py_pattern(node: PyPattern, proc: Callable[[PyPattern], None]):
         return
     if isinstance(node, PySubscriptPattern):
         proc(node.pattern)
-        for (element, separator) in node.slices:
+        for (element, separator) in node.slices.elements:
             if is_py_pattern(element):
                 proc(element)
+        if node.slices.last is not None:
+            if is_py_pattern(node.slices.last):
+                proc(node.slices.last)
         return
     if isinstance(node, PyStarredPattern):
         return
     if isinstance(node, PyListPattern):
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         return
     if isinstance(node, PyTuplePattern):
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         return
 
 
@@ -48,7 +55,7 @@ def for_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], None]):
         return
     if isinstance(node, PySubscriptExpr):
         proc(node.expr)
-        for (element, separator) in node.slices:
+        for (element, separator) in node.slices.elements:
             if isinstance(element, PySlice):
                 if is_py_expr(element.lower):
                     proc(element.lower)
@@ -58,17 +65,31 @@ def for_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], None]):
                     proc(element.step[1])
             elif is_py_expr(element):
                 proc(element)
+        if node.slices.last is not None:
+            if isinstance(node.slices.last, PySlice):
+                if is_py_expr(node.slices.last.lower):
+                    proc(node.slices.last.lower)
+                if is_py_expr(node.slices.last.upper):
+                    proc(node.slices.last.upper)
+                if isinstance(node.slices.last.step, tuple):
+                    proc(node.slices.last.step[1])
+            elif is_py_expr(node.slices.last):
+                proc(node.slices.last)
         return
     if isinstance(node, PyStarredExpr):
         proc(node.expr)
         return
     if isinstance(node, PyListExpr):
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         return
     if isinstance(node, PyTupleExpr):
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         return
     if isinstance(node, PyCallExpr):
         proc(node.operator)
@@ -101,7 +122,7 @@ def for_each_py_arg(node: PyArg, proc: Callable[[PyArg], None]):
         return
     if isinstance(node, PySubscriptExpr):
         proc(node.expr)
-        for (element, separator) in node.slices:
+        for (element, separator) in node.slices.elements:
             if isinstance(element, PySlice):
                 if is_py_expr(element.lower):
                     proc(element.lower)
@@ -111,25 +132,41 @@ def for_each_py_arg(node: PyArg, proc: Callable[[PyArg], None]):
                     proc(element.step[1])
             elif is_py_expr(element):
                 proc(element)
+        if node.slices.last is not None:
+            if isinstance(node.slices.last, PySlice):
+                if is_py_expr(node.slices.last.lower):
+                    proc(node.slices.last.lower)
+                if is_py_expr(node.slices.last.upper):
+                    proc(node.slices.last.upper)
+                if isinstance(node.slices.last.step, tuple):
+                    proc(node.slices.last.step[1])
+            elif is_py_expr(node.slices.last):
+                proc(node.slices.last)
         return
     if isinstance(node, PyStarredExpr):
         proc(node.expr)
         return
     if isinstance(node, PyListExpr):
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         return
     if isinstance(node, PyTupleExpr):
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         return
     if isinstance(node, PyKeywordArg):
         proc(node.expr)
         return
     if isinstance(node, PyCallExpr):
         proc(node.operator)
-        for (element, separator) in node.args:
+        for (element, separator) in node.args.elements:
             proc(element)
+        if node.args.last is not None:
+            proc(node.args.last)
         return
     if isinstance(node, PyPrefixExpr):
         proc(node.expr)
@@ -244,22 +281,31 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
         return
     if isinstance(node, PySubscriptPattern):
         proc(node.pattern)
-        for (element, separator) in node.slices:
+        for (element, separator) in node.slices.elements:
             if isinstance(element, PySlice):
                 proc(element)
             elif is_py_pattern(element):
                 proc(element)
+        if node.slices.last is not None:
+            if isinstance(node.slices.last, PySlice):
+                proc(node.slices.last)
+            elif is_py_pattern(node.slices.last):
+                proc(node.slices.last)
         return
     if isinstance(node, PyStarredPattern):
         proc(node.expr)
         return
     if isinstance(node, PyListPattern):
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         return
     if isinstance(node, PyTuplePattern):
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         return
     if isinstance(node, PyEllipsisExpr):
         return
@@ -289,30 +335,41 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
         return
     if isinstance(node, PySubscriptExpr):
         proc(node.expr)
-        for (element, separator) in node.slices:
+        for (element, separator) in node.slices.elements:
             if isinstance(element, PySlice):
                 proc(element)
             elif is_py_expr(element):
                 proc(element)
+        if node.slices.last is not None:
+            if isinstance(node.slices.last, PySlice):
+                proc(node.slices.last)
+            elif is_py_expr(node.slices.last):
+                proc(node.slices.last)
         return
     if isinstance(node, PyStarredExpr):
         proc(node.expr)
         return
     if isinstance(node, PyListExpr):
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         return
     if isinstance(node, PyTupleExpr):
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         return
     if isinstance(node, PyKeywordArg):
         proc(node.expr)
         return
     if isinstance(node, PyCallExpr):
         proc(node.operator)
-        for (element, separator) in node.args:
+        for (element, separator) in node.args.elements:
             proc(element)
+        if node.args.last is not None:
+            proc(node.args.last)
         return
     if isinstance(node, PyPrefixExpr):
         proc(node.expr)
@@ -336,13 +393,17 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
     if isinstance(node, PyFromAlias):
         return
     if isinstance(node, PyImportStmt):
-        for (element, separator) in node.aliases:
+        for (element, separator) in node.aliases.elements:
             proc(element)
+        if node.aliases.last is not None:
+            proc(node.aliases.last)
         return
     if isinstance(node, PyImportFromStmt):
         proc(node.path)
-        for (element, separator) in node.aliases:
+        for (element, separator) in node.aliases.elements:
             proc(element)
+        if node.aliases.last is not None:
+            proc(node.aliases.last)
         return
     if isinstance(node, PyRetStmt):
         if is_py_expr(node.expr):
@@ -433,8 +494,10 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
         return
     if isinstance(node, PyTypeAliasStmt):
         if isinstance(node.type_params, tuple):
-            for (element, separator) in node.type_params[1]:
+            for (element, separator) in node.type_params[1].elements:
                 proc(element)
+            if node.type_params[1].last is not None:
+                proc(node.type_params[1].last)
         proc(node.expr)
         return
     if isinstance(node, PyExceptHandler):
@@ -496,8 +559,10 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
     if isinstance(node, PyFuncDef):
         for element in node.decorators:
             proc(element)
-        for (element_1, separator) in node.params:
+        for (element_1, separator) in node.params.elements:
             proc(element_1)
+        if node.params.last is not None:
+            proc(node.params.last)
         if isinstance(node.return_type, tuple):
             proc(node.return_type[1])
         if is_py_stmt(node.body):
@@ -543,11 +608,17 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
     if isinstance(node, PySubscriptPattern):
         proc(node.pattern)
         proc(node.open_bracket)
-        for (element, separator) in node.slices:
+        for (element, separator) in node.slices.elements:
             if isinstance(element, PySlice):
                 proc(element)
             elif is_py_pattern(element):
                 proc(element)
+            proc(separator)
+        if node.slices.last is not None:
+            if isinstance(node.slices.last, PySlice):
+                proc(node.slices.last)
+            elif is_py_pattern(node.slices.last):
+                proc(node.slices.last)
         proc(node.close_bracket)
         return
     if isinstance(node, PyStarredPattern):
@@ -556,14 +627,20 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
         return
     if isinstance(node, PyListPattern):
         proc(node.open_bracket)
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+            proc(separator)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         proc(node.close_bracket)
         return
     if isinstance(node, PyTuplePattern):
         proc(node.open_paren)
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+            proc(separator)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         proc(node.close_paren)
         return
     if isinstance(node, PyEllipsisExpr):
@@ -612,11 +689,17 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
     if isinstance(node, PySubscriptExpr):
         proc(node.expr)
         proc(node.open_bracket)
-        for (element, separator) in node.slices:
+        for (element, separator) in node.slices.elements:
             if isinstance(element, PySlice):
                 proc(element)
             elif is_py_expr(element):
                 proc(element)
+            proc(separator)
+        if node.slices.last is not None:
+            if isinstance(node.slices.last, PySlice):
+                proc(node.slices.last)
+            elif is_py_expr(node.slices.last):
+                proc(node.slices.last)
         proc(node.close_bracket)
         return
     if isinstance(node, PyStarredExpr):
@@ -625,14 +708,20 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
         return
     if isinstance(node, PyListExpr):
         proc(node.open_bracket)
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+            proc(separator)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         proc(node.close_bracket)
         return
     if isinstance(node, PyTupleExpr):
         proc(node.open_paren)
-        for (element, separator) in node.elements:
+        for (element, separator) in node.elements.elements:
             proc(element)
+            proc(separator)
+        if node.elements.last is not None:
+            proc(node.elements.last)
         proc(node.close_paren)
         return
     if isinstance(node, PyKeywordArg):
@@ -643,8 +732,11 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
     if isinstance(node, PyCallExpr):
         proc(node.operator)
         proc(node.open_paren)
-        for (element, separator) in node.args:
+        for (element, separator) in node.args.elements:
             proc(element)
+            proc(separator)
+        if node.args.last is not None:
+            proc(node.args.last)
         proc(node.close_paren)
         return
     if isinstance(node, PyPrefixExpr):
@@ -687,15 +779,21 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
         return
     if isinstance(node, PyImportStmt):
         proc(node.import_keyword)
-        for (element, separator) in node.aliases:
+        for (element, separator) in node.aliases.elements:
             proc(element)
+            proc(separator)
+        if node.aliases.last is not None:
+            proc(node.aliases.last)
         return
     if isinstance(node, PyImportFromStmt):
         proc(node.from_keyword)
         proc(node.path)
         proc(node.import_keyword)
-        for (element, separator) in node.aliases:
+        for (element, separator) in node.aliases.elements:
             proc(element)
+            proc(separator)
+        if node.aliases.last is not None:
+            proc(node.aliases.last)
         return
     if isinstance(node, PyRetStmt):
         proc(node.return_keyword)
@@ -813,8 +911,11 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
         proc(node.name)
         if isinstance(node.type_params, tuple):
             proc(node.type_params[0])
-            for (element, separator) in node.type_params[1]:
+            for (element, separator) in node.type_params[1].elements:
                 proc(element)
+                proc(separator)
+            if node.type_params[1].last is not None:
+                proc(node.type_params[1].last)
             proc(node.type_params[2])
         proc(node.equals)
         proc(node.expr)
@@ -866,8 +967,11 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
         proc(node.name)
         if isinstance(node.bases, tuple):
             proc(node.bases[0])
-            for (element_1, separator) in node.bases[1]:
+            for (element_1, separator) in node.bases[1].elements:
                 proc(element_1)
+                proc(separator)
+            if node.bases[1].last is not None:
+                proc(node.bases[1].last)
             proc(node.bases[2])
         proc(node.colon)
         if is_py_stmt(node.body):
@@ -911,8 +1015,11 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
         proc(node.def_keyword)
         proc(node.name)
         proc(node.open_paren)
-        for (element_1, separator) in node.params:
+        for (element_1, separator) in node.params.elements:
             proc(element_1)
+            proc(separator)
+        if node.params.last is not None:
+            proc(node.params.last)
         proc(node.close_paren)
         if isinstance(node.return_type, tuple):
             proc(node.return_type[0])
