@@ -428,23 +428,23 @@ def rewrite_expr(expr: Expr, proc: Callable[[Expr], Expr | None]) -> Expr:
             return expr
         if isinstance(expr, RepeatExpr):
             new_expr = visit(expr.expr)
-            if new_expr == expr.expr:
+            if new_expr is expr.expr:
                 return expr
             return RepeatExpr(min=expr.min, max=expr.max, expr=new_expr, rules=expr.rules, label=expr.label)
         if isinstance(expr, LookaheadExpr):
             new_expr = visit(expr.expr)
-            if new_expr == expr.expr:
+            if new_expr is expr.expr:
                 return expr
             return LookaheadExpr(expr=new_expr, is_negated=expr.is_negated, rules=expr.rules, label=expr.label)
         if isinstance(expr, HideExpr):
             new_expr = visit(expr.expr)
-            if new_expr == expr.expr:
+            if new_expr is expr.expr:
                 return expr
             return HideExpr(expr=new_expr, rules=expr.rules, label=expr.label)
         if isinstance(expr, ListExpr):
             new_element = visit(expr.element)
             new_separator = visit(expr.separator)
-            if new_element == expr.element and new_separator == expr.separator:
+            if new_element is expr.element and new_separator is expr.separator:
                 return expr
             return ListExpr(element=new_element, separator=new_separator, min_count=expr.min_count, rules=expr.rules, label=expr.label)
         if isinstance(expr, ChoiceExpr):
@@ -452,7 +452,7 @@ def rewrite_expr(expr: Expr, proc: Callable[[Expr], Expr | None]) -> Expr:
             changed = False
             for element in expr.elements:
                 new_element = visit(element)
-                if new_element != element:
+                if new_element is not element:
                     changed = True
                 new_elements.append(new_element)
             if not changed:
@@ -463,7 +463,7 @@ def rewrite_expr(expr: Expr, proc: Callable[[Expr], Expr | None]) -> Expr:
             changed = False
             for element in expr.elements:
                 new_element = visit(element)
-                if new_element != element:
+                if new_element is not element:
                     changed = True
                 new_elements.append(new_element)
             if not changed:
