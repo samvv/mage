@@ -128,7 +128,7 @@ def generate_visitor(
                         PyNamedExpr(to_class_name(spec.name, prefix))
                     ),
                     body=[
-                        PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ PyNamedExpr(value_param_name) ])),
+                        PyRetStmt(),
                     ],
                 )))
 
