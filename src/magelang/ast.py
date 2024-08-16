@@ -1,3 +1,9 @@
+"""
+Hand-written abstract syntax tree (AST) of the Mage grammar.
+
+Also defines some visitors over Mage expressions and other useful procedures to
+make handling the AST a bit easier.
+"""
 
 from functools import cache
 import sys
@@ -417,6 +423,13 @@ class Grammar(Node):
         return self._rules_by_name.get(name)
 
 def rewrite_expr(expr: Expr, proc: Callable[[Expr], Expr | None]) -> Expr:
+    """
+    Rewrite an expression according to a procedure that either returns a new
+    node if the expression needs to be rewritten or `None` otherwise.
+
+    This works recursively, e.g. a deeply nested `LitExpr` will be rewritten
+    with only a top-level call to `rewrite_expr`.
+    """
 
     def visit(expr: Expr) -> Expr:
 
@@ -474,6 +487,11 @@ def rewrite_expr(expr: Expr, proc: Callable[[Expr], Expr | None]) -> Expr:
     return visit(expr)
 
 def for_each_expr(node: Expr, proc: Callable[[Expr], None]) -> None:
+    """
+    Visit each direct child of a given expression exactly once.
+
+    In the case that an expression does not have direct children, this function does nothing.
+    """
     if isinstance(node, LitExpr) or isinstance(node, CharSetExpr) or isinstance(node, RefExpr):
         return
     if isinstance(node, RepeatExpr) or isinstance(node, LookaheadExpr) or isinstance(node, HideExpr):
