@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Callable, Generator, assert_never
 
 
 if TYPE_CHECKING:
-    from .repr import Type
+    from .treespec import Type
 
 
 class Node:

@@ -1,8 +1,8 @@
 
 from typing import assert_never
 
-from .util import build_is_none, build_isinstance, build_or, build_union, gen_deep_test, gen_initializers, gen_py_type, namespaced, rule_type_to_py_type, to_class_name, quote_py_type
-from magelang.repr import *
+from .util import build_is_none, build_or, build_union, gen_deep_test, gen_initializers, gen_py_type, namespaced, rule_type_to_py_type, to_class_name, quote_py_type
+from magelang.treespec import *
 from magelang.lang.python.cst import *
 from magelang.lang.python.emitter import emit
 
@@ -38,7 +38,9 @@ def generate_tree(
     def get_parent_type(name: str) -> Type:
         if name not in parent_nodes:
             return NeverType()
-        return UnionType(list(name_to_type(name) for name in parent_nodes[name]))
+        types = FrozenList(name_to_type(name) for name in parent_nodes[name])
+        types.freeze()
+        return UnionType(types)
 
     def add_to_parent_nodes(name: str, ty: Type) -> None:
         if isinstance(ty, VariantType):

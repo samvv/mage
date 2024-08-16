@@ -4,7 +4,7 @@ from typing import assert_never
 from magelang.ast import *
 from magelang.lang.python.cst import *
 from magelang.ast import Grammar
-from magelang.repr import TokenSpec, grammar_to_specs
+from magelang.treespec import TokenSpec, grammar_to_specs
 from magelang.util import NameGenerator, nonnull
 from .util import build_cond, build_or, rule_type_to_py_type, to_class_name
 

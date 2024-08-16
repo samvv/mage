@@ -1,7 +1,7 @@
 
 from magelang.ast import Grammar
 from magelang.lang.python.emitter import emit
-from magelang.repr import grammar_to_specs
+from magelang.treespec import grammar_to_specs
 from magelang.util import Files
 from .tree import generate_tree
 from .tree_types import generate_tree_types

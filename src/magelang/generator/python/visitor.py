@@ -1,8 +1,6 @@
 
-from typing import assert_never
-
 from magelang.ast import Grammar
-from magelang.repr import *
+from magelang.treespec import *
 from magelang.lang.python.cst import *
 from magelang.util import NameGenerator
 from .util import build_cond, Case, build_isinstance, gen_shallow_test, namespaced, to_class_name

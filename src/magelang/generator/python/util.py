@@ -2,7 +2,7 @@
 from typing import Iterator, Iterable, Sequence
 import marko.inline
 from magelang.lang.python.emitter import emit
-from magelang.repr import *
+from magelang.treespec import *
 from magelang.lang.python.cst import *
 from magelang.logging import warn
 from magelang.util import to_camel_case, is_iterator

@@ -2,7 +2,7 @@
 from .util import build_union, gen_initializers, gen_py_type, namespaced, rule_type_to_py_type, to_class_name, quote_py_type
 from magelang.lang.python.cst import *
 from magelang.lang.python.emitter import emit
-from magelang.repr import *
+from magelang.treespec import *
 
 def generate_tree_types(
     specs: Specs,
