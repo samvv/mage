@@ -254,7 +254,6 @@ def generate_tree(
 
         cls_name = to_class_name(spec.name, prefix)
 
-        assert(len(spec.members) > 0)
         stmts.append(PyTypeAliasStmt(cls_name, build_union(gen_py_type(ty, prefix) for _, ty in spec.members)))
 
         params: list[PyParam] = []
