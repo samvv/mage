@@ -626,12 +626,12 @@ def emit(node: PyNode) -> str:
                 visit_expr(expr)
             return
 
-        if isinstance(node, PyArgSepParam):
-            visit_token(node.asterisk)
+        if isinstance(node, PyPosSepParam):
+            visit_token(node.slash)
             return
 
         if isinstance(node, PyKwSepParam):
-            visit_token(node.slash)
+            visit_token(node.asterisk)
             return
 
         if isinstance(node, PySlice):
