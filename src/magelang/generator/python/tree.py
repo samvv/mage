@@ -62,7 +62,7 @@ def generate_tree(
         elif isinstance(ty, UnionType):
             for element in ty.types:
                 add_to_parent_nodes(name, element)
-        elif isinstance(ty, NoneType) or isinstance(ty, ExternType) or isinstance(ty, NeverType):
+        elif isinstance(ty, NoneType) or isinstance(ty, ExternType) or isinstance(ty, NeverType) or isinstance(ty, AnyType):
             pass
         else:
             assert_never(ty)
