@@ -264,9 +264,10 @@ class Decorator(Node):
         self.name = name
         self.args = args
 
-EXTERN = 1
-PUBLIC = 2
-FORCE_TOKEN  = 4
+EXTERN        = 1
+PUBLIC        = 2
+FORCE_TOKEN   = 4
+FORCE_KEYWORD = 8
 
 unit_rule_name = 'void'
 string_rule_type = 'String'
@@ -318,6 +319,10 @@ class Rule(Node):
     def is_token(self) -> bool:
         return (self.flags & FORCE_TOKEN) > 0
 
+    @property
+    def is_keyword(self) -> bool:
+        return (self.flags & FORCE_KEYWORD) > 0
+
     def has_decorator(self, name: str) -> bool:
         for decorator in self.decorators:
             if decorator.name == name:
@@ -333,7 +338,7 @@ class Rule(Node):
         return self.has_decorator('wrap')
 
     @property
-    def is_keyword(self) -> bool:
+    def is_keyword_def(self) -> bool:
         return self.has_decorator('keyword')
 
 class Grammar(Node):
@@ -416,7 +421,7 @@ class Grammar(Node):
     @cache
     def keyword_rule(self) -> Rule | None:
         for rule in self.rules:
-            if rule.is_keyword:
+            if rule.is_keyword_def:
                 return rule
 
     def lookup(self, name: str) -> Rule | None:

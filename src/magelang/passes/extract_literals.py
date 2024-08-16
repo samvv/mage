@@ -13,6 +13,7 @@ def extract_literals(grammar: Grammar) -> Grammar:
         names = json.load(f)
 
     literal_to_name: dict[str, str] = {}
+    keywords = set[str]()
 
     token_counter = 0
     def generate_token_name() -> str:
@@ -31,7 +32,9 @@ def extract_literals(grammar: Grammar) -> Grammar:
         # FIXME Keyword detection should work with the @keyword decorator
         keyword_rule = grammar.keyword_rule
         if keyword_rule is not None and keyword_rule.expr is not None and accepts(keyword_rule.expr, text, grammar):
-            return f'{text}_keyword'
+            name = f'{text}_keyword'
+            keywords.add(name)
+            return name
         if len(text) <= 4:
             # First try to name the entire word
             if text in names:
@@ -51,13 +54,16 @@ def extract_literals(grammar: Grammar) -> Grammar:
     for rule in grammar.rules:
         if grammar.is_parse_rule(rule):
             assert(rule.expr is not None)
-            new_rules.append(Rule(comment=rule.comment, decorators=rule.decorators, flags=rule.flags, name=rule.name, type_name=rule.type_name, expr=rewrite_expr(rule.expr, rewriter)))
+            new_rules.append(rule.derive(expr=rewrite_expr(rule.expr, rewriter)))
         else:
             new_rules.append(rule)
 
     for literal in reversed(sorted(literal_to_name.keys())):
         name = literal_to_name[literal]
-        new_rules.append(Rule(comment=None, decorators=[], flags=PUBLIC | FORCE_TOKEN, name=name, expr=LitExpr(literal), type_name=string_rule_type))
+        flags = PUBLIC | FORCE_TOKEN
+        if name in keywords:
+            flags |= FORCE_KEYWORD
+        new_rules.append(Rule(comment=None, decorators=[], flags=flags, name=name, expr=LitExpr(literal), type_name=string_rule_type))
 
     return Grammar(new_rules)
 

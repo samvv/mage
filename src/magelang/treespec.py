@@ -821,22 +821,7 @@ def grammar_to_specs(grammar: Grammar) -> Specs:
         rename_duplicate_members(members)
         specs.add(NodeSpec(rule.name, members))
 
-    kw_rules = []
-
-    def visit(expr: Expr, rule: Rule) -> None:
-        if isinstance(expr, LitExpr):
-            match = False
-            for rule in kw_rules:
-                assert(rule.expr is not None)
-                if accepts(rule.expr, expr.text, grammar):
-                    match = True
-            if match:
-                specs.add(TokenSpec(rule.name, unit_rule_name, True))
-
-    for rule in grammar.rules:
-        if rule.expr is not None:
-            for_each_expr(rule.expr, lambda expr: visit(expr, rule))
-
+    specs.add(VariantSpec('keyword', list((rule.name, TokenType(rule.name)) for rule in grammar.rules if rule.is_keyword)))
     specs.add(VariantSpec('token', list((spec.name, TokenType(spec.name)) for spec in specs if isinstance(spec, TokenSpec))))
     specs.add(VariantSpec('node', list((spec.name, NodeType(spec.name)) for spec in specs if isinstance(spec, NodeSpec))))
     specs.add(VariantSpec('syntax', [ ('node', VariantType('node')), ('token', VariantType('token')) ]))
