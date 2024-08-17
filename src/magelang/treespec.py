@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Any, Iterator, assert_never
 from frozenlist import FrozenList
 
-from magelang.eval import accepts
 from magelang.util import nonnull, to_snake_case
 
 from .ast import *
