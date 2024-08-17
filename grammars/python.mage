@@ -272,7 +272,7 @@ pub nonlocal_stmt
 
 @noskip
 body
-  = stmt | \indent body:(stmt \eos)* \dedent
+  = stmt | \indent body:(stmt \eos)+ \dedent
 
 pub if_case
    = 'if' test:expr ':' body

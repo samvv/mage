@@ -1138,7 +1138,7 @@ class PyIfCase(_PyBaseNode):
         self.if_keyword: PyIfKeyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(if_keyword)
         self.test: PyExpr = _coerce_variant_expr_to_variant_expr(test)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
 
     @no_type_check
     def derive(self, if_keyword: 'PyIfKeyword | None' = None, test: 'PyExpr | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None) -> 'PyIfCase':
@@ -1163,7 +1163,7 @@ class PyElifCase(_PyBaseNode):
         self.elif_keyword: PyElifKeyword = _coerce_union_2_token_elif_keyword_none_to_token_elif_keyword(elif_keyword)
         self.test: PyExpr = _coerce_variant_expr_to_variant_expr(test)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
 
     @no_type_check
     def derive(self, elif_keyword: 'PyElifKeyword | None' = None, test: 'PyExpr | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None) -> 'PyElifCase':
@@ -1187,7 +1187,7 @@ class PyElseCase(_PyBaseNode):
     def __init__(self, body: 'PyStmt | Sequence[PyStmt]', *, else_keyword: 'PyElseKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
         self.else_keyword: PyElseKeyword = _coerce_union_2_token_else_keyword_none_to_token_else_keyword(else_keyword)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
 
     @no_type_check
     def derive(self, else_keyword: 'PyElseKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None) -> 'PyElseCase':
@@ -1212,7 +1212,7 @@ class PyIfStmt(_PyBaseNode):
     def __init__(self, first: 'PyIfCase', *, alternatives: 'Sequence[PyElifCase] | None' = None, last: 'PyElseCase | PyStmt | Sequence[PyStmt] | None' = None) -> None:
         self.first: PyIfCase = _coerce_node_if_case_to_node_if_case(first)
         self.alternatives: Sequence[PyElifCase] = _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(alternatives)
-        self.last: PyElseCase | None = _coerce_union_4_node_else_case_variant_stmt_list_variant_stmt_none_to_union_2_node_else_case_none(last)
+        self.last: PyElseCase | None = _coerce_union_4_node_else_case_variant_stmt_list_variant_stmt_required_none_to_union_2_node_else_case_none(last)
 
     @no_type_check
     def derive(self, first: 'PyIfCase | None' = None, alternatives: 'Sequence[PyElifCase] | None' = None, last: 'PyElseCase | PyStmt | Sequence[PyStmt] | None' = None) -> 'PyIfStmt':
@@ -1278,8 +1278,8 @@ class PyForStmt(_PyBaseNode):
         self.in_keyword: PyInKeyword = _coerce_union_2_token_in_keyword_none_to_token_in_keyword(in_keyword)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
-        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_list_variant_stmt_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_none(else_clause)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(else_clause)
 
     @no_type_check
     def derive(self, for_keyword: 'PyForKeyword | None' = None, pattern: 'PyPattern | None' = None, in_keyword: 'PyInKeyword | None' = None, expr: 'PyExpr | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> 'PyForStmt':
@@ -1310,8 +1310,8 @@ class PyWhileStmt(_PyBaseNode):
         self.while_keyword: PyWhileKeyword = _coerce_union_2_token_while_keyword_none_to_token_while_keyword(while_keyword)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
-        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_list_variant_stmt_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_none(else_clause)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(else_clause)
 
     @no_type_check
     def derive(self, while_keyword: 'PyWhileKeyword | None' = None, expr: 'PyExpr | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> 'PyWhileStmt':
@@ -1399,7 +1399,7 @@ class PyExceptHandler(_PyBaseNode):
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
         self.binder: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(binder)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
 
     @no_type_check
     def derive(self, except_keyword: 'PyExceptKeyword | None' = None, expr: 'PyExpr | None' = None, binder: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str' = None, colon: 'PyColon | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None) -> 'PyExceptHandler':
@@ -1428,10 +1428,10 @@ class PyTryStmt(_PyBaseNode):
     def __init__(self, body: 'PyStmt | Sequence[PyStmt]', *, try_keyword: 'PyTryKeyword | None' = None, colon: 'PyColon | None' = None, handlers: 'Sequence[PyExceptHandler] | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None, finally_clause: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> None:
         self.try_keyword: PyTryKeyword = _coerce_union_2_token_try_keyword_none_to_token_try_keyword(try_keyword)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
         self.handlers: Sequence[PyExceptHandler] = _coerce_union_2_list_node_except_handler_none_to_list_node_except_handler(handlers)
-        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_list_variant_stmt_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_none(else_clause)
-        self.finally_clause: tuple[PyFinallyKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_list_variant_stmt_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_none(finally_clause)
+        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(else_clause)
+        self.finally_clause: tuple[PyFinallyKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(finally_clause)
 
     @no_type_check
     def derive(self, try_keyword: 'PyTryKeyword | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None, handlers: 'Sequence[PyExceptHandler] | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None, finally_clause: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> 'PyTryStmt':
@@ -1465,7 +1465,7 @@ class PyClassDef(_PyBaseNode):
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
         self.bases: tuple[PyOpenParen, Punctuated[PyIdent, PyComma], PyCloseParen] | None = _coerce_union_5_tuple_3_union_2_token_open_paren_none_union_4_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_list_union_2_token_ident_extern_string_punct_union_2_token_ident_extern_string_token_comma_none_union_2_token_close_paren_none_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_list_union_2_token_ident_extern_string_punct_union_2_token_ident_extern_string_token_comma_none_to_union_2_tuple_3_token_open_paren_punct_token_ident_token_comma_token_close_paren_none(bases)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
 
     @no_type_check
     def derive(self, decorators: 'Sequence[PyDecorator | PyExpr] | None' = None, class_keyword: 'PyClassKeyword | None' = None, name: 'PyIdent | None | str' = None, bases: 'tuple[PyOpenParen | None, Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None, PyCloseParen | None] | Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None) -> 'PyClassDef':
@@ -1617,7 +1617,7 @@ class PyFuncDef(_PyBaseNode):
         self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
         self.return_type: tuple[PyRArrow, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_r_arrow_none_variant_expr_none_to_union_2_tuple_2_token_r_arrow_variant_expr_none(return_type)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(body)
+        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
 
     @no_type_check
     def derive(self, decorators: 'Sequence[PyDecorator | PyExpr] | None' = None, async_keyword: 'PyAsyncKeyword | None' = None, def_keyword: 'PyDefKeyword | None' = None, name: 'PyIdent | None | str' = None, open_paren: 'PyOpenParen | None' = None, params: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | Punctuated[PyParam, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None, return_type: 'PyExpr | tuple[PyRArrow | None, PyExpr] | None' = None, colon: 'PyColon | None' = None, body: 'PyStmt | Sequence[PyStmt] | None' = None) -> 'PyFuncDef':
@@ -2670,7 +2670,7 @@ def _coerce_variant_stmt_to_variant_stmt(value: 'PyStmt') -> 'PyStmt':
 
 
 @no_type_check
-def _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(value: 'PyStmt | Sequence[PyStmt]') -> 'PyStmt | Sequence[PyStmt]':
+def _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value: 'PyStmt | Sequence[PyStmt]') -> 'PyStmt | Sequence[PyStmt]':
     if is_py_stmt(value):
         return value
     elif isinstance(value, list):
@@ -2726,9 +2726,9 @@ def _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(value: 'Sequ
 
 
 @no_type_check
-def _coerce_union_4_node_else_case_variant_stmt_list_variant_stmt_none_to_union_2_node_else_case_none(value: 'PyElseCase | PyStmt | Sequence[PyStmt] | None') -> 'PyElseCase | None':
+def _coerce_union_4_node_else_case_variant_stmt_list_variant_stmt_required_none_to_union_2_node_else_case_none(value: 'PyElseCase | PyStmt | Sequence[PyStmt] | None') -> 'PyElseCase | None':
     if is_py_stmt(value) or isinstance(value, list):
-        return PyElseCase(_coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(value))
+        return PyElseCase(_coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value))
     elif isinstance(value, PyElseCase):
         return value
     elif value is None:
@@ -2770,11 +2770,11 @@ def _coerce_union_3_variant_expr_tuple_2_union_2_token_from_keyword_none_variant
 
 
 @no_type_check
-def _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_list_variant_stmt_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_none(value: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None':
+def _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(value: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None':
     if is_py_stmt(value) or isinstance(value, list):
-        return (PyElseKeyword(), PyColon(), _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(value))
+        return (PyElseKeyword(), PyColon(), _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value))
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_else_keyword_none_to_token_else_keyword(value[0]), _coerce_union_2_token_colon_none_to_token_colon(value[1]), _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(value[2]))
+        return (_coerce_union_2_token_else_keyword_none_to_token_else_keyword(value[0]), _coerce_union_2_token_colon_none_to_token_colon(value[1]), _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value[2]))
     elif value is None:
         return None
     else:
@@ -2916,11 +2916,11 @@ def _coerce_union_2_token_finally_keyword_none_to_token_finally_keyword(value: '
 
 
 @no_type_check
-def _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_list_variant_stmt_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_none(value: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyFinallyKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None':
+def _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(value: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyFinallyKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None':
     if is_py_stmt(value) or isinstance(value, list):
-        return (PyFinallyKeyword(), PyColon(), _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(value))
+        return (PyFinallyKeyword(), PyColon(), _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value))
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_finally_keyword_none_to_token_finally_keyword(value[0]), _coerce_union_2_token_colon_none_to_token_colon(value[1]), _coerce_union_2_variant_stmt_list_variant_stmt_to_union_2_variant_stmt_list_variant_stmt(value[2]))
+        return (_coerce_union_2_token_finally_keyword_none_to_token_finally_keyword(value[0]), _coerce_union_2_token_colon_none_to_token_colon(value[1]), _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value[2]))
     elif value is None:
         return None
     else:
