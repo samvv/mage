@@ -240,9 +240,11 @@ pub stmt
   | expr_stmt
   | for_stmt
   | func_def
+  | global_stmt
   | if_stmt
   | import_stmt
   | import_from_stmt
+  | nonlocal_stmt
   | pass_stmt
   | raise_stmt
   | ret_stmt
@@ -261,6 +263,12 @@ pub assign_stmt
 
 pub pass_stmt
   = 'pass'
+
+pub global_stmt
+  = 'global' names:(ident %% ',')
+
+pub nonlocal_stmt
+  = 'nonlocal' names:(ident %% ',')
 
 @noskip
 body

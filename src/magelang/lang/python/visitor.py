@@ -191,6 +191,10 @@ def for_each_py_stmt(node: PyStmt, proc: Callable[[PyStmt], None]):
         return
     if isinstance(node, PyPassStmt):
         return
+    if isinstance(node, PyGlobalStmt):
+        return
+    if isinstance(node, PyNonlocalStmt):
+        return
     if isinstance(node, PyIfStmt):
         return
     if isinstance(node, PyDeleteStmt):
@@ -420,6 +424,10 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
             proc(node.value[1])
         return
     if isinstance(node, PyPassStmt):
+        return
+    if isinstance(node, PyGlobalStmt):
+        return
+    if isinstance(node, PyNonlocalStmt):
         return
     if isinstance(node, PyIfCase):
         proc(node.test)
@@ -815,6 +823,22 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
     if isinstance(node, PyPassStmt):
         proc(node.pass_keyword)
         return
+    if isinstance(node, PyGlobalStmt):
+        proc(node.global_keyword)
+        for (element, separator) in node.names.elements:
+            proc(element)
+            proc(separator)
+        if node.names.last is not None:
+            proc(node.names.last)
+        return
+    if isinstance(node, PyNonlocalStmt):
+        proc(node.nonlocal_keyword)
+        for (element, separator) in node.names.elements:
+            proc(element)
+            proc(separator)
+        if node.names.last is not None:
+            proc(node.names.last)
+        return
     if isinstance(node, PyIfCase):
         proc(node.if_keyword)
         proc(node.test)
@@ -1055,6 +1079,8 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
         return
     if isinstance(node, PyNotKeyword):
         return
+    if isinstance(node, PyNonlocalKeyword):
+        return
     if isinstance(node, PyIsKeyword):
         return
     if isinstance(node, PyInKeyword):
@@ -1062,6 +1088,8 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
     if isinstance(node, PyImportKeyword):
         return
     if isinstance(node, PyIfKeyword):
+        return
+    if isinstance(node, PyGlobalKeyword):
         return
     if isinstance(node, PyFromKeyword):
         return

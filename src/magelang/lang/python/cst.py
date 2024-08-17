@@ -92,6 +92,11 @@ class PyNotKeyword(_PyBaseToken):
     pass
 
 
+class PyNonlocalKeyword(_PyBaseToken):
+
+    pass
+
+
 class PyIsKeyword(_PyBaseToken):
 
     pass
@@ -108,6 +113,11 @@ class PyImportKeyword(_PyBaseToken):
 
 
 class PyIfKeyword(_PyBaseToken):
+
+    pass
+
+
+class PyGlobalKeyword(_PyBaseToken):
 
     pass
 
@@ -1078,6 +1088,50 @@ class PyPassStmt(_PyBaseNode):
         return self._parent
 
 
+class PyGlobalStmt(_PyBaseNode):
+
+    def count_names(self) -> int:
+        return len(self.names)
+
+    def __init__(self, names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma]', *, global_keyword: 'PyGlobalKeyword | None' = None) -> None:
+        self.global_keyword: PyGlobalKeyword = _coerce_union_2_token_global_keyword_none_to_token_global_keyword(global_keyword)
+        self.names: Punctuated[PyIdent, PyComma] = _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(names)
+
+    @no_type_check
+    def derive(self, global_keyword: 'PyGlobalKeyword | None' = None, names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None' = None) -> 'PyGlobalStmt':
+        if global_keyword is None:
+            global_keyword = self.global_keyword
+        if names is None:
+            names = self.names
+        return PyGlobalStmt(global_keyword=global_keyword, names=names)
+
+    def parent(self) -> 'PyGlobalStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class PyNonlocalStmt(_PyBaseNode):
+
+    def count_names(self) -> int:
+        return len(self.names)
+
+    def __init__(self, names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma]', *, nonlocal_keyword: 'PyNonlocalKeyword | None' = None) -> None:
+        self.nonlocal_keyword: PyNonlocalKeyword = _coerce_union_2_token_nonlocal_keyword_none_to_token_nonlocal_keyword(nonlocal_keyword)
+        self.names: Punctuated[PyIdent, PyComma] = _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(names)
+
+    @no_type_check
+    def derive(self, nonlocal_keyword: 'PyNonlocalKeyword | None' = None, names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma] | None' = None) -> 'PyNonlocalStmt':
+        if nonlocal_keyword is None:
+            nonlocal_keyword = self.nonlocal_keyword
+        if names is None:
+            names = self.names
+        return PyNonlocalStmt(nonlocal_keyword=nonlocal_keyword, names=names)
+
+    def parent(self) -> 'PyNonlocalStmtParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
 class PyIfCase(_PyBaseNode):
 
     def __init__(self, test: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, if_keyword: 'PyIfKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
@@ -1654,11 +1708,11 @@ def is_py_path(value: Any) -> TypeGuard[PyPath]:
     return isinstance(value, PyAbsolutePath) or isinstance(value, PyRelativePath)
 
 
-type PyStmt = PyAssignStmt | PyBreakStmt | PyClassDef | PyContinueStmt | PyDeleteStmt | PyExprStmt | PyForStmt | PyFuncDef | PyIfStmt | PyImportStmt | PyImportFromStmt | PyPassStmt | PyRaiseStmt | PyRetStmt | PyTryStmt | PyTypeAliasStmt | PyWhileStmt
+type PyStmt = PyAssignStmt | PyBreakStmt | PyClassDef | PyContinueStmt | PyDeleteStmt | PyExprStmt | PyForStmt | PyFuncDef | PyGlobalStmt | PyIfStmt | PyImportStmt | PyImportFromStmt | PyNonlocalStmt | PyPassStmt | PyRaiseStmt | PyRetStmt | PyTryStmt | PyTypeAliasStmt | PyWhileStmt
 
 
 def is_py_stmt(value: Any) -> TypeGuard[PyStmt]:
-    return isinstance(value, PyAssignStmt) or isinstance(value, PyBreakStmt) or isinstance(value, PyClassDef) or isinstance(value, PyContinueStmt) or isinstance(value, PyDeleteStmt) or isinstance(value, PyExprStmt) or isinstance(value, PyForStmt) or isinstance(value, PyFuncDef) or isinstance(value, PyIfStmt) or isinstance(value, PyImportStmt) or isinstance(value, PyImportFromStmt) or isinstance(value, PyPassStmt) or isinstance(value, PyRaiseStmt) or isinstance(value, PyRetStmt) or isinstance(value, PyTryStmt) or isinstance(value, PyTypeAliasStmt) or isinstance(value, PyWhileStmt)
+    return isinstance(value, PyAssignStmt) or isinstance(value, PyBreakStmt) or isinstance(value, PyClassDef) or isinstance(value, PyContinueStmt) or isinstance(value, PyDeleteStmt) or isinstance(value, PyExprStmt) or isinstance(value, PyForStmt) or isinstance(value, PyFuncDef) or isinstance(value, PyGlobalStmt) or isinstance(value, PyIfStmt) or isinstance(value, PyImportStmt) or isinstance(value, PyImportFromStmt) or isinstance(value, PyNonlocalStmt) or isinstance(value, PyPassStmt) or isinstance(value, PyRaiseStmt) or isinstance(value, PyRetStmt) or isinstance(value, PyTryStmt) or isinstance(value, PyTypeAliasStmt) or isinstance(value, PyWhileStmt)
 
 
 type PyParam = PyRestPosParam | PyRestKeywordParam | PyPosSepParam | PyKwSepParam | PyNamedParam
@@ -1668,25 +1722,25 @@ def is_py_param(value: Any) -> TypeGuard[PyParam]:
     return isinstance(value, PyRestPosParam) or isinstance(value, PyRestKeywordParam) or isinstance(value, PyPosSepParam) or isinstance(value, PyKwSepParam) or isinstance(value, PyNamedParam)
 
 
-type PyKeyword = PyWhileKeyword | PyTypeKeyword | PyTryKeyword | PyReturnKeyword | PyRaiseKeyword | PyPassKeyword | PyOrKeyword | PyNotKeyword | PyIsKeyword | PyInKeyword | PyImportKeyword | PyIfKeyword | PyFromKeyword | PyForKeyword | PyFinallyKeyword | PyExceptKeyword | PyElseKeyword | PyElifKeyword | PyDelKeyword | PyDefKeyword | PyContinueKeyword | PyClassKeyword | PyBreakKeyword | PyAsyncKeyword | PyAsKeyword | PyAndKeyword
+type PyKeyword = PyWhileKeyword | PyTypeKeyword | PyTryKeyword | PyReturnKeyword | PyRaiseKeyword | PyPassKeyword | PyOrKeyword | PyNotKeyword | PyNonlocalKeyword | PyIsKeyword | PyInKeyword | PyImportKeyword | PyIfKeyword | PyGlobalKeyword | PyFromKeyword | PyForKeyword | PyFinallyKeyword | PyExceptKeyword | PyElseKeyword | PyElifKeyword | PyDelKeyword | PyDefKeyword | PyContinueKeyword | PyClassKeyword | PyBreakKeyword | PyAsyncKeyword | PyAsKeyword | PyAndKeyword
 
 
 def is_py_keyword(value: Any) -> TypeGuard[PyKeyword]:
-    return isinstance(value, PyWhileKeyword) or isinstance(value, PyTypeKeyword) or isinstance(value, PyTryKeyword) or isinstance(value, PyReturnKeyword) or isinstance(value, PyRaiseKeyword) or isinstance(value, PyPassKeyword) or isinstance(value, PyOrKeyword) or isinstance(value, PyNotKeyword) or isinstance(value, PyIsKeyword) or isinstance(value, PyInKeyword) or isinstance(value, PyImportKeyword) or isinstance(value, PyIfKeyword) or isinstance(value, PyFromKeyword) or isinstance(value, PyForKeyword) or isinstance(value, PyFinallyKeyword) or isinstance(value, PyExceptKeyword) or isinstance(value, PyElseKeyword) or isinstance(value, PyElifKeyword) or isinstance(value, PyDelKeyword) or isinstance(value, PyDefKeyword) or isinstance(value, PyContinueKeyword) or isinstance(value, PyClassKeyword) or isinstance(value, PyBreakKeyword) or isinstance(value, PyAsyncKeyword) or isinstance(value, PyAsKeyword) or isinstance(value, PyAndKeyword)
+    return isinstance(value, PyWhileKeyword) or isinstance(value, PyTypeKeyword) or isinstance(value, PyTryKeyword) or isinstance(value, PyReturnKeyword) or isinstance(value, PyRaiseKeyword) or isinstance(value, PyPassKeyword) or isinstance(value, PyOrKeyword) or isinstance(value, PyNotKeyword) or isinstance(value, PyNonlocalKeyword) or isinstance(value, PyIsKeyword) or isinstance(value, PyInKeyword) or isinstance(value, PyImportKeyword) or isinstance(value, PyIfKeyword) or isinstance(value, PyGlobalKeyword) or isinstance(value, PyFromKeyword) or isinstance(value, PyForKeyword) or isinstance(value, PyFinallyKeyword) or isinstance(value, PyExceptKeyword) or isinstance(value, PyElseKeyword) or isinstance(value, PyElifKeyword) or isinstance(value, PyDelKeyword) or isinstance(value, PyDefKeyword) or isinstance(value, PyContinueKeyword) or isinstance(value, PyClassKeyword) or isinstance(value, PyBreakKeyword) or isinstance(value, PyAsyncKeyword) or isinstance(value, PyAsKeyword) or isinstance(value, PyAndKeyword)
 
 
-type PyToken = PyIdent | PyFloat | PyInteger | PyString | PyTilde | PyVerticalBar | PyWhileKeyword | PyTypeKeyword | PyTryKeyword | PyReturnKeyword | PyRaiseKeyword | PyPassKeyword | PyOrKeyword | PyNotKeyword | PyIsKeyword | PyInKeyword | PyImportKeyword | PyIfKeyword | PyFromKeyword | PyForKeyword | PyFinallyKeyword | PyExceptKeyword | PyElseKeyword | PyElifKeyword | PyDelKeyword | PyDefKeyword | PyContinueKeyword | PyClassKeyword | PyBreakKeyword | PyAsyncKeyword | PyAsKeyword | PyAndKeyword | PyCaret | PyCloseBracket | PyOpenBracket | PyAtSign | PyGreaterThanGreaterThan | PyGreaterThanEquals | PyGreaterThan | PyEqualsEquals | PyEquals | PyLessThanEquals | PyLessThanLessThan | PyLessThan | PySemicolon | PyColon | PySlashSlash | PySlash | PyDotDotDot | PyDot | PyRArrow | PyHyphen | PyComma | PyPlus | PyAsteriskAsterisk | PyAsterisk | PyCloseParen | PyOpenParen | PyAmpersand | PyPercent | PyHashtag | PyExclamationMarkEquals | PyCarriageReturnLineFeed | PyLineFeed
+type PyToken = PyIdent | PyFloat | PyInteger | PyString | PyTilde | PyVerticalBar | PyWhileKeyword | PyTypeKeyword | PyTryKeyword | PyReturnKeyword | PyRaiseKeyword | PyPassKeyword | PyOrKeyword | PyNotKeyword | PyNonlocalKeyword | PyIsKeyword | PyInKeyword | PyImportKeyword | PyIfKeyword | PyGlobalKeyword | PyFromKeyword | PyForKeyword | PyFinallyKeyword | PyExceptKeyword | PyElseKeyword | PyElifKeyword | PyDelKeyword | PyDefKeyword | PyContinueKeyword | PyClassKeyword | PyBreakKeyword | PyAsyncKeyword | PyAsKeyword | PyAndKeyword | PyCaret | PyCloseBracket | PyOpenBracket | PyAtSign | PyGreaterThanGreaterThan | PyGreaterThanEquals | PyGreaterThan | PyEqualsEquals | PyEquals | PyLessThanEquals | PyLessThanLessThan | PyLessThan | PySemicolon | PyColon | PySlashSlash | PySlash | PyDotDotDot | PyDot | PyRArrow | PyHyphen | PyComma | PyPlus | PyAsteriskAsterisk | PyAsterisk | PyCloseParen | PyOpenParen | PyAmpersand | PyPercent | PyHashtag | PyExclamationMarkEquals | PyCarriageReturnLineFeed | PyLineFeed
 
 
 def is_py_token(value: Any) -> TypeGuard[PyToken]:
-    return isinstance(value, PyIdent) or isinstance(value, PyFloat) or isinstance(value, PyInteger) or isinstance(value, PyString) or isinstance(value, PyTilde) or isinstance(value, PyVerticalBar) or isinstance(value, PyWhileKeyword) or isinstance(value, PyTypeKeyword) or isinstance(value, PyTryKeyword) or isinstance(value, PyReturnKeyword) or isinstance(value, PyRaiseKeyword) or isinstance(value, PyPassKeyword) or isinstance(value, PyOrKeyword) or isinstance(value, PyNotKeyword) or isinstance(value, PyIsKeyword) or isinstance(value, PyInKeyword) or isinstance(value, PyImportKeyword) or isinstance(value, PyIfKeyword) or isinstance(value, PyFromKeyword) or isinstance(value, PyForKeyword) or isinstance(value, PyFinallyKeyword) or isinstance(value, PyExceptKeyword) or isinstance(value, PyElseKeyword) or isinstance(value, PyElifKeyword) or isinstance(value, PyDelKeyword) or isinstance(value, PyDefKeyword) or isinstance(value, PyContinueKeyword) or isinstance(value, PyClassKeyword) or isinstance(value, PyBreakKeyword) or isinstance(value, PyAsyncKeyword) or isinstance(value, PyAsKeyword) or isinstance(value, PyAndKeyword) or isinstance(value, PyCaret) or isinstance(value, PyCloseBracket) or isinstance(value, PyOpenBracket) or isinstance(value, PyAtSign) or isinstance(value, PyGreaterThanGreaterThan) or isinstance(value, PyGreaterThanEquals) or isinstance(value, PyGreaterThan) or isinstance(value, PyEqualsEquals) or isinstance(value, PyEquals) or isinstance(value, PyLessThanEquals) or isinstance(value, PyLessThanLessThan) or isinstance(value, PyLessThan) or isinstance(value, PySemicolon) or isinstance(value, PyColon) or isinstance(value, PySlashSlash) or isinstance(value, PySlash) or isinstance(value, PyDotDotDot) or isinstance(value, PyDot) or isinstance(value, PyRArrow) or isinstance(value, PyHyphen) or isinstance(value, PyComma) or isinstance(value, PyPlus) or isinstance(value, PyAsteriskAsterisk) or isinstance(value, PyAsterisk) or isinstance(value, PyCloseParen) or isinstance(value, PyOpenParen) or isinstance(value, PyAmpersand) or isinstance(value, PyPercent) or isinstance(value, PyHashtag) or isinstance(value, PyExclamationMarkEquals) or isinstance(value, PyCarriageReturnLineFeed) or isinstance(value, PyLineFeed)
+    return isinstance(value, PyIdent) or isinstance(value, PyFloat) or isinstance(value, PyInteger) or isinstance(value, PyString) or isinstance(value, PyTilde) or isinstance(value, PyVerticalBar) or isinstance(value, PyWhileKeyword) or isinstance(value, PyTypeKeyword) or isinstance(value, PyTryKeyword) or isinstance(value, PyReturnKeyword) or isinstance(value, PyRaiseKeyword) or isinstance(value, PyPassKeyword) or isinstance(value, PyOrKeyword) or isinstance(value, PyNotKeyword) or isinstance(value, PyNonlocalKeyword) or isinstance(value, PyIsKeyword) or isinstance(value, PyInKeyword) or isinstance(value, PyImportKeyword) or isinstance(value, PyIfKeyword) or isinstance(value, PyGlobalKeyword) or isinstance(value, PyFromKeyword) or isinstance(value, PyForKeyword) or isinstance(value, PyFinallyKeyword) or isinstance(value, PyExceptKeyword) or isinstance(value, PyElseKeyword) or isinstance(value, PyElifKeyword) or isinstance(value, PyDelKeyword) or isinstance(value, PyDefKeyword) or isinstance(value, PyContinueKeyword) or isinstance(value, PyClassKeyword) or isinstance(value, PyBreakKeyword) or isinstance(value, PyAsyncKeyword) or isinstance(value, PyAsKeyword) or isinstance(value, PyAndKeyword) or isinstance(value, PyCaret) or isinstance(value, PyCloseBracket) or isinstance(value, PyOpenBracket) or isinstance(value, PyAtSign) or isinstance(value, PyGreaterThanGreaterThan) or isinstance(value, PyGreaterThanEquals) or isinstance(value, PyGreaterThan) or isinstance(value, PyEqualsEquals) or isinstance(value, PyEquals) or isinstance(value, PyLessThanEquals) or isinstance(value, PyLessThanLessThan) or isinstance(value, PyLessThan) or isinstance(value, PySemicolon) or isinstance(value, PyColon) or isinstance(value, PySlashSlash) or isinstance(value, PySlash) or isinstance(value, PyDotDotDot) or isinstance(value, PyDot) or isinstance(value, PyRArrow) or isinstance(value, PyHyphen) or isinstance(value, PyComma) or isinstance(value, PyPlus) or isinstance(value, PyAsteriskAsterisk) or isinstance(value, PyAsterisk) or isinstance(value, PyCloseParen) or isinstance(value, PyOpenParen) or isinstance(value, PyAmpersand) or isinstance(value, PyPercent) or isinstance(value, PyHashtag) or isinstance(value, PyExclamationMarkEquals) or isinstance(value, PyCarriageReturnLineFeed) or isinstance(value, PyLineFeed)
 
 
-type PyNode = PySlice | PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern | PyEllipsisExpr | PyGuard | PyComprehension | PyGeneratorExpr | PyConstExpr | PyNestExpr | PyNamedExpr | PyAttrExpr | PySubscriptExpr | PyStarredExpr | PyListExpr | PyTupleExpr | PyKeywordArg | PyCallExpr | PyPrefixExpr | PyInfixExpr | PyQualName | PyAbsolutePath | PyRelativePath | PyAlias | PyFromAlias | PyImportStmt | PyImportFromStmt | PyRetStmt | PyExprStmt | PyAssignStmt | PyPassStmt | PyIfCase | PyElifCase | PyElseCase | PyIfStmt | PyDeleteStmt | PyRaiseStmt | PyForStmt | PyWhileStmt | PyBreakStmt | PyContinueStmt | PyTypeAliasStmt | PyExceptHandler | PyTryStmt | PyClassDef | PyNamedParam | PyRestPosParam | PyRestKeywordParam | PyPosSepParam | PyKwSepParam | PyDecorator | PyFuncDef | PyModule
+type PyNode = PySlice | PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern | PyEllipsisExpr | PyGuard | PyComprehension | PyGeneratorExpr | PyConstExpr | PyNestExpr | PyNamedExpr | PyAttrExpr | PySubscriptExpr | PyStarredExpr | PyListExpr | PyTupleExpr | PyKeywordArg | PyCallExpr | PyPrefixExpr | PyInfixExpr | PyQualName | PyAbsolutePath | PyRelativePath | PyAlias | PyFromAlias | PyImportStmt | PyImportFromStmt | PyRetStmt | PyExprStmt | PyAssignStmt | PyPassStmt | PyGlobalStmt | PyNonlocalStmt | PyIfCase | PyElifCase | PyElseCase | PyIfStmt | PyDeleteStmt | PyRaiseStmt | PyForStmt | PyWhileStmt | PyBreakStmt | PyContinueStmt | PyTypeAliasStmt | PyExceptHandler | PyTryStmt | PyClassDef | PyNamedParam | PyRestPosParam | PyRestKeywordParam | PyPosSepParam | PyKwSepParam | PyDecorator | PyFuncDef | PyModule
 
 
 def is_py_node(value: Any) -> TypeGuard[PyNode]:
-    return isinstance(value, PySlice) or isinstance(value, PyNamedPattern) or isinstance(value, PyAttrPattern) or isinstance(value, PySubscriptPattern) or isinstance(value, PyStarredPattern) or isinstance(value, PyListPattern) or isinstance(value, PyTuplePattern) or isinstance(value, PyEllipsisExpr) or isinstance(value, PyGuard) or isinstance(value, PyComprehension) or isinstance(value, PyGeneratorExpr) or isinstance(value, PyConstExpr) or isinstance(value, PyNestExpr) or isinstance(value, PyNamedExpr) or isinstance(value, PyAttrExpr) or isinstance(value, PySubscriptExpr) or isinstance(value, PyStarredExpr) or isinstance(value, PyListExpr) or isinstance(value, PyTupleExpr) or isinstance(value, PyKeywordArg) or isinstance(value, PyCallExpr) or isinstance(value, PyPrefixExpr) or isinstance(value, PyInfixExpr) or isinstance(value, PyQualName) or isinstance(value, PyAbsolutePath) or isinstance(value, PyRelativePath) or isinstance(value, PyAlias) or isinstance(value, PyFromAlias) or isinstance(value, PyImportStmt) or isinstance(value, PyImportFromStmt) or isinstance(value, PyRetStmt) or isinstance(value, PyExprStmt) or isinstance(value, PyAssignStmt) or isinstance(value, PyPassStmt) or isinstance(value, PyIfCase) or isinstance(value, PyElifCase) or isinstance(value, PyElseCase) or isinstance(value, PyIfStmt) or isinstance(value, PyDeleteStmt) or isinstance(value, PyRaiseStmt) or isinstance(value, PyForStmt) or isinstance(value, PyWhileStmt) or isinstance(value, PyBreakStmt) or isinstance(value, PyContinueStmt) or isinstance(value, PyTypeAliasStmt) or isinstance(value, PyExceptHandler) or isinstance(value, PyTryStmt) or isinstance(value, PyClassDef) or isinstance(value, PyNamedParam) or isinstance(value, PyRestPosParam) or isinstance(value, PyRestKeywordParam) or isinstance(value, PyPosSepParam) or isinstance(value, PyKwSepParam) or isinstance(value, PyDecorator) or isinstance(value, PyFuncDef) or isinstance(value, PyModule)
+    return isinstance(value, PySlice) or isinstance(value, PyNamedPattern) or isinstance(value, PyAttrPattern) or isinstance(value, PySubscriptPattern) or isinstance(value, PyStarredPattern) or isinstance(value, PyListPattern) or isinstance(value, PyTuplePattern) or isinstance(value, PyEllipsisExpr) or isinstance(value, PyGuard) or isinstance(value, PyComprehension) or isinstance(value, PyGeneratorExpr) or isinstance(value, PyConstExpr) or isinstance(value, PyNestExpr) or isinstance(value, PyNamedExpr) or isinstance(value, PyAttrExpr) or isinstance(value, PySubscriptExpr) or isinstance(value, PyStarredExpr) or isinstance(value, PyListExpr) or isinstance(value, PyTupleExpr) or isinstance(value, PyKeywordArg) or isinstance(value, PyCallExpr) or isinstance(value, PyPrefixExpr) or isinstance(value, PyInfixExpr) or isinstance(value, PyQualName) or isinstance(value, PyAbsolutePath) or isinstance(value, PyRelativePath) or isinstance(value, PyAlias) or isinstance(value, PyFromAlias) or isinstance(value, PyImportStmt) or isinstance(value, PyImportFromStmt) or isinstance(value, PyRetStmt) or isinstance(value, PyExprStmt) or isinstance(value, PyAssignStmt) or isinstance(value, PyPassStmt) or isinstance(value, PyGlobalStmt) or isinstance(value, PyNonlocalStmt) or isinstance(value, PyIfCase) or isinstance(value, PyElifCase) or isinstance(value, PyElseCase) or isinstance(value, PyIfStmt) or isinstance(value, PyDeleteStmt) or isinstance(value, PyRaiseStmt) or isinstance(value, PyForStmt) or isinstance(value, PyWhileStmt) or isinstance(value, PyBreakStmt) or isinstance(value, PyContinueStmt) or isinstance(value, PyTypeAliasStmt) or isinstance(value, PyExceptHandler) or isinstance(value, PyTryStmt) or isinstance(value, PyClassDef) or isinstance(value, PyNamedParam) or isinstance(value, PyRestPosParam) or isinstance(value, PyRestKeywordParam) or isinstance(value, PyPosSepParam) or isinstance(value, PyKwSepParam) or isinstance(value, PyDecorator) or isinstance(value, PyFuncDef) or isinstance(value, PyModule)
 
 
 type PySyntax = PyNode | PyToken
@@ -1796,6 +1850,12 @@ type PyAssignStmtParent = PyClassDef | PyElifCase | PyElseCase | PyExceptHandler
 
 
 type PyPassStmtParent = PyClassDef | PyElifCase | PyElseCase | PyExceptHandler | PyForStmt | PyFuncDef | PyIfCase | PyModule | PyTryStmt | PyWhileStmt
+
+
+type PyGlobalStmtParent = PyClassDef | PyElifCase | PyElseCase | PyExceptHandler | PyForStmt | PyFuncDef | PyIfCase | PyModule | PyTryStmt | PyWhileStmt
+
+
+type PyNonlocalStmtParent = PyClassDef | PyElifCase | PyElseCase | PyExceptHandler | PyForStmt | PyFuncDef | PyIfCase | PyModule | PyTryStmt | PyWhileStmt
 
 
 type PyIfCaseParent = PyIfStmt
@@ -2548,6 +2608,60 @@ def _coerce_union_2_token_pass_keyword_none_to_token_pass_keyword(value: 'PyPass
         return value
     else:
         raise ValueError('the coercion from PyPassKeyword | None to PyPassKeyword failed')
+
+
+@no_type_check
+def _coerce_union_2_token_global_keyword_none_to_token_global_keyword(value: 'PyGlobalKeyword | None') -> 'PyGlobalKeyword':
+    if value is None:
+        return PyGlobalKeyword()
+    elif isinstance(value, PyGlobalKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyGlobalKeyword | None to PyGlobalKeyword failed')
+
+
+@no_type_check
+def _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(value: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma]') -> 'Punctuated[PyIdent, PyComma]':
+    new_value = Punctuated()
+    iterator = iter(value)
+    try:
+        first_element = next(iterator)
+        while True:
+            try:
+                second_element = next(iterator)
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    element_separator = first_element[1]
+                    assert(element_separator is not None)
+                else:
+                    element_value = first_element
+                    element_separator = PyComma()
+                new_element_value = _coerce_union_2_token_ident_extern_string_to_token_ident(element_value)
+                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_value.append(new_element_value, new_element_separator)
+                first_element = second_element
+            except StopIteration:
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    assert(first_element[1] is None)
+                else:
+                    element_value = first_element
+                new_element_value = _coerce_union_2_token_ident_extern_string_to_token_ident(element_value)
+                new_value.append(new_element_value)
+                break
+    except StopIteration:
+        pass
+    return new_value
+
+
+@no_type_check
+def _coerce_union_2_token_nonlocal_keyword_none_to_token_nonlocal_keyword(value: 'PyNonlocalKeyword | None') -> 'PyNonlocalKeyword':
+    if value is None:
+        return PyNonlocalKeyword()
+    elif isinstance(value, PyNonlocalKeyword):
+        return value
+    else:
+        raise ValueError('the coercion from PyNonlocalKeyword | None to PyNonlocalKeyword failed')
 
 
 @no_type_check
