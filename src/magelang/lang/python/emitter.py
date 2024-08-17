@@ -216,6 +216,12 @@ def emit_token(node: PyToken) -> str:
     if isinstance(node, PySemicolon):
         return ';'
 
+    if isinstance(node, PyNonlocalKeyword):
+        return 'nonlocal'
+
+    if isinstance(node, PyGlobalKeyword):
+        return 'global'
+
     if isinstance(node, PySlash):
         return '/'
 
@@ -390,6 +396,24 @@ def emit(node: PyNode) -> str:
             out.write(' ')
 
     def visit_stmt(node: PyStmt) -> None:
+
+        if isinstance(node, PyGlobalStmt):
+            visit_token(node.global_keyword)
+            out.write(' ')
+            for name, comma in node.names:
+                visit_token(name)
+                if comma is not None:
+                    visit_token(comma)
+            return
+
+        if isinstance(node, PyNonlocalStmt):
+            visit_token(node.nonlocal_keyword)
+            out.write(' ')
+            for name, comma in node.names:
+                visit_token(name)
+                if comma is not None:
+                    visit_token(comma)
+            return
 
         if isinstance(node, PyBreakStmt):
             visit_token(node.break_keyword)
