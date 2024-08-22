@@ -2,15 +2,13 @@
 import argparse
 from pathlib import Path
 
-from magelang.emitter import emit
-from magelang.passes import simplify
-
 from .logging import error
 from .util import pipe
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser
-from .passes import extract_literals, inline, overlapping_charsets, extract_prefixes, check_undefined 
+from .passes import simplify, extract_literals, inline, overlapping_charsets, extract_prefixes, check_undefined , insert_skip
+from .emitter import emit
 from .generator import generate, get_generator_languages
 
 project_dir = Path(__file__).parent.parent.parent
@@ -78,7 +76,10 @@ _passes = {
     'inline': inline,
     'simplify': simplify,
     'extract_prefixes': extract_prefixes,
+    'overlapping_charsets': overlapping_charsets,
+    'check_undefined': check_undefined,
     'extract_literals': extract_literals,
+    'insert_skip': insert_skip,
 }
 
 def _do_dump(args) -> int:
