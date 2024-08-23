@@ -76,11 +76,13 @@ def emit(node: Node) -> str:
             return
 
         if isinstance(node, ChoiceExpr):
+            out.write('(')
             first = True
             for element in node.elements:
                 if first: first = False
                 else: out.write(' | ')
                 visit(element)
+            out.write(')')
             return
 
         if isinstance(node, ListExpr):
@@ -137,7 +139,20 @@ def emit(node: Node) -> str:
                     out.write(')')
                 out.write('+')
             else:
-                raise NotImplementedError()
+                wide = is_wide(node.expr)
+                if is_wide: out.write('(')
+                visit(node.expr)
+                if is_wide: out.write(')')
+                out.write('{')
+                out.write(str(node.min))
+                if node.max == node.min:
+                    pass
+                elif node.max == POSINF:
+                    out.write(',')
+                else:
+                    out.write(',')
+                    out.write(str(node.max))
+                out.write('}')
             return
 
         raise RuntimeError(f'unexepected {node}')

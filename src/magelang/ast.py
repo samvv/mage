@@ -511,3 +511,13 @@ def for_each_expr(node: Expr, proc: Callable[[Expr], None]) -> None:
             proc(element)
         return
     assert_never(node)
+
+def static_expr_to_str(expr: Expr) -> str:
+    if isinstance(expr, LitExpr):
+        return expr.text
+    if isinstance(expr, SeqExpr):
+        out = ''
+        for element in expr.elements:
+            out += static_expr_to_str(element)
+        return out
+    raise RuntimeError(f'could not extract text from {expr}: expression is non-static or not normalised')
