@@ -1,24 +1,14 @@
 
 import importlib
 from pathlib import Path
-from typing import Protocol
+from typing import Any
 
 from magelang.ast import Grammar
 from magelang.util import Files
 
 here = Path(__file__).parent.resolve()
 
-class _GenerateFn(Protocol):
-
-    def __call__(
-        self,
-        grammar: Grammar,
-        prefix: str = '',
-        cst_parent_pointers: bool = False,
-        debug: bool = False,
-    ) -> Files: ...
-
-_generate_by_language: dict[str, _GenerateFn] = {}
+_generate_by_language: dict[str, Any] = {}
 
 for fname in here.iterdir():
     if (fname / '__init__.py').exists():
@@ -34,7 +24,22 @@ def generate(
     prefix: str = '',
     cst_parent_pointers: bool = False,
     debug: bool = False,
+    enable_ast = False,
+    enable_cst = False,
+    enable_visitor = False,
+    enable_lexer = False,
+    enable_emitter = False,
 ) -> Files:
     generate = _generate_by_language[lang]
-    return generate(grammar, prefix=prefix, cst_parent_pointers=cst_parent_pointers, debug=debug)
+    return generate(
+        grammar,
+        prefix=prefix,
+        cst_parent_pointers=cst_parent_pointers,
+        debug=debug,
+        enable_ast=enable_ast,
+        enable_cst=enable_cst,
+        enable_lexer=enable_lexer,
+        enable_visitor=enable_visitor,
+        enable_emitter=enable_emitter
+    )
 

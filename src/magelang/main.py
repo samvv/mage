@@ -45,6 +45,12 @@ def _do_generate(args) -> int:
     #visualize(grammar, format='png')
 
     cst_parent_pointers = args.feat_all or args.feat_cst_parent_pointers
+    enable_visitor = args.feat_all or args.feat_visitor
+    enable_cst = args.feat_all or args.feat_cst
+    enable_ast = args.feat_all or args.feat_ast
+    enable_lexer = args.feat_all or args.feat_lexer
+    # This one is experimental and isn't triggered by '--feat-all'
+    enable_emitter = args.feat_emitter
 
     prefix = prefix + '_' if prefix else ''
 
@@ -54,6 +60,11 @@ def _do_generate(args) -> int:
         prefix=prefix,
         cst_parent_pointers=cst_parent_pointers,
         debug=debug,
+        enable_emitter=enable_emitter,
+        enable_cst=enable_cst,
+        enable_ast=enable_ast,
+        enable_visitor=enable_visitor,
+        enable_lexer=enable_lexer
     ):
         out_path = dest_dir / fname
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -122,6 +133,10 @@ def main() -> int:
     generate_parser.add_argument('--feat-all', action=argparse.BooleanOptionalAction, help='Enable all output features (off by default)')
     generate_parser.add_argument('--feat-linecol', action=argparse.BooleanOptionalAction, help='Track line/column information during lexing (unless grammar requires it off by default)')
     generate_parser.add_argument('--feat-cst-parent-pointers', action=argparse.BooleanOptionalAction, help='Generate references to the parent of a CST node (off by default)')
+    generate_parser.add_argument('--feat-ast', action=argparse.BooleanOptionalAction, default=True, help='Generate an abstract syntax tree (on by default)')
+    generate_parser.add_argument('--feat-cst', action=argparse.BooleanOptionalAction, default=True, help='Generate a concrete syntax tree (on by default)')
+    generate_parser.add_argument('--feat-visitor', action=argparse.BooleanOptionalAction, default=True, help='Generate AST/CST visitors (on by default)')
+    generate_parser.add_argument('--feat-emitter', action=argparse.BooleanOptionalAction, help='Generate a highly experimental emitter (off by default)')
     generate_parser.add_argument('--force', action=argparse.BooleanOptionalAction, help='Ignore errors and always overwrite files that already exist')
     generate_parser.add_argument('--out-dir', default='output', help='Where to place the generated files')
     generate_parser.add_argument('--prefix', default='', help='Prefix all rules in the grammar with this value')
