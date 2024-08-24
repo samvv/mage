@@ -38,8 +38,7 @@ def _do_generate(args) -> int:
     grammar = _load_grammar(filename)
     if not skip_checks:
         grammar = _run_checks(grammar)
-    #grammar = pipe(grammar, inline, extract_literals)
-    grammar = pipe(grammar, extract_literals)
+    grammar = pipe(grammar, inline, extract_literals)
     # FIXME should only happen in the parser generator and lexer generator
     #if opt:
     #    grammar = pipe(grammar, extract_prefixes, simplify)
