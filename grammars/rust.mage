@@ -1,0 +1,206 @@
+# Should be part of standard library
+
+any_byte = [\x00-\xFF]
+
+any_char = [\x00-\x7F]
+
+eof = !any_byte
+
+# Helper utilities
+
+eol = '\r\n' | '\n'
+
+eolf = eol | eof
+
+triple_slash_comment
+  = '///' (!eolf any_char)*
+
+line_comment
+  = '//' (!eolf any_char)*
+
+block_comment
+  = '/*' (!'*/' any_char)* '*/'
+
+@skip
+__ = ([\n\r\t ] | '\\' eolf)*
+
+# First tokens
+
+@keyword
+pub token ident
+  = [a-zA-Z_] [a-zA-Z_0-9]*
+
+pub token integer -> Integer
+  = '0b' [0-1]+
+  | '0b' [0-8]+
+  | '0x' [0-9a-f]i+
+  | [0-9]*
+
+pub token float -> Float
+   = [0-9]* '.' [0-9]+
+
+character = any_char
+
+pub token string
+   = '"' character* '"'
+
+pub token char
+  = '\'' character '\''
+
+# Type expressions
+
+pub type_init
+  = '=' type_expr
+
+pub type_param
+  = name:ident ':' bounds:(type_param_bound '%' '+') default:type_init?
+
+pub const_param
+  = 'const' name:ident ':' type_expr default:init?
+
+pub generic_param
+  = lifetime
+  | type_param
+  | const_param
+
+pub trait_bound_modifier
+  = '?'
+
+pub bound_lifetimes
+  = 'for' '<' lifetimes:(generic_param % ',') '>'
+
+pub trait_bound
+  = modifier:trait_bound_modifier? bound_lifetimes? path
+
+pub type_param_bound
+  = trait_bound
+  | lifetime
+
+pub lifetime
+  = '\'' name:ident
+
+pub assoc_type
+  = name:ident generics:angle_bracketed_generic_arguments? '=' type_expr
+
+pub assoc_const
+  = name:ident generics:angle_bracketed_generic_arguments? '=' expr
+
+pub constraint
+  = name:ident generics:angle_bracketed_generic_arguments ':' bounds:(type_param_bound % '+')
+
+pub generic_argument
+  = lifetime
+  | type_expr
+  | expr
+  | assoc_type
+  | assoc_const
+  | constraint
+
+pub turbofish
+  = '::' '<' args:(generic_argument % ',') '>'
+
+pub angle_bracketed_generic_arguments
+  = '<' args:(generic_argument % ',') '>'
+
+pub parenthesized_generic_arguments
+  = '(' params:(type_expr % ',') ')' result:type_expr
+
+pub path_arguments
+  = turbofish
+  | angle_bracketed_generic_arguments
+  | parenthesized_generic_arguments
+
+pub path_segment
+  = name:ident args:path_arguments?
+
+pub path
+  = leading_colon_colon:'::'? segments:(path_segment % '::')
+
+pub qself
+  = '<' type_expr 'as' path '>'
+
+pub path_type_expr
+  = qself? path
+
+pub type_expr
+  = path_type_expr
+
+# Expressions
+
+path = path:(ident '.')* name:ident
+
+pub ref_expr
+  = path
+
+bool = 'true' | 'false'
+
+pub lit_expr
+  = string
+  | char
+  | float
+  | bool
+
+pub init
+  = name:ident '=' value:expr
+
+pub struct_expr
+  = path '{' (init % ',') ','? '}'
+
+pub call_expr
+  = operator:expr '(' args:(expr % ',') ')'
+
+pub ret_expr
+  = 'return' expr
+
+pub block_expr
+  = '{' stmts:(item ';') last:expr '}'
+
+pub expr
+  = lit_expr
+  | ref_expr
+  | call_expr
+  | struct_expr
+  | block_expr
+  | ret_expr
+
+# Items
+
+pub field
+  = name:ident ':' type_expr
+
+pub variant
+  = struct_variant
+  | tuple_variant
+  | empty_variant
+
+pub struct_variant
+  = name:ident '{' fields:(field % ',') ','? '}'
+
+pub tuple_variant
+  = name:ident '(' types:(type_expr % ',') ')'
+
+pub empty_variant
+  = name:ident init?
+
+pub enum_item
+  = 'pub'? 'enum' name:ident '{' variants:(variant % ',') ','? '}'
+
+pub struct_item
+  = 'pub'? 'struct' name:ident '{' fields:(field % ',') ',' '}'
+
+pub expr_item
+  = expr
+
+pub item
+  = enum_item
+  | struct_item
+  | expr_item
+
+pub toplevel
+  = enum_item
+  | struct_item
+  | use_item
+
+pub source_file
+  = items:toplevel*
+
