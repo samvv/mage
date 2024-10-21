@@ -1,6 +1,6 @@
 
 import io
-from typing import Any, Callable, Iterator, TextIO, TypeGuard, TypeVar, overload
+from typing import Any, Callable, Iterator, Never, TextIO, TypeGuard, TypeVar, overload
 import re
 
 
@@ -28,6 +28,8 @@ def to_snake_case(name: str) -> str:
         s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
+def todo() -> Never:
+    raise NotImplementedError(f'this functionality has yet to be implemented')
 
 T = TypeVar('T')
 
