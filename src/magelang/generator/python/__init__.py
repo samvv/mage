@@ -28,7 +28,6 @@ def generate(
         #('cst.pyi', emit(generate_tree_types(specs, prefix=prefix, gen_parent_pointers=cst_parent_pointers))),
         if enable_visitor:
             from .visitor import generate_visitor
-            print('HERee')
             files.append(('cst_visitor.py', emit(generate_visitor(grammar, prefix=prefix, debug=debug))))
 
     if enable_lexer:
@@ -41,5 +40,4 @@ def generate(
         from .emitter import generate_emitter
         files.append(('emitter.py', emit(generate_emitter(grammar, prefix=prefix))))
 
-    print(files)
     return files
