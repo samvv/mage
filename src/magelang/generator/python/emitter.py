@@ -1,10 +1,8 @@
 
 from collections.abc import Generator
-from functools import wraps
-from re import A
 from typing import assert_never
 from magelang.ast import CharSetExpr, ChoiceExpr, Expr, Grammar, HideExpr, ListExpr, LitExpr, LookaheadExpr, RefExpr, RepeatExpr, SeqExpr, static_expr_to_str
-from magelang.treespec import AnyType, ExternType, ListType, NeverType, NodeType, NoneType, PunctType, TokenSpec, TokenType, TupleType, UnionType, VariantSpec, VariantType, expand_variant_types, grammar_to_specs, NodeSpec, Type
+from magelang.treespec import AnyType, ExternType, ListType, NeverType, NodeType, NoneType, PunctType, TokenSpec, TokenType, TupleType, UnionType, VariantType, grammar_to_specs, NodeSpec, Type
 from magelang.lang.python.cst import *
 from .util import Case, build_cond, gen_shallow_test, namespaced, to_class_name, build_isinstance
 
