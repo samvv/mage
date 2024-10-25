@@ -8,7 +8,7 @@ some tabular data in a fringe format, Mage has got you covered!
  - 🚀 Full support for Python typings. Avoid runtime errors while building your language!
  - ➕ Add your own languages through the use of a powerful template engine!
 
-👀 Mage is written in itself. Check out the [generated code][1] of our Python generator!
+👀 Mage is written in itself. Check out the [generated code][1] of part of our Python generator!
 
 Here is the status of the various languages supported by Mage:
 
