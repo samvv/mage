@@ -190,6 +190,7 @@ base_op
   | '^'
   | '&'
 
+@noskip
 assign_op
   = op:base_op '='
 
