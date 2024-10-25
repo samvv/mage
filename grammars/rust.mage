@@ -1,3 +1,10 @@
+# A Mage grammar for the Rust Programming Language 
+#
+# Grammar derived from the structures defined in the `syn` crate.
+# See [its documentation][1] for more information.
+#
+# [1]: https://docs.rs/syn/2.0.85/syn/index.html
+
 # Should be part of standard library
 
 any_byte = [\x00-\xFF]
@@ -97,13 +104,13 @@ pub generic_argument
   | constraint
 
 pub turbofish
-  = '::' '<' args:(generic_argument % ',') '>'
+  = leading_colon_colon:'::' '<' args:(generic_argument % ',') '>'
 
 pub angle_bracketed_generic_arguments
   = '<' args:(generic_argument % ',') '>'
 
 pub parenthesized_generic_arguments
-  = '(' params:(type_expr % ',') ')' result:type_expr
+  = '(' params:(type_expr % ',') ')' '->' result:type_expr
 
 pub path_arguments
   = turbofish
@@ -127,18 +134,16 @@ pub type_expr
 
 # Expressions
 
-path = path:(ident '.')* name:ident
+path = path:(ident '::')* name:ident
 
 pub ref_expr
   = path
 
 bool = 'true' | 'false'
 
+@wrap
 pub lit_expr
-  = string
-  | char
-  | float
-  | bool
+  = literal:(string | char | float | bool)
 
 pub init
   = name:ident '=' value:expr
@@ -186,14 +191,40 @@ pub enum_item
   = 'pub'? 'enum' name:ident '{' variants:(variant % ',') ','? '}'
 
 pub struct_item
-  = 'pub'? 'struct' name:ident '{' fields:(field % ',') ',' '}'
+  = 'pub'? 'struct' name:ident '{' fields:(field % ',') ','? '}'
 
 pub expr_item
   = expr
 
+pub use_path
+  = name:ident '::' tree:use_tree
+
+pub use_name
+  = name:ident
+
+pub use_rename
+  = name:ident 'as' rename:ident
+
+pub use_glob
+  = '*'
+
+pub use_group
+  = '{' items:(use_tree % ',') '}'
+
+pub use_tree
+  = use_path
+  | use_name
+  | use_rename
+  | use_glob
+  | use_group
+
+pub use_item
+  = 'use' '::'? path:(ident '::')* ';'
+
 pub item
   = enum_item
   | struct_item
+  | use_item
   | expr_item
 
 pub toplevel
