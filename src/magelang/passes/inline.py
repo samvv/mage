@@ -11,7 +11,7 @@ def inline(grammar: Grammar) -> Grammar:
             if rule is None or rule.is_public or rule.is_extern:
                 return
             assert(rule.expr is not None)
-            new_expr = rule.expr.derive(label=rule.name)
+            new_expr = rule.expr.derive(label=expr.label or rule.name)
             return rewrite_expr(new_expr, rewriter)
 
     for rule in grammar.rules:
@@ -19,12 +19,7 @@ def inline(grammar: Grammar) -> Grammar:
             new_rules.append(rule)
         elif rule.is_public or rule.is_skip:
             assert(rule.expr is not None)
-            new_rules.append(Rule(
-                comment=rule.comment,
-                decorators=rule.decorators,
-                flags=rule.flags,
-                name=rule.name,
-                type_name=rule.type_name,
+            new_rules.append(rule.derive(
                 expr=rewrite_expr(rule.expr, rewriter)
             ))
 
