@@ -5,10 +5,11 @@ Also defines some visitors over Mage expressions and other useful procedures to
 make handling the AST a bit easier.
 """
 
-from functools import cache
+from functools import cache, lru_cache
 import sys
-from typing import TYPE_CHECKING, Callable, Generator, assert_never
-
+from typing import TYPE_CHECKING, Callable, Generator, Iterator, SupportsComplex, TypeVar, assert_never
+from intervaltree import IntervalTree
+from intervaltree.intervaltree import warn
 
 if TYPE_CHECKING:
     from .treespec import Type
@@ -131,6 +132,43 @@ class CharSetExpr(ExprBase):
             action = self.action
         return CharSetExpr(elements=elements, ci=ci, invert=invert, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
 
+    def contains(self, ch: str) -> bool:
+        for element in self.elements:
+            if isinstance(element, str):
+                if element == ch:
+                    return True
+            else:
+                low, high = element
+                if ord(ch) >= ord(low) and ord(ch) <= ord(high):
+                    return True
+        return False
+
+    def to_interval_tree(self) -> IntervalTree:
+        # FIXME must handle self.ci and self.negate. Maybe add self.canonical?
+        m = IntervalTree()
+        for element in self.elements:
+            if isinstance(element, str):
+                low = ord(element)
+                high = ord(element)+1
+            else:
+                low = ord(element[0])
+                high = ord(element[1])+1
+            m.addi(low, high)
+        return m
+
+    @staticmethod
+    def overlaps(a: 'CharSetExpr', b: 'CharSetExpr') -> bool:
+        # FIXME must handle self.ci and self.negate. Maybe add self.canoncical?
+        m = a.to_interval_tree()
+        for element in b.elements:
+            if isinstance(element, str):
+                if m.at(ord(element)):
+                    return True
+            else:
+                low, high = element
+                if m.overlap(ord(low), ord(high)+1):
+                    return True
+        return False
 
 class ChoiceExpr(ExprBase):
 
@@ -521,3 +559,18 @@ def static_expr_to_str(expr: Expr) -> str:
             out += static_expr_to_str(element)
         return out
     raise RuntimeError(f'could not extract text from {expr}: expression is non-static or not normalised')
+
+def flatten_sequence(expr: Expr) -> Generator[Expr, None, None]:
+    if isinstance(expr, SeqExpr):
+        for element in expr.elements:
+            yield from flatten_sequence(element)
+    else:
+        yield expr
+
+def flatten_choice(expr: Expr) -> Generator[Expr, None, None]:
+    if isinstance(expr, ChoiceExpr):
+        for element in expr.elements:
+            yield from flatten_choice(element)
+    else:
+        yield expr
+

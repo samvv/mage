@@ -22,22 +22,30 @@ def generate(
 
     files = []
 
+    init = ''
+
     if enable_cst:
         from .tree import generate_tree
         files.append(('cst.py', emit(generate_tree(specs, prefix=prefix, gen_parent_pointers=cst_parent_pointers))))
+        init += 'from .cst import *\n'
         #('cst.pyi', emit(generate_tree_types(specs, prefix=prefix, gen_parent_pointers=cst_parent_pointers))),
         if enable_visitor:
             from .visitor import generate_visitor
             files.append(('cst_visitor.py', emit(generate_visitor(grammar, prefix=prefix, debug=debug))))
+            init += 'from .cst_visitor import *\n'
 
     if enable_lexer:
         from .lexer import generate_lexer
         from .test_lexer import generate_test_lexer
         files.append(('lexer.py', emit(generate_lexer(grammar, prefix=prefix))))
+        init += 'from .lexer import *\n'
         files.append(('test_lexer.py', emit(generate_test_lexer(grammar, prefix=prefix))))
 
     if enable_emitter:
         from .emitter import generate_emitter
+        init += 'from .emitter import *\n'
         files.append(('emitter.py', emit(generate_emitter(grammar, prefix=prefix))))
+
+    files.append(('__init__.py', init))
 
     return files

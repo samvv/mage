@@ -289,6 +289,7 @@ class Field:
     """
     name: str
     ty: Type
+    expr: Expr
 
 @dataclass
 class SpecBase:
@@ -448,6 +449,7 @@ def infer_type(expr: Expr, grammar: Grammar) -> Type:
 
         if isinstance(expr, HideExpr):
             buffer.append(expr.expr)
+            # TODO return some internal constant rather than a public type
             return make_unit()
 
         if isinstance(expr, ListExpr):
@@ -466,7 +468,7 @@ def infer_type(expr: Expr, grammar: Grammar) -> Type:
             if not rule.is_public:
                 return visit(rule.expr)
             if grammar.is_token_rule(rule):
-                return TokenType(rule.name) 
+                return TokenType(rule.name)
             if grammar.is_variant(rule):
                 return VariantType(rule.name)
             return NodeType(rule.name)
@@ -895,7 +897,7 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
         field_type = simplify_type(infer_type(expr, grammar))
         expr.field_name = field_name
         expr.field_type = field_type
-        yield Field(field_name, field_type)
+        yield Field(field_name, field_type, expr)
 
     def rename_duplicate_members(members: list[Field]) -> list[Field]:
         taken = dict[str, int]()

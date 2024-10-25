@@ -1,5 +1,6 @@
 
-from typing import Any, Generic, Iterable, Iterator, TypeVar
+from dataclasses import dataclass
+from typing import Generic, Iterable, Iterator, TypeVar
 
 
 EOF = '\uFFFF'
@@ -113,4 +114,39 @@ class AbstractLexer:
             self._curr_pos.column += 1
         return ch
 
+## -- Designed for the emitter
 
+@dataclass
+class Doc:
+    pass
+
+
+@dataclass
+class ConsDoc(Doc):
+    head: Doc
+    tail: Doc
+
+
+@dataclass
+class EmptyDoc(Doc):
+    pass
+
+
+@dataclass
+class TextDoc(Doc):
+    text: str
+
+
+def empty() -> Doc:
+    return EmptyDoc()
+
+
+def seq(elements: list[Doc]) -> Doc:
+    out = EmptyDoc()
+    for element in reversed(elements):
+        out = ConsDoc(element, out)
+    return out
+
+
+def text(contents: str) -> TextDoc:
+    return TextDoc(contents)
