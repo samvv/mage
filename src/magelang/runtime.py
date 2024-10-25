@@ -1,6 +1,6 @@
 
 from dataclasses import dataclass
-from typing import Generic, Iterable, Iterator, TypeVar
+from typing import Generic, Iterable, Iterator, Sequence, TypeVar
 
 
 EOF = '\uFFFF'
@@ -116,24 +116,25 @@ class AbstractLexer:
 
 ## -- Designed for the emitter
 
+type Doc = ConsDoc | EmptyDoc | TextDoc
+
 @dataclass
-class Doc:
+class DocBase:
     pass
 
-
 @dataclass
-class ConsDoc(Doc):
+class ConsDoc(DocBase):
     head: Doc
     tail: Doc
 
 
 @dataclass
-class EmptyDoc(Doc):
+class EmptyDoc(DocBase):
     pass
 
 
 @dataclass
-class TextDoc(Doc):
+class TextDoc(DocBase):
     text: str
 
 
@@ -141,7 +142,7 @@ def empty() -> Doc:
     return EmptyDoc()
 
 
-def seq(elements: list[Doc]) -> Doc:
+def seq(elements: Sequence[Doc]) -> Doc:
     out = EmptyDoc()
     for element in reversed(elements):
         out = ConsDoc(element, out)
