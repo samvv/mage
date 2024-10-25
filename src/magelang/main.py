@@ -7,7 +7,7 @@ from .util import pipe
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser
-from .passes import simplify, extract_literals, inline, overlapping_charsets, extract_prefixes, check_undefined , insert_skip
+from .passes import simplify, extract_literals, inline, overlapping_charsets, extract_prefixes, check_undefined , insert_skip, check_token_no_parse
 from .emitter import emit
 from .generator import generate, get_generator_languages
 
@@ -22,7 +22,7 @@ def _load_grammar(filename: str) -> Grammar:
     return parser.parse_grammar()
 
 def _run_checks(grammar: Grammar) -> Grammar:
-    return pipe(grammar, check_undefined, overlapping_charsets)
+    return pipe(grammar, check_token_no_parse, check_undefined, overlapping_charsets)
 
 def _do_generate(args) -> int:
 
