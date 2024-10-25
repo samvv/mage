@@ -33,7 +33,7 @@ def generate_emitter(
         yield gen_write(PyCallExpr(PyNamedExpr(emit_token_fn_name), args=[ target ]))
 
     def gen_write(expr: PyExpr) -> PyStmt:
-        return PyAssignStmt(PyNamedPattern(out_name), value=PyInfixExpr(PyNamedExpr(out_name), PyPlus(), expr))
+        return PyAugAssignStmt(PyNamedPattern(out_name), PyPlus(), expr)
 
     def gen_skip() -> Generator[PyStmt, None, None]:
         assert(skip_rule is not None and skip_rule.expr is not None)

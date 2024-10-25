@@ -139,7 +139,7 @@ def generate_lexer(
                     *build_cond([(
                         PyInfixExpr(left=PyNamedExpr(ch_name), op=PyEqualsEquals(), right=PyConstExpr(literal=ch)),
                         [
-                            PyAssignStmt(PyNamedPattern(char_offset_name), value=PyInfixExpr(PyNamedExpr(char_offset_name), PyPlus(), PyConstExpr(1))),
+                            PyAugAssignStmt(PyNamedPattern(char_offset_name), PyPlus(), PyConstExpr(1)),
                             *next_char(k+1)
                         ]
                     )])
@@ -171,7 +171,7 @@ def generate_lexer(
                 *build_cond([(
                     build_or(make_charset_predicate(element, PyNamedExpr(ch_name)) for element in expr.elements),
                     [
-                        PyAssignStmt(PyNamedPattern(char_offset_name), value=PyInfixExpr(PyNamedExpr(char_offset_name), PyPlus(), PyConstExpr(1))),
+                        PyAugAssignStmt(PyNamedPattern(char_offset_name), PyPlus(), PyConstExpr(1)),
                         *success()
                     ]
                 )]),

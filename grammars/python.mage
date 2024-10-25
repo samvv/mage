@@ -175,19 +175,26 @@ pub prefix_op
 pub prefix_expr
   = prefix_op expr
 
-pub infix_op
+base_op
   = '+'
   | '-'
   | '*'
   | '/'
+  | '@'
   | '//'
   | '%'
+  | '**'
   | '<<'
   | '>>'
   | '|'
   | '^'
   | '&'
-  | '@'
+
+assign_op
+  = op:base_op '='
+
+pub infix_op
+  = base_op
   | 'or'
   | 'and'
   | '=='
@@ -233,6 +240,7 @@ pub import_from_stmt
 
 pub stmt
   = assign_stmt
+  | aug_assign_stmt
   | break_stmt
   | class_def
   | continue_stmt
@@ -257,6 +265,9 @@ pub ret_stmt
 
 pub expr_stmt
   = expr
+
+pub aug_assign_stmt
+  = pattern annotation:(':' expr)? assign_op expr
 
 pub assign_stmt
   = pattern annotation:(':' expr)? value:('=' expr)?

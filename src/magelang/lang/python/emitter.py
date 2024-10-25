@@ -516,6 +516,20 @@ def emit(node: PyNode) -> str:
                 visit_expr(expr)
             return
 
+        if isinstance(node, PyAugAssignStmt):
+            visit_pattern(node.pattern)
+            if node.annotation is not None:
+                colon, expr = node.annotation
+                visit_token(colon)
+                out.write(' ')
+                visit_expr(expr)
+            out.write(' ')
+            visit_token(node.op)
+            visit_token(node.equals)
+            out.write(' ')
+            visit_expr(node.expr)
+            return
+
         if isinstance(node, PyPassStmt):
             visit_token(node.pass_keyword)
             return

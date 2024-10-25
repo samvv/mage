@@ -187,6 +187,8 @@ def for_each_py_stmt(node: PyStmt, proc: Callable[[PyStmt], None]):
         return
     if isinstance(node, PyExprStmt):
         return
+    if isinstance(node, PyAugAssignStmt):
+        return
     if isinstance(node, PyAssignStmt):
         return
     if isinstance(node, PyPassStmt):
@@ -414,6 +416,12 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
             proc(node.expr)
         return
     if isinstance(node, PyExprStmt):
+        proc(node.expr)
+        return
+    if isinstance(node, PyAugAssignStmt):
+        proc(node.pattern)
+        if isinstance(node.annotation, tuple):
+            proc(node.annotation[1])
         proc(node.expr)
         return
     if isinstance(node, PyAssignStmt):
@@ -809,6 +817,40 @@ def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
             proc(node.expr)
         return
     if isinstance(node, PyExprStmt):
+        proc(node.expr)
+        return
+    if isinstance(node, PyAugAssignStmt):
+        proc(node.pattern)
+        if isinstance(node.annotation, tuple):
+            proc(node.annotation[0])
+            proc(node.annotation[1])
+        if isinstance(node.op, PyAmpersand):
+            proc(node.op)
+        elif isinstance(node.op, PyAsterisk):
+            proc(node.op)
+        elif isinstance(node.op, PyAsteriskAsterisk):
+            proc(node.op)
+        elif isinstance(node.op, PyAtSign):
+            proc(node.op)
+        elif isinstance(node.op, PyCaret):
+            proc(node.op)
+        elif isinstance(node.op, PyGreaterThanGreaterThan):
+            proc(node.op)
+        elif isinstance(node.op, PyHyphen):
+            proc(node.op)
+        elif isinstance(node.op, PyLessThanLessThan):
+            proc(node.op)
+        elif isinstance(node.op, PyPercent):
+            proc(node.op)
+        elif isinstance(node.op, PyPlus):
+            proc(node.op)
+        elif isinstance(node.op, PySlash):
+            proc(node.op)
+        elif isinstance(node.op, PySlashSlash):
+            proc(node.op)
+        elif isinstance(node.op, PyVerticalBar):
+            proc(node.op)
+        proc(node.equals)
         proc(node.expr)
         return
     if isinstance(node, PyAssignStmt):
