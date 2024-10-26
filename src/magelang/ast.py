@@ -7,7 +7,7 @@ make handling the AST a bit easier.
 
 import sys
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Callable, Generator, TypeGuard, assert_never
+from typing import TYPE_CHECKING, Any, Callable, Generator, assert_never
 from intervaltree import Interval, IntervalTree
 
 if TYPE_CHECKING:
