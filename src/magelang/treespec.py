@@ -469,7 +469,7 @@ def infer_type(expr: Expr, grammar: Grammar) -> Type:
                 return visit(rule.expr)
             if grammar.is_token_rule(rule):
                 return TokenType(rule.name)
-            if grammar.is_variant(rule):
+            if grammar.is_variant_rule(rule):
                 return VariantType(rule.name)
             return NodeType(rule.name)
 
@@ -919,7 +919,7 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
         if grammar.is_token_rule(rule):
             specs.add(TokenSpec(rule, rule.name, rule.type_name, grammar.is_static_token(rule.expr) if rule.expr is not None else False))
             continue
-        if grammar.is_variant(rule):
+        if grammar.is_variant_rule(rule):
             specs.add(VariantSpec(rule, rule.name, list(get_variant_members(rule.expr))))
             continue
         field_counter = 0

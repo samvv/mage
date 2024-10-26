@@ -469,7 +469,7 @@ class Grammar(Node):
             return not rule.is_token
         return rule.is_public and not self.is_token_rule(rule)
 
-    def is_variant(self, rule: Rule) -> bool:
+    def is_variant_rule(self, rule: Rule) -> bool:
         if rule.is_extern or rule.is_wrap:
             return False
         # only Rule(is_extern=True) can not hold an expression
