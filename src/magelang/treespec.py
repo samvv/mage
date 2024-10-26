@@ -1,9 +1,9 @@
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Iterator, assert_never
+from typing import Any, Iterable, Iterator, assert_never, cast
 
-from magelang.util import to_snake_case
+from magelang.util import NameGenerator, to_snake_case
 
 from .ast import *
 
@@ -814,6 +814,66 @@ def merge_similar_types(ty: Type) -> Type:
     # call `simplify_type`.
     return simplify_type(UnionType(types))
 
+def plural(name: str) -> str:
+    return name if name.endswith('s') else f'{name}s'
+
+def get_field_name(expr: Expr) -> str | None:
+    if expr.label is not None:
+        return expr.label
+    if isinstance(expr, RefExpr):
+        return expr.name
+    if isinstance(expr, RepeatExpr):
+        element_label = get_field_name(expr.expr)
+        if element_label is not None:
+            if expr.max > 1:
+                return plural(element_label)
+            return element_label
+        return None
+    if isinstance(expr, ListExpr) or isinstance(expr, CharSetExpr) or isinstance(expr, ChoiceExpr):
+        return None
+    raise RuntimeError(f'unexpected {expr}')
+
+def get_members(expr: Expr, grammar: Grammar, include_hidden: bool = False) -> Generator[Field | Expr, None, None]:
+
+    generator = NameGenerator()
+
+    def generate_field_name() -> str:
+        return generator(prefix='field_')
+
+    def visit(expr: Expr, rule_name: str | None) -> Generator[Field | Expr, None, None]:
+
+        if isinstance(expr, LookaheadExpr):
+            return
+
+        if isinstance(expr, RefExpr):
+            rule = grammar.lookup(expr.name)
+            if rule is not None and rule.expr is not None and not rule.is_public:
+                yield from visit(rule.expr, rule.name)
+                return
+
+        if isinstance(expr, HideExpr):
+            if include_hidden:
+                yield from visit(expr.expr, rule_name)
+            else:
+                yield expr.expr
+            return
+
+        if isinstance(expr, SeqExpr):
+            for element in expr.elements:
+                yield from visit(element, rule_name)
+            return
+
+        if isinstance(expr, LitExpr) or isinstance(expr, CharSetExpr):
+            assert(False) # literals should already have been eliminated by previous passes
+
+        field_name = rule_name or get_field_name(expr) or generate_field_name()
+        field_type = simplify_type(infer_type(expr, grammar))
+        expr.field_name = field_name
+        expr.field_type = field_type
+        yield Field(field_name, field_type, expr)
+
+    return visit(expr, None)
+
 def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
 
     field_counter = 0
@@ -850,54 +910,8 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
             return
         yield get_member_name(expr), infer_type(expr, grammar)
 
-    def plural(name: str) -> str:
-        return name if name.endswith('s') else f'{name}s'
-
-    def get_field_name(expr: Expr) -> str:
-        if expr.label is not None:
-            return expr.label
-        if isinstance(expr, RefExpr):
-            return expr.name
-        if isinstance(expr, RepeatExpr):
-            element_label = get_field_name(expr.expr)
-            if element_label is not None:
-                if expr.max > 1:
-                    return plural(element_label)
-                return element_label
-            return generate_field_name()
-        if isinstance(expr, ListExpr) or isinstance(expr, CharSetExpr) or isinstance(expr, ChoiceExpr):
-            return generate_field_name()
-        raise RuntimeError(f'unexpected {expr}')
-
-    def get_node_members(expr: Expr, rule_name: str | None = None) -> Generator[Field, None, None]:
-
-        if isinstance(expr, LookaheadExpr):
-            return
-
-        if isinstance(expr, RefExpr):
-            rule = grammar.lookup(expr.name)
-            if rule is not None and rule.expr is not None and not rule.is_public:
-                yield from get_node_members(rule.expr, rule.name)
-                return
-
-        if isinstance(expr, HideExpr):
-            if include_hidden:
-                yield from get_node_members(expr.expr, rule_name)
-            return
-
-        if isinstance(expr, SeqExpr):
-            for element in expr.elements:
-                yield from get_node_members(element, rule_name)
-            return
-
-        if isinstance(expr, LitExpr) or isinstance(expr, CharSetExpr):
-            assert(False) # literals should already have been eliminated by previous passes
-
-        field_name = rule_name or get_field_name(expr)
-        field_type = simplify_type(infer_type(expr, grammar))
-        expr.field_name = field_name
-        expr.field_type = field_type
-        yield Field(field_name, field_type, expr)
+    def get_field_members(expr: Expr) -> Iterable[Field]:
+        return cast(Iterable[Field], filter(lambda element: isinstance(element, Field), get_members(expr, grammar, include_hidden=include_hidden)))
 
     def rename_duplicate_members(members: list[Field]) -> list[Field]:
         taken = dict[str, int]()
@@ -924,7 +938,7 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
             continue
         field_counter = 0
         assert(rule.expr is not None)
-        members = list(get_node_members(rule.expr))
+        members = list(get_field_members(rule.expr))
         rename_duplicate_members(members)
         specs.add(NodeSpec(rule, rule.name, members))
 

@@ -1,6 +1,6 @@
 
 from dataclasses import dataclass
-from typing import Generic, Iterable, Iterator, Sequence, TypeVar
+from typing import Generic, Iterable, Iterator, Sequence, TypeVar, assert_never
 
 
 EOF = '\uFFFF'
@@ -148,6 +148,14 @@ def seq(elements: Sequence[Doc]) -> Doc:
         out = ConsDoc(element, out)
     return out
 
-
 def text(contents: str) -> TextDoc:
     return TextDoc(contents)
+
+def generate(doc: Doc) -> str:
+    if isinstance(doc, EmptyDoc):
+        return ''
+    if isinstance(doc, ConsDoc):
+        return generate(doc.head) + generate(doc.tail)
+    if isinstance(doc, TextDoc):
+        return doc.text
+    assert_never(doc)

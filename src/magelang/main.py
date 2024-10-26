@@ -50,7 +50,7 @@ def _do_generate(args) -> int:
     enable_ast = args.feat_all or args.feat_ast
     enable_lexer = args.feat_all or args.feat_lexer
     # This one is experimental and isn't triggered by '--feat-all'
-    enable_emitter = args.feat_emitter
+    enable_emitter = args.feat_all or args.feat_emitter
 
     prefix = prefix + '_' if prefix else ''
 
