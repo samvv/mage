@@ -5,15 +5,16 @@ Also defines some visitors over Mage expressions and other useful procedures to
 make handling the AST a bit easier.
 """
 
-from functools import lru_cache
 import sys
-from typing import TYPE_CHECKING, Callable, Generator, Iterator, SupportsComplex, TypeVar, assert_never
-from intervaltree import IntervalTree
-from intervaltree.intervaltree import warn
+from functools import lru_cache
+from typing import TYPE_CHECKING, Any, Callable, Generator, TypeGuard, assert_never
+from intervaltree import Interval, IntervalTree
 
 if TYPE_CHECKING:
     from .treespec import Type
 
+ASCII_MIN = 0x00
+ASCII_MAX = 0x7F
 
 class Node:
     pass
@@ -104,14 +105,23 @@ class LookaheadExpr(ExprBase):
 
 type CharSetElement = str | tuple[str, str]
 
+_LOWERCASE = Interval(97, 122+1)
+_UPPERCASE = Interval(65, 90+1)
 
 class CharSetExpr(ExprBase):
 
     def __init__(self, elements: list[CharSetElement], ci: bool, invert: bool, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
         super().__init__(label, rules, field_name, field_type, action)
-        self.elements = elements
         self.ci = ci
         self.invert = invert
+        self.elements = []
+        self.tree = IntervalTree()
+        for element in elements:
+            if isinstance(element, str):
+                self.add_char(element)
+            else:
+                low, high = element
+                self.add_char_range(low, high)
 
     def derive(self, elements: list[CharSetElement] | None = None, ci: bool | None = None, invert: bool | None = None, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> 'CharSetExpr':
         if elements is None:
@@ -132,43 +142,62 @@ class CharSetExpr(ExprBase):
             action = self.action
         return CharSetExpr(elements=elements, ci=ci, invert=invert, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
 
-    def contains(self, ch: str) -> bool:
-        for element in self.elements:
-            if isinstance(element, str):
-                if element == ch:
-                    return True
-            else:
-                low, high = element
-                if ord(ch) >= ord(low) and ord(ch) <= ord(high):
-                    return True
-        return False
+    def add_char(self, ch: str) -> None:
+        self.elements.append(ch)
+        code = ord(ch)
+        self.tree.addi(code, code+1)
 
-    def to_interval_tree(self) -> IntervalTree:
-        # FIXME must handle self.ci and self.negate. Maybe add self.canonical?
-        m = IntervalTree()
-        for element in self.elements:
-            if isinstance(element, str):
-                low = ord(element)
-                high = ord(element)+1
-            else:
-                low = ord(element[0])
-                high = ord(element[1])+1
-            m.addi(low, high)
-        return m
+    def add_char_range(self, low: str, high: str) -> None:
+        self.elements.append((low, high))
+        interval = Interval(ord(low), ord(high)+1)
+        self.tree.add(interval)
+        lc_range = intersect_interval(interval, _LOWERCASE)
+        if lc_range is not None:
+            self.tree.addi(lc_range.begin-32, lc_range.end-32)
+        uc_range = intersect_interval(interval, _UPPERCASE)
+        if uc_range is not None:
+            self.tree.addi(uc_range.begin+32, uc_range.end+32)
+
+    def __len__(self) -> int:
+        n = 0
+        for interval in self.tree:
+            n += interval.end - interval.begin
+        return n
+
+    def contains(self, ch: str) -> bool:
+        return self.tree.overlaps_point(ord(ch)) != self.invert
 
     @staticmethod
     def overlaps(a: 'CharSetExpr', b: 'CharSetExpr') -> bool:
-        # FIXME must handle self.ci and self.negate. Maybe add self.canoncical?
-        m = a.to_interval_tree()
-        for element in b.elements:
-            if isinstance(element, str):
-                if m.at(ord(element)):
-                    return True
-            else:
-                low, high = element
-                if m.overlap(ord(low), ord(high)+1):
-                    return True
+        for interval in b.tree:
+            if a.tree.overlap(interval) != b.invert:
+                return True
         return False
+
+def intersect_interval(a: Interval, b: Interval) -> Interval | None:
+    if a.begin == a.end or b.begin == b.end:
+        return
+    if a.begin > b.begin and a.end < b.end:
+        low = a.begin
+        high = a.end
+        return Interval(low, high)
+    if b.begin > a.begin and b.end < a.end:
+        low = b.begin
+        high = b.end
+        return Interval(low, high)
+    # Using a non-strict comparison between `b.begin` and `a.end` because point
+    # `b.begin` is included in the interval `b`. Likewise, `a.end` is NOT
+    # included in the interval `a` so we use a strict comparison.
+    if a.begin <= b.begin and b.begin < a.end:
+        low = b.begin
+        high = min(a.end, b.end)
+        return Interval(low, high)
+    # Using a strict comparison between `a.begin` and `b.end` because point `b.end`
+    # is not part of the interval `b`
+    if a.begin < b.end and b.end < a.end:
+        low = max(a.begin, b.begin)
+        high = b.end
+        return Interval(low, high)
 
 class ChoiceExpr(ExprBase):
 
