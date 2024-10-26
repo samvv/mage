@@ -110,7 +110,7 @@ _UPPERCASE = Interval(65, 90+1)
 
 class CharSetExpr(ExprBase):
 
-    def __init__(self, elements: list[CharSetElement], ci: bool, invert: bool, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
+    def __init__(self, elements: list[CharSetElement], ci: bool = False, invert: bool = False, label: str | None = None, rules: list['Rule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'Rule | None' = None) -> None:
         super().__init__(label, rules, field_name, field_type, action)
         self.ci = ci
         self.invert = invert
@@ -151,12 +151,13 @@ class CharSetExpr(ExprBase):
         self.elements.append((low, high))
         interval = Interval(ord(low), ord(high)+1)
         self.tree.add(interval)
-        lc_range = intersect_interval(interval, _LOWERCASE)
-        if lc_range is not None:
-            self.tree.addi(lc_range.begin-32, lc_range.end-32)
-        uc_range = intersect_interval(interval, _UPPERCASE)
-        if uc_range is not None:
-            self.tree.addi(uc_range.begin+32, uc_range.end+32)
+        if self.ci:
+            lc_range = intersect_interval(interval, _LOWERCASE)
+            if lc_range is not None:
+                self.tree.addi(lc_range.begin-32, lc_range.end-32)
+            uc_range = intersect_interval(interval, _UPPERCASE)
+            if uc_range is not None:
+                self.tree.addi(uc_range.begin+32, uc_range.end+32)
 
     def __len__(self) -> int:
         n = 0
@@ -169,8 +170,9 @@ class CharSetExpr(ExprBase):
 
     @staticmethod
     def overlaps(a: 'CharSetExpr', b: 'CharSetExpr') -> bool:
+        invert = a.invert != b.invert
         for interval in b.tree:
-            if a.tree.overlap(interval) != b.invert:
+            if bool(a.tree.overlap(interval)) != invert:
                 return True
         return False
 
