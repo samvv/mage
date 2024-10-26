@@ -2,7 +2,7 @@
 from magelang.ast import Grammar
 from magelang.treespec import grammar_to_specs
 from magelang.util import Files
-from magelang.lang.rust.emitter_3 import rs_emit as emit # FIXME
+from magelang.lang.rust.emitter import rust_emit as emit # FIXME
 
 #from .tree_types import generate_tree_types
 #from .lexer import generate_lexer
