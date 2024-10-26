@@ -5,7 +5,7 @@ Also defines some visitors over Mage expressions and other useful procedures to
 make handling the AST a bit easier.
 """
 
-from functools import cache, lru_cache
+from functools import lru_cache
 import sys
 from typing import TYPE_CHECKING, Callable, Generator, Iterator, SupportsComplex, TypeVar, assert_never
 from intervaltree import IntervalTree
@@ -394,7 +394,7 @@ class Grammar(Node):
         return not rule.is_public
 
     @property
-    @cache
+    @lru_cache
     def skip_rule(self) -> Rule | None:
         for rule in self.rules:
             if rule.is_skip:
@@ -456,7 +456,7 @@ class Grammar(Node):
                 yield rule
 
     @property
-    @cache
+    @lru_cache
     def keyword_rule(self) -> Rule | None:
         for rule in self.rules:
             if rule.is_keyword_def:
