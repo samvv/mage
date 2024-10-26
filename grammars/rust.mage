@@ -29,7 +29,7 @@ block_comment
   = '/*' (!'*/' any_char)* '*/'
 
 @skip
-__ = ([\n\r\t ] | '\\' eolf)*
+__ = ([\n\r\t ] | line_comment)*
 
 # First tokens
 
