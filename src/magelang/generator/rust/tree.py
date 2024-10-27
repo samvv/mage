@@ -11,6 +11,6 @@ def generate_tree(
 
     for spec in specs:
         if isinstance(spec, TokenSpec):
-            items.append(RustStructItem(name=spec.name, fields=[]))
+            items.append(RustStructItem(pub_keyword=RustPubKeyword(), name=spec.name, fields=[]))
 
     return RustSourceFile(items=items)
