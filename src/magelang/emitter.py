@@ -4,18 +4,18 @@ from io import StringIO
 from .util import IndentWriter
 from .ast import *
 
+def escape(ch: str) -> str:
+    if ch.isprintable():
+        return ch
+    code = ord(ch)
+    if code <= 0x7F:
+        return f'\\x{code:02X}'
+    return f'\\u{code:04x}'
+
 def emit(node: Node) -> str:
 
     string = StringIO()
     out = IndentWriter(string)
-
-    def escape(ch: str) -> str:
-        if ch.isprintable():
-            return ch
-        code = ord(ch)
-        if code <= 0x7F:
-            return f'\\x{code:02X}'
-        return f'\\u{code:04x}'
 
     def is_wide(expr: Expr) -> bool:
         if isinstance(expr, SeqExpr):

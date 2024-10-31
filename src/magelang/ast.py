@@ -10,6 +10,8 @@ from functools import cache, lru_cache
 from typing import TYPE_CHECKING, Any, Callable, Generator, assert_never
 from intervaltree import Interval, IntervalTree
 
+from magelang.logging import debug
+
 if TYPE_CHECKING:
     from .treespec import Type
 
@@ -149,6 +151,9 @@ class CharSetExpr(ExprBase):
 
     def add_char_range(self, low: str, high: str) -> None:
         self.elements.append((low, high))
+        if low > high:
+            debug(f'Refused to index an invalid CharSetExpr element where low > high')
+            return
         interval = Interval(ord(low), ord(high)+1)
         self.tree.add(interval)
         if self.ci:

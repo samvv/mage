@@ -7,7 +7,7 @@ from .util import pipe
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser
-from .passes import simplify, extract_literals, inline, overlapping_charsets, extract_prefixes, check_undefined , insert_skip, check_token_no_parse, insert_magic_rules
+from .passes import *
 from .emitter import emit
 from .generator import generate, get_generator_languages
 
@@ -22,7 +22,7 @@ def _load_grammar(filename: str) -> Grammar:
     return parser.parse_grammar()
 
 def _run_checks(grammar: Grammar) -> Grammar:
-    return pipe(grammar, check_token_no_parse, check_undefined, overlapping_charsets)
+    return pipe(grammar, check_token_no_parse, check_undefined, check_overlapping_charset_intervals, check_neg_charset_intervals)
 
 def _do_generate(args) -> int:
 
@@ -81,16 +81,6 @@ def _do_check(args) -> int:
     _run_checks(grammar)
     return 0
 
-_passes = {
-    'inline': inline,
-    'simplify': simplify,
-    'extract_prefixes': extract_prefixes,
-    'overlapping_charsets': overlapping_charsets,
-    'check_undefined': check_undefined,
-    'extract_literals': extract_literals,
-    'insert_skip': insert_skip,
-}
-
 def _do_dump(args) -> int:
     filename = args.file[0]
     with open(filename, 'r') as f:
@@ -99,7 +89,7 @@ def _do_dump(args) -> int:
     parser = Parser(scanner)
     grammar = parser.parse_grammar()
     for name in args.name:
-        grammar = _passes[name](grammar)
+        grammar = passes[name](grammar)
     print(emit(grammar))
     return 0
 

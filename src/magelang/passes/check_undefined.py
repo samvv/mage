@@ -7,7 +7,7 @@ def check_undefined(grammar: Grammar) -> Grammar:
     def traverse(expr: Expr) -> None:
         if isinstance(expr, RefExpr):
             if grammar.lookup(expr.name) is None:
-                error(f"Undefined rule referenced: {expr.name}")
+                error(f"undefined rule referenced: {expr.name}")
             return
         for_each_expr(expr, traverse)
 

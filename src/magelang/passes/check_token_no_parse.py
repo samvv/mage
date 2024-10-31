@@ -1,4 +1,5 @@
 
+from magelang.logging import error
 from magelang.ast import *
 
 def check_token_no_parse(grammar: Grammar) -> Grammar:
@@ -28,10 +29,12 @@ def check_token_no_parse(grammar: Grammar) -> Grammar:
         if isinstance(expr, LitExpr) \
                 or isinstance(expr, CharSetExpr):
             return False
-        raise RuntimeError(f'unexpected node {expr}')
+        if isinstance(expr, HideExpr):
+            return references_pub_rule(expr.expr)
+        assert_never(expr)
 
     for rule in grammar.rules:
         if grammar.is_token_rule(rule) and rule.expr is not None and references_pub_rule(rule.expr):
-            print(f"Error: token rule '{rule.name}' references another rule marked with 'pub'.")
+            error(f"token rule '{rule.name}' references another rule marked with 'pub'.")
 
     return grammar

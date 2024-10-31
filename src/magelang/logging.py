@@ -1,6 +1,9 @@
 
 import sys
 
+def debug(message: str) -> None:
+    sys.stderr.write(f'{message}\n')
+
 def info(message: str) -> None:
     sys.stderr.write(f'Info: {message}\n')
 
