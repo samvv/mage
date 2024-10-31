@@ -1,0 +1,113 @@
+
+# Should be part of standard library
+
+any_byte = [\x00-\xFF]
+
+any_char = [\x00-\x7F]
+
+eof = !any_byte
+
+# Whitespace and comments
+
+eol = '\r\n' | '\n'
+
+eolf = eol | eof
+
+line_comment
+  = '#' (!eolf any_char)*
+
+comment
+  = line_comment
+
+@skip
+__ = ([\n\r\t ] | comment)*
+
+_ = [\t ]*
+
+# Externally defined tokens
+
+extern token block_start
+extern token block_end
+extern token linefold_end
+
+# Tokens
+
+@keyword
+pub token ident
+  = [a-z_]i [0-9a-z_]i*
+
+pub token ident_alt
+  = [A-Z_] [0-9a-z_]i*
+
+bin_digit
+  = [01]
+
+oct_digit
+  = [0-7]
+
+hex_digit
+  = [0-9a-f]i
+
+pub token integer
+  = '0b' bin_digit+
+  | '0o' oct_digit+
+  | '0x' hex_digit+
+  | '0'
+  | [1-9] [0-9]*
+
+escapee
+  = [abefnrtv\\'"]
+  | 'x' hex_digit{2}
+  | 'u' hex_digit{4}
+
+char
+  = '\\' escapee
+  | any_char
+
+pub token string
+  = '"' char+ '"'
+
+pub token operator
+  = [+\-*/&^%$!?<>=~.]+
+
+# Expressions
+
+pub call_expr
+  = func:expr args:expr+
+
+pub func_expr
+  = '\\' params:pattern+ '->' expr
+
+pub match_expr
+  = 'match' expr block_start (match_arm % linefold_end) block_end
+
+pub member_expr
+  = expr %%% '.'
+
+pub nest_expr
+  = '(' expr ')'
+
+path
+  = (ident_alt '.')*
+
+pub ref_expr
+  = path name:ident
+
+pub ret_expr
+  = 'return' expr
+
+pub struct_expr
+  = '{' fields:(field % ',') ','? '}'
+
+pub tuple_expr
+  = '(' elements:expr* ')'
+
+pub expr
+  = call_expr
+  | func_expr
+  | match_expr
+  | member_expr
+  | nest_expr
+  | ref_expr
+  | struct_expr
+  | tuple_expr
