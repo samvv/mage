@@ -70,13 +70,59 @@ pub token string
 pub token operator
   = [+\-*/&^%$!?<>=~.]+
 
+# Shared definitions
+
+pub literal
+  = string
+  | integer
+
+module_path
+  = (ident_alt '.')*
+
+# Patterns
+
+pub lit_patt
+  = literal
+
+pub named_patt
+  = name:ident
+
+pub tuple_patt
+  = '(' elements:(patt % ',')* ')'
+
+pub enum_patt
+  = name:type_name args:patt*
+
+pub typed_patt
+  = patt ':' type_expr
+
+pub patt
+  = lit_patt
+  | named_patt
+  | tuple_patt
+
 # Expressions
+
+pub block_element
+  = type_decl
+  | func_decl
+  | var_decl
+  | expr
+
+pub block_expr
+  = block_start items:(block_element %% linefold_end) block_end
 
 pub call_expr
   = func:expr args:expr+
 
 pub func_expr
-  = '\\' params:pattern+ '->' expr
+  = '\\' params:patt+ '->' expr
+
+pub infix_expr
+  = expr operator expr
+
+pub match_arm
+  = patt '=>' expr
 
 pub match_expr
   = 'match' expr block_start (match_arm % linefold_end) block_end
@@ -87,14 +133,14 @@ pub member_expr
 pub nest_expr
   = '(' expr ')'
 
-path
-  = (ident_alt '.')*
-
 pub ref_expr
-  = path name:ident
+  = module_path name:ident
 
 pub ret_expr
   = 'return' expr
+
+pub field
+  = name:ident '=' expr
 
 pub struct_expr
   = '{' fields:(field % ',') ','? '}'
@@ -103,11 +149,80 @@ pub tuple_expr
   = '(' elements:expr* ')'
 
 pub expr
-  = call_expr
+  = block_expr
+  | call_expr
   | func_expr
+  | infix_expr
   | match_expr
   | member_expr
   | nest_expr
   | ref_expr
   | struct_expr
   | tuple_expr
+
+# Type expressions
+
+type_var
+  = name:ident
+
+type_name
+  = module_path name:ident_alt
+
+pub app_type_expr
+  = op:type_expr arg:type_expr
+
+pub arrow_type_expr
+  = left:type_expr '->' right:type_expr
+
+pub ref_type_expr
+  = type_name
+
+pub var_type_expr
+  = type_var
+
+pub type_expr
+  = app_type_expr
+  | arrow_type_expr
+  | var_type_expr
+  | ref_type_expr
+
+# Items
+
+pub import_specifier
+  = name:ident rename:('as' ident)?
+
+pub import_decl
+  = 'import' path:string specifiers:('(' (import_specifier % ',') ')')? \linefold_end
+
+pub type_decl
+  = 'type' name:ident type_var* '=' type_expr \linefold_end
+
+pub var_decl
+  = 'let' patt type_init:(':' type_expr)? init:('=' expr)? \linefold_end
+
+pub func_decl
+  = 'let' name:ident params:patt+ '=' expr \linefold_end
+
+# modules
+
+pub module_element
+  = func_decl
+  | import_decl
+  | type_decl
+  | var_decl
+
+# Toplevel entry points
+
+pub repl_command
+  = ',' name:ident args:expr* \linefold_end
+
+pub repl
+  = repl_command
+  | source_element
+
+pub source_element
+  = module_element
+
+pub source_file
+  = elements:source_element*
+
