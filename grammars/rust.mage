@@ -121,7 +121,7 @@ pub path_segment
   = name:ident args:path_arguments?
 
 pub path
-  = leading_colon_colon:'::'? segments:(path_segment % '::')
+  = leading_colon_colon:'::'? segments:(path_segment %% '::')
 
 pub qself
   = '<' type_expr 'as' path '>'
