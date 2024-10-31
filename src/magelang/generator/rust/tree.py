@@ -49,7 +49,12 @@ def generate_tree(
 
     for spec in specs:
         if isinstance(spec, TokenSpec):
-            fields = []
+            fields = [
+                RustField(
+                    name='span',
+                    type_expr=RustPathTypeExpr(make_rust_ident('Span')),
+                ),
+            ]
             if not spec.is_static:
                 fields.append(
                     RustField(
