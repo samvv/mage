@@ -134,10 +134,8 @@ pub type_expr
 
 # Expressions
 
-path = path:(ident '::')* name:ident
-
-pub ref_expr
-  = path
+pub path_expr
+  = attr* qself? path
 
 bool = 'true' | 'false'
 
@@ -162,7 +160,7 @@ pub block_expr
 
 pub expr
   = lit_expr
-  | ref_expr
+  | path_expr
   | call_expr
   | struct_expr
   | block_expr
@@ -190,8 +188,33 @@ pub empty_variant
 pub enum_item
   = 'pub'? 'enum' name:ident '{' variants:(variant % ',') ','? '}'
 
+pub meta_path
+  = path
+
+pub meta_braced
+  = path '{' token* '}'
+
+pub meta_parenthesized
+  = path '(' token* ')'
+
+pub meta_bracketed
+  = path '[' token* ']'
+
+pub meta_name_value
+  = path '=' expr
+
+pub meta
+  = meta_path
+  | meta_parenthesized
+  | meta_bracketed
+  | meta_braced
+  | meta_name_value
+
+pub attr
+  = '#' '!' '[' meta ']'
+
 pub struct_item
-  = 'pub'? 'struct' name:ident '{' fields:(field % ',') ','? '}'
+  = attr* 'pub'? 'struct' name:ident '{' fields:(field % ',') ','? '}'
 
 pub expr_item
   = expr
