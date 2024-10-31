@@ -650,13 +650,13 @@ class RustPathExpr(_RustBaseNode):
     def count_attrs(self) -> int:
         return len(self.attrs)
 
-    def __init__(self, path: 'RustPath', *, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, qself: 'RustQself | None' = None) -> None:
-        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(attrs)
+    def __init__(self, path: 'RustPath', *, attrs: 'Sequence[RustAttr] | None' = None, qself: 'RustQself | None' = None) -> None:
+        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_node_attr_none_to_list_node_attr(attrs)
         self.qself: RustQself | None = _coerce_union_2_node_qself_none_to_union_2_node_qself_none(qself)
         self.path: RustPath = _coerce_node_path_to_node_path(path)
 
     @no_type_check
-    def derive(self, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, qself: 'RustQself | None' = None, path: 'RustPath | None' = None) -> 'RustPathExpr':
+    def derive(self, attrs: 'Sequence[RustAttr] | None' = None, qself: 'RustQself | None' = None, path: 'RustPath | None' = None) -> 'RustPathExpr':
         if attrs is None:
             attrs = self.attrs
         if qself is None:
@@ -1077,7 +1077,7 @@ class RustAttr(_RustBaseNode):
 
     def __init__(self, meta: 'RustMeta', *, hashtag: 'RustHashtag | None' = None, exclamation_mark: 'RustExclamationMark | None' = None, open_bracket: 'RustOpenBracket | None' = None, close_bracket: 'RustCloseBracket | None' = None) -> None:
         self.hashtag: RustHashtag = _coerce_union_2_token_hashtag_none_to_token_hashtag(hashtag)
-        self.exclamation_mark: RustExclamationMark = _coerce_union_2_token_exclamation_mark_none_to_token_exclamation_mark(exclamation_mark)
+        self.exclamation_mark: RustExclamationMark | None = _coerce_union_2_token_exclamation_mark_none_to_union_2_token_exclamation_mark_none(exclamation_mark)
         self.open_bracket: RustOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
         self.meta: RustMeta = _coerce_variant_meta_to_variant_meta(meta)
         self.close_bracket: RustCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
@@ -1109,8 +1109,8 @@ class RustStructItem(_RustBaseNode):
     def count_fields(self) -> int:
         return len(self.fields)
 
-    def __init__(self, name: 'RustIdent | str', *, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, pub_keyword: 'RustPubKeyword | None' = None, struct_keyword: 'RustStructKeyword | None' = None, open_brace: 'RustOpenBrace | None' = None, fields: 'Sequence[RustField] | Sequence[tuple[RustField, RustComma | None]] | Punctuated[RustField, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
-        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(attrs)
+    def __init__(self, name: 'RustIdent | str', *, attrs: 'Sequence[RustAttr] | None' = None, pub_keyword: 'RustPubKeyword | None' = None, struct_keyword: 'RustStructKeyword | None' = None, open_brace: 'RustOpenBrace | None' = None, fields: 'Sequence[RustField] | Sequence[tuple[RustField, RustComma | None]] | Punctuated[RustField, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
+        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_node_attr_none_to_list_node_attr(attrs)
         self.pub_keyword: RustPubKeyword | None = _coerce_union_2_token_pub_keyword_none_to_union_2_token_pub_keyword_none(pub_keyword)
         self.struct_keyword: RustStructKeyword = _coerce_union_2_token_struct_keyword_none_to_token_struct_keyword(struct_keyword)
         self.name: RustIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
@@ -1120,7 +1120,7 @@ class RustStructItem(_RustBaseNode):
         self.close_brace: RustCloseBrace = _coerce_union_2_token_close_brace_none_to_token_close_brace(close_brace)
 
     @no_type_check
-    def derive(self, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, pub_keyword: 'RustPubKeyword | None' = None, struct_keyword: 'RustStructKeyword | None' = None, name: 'RustIdent | None | str' = None, open_brace: 'RustOpenBrace | None' = None, fields: 'Sequence[RustField] | Sequence[tuple[RustField, RustComma | None]] | Punctuated[RustField, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustStructItem':
+    def derive(self, attrs: 'Sequence[RustAttr] | None' = None, pub_keyword: 'RustPubKeyword | None' = None, struct_keyword: 'RustStructKeyword | None' = None, name: 'RustIdent | None | str' = None, open_brace: 'RustOpenBrace | None' = None, fields: 'Sequence[RustField] | Sequence[tuple[RustField, RustComma | None]] | Punctuated[RustField, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustStructItem':
         if attrs is None:
             attrs = self.attrs
         if pub_keyword is None:
@@ -2072,31 +2072,21 @@ def _coerce_union_2_token_close_bracket_none_to_token_close_bracket(value: 'Rust
 
 
 @no_type_check
-def _coerce_variant_meta_to_variant_meta(value: 'RustMeta') -> 'RustMeta':
+def _coerce_node_attr_to_node_attr(value: 'RustAttr') -> 'RustAttr':
     return value
 
 
 @no_type_check
-def _coerce_union_2_node_attr_variant_meta_to_node_attr(value: 'RustAttr | RustMeta') -> 'RustAttr':
-    if is_rust_meta(value):
-        return RustAttr(_coerce_variant_meta_to_variant_meta(value))
-    elif isinstance(value, RustAttr):
-        return value
-    else:
-        raise ValueError('the coercion from RustAttr | RustMeta to RustAttr failed')
-
-
-@no_type_check
-def _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(value: 'Sequence[RustAttr | RustMeta] | None') -> 'Sequence[RustAttr]':
+def _coerce_union_2_list_node_attr_none_to_list_node_attr(value: 'Sequence[RustAttr] | None') -> 'Sequence[RustAttr]':
     if value is None:
         return list()
     elif isinstance(value, list):
         new_elements = list()
         for value_element in value:
-            new_elements.append(_coerce_union_2_node_attr_variant_meta_to_node_attr(value_element))
+            new_elements.append(_coerce_node_attr_to_node_attr(value_element))
         return new_elements
     else:
-        raise ValueError('the coercion from Sequence[RustAttr | RustMeta] | None to Sequence[RustAttr] failed')
+        raise ValueError('the coercion from Sequence[RustAttr] | None to Sequence[RustAttr] failed')
 
 
 @no_type_check
@@ -2384,13 +2374,18 @@ def _coerce_union_2_token_hashtag_none_to_token_hashtag(value: 'RustHashtag | No
 
 
 @no_type_check
-def _coerce_union_2_token_exclamation_mark_none_to_token_exclamation_mark(value: 'RustExclamationMark | None') -> 'RustExclamationMark':
-    if value is None:
-        return RustExclamationMark()
-    elif isinstance(value, RustExclamationMark):
+def _coerce_union_2_token_exclamation_mark_none_to_union_2_token_exclamation_mark_none(value: 'RustExclamationMark | None') -> 'RustExclamationMark | None':
+    if isinstance(value, RustExclamationMark):
         return value
+    elif value is None:
+        return None
     else:
-        raise ValueError('the coercion from RustExclamationMark | None to RustExclamationMark failed')
+        raise ValueError('the coercion from RustExclamationMark | None to RustExclamationMark | None failed')
+
+
+@no_type_check
+def _coerce_variant_meta_to_variant_meta(value: 'RustMeta') -> 'RustMeta':
+    return value
 
 
 @no_type_check
