@@ -215,7 +215,7 @@ pub meta
   | meta_name_value
 
 pub attr
-  = '#' '!' '[' meta ']'
+  = '#' '!'? '[' meta ']'
 
 pub struct_item
   = attr* 'pub'? 'struct' name:ident '{' fields:(field % ',') ','? '}'
