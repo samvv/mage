@@ -64,7 +64,7 @@ def generate_tree(
                 )
             items.append(RustStructItem(
                 attrs=[ RustAttr(make_derive('Clone', 'Debug')) ],
-                pub_keyword=RustPubKeyword(),
+                visibility=RustPublic(),
                 name=to_type_name(spec.name),
                 fields=fields
             ))

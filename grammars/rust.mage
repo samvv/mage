@@ -54,7 +54,10 @@ pub token string
 pub token char
   = '\'' character '\''
 
-# Type expressions
+# Shared definitions
+
+pub public
+  = 'pub' restrict:( '(' 'in'? path ')' )?
 
 pub type_init
   = '=' type_expr
@@ -123,6 +126,11 @@ pub path_segment
 pub path
   = leading_colon_colon:'::'? segments:(path_segment %% '::')
 
+block
+  = '{' stmts:(item ';') last:expr '}'
+
+# Type expressions
+
 pub qself
   = '<' type_expr 'as' path '>'
 
@@ -135,6 +143,14 @@ pub array_type_expr
 pub type_expr
   = path_type_expr
   | array_type_expr
+
+# Patterns
+
+pub named_pattern
+  = attr* 'ref'? 'mut'? name:ident sub:('@' pattern)?
+
+pub pattern
+  = named_pattern
 
 # Expressions
 
@@ -160,7 +176,7 @@ pub ret_expr
   = 'return' expr
 
 pub block_expr
-  = '{' stmts:(item ';') last:expr '}'
+  = block
 
 pub expr
   = lit_expr
@@ -171,6 +187,39 @@ pub expr
   | ret_expr
 
 # Items
+
+pub abi
+  = 'extern' name:string
+
+pub variadic_arg
+  = attr* pattern '...'? ','?
+
+pub self_arg
+  = attr* reference:('&' lifetime)? 'mut'? 'self' ':' type_expr
+
+pub typed_arg
+  = attr* pattern ':' type_expr
+
+pub arg
+  = self_arg
+  | typed_arg
+  | variadic_arg
+
+pub lifetime_predicate
+  = lifetime ':' bounds:(lifetime %% '+')
+
+pub type_predicate
+  = bound_lifetimes type_expr ':' bounds:(type_param_bound %% '+')
+
+pub where_predicate
+  = lifetime_predicate
+  | type_predicate
+
+pub generics
+  = '<' params:(generic_param % ',') '>' where_clause:('where' (where_predicate %% ','))?
+
+pub signature
+  = 'const'? 'async'? 'unsafe'? abi? 'fn' name:ident generics '(' inputs:(arg % ',') ')' output:('->' type_expr)?
 
 pub field
   = name:ident ':' type_expr
@@ -190,7 +239,7 @@ pub empty_variant
   = name:ident init?
 
 pub enum_item
-  = 'pub'? 'enum' name:ident '{' variants:(variant % ',') ','? '}'
+  = attr* visibility:public? 'enum' name:ident '{' variants:(variant % ',') ','? '}'
 
 pub meta_path
   = path
@@ -218,7 +267,7 @@ pub attr
   = '#' '!'? '[' meta ']'
 
 pub struct_item
-  = attr* 'pub'? 'struct' name:ident '{' fields:(field % ',') ','? '}'
+  = attr* visibility:public? 'struct' name:ident '{' fields:(field % ',') ','? '}'
 
 pub expr_item
   = expr
@@ -240,13 +289,22 @@ pub use_group
 
 pub use_tree
   = use_path
-  | use_name
   | use_rename
+  | use_name
   | use_glob
   | use_group
 
 pub use_item
-  = 'use' '::'? path:(ident '::')* ';'
+  = attr* visibility:public? 'use' '::'? path:(ident '::')* ';'
+
+pub fn_impl_element
+  = attr* visibility:public? 'default'? signature block
+
+pub impl_element
+  = fn_impl_element
+
+pub impl_item
+  = attr* 'default'? 'unsafe'? 'impl' generics '!'? trait:(path 'for' type_expr)? '{' impl_element* '}'
 
 pub item
   = enum_item
@@ -258,6 +316,7 @@ pub toplevel
   = enum_item
   | struct_item
   | use_item
+  | impl_item
 
 pub source_file
   = items:toplevel*
