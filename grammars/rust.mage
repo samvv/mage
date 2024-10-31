@@ -31,7 +31,7 @@ block_comment
 @skip
 __ = ([\n\r\t ] | line_comment)*
 
-# First tokens
+# Tokens
 
 @keyword
 pub token ident
