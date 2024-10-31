@@ -221,9 +221,6 @@ def generate_emitter(
                     item_2 = items[k]
                     expr_2 = item_2.expr if isinstance(item_2, Field) else item_2
                     if intersects(expr, expr_2, grammar=grammar):
-                        print('------------')
-                        print(emit(expr))
-                        print(emit(expr_2))
                         skip = True
                         break
                     if not can_be_empty(expr_2, grammar=grammar):
