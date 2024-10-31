@@ -129,8 +129,12 @@ pub qself
 pub path_type_expr
   = qself? path
 
+pub array_type_expr
+  = '[' type_expr ';' expr ']'
+
 pub type_expr
   = path_type_expr
+  | array_type_expr
 
 # Expressions
 
