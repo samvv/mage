@@ -833,7 +833,7 @@ def get_field_name(expr: Expr) -> str | None:
         return None
     raise RuntimeError(f'unexpected {expr}')
 
-def get_members(expr: Expr, grammar: Grammar, include_hidden: bool = False) -> Generator[Field | Expr, None, None]:
+def get_fields(expr: Expr, grammar: Grammar, include_hidden: bool = False) -> Generator[Field | Expr, None, None]:
 
     generator = NameGenerator()
 
@@ -895,10 +895,10 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
             return rule.name
         raise NotImplementedError()
 
-    def get_variant_members(expr: Expr) -> Generator[tuple[str, Type], None, None]:
+    def get_variants(expr: Expr) -> Generator[tuple[str, Type], None, None]:
         if isinstance(expr, ChoiceExpr):
             for element in expr.elements:
-                yield from get_variant_members(element)
+                yield from get_variants(element)
             return
         if isinstance(expr, SeqExpr):
             names = []
@@ -911,7 +911,7 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
         yield get_member_name(expr), infer_type(expr, grammar)
 
     def get_field_members(expr: Expr) -> Iterable[Field]:
-        return cast(Iterable[Field], filter(lambda element: isinstance(element, Field), get_members(expr, grammar, include_hidden=include_hidden)))
+        return cast(Iterable[Field], filter(lambda element: isinstance(element, Field), get_fields(expr, grammar, include_hidden=include_hidden)))
 
     def rename_duplicate_members(members: list[Field]) -> list[Field]:
         taken = dict[str, int]()
@@ -934,7 +934,7 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
             specs.add(TokenSpec(rule, rule.name, rule.type_name, grammar.is_static_token(rule.expr) if rule.expr is not None else False))
             continue
         if grammar.is_variant_rule(rule):
-            specs.add(VariantSpec(rule, rule.name, list(get_variant_members(rule.expr))))
+            specs.add(VariantSpec(rule, rule.name, list(get_variants(rule.expr))))
             continue
         field_counter = 0
         assert(rule.expr is not None)

@@ -2,11 +2,13 @@
 # FIXME This emitter generator doesn't work (yet). It is disabled by default.
 
 from collections.abc import Generator
-from typing import assert_never
+from typing import assert_never, cast
+
+from intervaltree.intervaltree import warn
 from magelang.analysis import intersects, can_be_empty
 from magelang.ast import CharSetExpr, ChoiceExpr, Expr, Grammar, HideExpr, ListExpr, LitExpr, LookaheadExpr, RefExpr, RepeatExpr, Rule, SeqExpr, static_expr_to_str
 from magelang.emitter import emit
-from magelang.treespec import Field, get_members, grammar_to_specs, infer_type, is_unit
+from magelang.treespec import Field, get_fields, grammar_to_specs, infer_type, is_unit
 from magelang.lang.python.cst import *
 from magelang.util import unreachable
 from .util import Case, build_cond, gen_shallow_test, namespaced, to_class_name, build_isinstance
@@ -26,6 +28,14 @@ def generate_emitter(
     token_param_name = 'token'
     param_name = 'node'
     out_name = 'out'
+
+    is_token_name = f"is_{namespaced('token', prefix)}"
+
+    def references_token_rule(expr: Expr) -> bool:
+        if  not isinstance(expr, RefExpr):
+            return False
+        rule = grammar.lookup(expr.name)
+        return rule is not None and rule.expr is not None and grammar.is_token_rule(rule)
 
     def gen_visit_node(target: PyExpr) -> Generator[PyStmt, None, None]:
         yield PyExprStmt(PyCallExpr(PyNamedExpr(visit_fn_name), args=[ target ]))
@@ -93,6 +103,19 @@ def generate_emitter(
                 if skip:
                     yield from gen_skip()
                 return
+            if grammar.is_variant_rule(rule):
+                expr = cast(ChoiceExpr, rule.expr)
+                token_count = sum(int(references_token_rule(element)) for element in expr.elements)
+                if token_count == len(expr.elements):
+                    yield from gen_write_token(target)
+                elif token_count > 0:
+                    yield PyIfStmt(
+                        first=PyIfCase(
+                            test=PyCallExpr(PyNamedExpr(is_token_name), args=[ target ]),
+                            body=list(gen_write_token(target)),
+                        ),
+                        last=list(gen_visit_node(target)),
+                    )
             yield from gen_visit_node(target)
         elif isinstance(expr, ChoiceExpr):
             if target is None:
@@ -190,7 +213,7 @@ def generate_emitter(
         elif grammar.is_parse_rule(rule):
             assert(rule.expr is not None)
             if_body = []
-            items = list(get_members(rule.expr, include_hidden=include_hidden, grammar=grammar))
+            items = list(get_fields(rule.expr, include_hidden=include_hidden, grammar=grammar))
             for i, item in enumerate(items):
                 expr = item.expr if isinstance(item, Field) else item
                 skip = False
