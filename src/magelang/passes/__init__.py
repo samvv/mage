@@ -6,3 +6,4 @@ from .extract_literals import *
 from .inline import *
 from .insert_skip import *
 from .check_token_no_parse import *
+from .insert_magic_rules import *

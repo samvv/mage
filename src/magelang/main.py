@@ -7,7 +7,7 @@ from .util import pipe
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser
-from .passes import simplify, extract_literals, inline, overlapping_charsets, extract_prefixes, check_undefined , insert_skip, check_token_no_parse
+from .passes import simplify, extract_literals, inline, overlapping_charsets, extract_prefixes, check_undefined , insert_skip, check_token_no_parse, insert_magic_rules
 from .emitter import emit
 from .generator import generate, get_generator_languages
 
@@ -35,22 +35,20 @@ def _do_generate(args) -> int:
     dest_dir = Path(args.out_dir)
     enable_linecol = True
 
-    grammar = _load_grammar(filename)
+    grammar = pipe(_load_grammar(filename), inline, extract_literals, insert_magic_rules)
     if not skip_checks:
         grammar = _run_checks(grammar)
-    grammar = pipe(grammar, inline, extract_literals)
     # FIXME should only happen in the parser generator and lexer generator
     #if opt:
     #    grammar = pipe(grammar, extract_prefixes, simplify)
     #visualize(grammar, format='png')
 
-    cst_parent_pointers = args.feat_all or args.feat_cst_parent_pointers
-    enable_visitor = args.feat_all or args.feat_visitor
-    enable_cst = args.feat_all or args.feat_cst
-    enable_ast = args.feat_all or args.feat_ast
-    enable_lexer = args.feat_all or args.feat_lexer
-    # This one is experimental and isn't triggered by '--feat-all'
-    enable_emitter = args.feat_all or args.feat_emitter
+    cst_parent_pointers = args.feat_all if args.feat_cst_parent_pointers is None else args.feat_cst_parent_pointers
+    enable_visitor = args.feat_all if args.feat_visitor is None else args.feat_visitor
+    enable_cst = args.feat_all if args.feat_cst is None else args.feat_cst
+    enable_ast = args.feat_all if args.feat_ast is None else args.feat_ast
+    enable_lexer = args.feat_all if args.feat_lexer is None else args.feat_lexer
+    enable_emitter = args.feat_all if args.feat_emitter is None else args.feat_emitter
 
     prefix = prefix + '_' if prefix else ''
 
@@ -135,8 +133,9 @@ def main() -> int:
     generate_parser.add_argument('--feat-cst-parent-pointers', action=argparse.BooleanOptionalAction, help='Generate references to the parent of a CST node (off by default)')
     generate_parser.add_argument('--feat-ast', action=argparse.BooleanOptionalAction, default=True, help='Generate an abstract syntax tree (on by default)')
     generate_parser.add_argument('--feat-cst', action=argparse.BooleanOptionalAction, default=True, help='Generate a concrete syntax tree (on by default)')
+    generate_parser.add_argument('--feat-lexer', action=argparse.BooleanOptionalAction, default=True, help='Generate a lexer (on by default)')
     generate_parser.add_argument('--feat-visitor', action=argparse.BooleanOptionalAction, default=True, help='Generate AST/CST visitors (on by default)')
-    generate_parser.add_argument('--feat-emitter', action=argparse.BooleanOptionalAction, help='Generate a highly experimental emitter (off by default)')
+    generate_parser.add_argument('--feat-emitter', action=argparse.BooleanOptionalAction, default=True, help='Generate a highly experimental emitter (on by default)')
     generate_parser.add_argument('--force', action=argparse.BooleanOptionalAction, help='Ignore errors and always overwrite files that already exist')
     generate_parser.add_argument('--out-dir', default='output', help='Where to place the generated files')
     generate_parser.add_argument('--prefix', default='', help='Prefix all rules in the grammar with this value')

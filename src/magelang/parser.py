@@ -2,6 +2,8 @@
 from collections import deque
 from typing import cast
 
+from intervaltree.intervaltree import warn
+
 from .ast import *
 from .scanner import *
 
@@ -13,8 +15,13 @@ class ParseError(RuntimeError):
         self.actual = actual
         self.expected = expected
 
-def is_prefix_operator(tt: TokenType) -> bool:
+_tt_ident = [ TT_IDENT, TT_TOKEN ]
+
+def _is_prefix_operator(tt: TokenType) -> bool:
     return tt in [ TT_EXCL, TT_AMP, TT_SLASH ]
+
+def _is_ident(token: Token) -> bool:
+    return token.type in _tt_ident
 
 class Parser:
 
@@ -38,11 +45,17 @@ class Parser:
             raise ParseError(t0, [ expected ])
         return self._get_token()
 
+    def _get_ident(self) -> Token:
+        token = self._peek_token();
+        if not _is_ident(token):
+            raise ParseError(token, _tt_ident)
+        return self._get_token()
+
     def _parse_prim_expr(self) -> Expr:
         t1 = self._peek_token(1)
         label = None
         if t1.type == TT_COLON:
-            label = self._expect_token(TT_IDENT)
+            label = self._get_ident()
             self._get_token()
         t2 = self._peek_token()
         if t2.type == TT_TILDE or t2.type == TT_CHARSET:
@@ -58,10 +71,9 @@ class Parser:
             self._get_token()
             expr = self.parse_expr()
             self._expect_token(TT_RPAREN)
-        elif t2.type == TT_IDENT:
+        elif _is_ident(t2):
             self._get_token()
-            assert(isinstance(t2.value, str))
-            expr = RefExpr(name=t2.value)
+            expr = RefExpr(name=token_to_string(t2))
         elif t2.type == TT_STR:
             self._get_token()
             assert(isinstance(t2.value, str))
@@ -92,7 +104,7 @@ class Parser:
         tokens = []
         while True:
             t0 = self._peek_token()
-            if not is_prefix_operator(t0.type):
+            if not _is_prefix_operator(t0.type):
                 break
             self._get_token()
             tokens.append(t0.type)
@@ -112,7 +124,7 @@ class Parser:
         t0 = self._peek_token(0)
         t1 = self._peek_token(1)
         label = None
-        if t0.type == TT_IDENT and t1.type == TT_COLON:
+        if _is_ident(t0) and t1.type == TT_COLON:
             label = t0.value
             self._get_token()
             self._get_token()
@@ -147,12 +159,19 @@ class Parser:
         expr.label = label
         return expr
 
+    def _lookahead_is_rule(self) -> bool:
+            t0 = self._peek_token(0)
+            t1 = self._peek_token(1)
+            t2 = self._peek_token(2)
+            return t0.type in [ TT_PUB, TT_EXTERN, TT_AT ] \
+                   or t1.type == TT_EQUAL \
+                   or t0.type == TT_TOKEN and t2.type == TT_EQUAL
+
     def _parse_expr_sequence(self) -> Expr:
         elements = [ self._parse_expr_with_suffixes() ]
         while True:
             t0 = self._peek_token(0)
-            t1 = self._peek_token(1)
-            if t0.type in [ TT_PUB, TT_EXTERN, TT_TOKEN, TT_AT ] or t1.type == TT_EQUAL or t0.type in [ TT_EOF, TT_VBAR, TT_RPAREN ]:
+            if self._lookahead_is_rule() or t0.type in [ TT_EOF, TT_VBAR, TT_RPAREN ]:
                 break
             elements.append(self._parse_expr_with_suffixes())
         if len(elements) == 1:
@@ -179,8 +198,7 @@ class Parser:
             if t0.type != TT_AT:
                 break
             self._get_token()
-            name = self._expect_token(TT_IDENT).value
-            assert(isinstance(name, str))
+            name = token_to_string(self._get_ident())
             decorators.append(Decorator(name=name))
         flags = 0
         t0 = self._get_token()
@@ -193,14 +211,14 @@ class Parser:
         if t0.type == TT_TOKEN:
             flags |= FORCE_TOKEN
             t0 = self._get_token()
-        if t0.type != TT_IDENT:
+        if not _is_ident(t0):
             raise ParseError(t0, [ TT_IDENT ])
         assert(isinstance(t0.value, str))
         t3 = self._peek_token()
         type_name = string_rule_type
         if t3.type == TT_RARROW:
             self._get_token()
-            type_name = cast(str, self._expect_token(TT_IDENT).value)
+            type_name = token_to_string(self._get_ident())
         if flags & EXTERN:
             return Rule(name=t0.value, expr=None, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
         self._expect_token(TT_EQUAL)

@@ -6,7 +6,7 @@ make handling the AST a bit easier.
 """
 
 import sys
-from functools import lru_cache
+from functools import cache, lru_cache
 from typing import TYPE_CHECKING, Any, Callable, Generator, assert_never
 from intervaltree import Interval, IntervalTree
 
@@ -495,6 +495,7 @@ class Grammar(Node):
 
     def lookup(self, name: str) -> Rule | None:
         return self._rules_by_name.get(name)
+
 
 def rewrite_expr(expr: Expr, proc: Callable[[Expr], Expr | None]) -> Expr:
     """

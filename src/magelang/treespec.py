@@ -942,10 +942,10 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
         rename_duplicate_members(members)
         specs.add(NodeSpec(rule, rule.name, members))
 
-    specs.add(VariantSpec(None, 'keyword', list((rule.name, TokenType(rule.name)) for rule in grammar.rules if rule.is_keyword)))
-    specs.add(VariantSpec(None, 'token', list((spec.name, TokenType(spec.name)) for spec in specs if isinstance(spec, TokenSpec))))
-    specs.add(VariantSpec(None, 'node', list((spec.name, NodeType(spec.name)) for spec in specs if isinstance(spec, NodeSpec))))
-    specs.add(VariantSpec(None, 'syntax', [ ('node', VariantType('node')), ('token', VariantType('token')) ]))
+    # specs.add(VariantSpec(None, 'keyword', list((rule.name, TokenType(rule.name)) for rule in grammar.rules if rule.is_keyword)))
+    # specs.add(VariantSpec(None, 'token', list((spec.name, TokenType(spec.name)) for spec in specs if isinstance(spec, TokenSpec))))
+    # specs.add(VariantSpec(None, 'node', list((spec.name, NodeType(spec.name)) for spec in specs if isinstance(spec, NodeSpec))))
+    # specs.add(VariantSpec(None, 'syntax', [ ('node', VariantType('node')), ('token', VariantType('token')) ]))
 
     return specs
 

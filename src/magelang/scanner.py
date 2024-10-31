@@ -141,6 +141,14 @@ token_type_descriptions = {
     TT_RARROW: "'->'",
     }
 
+def token_to_string(token: Token) -> str:
+    if token.type == TT_IDENT:
+        assert(isinstance(token.value, str))
+        return token.value
+    if token.type  == TT_TOKEN:
+        return 'token'
+    raise NotImplementedError()
+
 class ScanError(RuntimeError):
 
     def __init__(self, ch: str, position: TextPos) -> None:
