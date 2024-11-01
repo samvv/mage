@@ -1,6 +1,6 @@
 
 import io
-from typing import Any, Callable, Iterator, Never, TextIO, TypeGuard, TypeVar, overload
+from typing import Any, Callable, Generic, Iterator, Never, Protocol, Sequence, SupportsIndex, TextIO, TypeGuard, TypeVar, overload
 import re
 
 
@@ -35,13 +35,48 @@ def unreachable() -> Never:
     raise RuntimeError(f'Some code was executed that was not meant to be executed. This is a bug.')
 
 
-T = TypeVar('T')
+_T = TypeVar('_T')
 
 
-def nonnull(value: T | None) -> T:
+def nonnull(value: _T | None) -> _T:
     assert(value is not None)
     return value
 
+class Eq(Protocol):
+    def __eq__(self, value: object, /) -> bool: ...
+
+_Elem = TypeVar('_Elem')
+
+class Seq(Generic[_Elem], Protocol):
+    def __len__(self) -> int: ...
+    @overload
+    def __getitem__(self, i: SupportsIndex, /) -> _Elem: ...
+    @overload
+    def __getitem__(self, s: slice, /) -> list[_Elem]: ...
+
+_K = TypeVar('_K', bound=Eq)
+
+def get_common_suffix(names: Sequence[Seq[_K]]) -> Seq[_K]:
+    i = 0
+    name = names[0]
+    while True:
+        k = len(name) - i - 1
+        if k < 0:
+            break
+        ch = name[k]
+        match = True
+        for name_2 in names[1:]:
+            k = len(name_2) - i - 1
+            if k < 0:
+                match = False
+                break
+            if ch != name_2[k]:
+                match = False
+                break
+        if not match:
+            break
+        i += 1
+    return name[len(name) - i:]
 
 class IndentWriter:
 

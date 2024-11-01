@@ -4,7 +4,7 @@ from typing import TypeVar, assert_type
 from magelang.lang.rust.cst import *
 from magelang.logging import warn
 from magelang.treespec import *
-from magelang.util import to_camel_case, unreachable
+from magelang.util import get_common_suffix, to_camel_case, unreachable
 
 def make_rust_ident(name: str) -> RustPath:
     return RustPath([ RustPathSegment(name) ])
@@ -79,6 +79,10 @@ def generate_tree(
             tokens=list_comma(RustIdent(name) for name in names),
         )
 
+    def drop(name: str, n: int) -> str:
+        parts = name.split('_')
+        return '_'.join(parts[:len(parts)-n])
+
     for spec in specs:
         if isinstance(spec, TokenSpec):
             fields = [
@@ -102,11 +106,12 @@ def generate_tree(
             ))
 
         if isinstance(spec, VariantSpec):
+            k = len(get_common_suffix(list(name.split('_') for name, _ in spec.members)))
             items.append(RustEnumItem(
                 attrs=[ RustAttr(make_derive('Clone', 'Debug')) ],
                 visibility=RustPublic(),
                 name=to_type_name(spec.name),
-                variants=list(RustTupleVariant(to_type_name(name), types=[ to_rust_type_expr(ty) ]) for name, ty in spec.members),
+                variants=list(RustTupleVariant(to_type_name(drop(name, k)), types=[ to_rust_type_expr(ty) ]) for name, ty in spec.members),
             ))
 
     return RustSourceFile(items=items)
