@@ -46,6 +46,9 @@ class NodeType(SpecType):
     def encode(self) -> Any:
         return (1, self.name)
 
+    def __repr__(self) -> str:
+        return f'NodeType({self.name})'
+
 class TokenType(SpecType):
     """
     Matches a token type in the CST.
@@ -57,6 +60,9 @@ class TokenType(SpecType):
 
     def encode(self) -> Any:
         return (2, self.name)
+
+    def __repr__(self) -> str:
+        return f'TokenType({self.name})'
 
 class VariantType(SpecType):
     """
@@ -70,6 +76,9 @@ class VariantType(SpecType):
     def encode(self) -> Any:
         return (3, self.name)
 
+    def __repr__(self) -> str:
+        return f'VariantType({self.name})'
+
 class NeverType(TypeBase):
     """
     Represents a type that never matches. Mostly useful to close off a union type when generating types.
@@ -77,6 +86,9 @@ class NeverType(TypeBase):
 
     def encode(self) -> Any:
         return (4,)
+
+    def __repr__(self) -> str:
+        return 'NeverType()'
 
 class TupleType(TypeBase):
     """
@@ -102,9 +114,11 @@ class TupleType(TypeBase):
             after = list(self.after)
         return TupleType(element_types, before, after)
 
-
     def encode(self) -> Any:
         return (5, tuple(ty.encode() for ty in self.element_types))
+
+    def __repr__(self) -> str:
+        return f"TupleType({', '.join(repr(self.element_types))})"
 
 class ListType(TypeBase):
     """
@@ -136,6 +150,9 @@ class ListType(TypeBase):
 
     def encode(self) -> Any:
         return (6, self.element_type.encode(), self.required)
+
+    def __repr__(self) -> str:
+        return f'ListType({repr(self.element_type)})'
 
 class PunctType(TypeBase):
     """
@@ -179,6 +196,9 @@ class PunctType(TypeBase):
     def encode(self) -> Any:
         return (7, self.element_type.encode(), self.separator_type.encode(), self.required)
 
+    def __repr__(self) -> str:
+        return f'PunctType({repr(self.element_type)}, {repr(self.separator_type)})'
+
 class UnionType(TypeBase):
     """
     A type where any of the member types are valid.
@@ -206,6 +226,9 @@ class UnionType(TypeBase):
     def encode(self) -> Any:
         return (8, tuple(ty.encode() for ty in self.types))
 
+    def __repr__(self) -> str:
+        return f"UnionType({', '.join(repr(ty) for ty in self.types)})"
+
 class NoneType(TypeBase):
     """
     A type that indicates that the value is empty.
@@ -215,6 +238,9 @@ class NoneType(TypeBase):
 
     def encode(self) -> Any:
         return (9,)
+
+    def __repr__(self) -> str:
+        return 'NoneType()'
 
 class ExternType(TypeBase):
     """
@@ -228,6 +254,9 @@ class ExternType(TypeBase):
     def encode(self) -> Any:
         return (10, self.name)
 
+    def __repr__(self) -> str:
+        return f'ExternType({self.name})'
+
 class AnyType(TypeBase):
     """
     A type that is used as a placeholder when no more specific type is known.
@@ -235,6 +264,9 @@ class AnyType(TypeBase):
 
     def encode(self) -> Any:
         return (11,)
+
+    def __repr__(self) -> str:
+        return 'AnyType()'
 
 def rewrite_each_type(ty: Type, proc: Callable[[Type], Type | None]) -> Type:
     updated = proc(ty)
