@@ -312,7 +312,7 @@ pub impl_element
   = fn_impl_element
 
 pub impl_item
-  = attr* 'default'? 'unsafe'? 'impl' generics '!'? trait:(path 'for' type_expr)? '{' impl_element* '}'
+  = attr* 'default'? 'unsafe'? 'impl' generics trait:('!'? path 'for')? type_expr '{' impl_element* '}'
 
 pub item
   = enum_item
