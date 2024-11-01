@@ -353,6 +353,16 @@ def is_optional(ty: Type) -> bool:
                 return True
     return False
 
+def get_optional_element(ty: Type) -> Type:
+    assert(isinstance(ty, UnionType))
+    found = None
+    for el_ty in ty.types:
+        if not isinstance(el_ty, NoneType):
+            assert(found is None)
+            found = el_ty
+    assert(found is not None)
+    return found
+
 def make_unit() -> Type:
     return TupleType(list())
 

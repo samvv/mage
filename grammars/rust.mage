@@ -140,9 +140,17 @@ pub path_type_expr
 pub array_type_expr
   = '[' type_expr ';' expr ']'
 
+pub never_type_expr
+  = '!'
+
+pub tuple_type_expr
+  = '(' elements:(type_expr % ',') ')'
+
 pub type_expr
   = path_type_expr
   | array_type_expr
+  | never_type_expr
+  | tuple_type_expr
 
 # Patterns
 

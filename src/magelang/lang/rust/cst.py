@@ -734,6 +734,47 @@ class RustArrayTypeExpr(_RustBaseNode):
         return self._parent
 
 
+class RustNeverTypeExpr(_RustBaseNode):
+
+    def __init__(self, *, exclamation_mark: 'RustExclamationMark | None' = None) -> None:
+        self.exclamation_mark: RustExclamationMark = _coerce_union_2_token_exclamation_mark_none_to_token_exclamation_mark(exclamation_mark)
+
+    @no_type_check
+    def derive(self, exclamation_mark: 'RustExclamationMark | None' = None) -> 'RustNeverTypeExpr':
+        if exclamation_mark is None:
+            exclamation_mark = self.exclamation_mark
+        return RustNeverTypeExpr(exclamation_mark=exclamation_mark)
+
+    def parent(self) -> 'RustNeverTypeExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
+class RustTupleTypeExpr(_RustBaseNode):
+
+    def count_elements(self) -> int:
+        return len(self.elements)
+
+    def __init__(self, *, open_paren: 'RustOpenParen | None' = None, elements: 'Sequence[RustTypeExpr] | Sequence[tuple[RustTypeExpr, RustComma | None]] | Punctuated[RustTypeExpr, RustComma] | None' = None, close_paren: 'RustCloseParen | None' = None) -> None:
+        self.open_paren: RustOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
+        self.elements: Punctuated[RustTypeExpr, RustComma] = _coerce_union_4_list_variant_type_expr_list_tuple_2_variant_type_expr_union_2_token_comma_none_punct_variant_type_expr_token_comma_none_to_punct_variant_type_expr_token_comma(elements)
+        self.close_paren: RustCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
+
+    @no_type_check
+    def derive(self, open_paren: 'RustOpenParen | None' = None, elements: 'Sequence[RustTypeExpr] | Sequence[tuple[RustTypeExpr, RustComma | None]] | Punctuated[RustTypeExpr, RustComma] | None' = None, close_paren: 'RustCloseParen | None' = None) -> 'RustTupleTypeExpr':
+        if open_paren is None:
+            open_paren = self.open_paren
+        if elements is None:
+            elements = self.elements
+        if close_paren is None:
+            close_paren = self.close_paren
+        return RustTupleTypeExpr(open_paren=open_paren, elements=elements, close_paren=close_paren)
+
+    def parent(self) -> 'RustTupleTypeExprParent':
+        assert(self._parent is not None)
+        return self._parent
+
+
 class RustNamedPattern(_RustBaseNode):
 
     def count_attrs(self) -> int:
@@ -1833,11 +1874,11 @@ def is_rust_path_arguments(value: Any) -> TypeGuard[RustPathArguments]:
     return isinstance(value, RustTurbofish) or isinstance(value, RustAngleBracketedGenericArguments) or isinstance(value, RustParenthesizedGenericArguments)
 
 
-type RustTypeExpr = RustPathTypeExpr | RustArrayTypeExpr
+type RustTypeExpr = RustPathTypeExpr | RustArrayTypeExpr | RustNeverTypeExpr | RustTupleTypeExpr
 
 
 def is_rust_type_expr(value: Any) -> TypeGuard[RustTypeExpr]:
-    return isinstance(value, RustPathTypeExpr) or isinstance(value, RustArrayTypeExpr)
+    return isinstance(value, RustPathTypeExpr) or isinstance(value, RustArrayTypeExpr) or isinstance(value, RustNeverTypeExpr) or isinstance(value, RustTupleTypeExpr)
 
 
 type RustExpr = RustLitExpr | RustPathExpr | RustCallExpr | RustStructExpr | RustBlockExpr | RustRetExpr
@@ -1910,11 +1951,11 @@ def is_rust_token(value: Any) -> TypeGuard[RustToken]:
     return isinstance(value, RustIdent) or isinstance(value, RustInteger) or isinstance(value, RustFloat) or isinstance(value, RustString) or isinstance(value, RustChar) or isinstance(value, RustCloseBrace) or isinstance(value, RustOpenBrace) or isinstance(value, RustWhereKeyword) or isinstance(value, RustUseKeyword) or isinstance(value, RustUnsafeKeyword) or isinstance(value, RustTrueKeyword) or isinstance(value, RustStructKeyword) or isinstance(value, RustSelfKeyword) or isinstance(value, RustReturnKeyword) or isinstance(value, RustRefKeyword) or isinstance(value, RustPubKeyword) or isinstance(value, RustMutKeyword) or isinstance(value, RustInKeyword) or isinstance(value, RustImplKeyword) or isinstance(value, RustForKeyword) or isinstance(value, RustFnKeyword) or isinstance(value, RustFalseKeyword) or isinstance(value, RustExternKeyword) or isinstance(value, RustEnumKeyword) or isinstance(value, RustDefaultKeyword) or isinstance(value, RustConstKeyword) or isinstance(value, RustAsyncKeyword) or isinstance(value, RustAsKeyword) or isinstance(value, RustCloseBracket) or isinstance(value, RustOpenBracket) or isinstance(value, RustAtSign) or isinstance(value, RustQuestionMark) or isinstance(value, RustGreaterThan) or isinstance(value, RustEquals) or isinstance(value, RustLessThan) or isinstance(value, RustSemicolon) or isinstance(value, RustColonColon) or isinstance(value, RustColon) or isinstance(value, RustDotDotDot) or isinstance(value, RustRArrow) or isinstance(value, RustComma) or isinstance(value, RustPlus) or isinstance(value, RustAsterisk) or isinstance(value, RustCloseParen) or isinstance(value, RustOpenParen) or isinstance(value, RustSingleQuote) or isinstance(value, RustAmpersand) or isinstance(value, RustPercent) or isinstance(value, RustHashtag) or isinstance(value, RustExclamationMark)
 
 
-type RustNode = RustPublic | RustTypeInit | RustTypeParam | RustConstParam | RustTraitBoundModifier | RustBoundLifetimes | RustTraitBound | RustLifetime | RustAssocType | RustAssocConst | RustConstraint | RustTurbofish | RustAngleBracketedGenericArguments | RustParenthesizedGenericArguments | RustPathSegment | RustPath | RustQself | RustPathTypeExpr | RustArrayTypeExpr | RustNamedPattern | RustPattern | RustPathExpr | RustLitExpr | RustInit | RustStructExpr | RustCallExpr | RustRetExpr | RustBlockExpr | RustAbi | RustVariadicArg | RustSelfArg | RustTypedArg | RustLifetimePredicate | RustTypePredicate | RustGenerics | RustSignature | RustField | RustStructVariant | RustTupleVariant | RustEmptyVariant | RustEnumItem | RustMetaPath | RustMetaBraced | RustMetaParenthesized | RustMetaBracketed | RustMetaNameValue | RustAttr | RustStructItem | RustExprItem | RustUsePath | RustUseName | RustUseRename | RustUseGlob | RustUseGroup | RustUseItem | RustFnImplElement | RustImplElement | RustImplItem | RustSourceFile
+type RustNode = RustPublic | RustTypeInit | RustTypeParam | RustConstParam | RustTraitBoundModifier | RustBoundLifetimes | RustTraitBound | RustLifetime | RustAssocType | RustAssocConst | RustConstraint | RustTurbofish | RustAngleBracketedGenericArguments | RustParenthesizedGenericArguments | RustPathSegment | RustPath | RustQself | RustPathTypeExpr | RustArrayTypeExpr | RustNeverTypeExpr | RustTupleTypeExpr | RustNamedPattern | RustPattern | RustPathExpr | RustLitExpr | RustInit | RustStructExpr | RustCallExpr | RustRetExpr | RustBlockExpr | RustAbi | RustVariadicArg | RustSelfArg | RustTypedArg | RustLifetimePredicate | RustTypePredicate | RustGenerics | RustSignature | RustField | RustStructVariant | RustTupleVariant | RustEmptyVariant | RustEnumItem | RustMetaPath | RustMetaBraced | RustMetaParenthesized | RustMetaBracketed | RustMetaNameValue | RustAttr | RustStructItem | RustExprItem | RustUsePath | RustUseName | RustUseRename | RustUseGlob | RustUseGroup | RustUseItem | RustFnImplElement | RustImplElement | RustImplItem | RustSourceFile
 
 
 def is_rust_node(value: Any) -> TypeGuard[RustNode]:
-    return isinstance(value, RustPublic) or isinstance(value, RustTypeInit) or isinstance(value, RustTypeParam) or isinstance(value, RustConstParam) or isinstance(value, RustTraitBoundModifier) or isinstance(value, RustBoundLifetimes) or isinstance(value, RustTraitBound) or isinstance(value, RustLifetime) or isinstance(value, RustAssocType) or isinstance(value, RustAssocConst) or isinstance(value, RustConstraint) or isinstance(value, RustTurbofish) or isinstance(value, RustAngleBracketedGenericArguments) or isinstance(value, RustParenthesizedGenericArguments) or isinstance(value, RustPathSegment) or isinstance(value, RustPath) or isinstance(value, RustQself) or isinstance(value, RustPathTypeExpr) or isinstance(value, RustArrayTypeExpr) or isinstance(value, RustNamedPattern) or isinstance(value, RustPattern) or isinstance(value, RustPathExpr) or isinstance(value, RustLitExpr) or isinstance(value, RustInit) or isinstance(value, RustStructExpr) or isinstance(value, RustCallExpr) or isinstance(value, RustRetExpr) or isinstance(value, RustBlockExpr) or isinstance(value, RustAbi) or isinstance(value, RustVariadicArg) or isinstance(value, RustSelfArg) or isinstance(value, RustTypedArg) or isinstance(value, RustLifetimePredicate) or isinstance(value, RustTypePredicate) or isinstance(value, RustGenerics) or isinstance(value, RustSignature) or isinstance(value, RustField) or isinstance(value, RustStructVariant) or isinstance(value, RustTupleVariant) or isinstance(value, RustEmptyVariant) or isinstance(value, RustEnumItem) or isinstance(value, RustMetaPath) or isinstance(value, RustMetaBraced) or isinstance(value, RustMetaParenthesized) or isinstance(value, RustMetaBracketed) or isinstance(value, RustMetaNameValue) or isinstance(value, RustAttr) or isinstance(value, RustStructItem) or isinstance(value, RustExprItem) or isinstance(value, RustUsePath) or isinstance(value, RustUseName) or isinstance(value, RustUseRename) or isinstance(value, RustUseGlob) or isinstance(value, RustUseGroup) or isinstance(value, RustUseItem) or isinstance(value, RustFnImplElement) or isinstance(value, RustImplElement) or isinstance(value, RustImplItem) or isinstance(value, RustSourceFile)
+    return isinstance(value, RustPublic) or isinstance(value, RustTypeInit) or isinstance(value, RustTypeParam) or isinstance(value, RustConstParam) or isinstance(value, RustTraitBoundModifier) or isinstance(value, RustBoundLifetimes) or isinstance(value, RustTraitBound) or isinstance(value, RustLifetime) or isinstance(value, RustAssocType) or isinstance(value, RustAssocConst) or isinstance(value, RustConstraint) or isinstance(value, RustTurbofish) or isinstance(value, RustAngleBracketedGenericArguments) or isinstance(value, RustParenthesizedGenericArguments) or isinstance(value, RustPathSegment) or isinstance(value, RustPath) or isinstance(value, RustQself) or isinstance(value, RustPathTypeExpr) or isinstance(value, RustArrayTypeExpr) or isinstance(value, RustNeverTypeExpr) or isinstance(value, RustTupleTypeExpr) or isinstance(value, RustNamedPattern) or isinstance(value, RustPattern) or isinstance(value, RustPathExpr) or isinstance(value, RustLitExpr) or isinstance(value, RustInit) or isinstance(value, RustStructExpr) or isinstance(value, RustCallExpr) or isinstance(value, RustRetExpr) or isinstance(value, RustBlockExpr) or isinstance(value, RustAbi) or isinstance(value, RustVariadicArg) or isinstance(value, RustSelfArg) or isinstance(value, RustTypedArg) or isinstance(value, RustLifetimePredicate) or isinstance(value, RustTypePredicate) or isinstance(value, RustGenerics) or isinstance(value, RustSignature) or isinstance(value, RustField) or isinstance(value, RustStructVariant) or isinstance(value, RustTupleVariant) or isinstance(value, RustEmptyVariant) or isinstance(value, RustEnumItem) or isinstance(value, RustMetaPath) or isinstance(value, RustMetaBraced) or isinstance(value, RustMetaParenthesized) or isinstance(value, RustMetaBracketed) or isinstance(value, RustMetaNameValue) or isinstance(value, RustAttr) or isinstance(value, RustStructItem) or isinstance(value, RustExprItem) or isinstance(value, RustUsePath) or isinstance(value, RustUseName) or isinstance(value, RustUseRename) or isinstance(value, RustUseGlob) or isinstance(value, RustUseGroup) or isinstance(value, RustUseItem) or isinstance(value, RustFnImplElement) or isinstance(value, RustImplElement) or isinstance(value, RustImplItem) or isinstance(value, RustSourceFile)
 
 
 type RustSyntax = RustNode | RustToken
@@ -1975,10 +2016,16 @@ type RustPathParent = RustImplItem | RustMetaBraced | RustMetaBracketed | RustMe
 type RustQselfParent = RustPathExpr | RustPathTypeExpr
 
 
-type RustPathTypeExprParent = RustAngleBracketedGenericArguments | RustArrayTypeExpr | RustAssocType | RustConstParam | RustField | RustImplItem | RustParenthesizedGenericArguments | RustQself | RustSelfArg | RustSignature | RustTupleVariant | RustTurbofish | RustTypeInit | RustTypePredicate | RustTypedArg
+type RustPathTypeExprParent = RustAngleBracketedGenericArguments | RustArrayTypeExpr | RustAssocType | RustConstParam | RustField | RustImplItem | RustParenthesizedGenericArguments | RustQself | RustSelfArg | RustSignature | RustTupleTypeExpr | RustTupleVariant | RustTurbofish | RustTypeInit | RustTypePredicate | RustTypedArg
 
 
-type RustArrayTypeExprParent = RustAngleBracketedGenericArguments | RustArrayTypeExpr | RustAssocType | RustConstParam | RustField | RustImplItem | RustParenthesizedGenericArguments | RustQself | RustSelfArg | RustSignature | RustTupleVariant | RustTurbofish | RustTypeInit | RustTypePredicate | RustTypedArg
+type RustArrayTypeExprParent = RustAngleBracketedGenericArguments | RustArrayTypeExpr | RustAssocType | RustConstParam | RustField | RustImplItem | RustParenthesizedGenericArguments | RustQself | RustSelfArg | RustSignature | RustTupleTypeExpr | RustTupleVariant | RustTurbofish | RustTypeInit | RustTypePredicate | RustTypedArg
+
+
+type RustNeverTypeExprParent = RustAngleBracketedGenericArguments | RustArrayTypeExpr | RustAssocType | RustConstParam | RustField | RustImplItem | RustParenthesizedGenericArguments | RustQself | RustSelfArg | RustSignature | RustTupleTypeExpr | RustTupleVariant | RustTurbofish | RustTypeInit | RustTypePredicate | RustTypedArg
+
+
+type RustTupleTypeExprParent = RustAngleBracketedGenericArguments | RustArrayTypeExpr | RustAssocType | RustConstParam | RustField | RustImplItem | RustParenthesizedGenericArguments | RustQself | RustSelfArg | RustSignature | RustTupleTypeExpr | RustTupleVariant | RustTurbofish | RustTypeInit | RustTypePredicate | RustTypedArg
 
 
 type RustNamedPatternParent = RustPattern
@@ -2653,6 +2700,16 @@ def _coerce_union_2_token_close_bracket_none_to_token_close_bracket(value: 'Rust
         return value
     else:
         raise ValueError('the coercion from RustCloseBracket | None to RustCloseBracket failed')
+
+
+@no_type_check
+def _coerce_union_2_token_exclamation_mark_none_to_token_exclamation_mark(value: 'RustExclamationMark | None') -> 'RustExclamationMark':
+    if value is None:
+        return RustExclamationMark()
+    elif isinstance(value, RustExclamationMark):
+        return value
+    else:
+        raise ValueError('the coercion from RustExclamationMark | None to RustExclamationMark failed')
 
 
 @no_type_check
