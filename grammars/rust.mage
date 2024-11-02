@@ -224,7 +224,7 @@ pub where_predicate
   | type_predicate
 
 pub generics
-  = '<' params:(generic_param % ',') '>' where_clause:('where' (where_predicate %% ','))?
+  = params:('<' (generic_param % ',') '>')? where_clause:('where' (where_predicate %% ','))?
 
 pub signature
   = 'const'? 'async'? 'unsafe'? abi? 'fn' name:ident generics '(' inputs:(arg % ',') ')' output:('->' type_expr)?
