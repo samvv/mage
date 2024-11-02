@@ -20,30 +20,37 @@ def is_empty(expr: Expr) -> bool:
 
 # FIXME needs to be extensively tested
 def can_be_empty(expr: Expr, *, grammar: Grammar) -> bool:
-    if isinstance(expr, LitExpr):
-        return len(expr.text) == 0
-    if isinstance(expr, RefExpr):
-        rule = grammar.lookup(expr.name)
-        assert(rule is not None and rule.expr is not None)
-        return can_be_empty(rule.expr, grammar=grammar)
-    if isinstance(expr, CharSetExpr):
-        return len(expr) == 0
-    if isinstance(expr, LookaheadExpr):
-        return True
-    if isinstance(expr, ListExpr):
-        return expr.min_count == 0
-    if isinstance(expr, RepeatExpr):
-        return expr.min == 0 or can_be_empty(expr.expr, grammar=grammar)
-    if isinstance(expr, SeqExpr):
-        return len(expr.elements) == 0 or all(can_be_empty(el, grammar=grammar) for el in expr.elements)
-    if isinstance(expr, ChoiceExpr):
-        return len(expr.elements) == 0 or any(can_be_empty(el, grammar=grammar) for el in expr.elements)
-    unreachable()
+    visited = set()
+    def visit(expr: Expr) -> bool:
+        if isinstance(expr, LitExpr):
+            return len(expr.text) == 0
+        if isinstance(expr, HideExpr):
+            return visit(expr.expr)
+        if isinstance(expr, RefExpr):
+            if expr.name in visited:
+                return False
+            visited.add(expr.name)
+            rule = grammar.lookup(expr.name)
+            # If a rule is not defined, it CAN be empty if defined; we just don't know for sure.
+            # Likewise if we are dealing with an external rule, chances are it might be empty.
+            return rule is None or rule.expr is None or visit(rule.expr)
+        if isinstance(expr, CharSetExpr):
+            return len(expr) == 0
+        if isinstance(expr, LookaheadExpr):
+            return True
+        if isinstance(expr, ListExpr):
+            return expr.min_count == 0 or visit(expr.element)
+        if isinstance(expr, RepeatExpr):
+            return expr.min == 0 or visit(expr.expr)
+        if isinstance(expr, SeqExpr):
+            return len(expr.elements) == 0 or all(visit(el) for el in expr.elements)
+        if isinstance(expr, ChoiceExpr):
+            return len(expr.elements) == 0 or any(visit(el) for el in expr.elements)
+        assert_never(expr)
+    return visit(expr)
 
 def is_eof(expr: Expr) -> bool:
-    if isinstance(expr, CharSetExpr):
-        return len(expr) == 0
-    return False
+    return isinstance(expr, CharSetExpr) and len(expr) == 0
 
 def intersects(left: Expr, right: Expr, *, grammar: Grammar, default: bool = False) -> bool:
     """
