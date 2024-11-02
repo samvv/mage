@@ -6,12 +6,10 @@ from magelang.util import NameGenerator
 from .util import build_cond, Case, build_isinstance, gen_shallow_test, namespaced, to_class_name
 
 def generate_visitor(
-    grammar: Grammar,
+    specs: Specs,
     prefix='',
     debug = False,
 ) -> PyModule:
-
-    specs = grammar_to_specs(grammar)
 
     generate_temporary = NameGenerator()
 
