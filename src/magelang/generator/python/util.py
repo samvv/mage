@@ -356,7 +356,7 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
             required_fields: list[Field] = []
 
             for field in spec.fields:
-                if is_default_constructible(field.ty, specs=specs):
+                if is_optional(field.ty) or is_default_constructible(field.ty, specs=specs):
                     optional_fields.append(field)
                 else:
                     required_fields.append(field)
@@ -622,15 +622,24 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
             required: list[Type] = []
 
             for element_type in ty.element_types:
-                if not is_default_constructible(element_type, specs=specs, allow_empty_sequences=False):
+                if not is_optional(element_type) and not is_default_constructible(element_type, specs=specs, allow_empty_sequences=False):
                     required.append(element_type)
 
             if len(required) == 1:
                 main_type = required[0]
                 coerced_type, coerce_expr = gen_coerce_call(main_type, PyNamedExpr(param_name), True)
+                elements = []
+                for el_ty in ty.element_types:
+                    if el_ty == main_type:
+                        element = coerce_expr
+                    elif is_optional(el_ty):
+                        element = PyNamedExpr('None')
+                    else:
+                        element = gen_default_constructor(el_ty, specs=specs, prefix=prefix)
+                    elements.append(element)
                 yield coerced_type, [
                     PyRetStmt(expr=PyTupleExpr(
-                        elements=list(coerce_expr if el_ty == main_type else gen_default_constructor(el_ty, specs=specs, prefix=prefix) for el_ty in ty.element_types)
+                        elements=elements,
                     )),
                 ]
 
