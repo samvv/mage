@@ -8,7 +8,7 @@ from intervaltree.intervaltree import warn
 from magelang.analysis import intersects, can_be_empty
 from magelang.ast import CharSetExpr, ChoiceExpr, Expr, Grammar, HideExpr, ListExpr, LitExpr, LookaheadExpr, RefExpr, RepeatExpr, Rule, SeqExpr, static_expr_to_str
 from magelang.emitter import emit
-from magelang.treespec import Field, get_fields, grammar_to_specs, infer_type, is_unit
+from magelang.treespec import Field, get_fields, grammar_to_specs, infer_type, is_unit_type
 from magelang.lang.python.cst import *
 from magelang.util import unreachable
 from .util import Case, build_cond, gen_shallow_test, namespaced, to_class_name, build_isinstance
@@ -50,6 +50,24 @@ def generate_emitter(
         assert(skip_rule is not None and skip_rule.expr is not None)
         return gen_emit_expr(skip_rule.expr, None, False)
 
+    def get_expr(item: Expr | Field) -> Expr:
+        return item.expr if isinstance(item, Field) else item
+
+    def is_skip(elements: Sequence[Expr | Field], i: int) -> bool:
+        expr = get_expr(elements[i])
+        for k in range(i+1, len(items)):
+            item_2 = items[k]
+            expr_2 = item_2.expr if isinstance(item_2, Field) else item_2
+            if intersects(expr, expr_2, grammar=grammar):
+                return True
+            if not can_be_empty(expr_2, grammar=grammar):
+                break
+        return False
+
+    def is_empty(expr: Expr) -> bool:
+        # HACK Infer whether it is a hidden field or a lookahead expression
+        return is_unit_type(infer_type(expr, grammar))
+
     # def eliminate_choices(expr: ChoiceExpr, last: bool) -> list[Expr]:
     #     out = []
     #     for element in flatten_choice(expr):
@@ -90,9 +108,11 @@ def generate_emitter(
             if rule is None:
                 return
             if rule.is_extern:
-                assert(target is not None)
-                yield from gen_write_token(target)
-                return # TODO
+                if target is None:
+                    pass # TODO cover case where target is not set
+                else:
+                    yield from gen_write_token(target)
+                return
             if rule.expr is None:
                 return
             if not rule.is_public or target is None:
@@ -139,23 +159,18 @@ def generate_emitter(
             # A LookaheadExpr never parses/emits anything.
             pass
         elif isinstance(expr, HideExpr):
-            # `target` is set to `None` because it won't hold any information about a hidden expression
+            # `target` is set to `None` because by definition it won't hold any information
             yield from gen_emit_expr(expr.expr, None, skip)
         elif isinstance(expr, SeqExpr):
-            if target is None:
-                n = len(expr.elements)
-                for i, element in enumerate(expr.elements):
-                    yield from gen_emit_expr(element, target, skip)
-            else:
-                n = len(expr.elements)
-                m = len(list(filter(lambda element: not is_unit(infer_type(element, grammar)), expr.elements)))
-                k = 0 # Keeps track of the tuple index in the struct
-                for i, element in enumerate(expr.elements):
-                    if is_unit(infer_type(element, grammar)):
-                        yield from gen_emit_expr(element, None, skip and i == 0)
-                    else:
-                        yield from gen_emit_expr(element, target if m == 1 else PySubscriptExpr(target, [ PyConstExpr(k) ]), skip and i == 0)
-                        k += 1
+            tuple_len = len(list(filter(lambda element: not is_empty(element), expr.elements)))
+            tuple_index = 0
+            for i, element in enumerate(expr.elements):
+                new_skip = (i == 0 and skip) or is_skip(expr.elements, i)
+                if target is None or is_empty(element):
+                    yield from gen_emit_expr(element, None, new_skip)
+                else:
+                    yield from gen_emit_expr(element, target if tuple_len == 1 else PySubscriptExpr(target, [ PyConstExpr(tuple_index) ]), new_skip)
+                    tuple_index += 1
         elif isinstance(expr, ListExpr):
             if target is None:
                 if expr.min_count > 0:
@@ -195,7 +210,9 @@ def generate_emitter(
     for rule in grammar.rules:
 
         if grammar.is_token_rule(rule):
-            assert(rule.expr is not None)
+            if rule.expr is None:
+                # TODO cover this case
+                continue
             if grammar.is_static_token(rule.expr):
                 expr = PyConstExpr(static_expr_to_str(rule.expr))
             else:
@@ -215,16 +232,8 @@ def generate_emitter(
             if_body = []
             items = list(get_fields(rule.expr, include_hidden=include_hidden, grammar=grammar))
             for i, item in enumerate(items):
-                expr = item.expr if isinstance(item, Field) else item
-                skip = False
-                for k in range(i+1, len(items)):
-                    item_2 = items[k]
-                    expr_2 = item_2.expr if isinstance(item_2, Field) else item_2
-                    if intersects(expr, expr_2, grammar=grammar):
-                        skip = True
-                        break
-                    if not can_be_empty(expr_2, grammar=grammar):
-                        break
+                expr = get_expr(item)
+                skip = is_skip(items, i)
                 if isinstance(item, Field):
                     if_body.extend(gen_emit_expr(expr, PyAttrExpr(PyNamedExpr(param_name), item.name), skip))
                 else:
