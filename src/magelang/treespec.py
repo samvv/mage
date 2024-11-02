@@ -118,7 +118,7 @@ class TupleType(TypeBase):
         return (5, tuple(ty.encode() for ty in self.element_types))
 
     def __repr__(self) -> str:
-        return f"TupleType({', '.join(repr(self.element_types))})"
+        return f"TupleType({', '.join(repr(ty) for ty in self.element_types)})"
 
 class ListType(TypeBase):
     """
