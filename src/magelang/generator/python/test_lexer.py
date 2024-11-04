@@ -2,12 +2,12 @@
 from textwrap import dedent
 import marko
 from magelang.util import NameGenerator
-from magelang.ast import Grammar
+from magelang.ast import MageGrammar
 from magelang.lang.python.cst import *
 from .util import build_isinstance, get_marko_element_text, to_class_name
 
 def generate_test_lexer(
-    grammar: Grammar,
+    grammar: MageGrammar,
     prefix = '',
 ) -> PyModule:
 

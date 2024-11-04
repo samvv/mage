@@ -1,11 +1,11 @@
 
 from ..logging import error
-from ..ast import Grammar, RefExpr, Expr, for_each_expr
+from ..ast import MageGrammar, MageRefExpr, MageExpr, for_each_expr
 
-def check_undefined(grammar: Grammar) -> Grammar:
+def check_undefined(grammar: MageGrammar) -> MageGrammar:
 
-    def traverse(expr: Expr) -> None:
-        if isinstance(expr, RefExpr):
+    def traverse(expr: MageExpr) -> None:
+        if isinstance(expr, MageRefExpr):
             if grammar.lookup(expr.name) is None:
                 error(f"undefined rule referenced: {expr.name}")
             return

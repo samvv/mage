@@ -184,6 +184,9 @@ def generate_tree(
                     ]
                 ))
 
+        if not spec.fields:
+            init_body.append(PyPassStmt())
+
         params.extend(required)
         if optional:
             params.append(PyKwSepParam())
@@ -258,13 +261,13 @@ def generate_tree(
             ],
         ))
 
-    node_names: list[str] = []
-    token_names: list[str] = []
-    for spec in specs:
-        if isinstance(spec, TokenSpec):
-            token_names.append(spec.name)
-        elif isinstance(spec, NodeSpec):
-            node_names.append(spec.name)
+    # node_names: list[str] = []
+    # token_names: list[str] = []
+    # for spec in specs:
+    #     if isinstance(spec, TokenSpec):
+    #         token_names.append(spec.name)
+    #     elif isinstance(spec, NodeSpec):
+    #         node_names.append(spec.name)
 
     if gen_parent_pointers:
         for spec in specs:

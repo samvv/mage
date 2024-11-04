@@ -6,8 +6,8 @@ any_char = [\x00-\x7F]
 
 eof = !any_byte
 
-extern token indent
-extern token dedent
+pub extern token indent
+pub extern token dedent
 
 # Helper utilities
 

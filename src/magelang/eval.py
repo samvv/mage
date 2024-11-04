@@ -5,7 +5,7 @@ from .ast import *
 
 EOF = '\uFFFF'
 
-def accepts(expr: Expr, text: str, grammar: Grammar) -> bool:
+def accepts(expr: MageExpr, text: str, grammar: MageGrammar) -> bool:
 
     offset = 0
 
@@ -19,24 +19,24 @@ def accepts(expr: Expr, text: str, grammar: Grammar) -> bool:
         offset += 1
         return ch
 
-    def visit(expr: Expr) -> bool:
+    def visit(expr: MageExpr) -> bool:
 
         nonlocal offset
 
-        if isinstance(expr, RefExpr):
+        if isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
             assert(rule is not None)
             assert(rule.expr is not None)
             return visit(rule.expr)
 
-        if isinstance(expr, LitExpr):
+        if isinstance(expr, MageLitExpr):
             for i, ch in enumerate(expr.text):
                 if peek(i) != ch:
                     return False
             offset += len(expr.text)
             return True
 
-        if isinstance(expr, CharSetExpr):
+        if isinstance(expr, MageCharSetExpr):
             ch = peek()
             if expr.invert:
                 for element in expr.elements:
@@ -69,7 +69,7 @@ def accepts(expr: Expr, text: str, grammar: Grammar) -> bool:
                         return True
                 return False
 
-        if isinstance(expr, SeqExpr):
+        if isinstance(expr, MageSeqExpr):
             keep = offset
             for element in expr.elements:
                 if not visit(element):
@@ -77,13 +77,13 @@ def accepts(expr: Expr, text: str, grammar: Grammar) -> bool:
                     return False
             return True
 
-        if isinstance(expr, ChoiceExpr):
+        if isinstance(expr, MageChoiceExpr):
             for element in expr.elements:
                 if visit(element):
                     return True
             return False
 
-        if isinstance(expr, RepeatExpr):
+        if isinstance(expr, MageRepeatExpr):
             keep = offset
             for _ in range(0, expr.min):
                 if not visit(expr.expr):
@@ -100,13 +100,13 @@ def accepts(expr: Expr, text: str, grammar: Grammar) -> bool:
                         break
             return True
 
-        if isinstance(expr, LookaheadExpr):
+        if isinstance(expr, MageLookaheadExpr):
             keep = offset
             result = visit(expr.expr)
             offset = keep
             return result
 
-        if isinstance(expr, ListExpr):
+        if isinstance(expr, MageListExpr):
             if not visit(expr.element):
                 return True
             while True:
@@ -117,7 +117,7 @@ def accepts(expr: Expr, text: str, grammar: Grammar) -> bool:
                     offset = keep
                     return True
 
-        if isinstance(expr, HideExpr):
+        if isinstance(expr, MageHideExpr):
             return visit(expr.expr)
 
         assert_never(expr)

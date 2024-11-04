@@ -113,5 +113,9 @@ def generate_tree(
                 name=to_type_name(spec.name),
                 variants=list(RustTupleVariant(to_type_name(drop(name, k)), types=[ to_rust_type_expr(ty) ]) for name, ty in spec.members),
             ))
+            items.append(RustImplItem(
+                trait=RustPath([ RustPathSegment('From', args=RustAngleBracketedGenericArguments(args=[ RustPathTypeExpr(make_rust_ident(to_type_name(spec.name))) ])) ]),
+                type_expr=RustPathTypeExpr(make_rust_ident(spec.name))
+            ))
 
     return RustSourceFile(items=items)

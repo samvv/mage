@@ -4,24 +4,22 @@
 from collections.abc import Generator
 from typing import assert_never, cast
 
-from intervaltree.intervaltree import warn
 from magelang.analysis import intersects, can_be_empty
-from magelang.ast import CharSetExpr, ChoiceExpr, Expr, Grammar, HideExpr, ListExpr, LitExpr, LookaheadExpr, RefExpr, RepeatExpr, Rule, SeqExpr, static_expr_to_str
-from magelang.emitter import emit
+from magelang.ast import MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageListExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, static_expr_to_str
 from magelang.treespec import Field, get_fields, grammar_to_specs, infer_type, is_unit_type
 from magelang.lang.python.cst import *
 from magelang.util import unreachable
 from .util import Case, build_cond, gen_shallow_test, namespaced, to_class_name, build_isinstance
 
 def generate_emitter(
-    grammar: Grammar,
+    grammar: MageGrammar,
     prefix = '',
     include_hidden: bool = False,
 ) -> PyModule:
 
     specs = grammar_to_specs(grammar, include_hidden=True)
 
-    skip_rule = Rule('___', LitExpr(' ')) # grammar.skip_rule # FIXME
+    skip_rule = MageRule('___', MageLitExpr(' ')) # grammar.skip_rule # FIXME
     emit_node_fn_name = namespaced('emit', prefix)
     visit_fn_name = 'visit'
     emit_token_fn_name = namespaced('emit_token', prefix)
@@ -31,8 +29,8 @@ def generate_emitter(
 
     is_token_name = f"is_{namespaced('token', prefix)}"
 
-    def references_token_rule(expr: Expr) -> bool:
-        if  not isinstance(expr, RefExpr):
+    def references_token_rule(expr: MageExpr) -> bool:
+        if  not isinstance(expr, MageRefExpr):
             return False
         rule = grammar.lookup(expr.name)
         return rule is not None and rule.expr is not None and grammar.is_token_rule(rule)
@@ -50,10 +48,10 @@ def generate_emitter(
         assert(skip_rule is not None and skip_rule.expr is not None)
         return gen_emit_expr(skip_rule.expr, None, False)
 
-    def get_expr(item: Expr | Field) -> Expr:
+    def get_expr(item: MageExpr | Field) -> MageExpr:
         return item.expr if isinstance(item, Field) else item
 
-    def is_skip(elements: Sequence[Expr | Field], i: int) -> bool:
+    def is_skip(elements: Sequence[MageExpr | Field], i: int) -> bool:
         expr = get_expr(elements[i])
         for k in range(i+1, len(items)):
             item_2 = items[k]
@@ -64,11 +62,11 @@ def generate_emitter(
                 break
         return False
 
-    def is_empty(expr: Expr) -> bool:
+    def is_empty(expr: MageExpr) -> bool:
         # HACK Infer whether it is a hidden field or a lookahead expression
         return is_unit_type(infer_type(expr, grammar))
 
-    # def eliminate_choices(expr: ChoiceExpr, last: bool) -> list[Expr]:
+    # def eliminate_choices(expr: ChoiceExpr, last: bool) -> list[MageExpr]:
     #     out = []
     #     for element in flatten_choice(expr):
     #         if not last and is_eof(element):
@@ -76,11 +74,11 @@ def generate_emitter(
     #         out.append(element)
     #     return out
 
-    def gen_emit_expr(expr: Expr, target: PyExpr | None, skip: bool) -> Generator[PyStmt, None, None]:
+    def gen_emit_expr(expr: MageExpr, target: PyExpr | None, skip: bool) -> Generator[PyStmt, None, None]:
         # NOTE This logic must be in sync with infer_type() in magelang.treespec
-        if isinstance(expr, LitExpr):
+        if isinstance(expr, MageLitExpr):
             yield gen_write(PyConstExpr(expr.text))
-        elif isinstance(expr, RepeatExpr):
+        elif isinstance(expr, MageRepeatExpr):
             if target is None:
                 # We only generate the minimum amount of tokens so that our grammar is correct.
                 # Any excessive tokens are not produced by this logic
@@ -95,7 +93,7 @@ def generate_emitter(
                     return
                 element_name = 'element'
                 yield PyForStmt(pattern=PyNamedPattern(element_name), expr=target, body=list(gen_emit_expr(expr.expr, PyNamedExpr(element_name), skip)))
-        elif isinstance(expr, CharSetExpr):
+        elif isinstance(expr, MageCharSetExpr):
             if target is None:
                 # We assume this CharSetExpr has been reduced to its most canonical form.
                 # In other words, we assume this expression has at least 2 different characters.
@@ -103,7 +101,7 @@ def generate_emitter(
                 pass
             else:
                 yield gen_write(PyCallExpr(PyNamedExpr(emit_token_fn_name), args=[ target ]))
-        elif isinstance(expr, RefExpr):
+        elif isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
             if rule is None:
                 return
@@ -124,7 +122,7 @@ def generate_emitter(
                     yield from gen_skip()
                 return
             if grammar.is_variant_rule(rule):
-                expr = cast(ChoiceExpr, rule.expr)
+                expr = cast(MageChoiceExpr, rule.expr)
                 token_count = sum(int(references_token_rule(element)) for element in expr.elements)
                 if token_count == len(expr.elements):
                     yield from gen_write_token(target)
@@ -137,7 +135,7 @@ def generate_emitter(
                         last=list(gen_visit_node(target)),
                     )
             yield from gen_visit_node(target)
-        elif isinstance(expr, ChoiceExpr):
+        elif isinstance(expr, MageChoiceExpr):
             if target is None:
                 # We cannot decide what rule we should take without additional
                 # information, so do nothing.
@@ -155,13 +153,13 @@ def generate_emitter(
                             body
                         ))
                 yield from build_cond(cases)
-        elif isinstance(expr, LookaheadExpr):
+        elif isinstance(expr, MageLookaheadExpr):
             # A LookaheadExpr never parses/emits anything.
             pass
-        elif isinstance(expr, HideExpr):
+        elif isinstance(expr, MageHideExpr):
             # `target` is set to `None` because by definition it won't hold any information
             yield from gen_emit_expr(expr.expr, None, skip)
-        elif isinstance(expr, SeqExpr):
+        elif isinstance(expr, MageSeqExpr):
             tuple_len = len(list(filter(lambda element: not is_empty(element), expr.elements)))
             tuple_index = 0
             for i, element in enumerate(expr.elements):
@@ -171,7 +169,7 @@ def generate_emitter(
                 else:
                     yield from gen_emit_expr(element, target if tuple_len == 1 else PySubscriptExpr(target, [ PyConstExpr(tuple_index) ]), new_skip)
                     tuple_index += 1
-        elif isinstance(expr, ListExpr):
+        elif isinstance(expr, MageListExpr):
             if target is None:
                 if expr.min_count > 0:
                     yield from gen_emit_expr(expr.element, target, skip)
@@ -213,7 +211,7 @@ def generate_emitter(
             if rule.expr is None:
                 # TODO cover this case
                 continue
-            if grammar.is_static_token(rule.expr):
+            if grammar.is_static_token_rule(rule.expr):
                 expr = PyConstExpr(static_expr_to_str(rule.expr))
             else:
                 expr = PyCallExpr(PyNamedExpr('str'), args=[ PyAttrExpr(PyNamedExpr(token_param_name), 'value') ])

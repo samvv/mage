@@ -1,5 +1,5 @@
 
-from magelang.ast import Grammar
+from magelang.ast import MageGrammar
 from magelang.treespec import *
 from magelang.lang.python.cst import *
 from magelang.util import NameGenerator
@@ -38,6 +38,8 @@ def generate_visitor(
                 yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ target ]))
                 return
             if isinstance(ty, NoneType):
+                return
+            if isinstance(ty, ExternType):
                 return
             if isinstance(ty, VariantType):
                 spec = specs.lookup(ty.name)

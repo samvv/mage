@@ -2,10 +2,10 @@
 from magelang.logging import error
 from magelang.ast import *
 
-def check_token_no_parse(grammar: Grammar) -> Grammar:
+def check_token_no_parse(grammar: MageGrammar) -> MageGrammar:
 
-    def references_pub_rule(expr: Expr) -> bool:
-        if isinstance(expr, RefExpr):
+    def references_pub_rule(expr: MageExpr) -> bool:
+        if isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
             if rule is None:
                 return True # FIXME maybe return False?
@@ -15,21 +15,21 @@ def check_token_no_parse(grammar: Grammar) -> Grammar:
                 return False
             assert(rule.expr is not None)
             return references_pub_rule(rule.expr)
-        if isinstance(expr, SeqExpr) \
-                or isinstance(expr, ChoiceExpr):
+        if isinstance(expr, MageSeqExpr) \
+                or isinstance(expr, MageChoiceExpr):
             for element in expr.elements:
                 if references_pub_rule(element):
                     return True
             return False
-        if isinstance(expr, ListExpr):
+        if isinstance(expr, MageListExpr):
             return references_pub_rule(expr.element) \
                 or references_pub_rule(expr.separator)
-        if isinstance(expr, RepeatExpr) or isinstance(expr, LookaheadExpr):
+        if isinstance(expr, MageRepeatExpr) or isinstance(expr, MageLookaheadExpr):
             return references_pub_rule(expr.expr)
-        if isinstance(expr, LitExpr) \
-                or isinstance(expr, CharSetExpr):
+        if isinstance(expr, MageLitExpr) \
+                or isinstance(expr, MageCharSetExpr):
             return False
-        if isinstance(expr, HideExpr):
+        if isinstance(expr, MageHideExpr):
             return references_pub_rule(expr.expr)
         assert_never(expr)
 

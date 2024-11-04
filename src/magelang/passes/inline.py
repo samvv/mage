@@ -1,18 +1,20 @@
 
 from ..ast import *
+from ..emitter import *
 
-def inline(grammar: Grammar) -> Grammar:
+def inline(grammar: MageGrammar) -> MageGrammar:
 
     new_rules = []
 
-    def rewriter(expr: Expr) -> Expr | None:
-        if isinstance(expr, RefExpr):
+    def inline_expr(expr: MageExpr) -> MageExpr:
+        if isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
             if rule is None or rule.is_public or rule.is_extern:
-                return
+                return expr
             assert(rule.expr is not None)
             new_expr = rule.expr.derive(label=expr.label or rule.name)
-            return rewrite_expr(new_expr, rewriter)
+            return inline_expr(new_expr)
+        return rewrite_each_child_expr(expr, inline_expr)
 
     for rule in grammar.rules:
         if rule.is_extern:
@@ -20,7 +22,7 @@ def inline(grammar: Grammar) -> Grammar:
         elif rule.is_public or rule.is_skip:
             assert(rule.expr is not None)
             new_rules.append(rule.derive(
-                expr=rewrite_expr(rule.expr, rewriter)
+                expr=inline_expr(rule.expr)
             ))
 
-    return Grammar(new_rules)
+    return MageGrammar(new_rules)

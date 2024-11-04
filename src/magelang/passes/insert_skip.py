@@ -1,31 +1,34 @@
 
-from ..ast import Expr, Grammar, RefExpr, SeqExpr, rewrite_expr
+from ..ast import MageExpr, MageGrammar, MageRefExpr, MageSeqExpr, rewrite_each_child_expr
 
-def insert_skip(grammar: Grammar) -> Grammar:
+def insert_skip(grammar: MageGrammar) -> MageGrammar:
 
     assert(grammar.skip_rule is not None)
     skip_name = grammar.skip_rule.name
 
-    def rewriter(expr: Expr) -> Expr | None:
-        if isinstance(expr, SeqExpr):
+    def rewrite_expr(expr: MageExpr) -> MageExpr:
+
+        def recurse(expr: MageExpr) -> MageExpr:
+            return rewrite_each_child_expr(expr, rewrite_expr)
+
+        if isinstance(expr, MageSeqExpr):
             new_elements = []
             iterator = iter(expr.elements)
             try:
                 element = next(iterator)
             except StopIteration:
                 return expr
-            new_elements.append(rewrite(element))
+            new_elements.append(recurse(element))
             while True:
                 try:
                     element = next(iterator)
                 except StopIteration:
                     break
-                new_elements.append(RefExpr(skip_name))
-                new_elements.append(rewrite(element))
+                new_elements.append(MageRefExpr(skip_name))
+                new_elements.append(recurse(element))
             return expr.derive(elements=new_elements)
 
-    def rewrite(expr: Expr) -> Expr:
-        return rewrite_expr(expr, rewriter)
+        return rewrite_each_child_expr(expr, rewrite_expr)
 
     new_rules = []
 
@@ -33,7 +36,7 @@ def insert_skip(grammar: Grammar) -> Grammar:
         if rule.expr is None:
             new_rule = rule
         else:
-            new_rule = rule.derive(expr=rewrite(rule.expr))
+            new_rule = rule.derive(expr=rewrite_expr(rule.expr))
         new_rules.append(new_rule)
 
-    return Grammar(rules=new_rules)
+    return MageGrammar(rules=new_rules)

@@ -8,11 +8,11 @@ from ..emitter import escape
 def _pretty(low, high) -> str:
     return escape(low) if low == high else f'{escape(low)}-{escape(high)}'
 
-def check_overlapping_charset_intervals(grammar: Grammar) -> Grammar:
+def check_overlapping_charset_intervals(grammar: MageGrammar) -> MageGrammar:
 
-    def visit(expr: Expr) -> None:
+    def visit(expr: MageExpr) -> None:
 
-        if isinstance(expr, CharSetExpr):
+        if isinstance(expr, MageCharSetExpr):
             tree = IntervalTree()
             for element in expr.elements:
                 if isinstance(element, tuple):

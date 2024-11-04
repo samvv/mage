@@ -12,24 +12,24 @@ def escape(ch: str) -> str:
         return f'\\x{code:02X}'
     return f'\\u{code:04x}'
 
-def emit(node: Node) -> str:
+def emit(node: MageNode) -> str:
 
     string = StringIO()
     out = IndentWriter(string)
 
-    def is_wide(expr: Expr) -> bool:
-        if isinstance(expr, SeqExpr):
+    def is_wide(expr: MageExpr) -> bool:
+        if isinstance(expr, MageSeqExpr):
             return len(expr.elements) > 1 or any(is_wide(element) for element in expr.elements)
         return False
 
-    def visit(node: Node) -> None:
+    def visit(node: MageNode) -> None:
 
-        if isinstance(node, Grammar):
+        if isinstance(node, MageGrammar):
             for rule in node.rules:
                 visit(rule)
             return
 
-        if isinstance(node, Rule):
+        if isinstance(node, MageRule):
             if node.is_public:
                 out.write('pub ')
             if node.is_extern:
@@ -46,11 +46,11 @@ def emit(node: Node) -> str:
             out.write('\n')
             return
 
-        if isinstance(node, RefExpr):
+        if isinstance(node, MageRefExpr):
             out.write(node.name)
             return
 
-        if isinstance(node, CharSetExpr):
+        if isinstance(node, MageCharSetExpr):
             out.write('[')
             for element in node.elements:
                 if isinstance(element, str):
@@ -63,11 +63,11 @@ def emit(node: Node) -> str:
             out.write(']')
             return
 
-        if isinstance(node, LitExpr):
+        if isinstance(node, MageLitExpr):
             out.write(repr(node.text))
             return
 
-        if isinstance(node, SeqExpr):
+        if isinstance(node, MageSeqExpr):
             first = True
             for element in node.elements:
                 if first: first = False
@@ -75,7 +75,7 @@ def emit(node: Node) -> str:
                 visit(element)
             return
 
-        if isinstance(node, ChoiceExpr):
+        if isinstance(node, MageChoiceExpr):
             out.write('(')
             first = True
             for element in node.elements:
@@ -85,7 +85,7 @@ def emit(node: Node) -> str:
             out.write(')')
             return
 
-        if isinstance(node, ListExpr):
+        if isinstance(node, MageListExpr):
             out.write('(')
             visit(node.element)
             out.write(' % ')
@@ -93,7 +93,7 @@ def emit(node: Node) -> str:
             out.write(')')
             return
 
-        if isinstance(node, HideExpr):
+        if isinstance(node, MageHideExpr):
             out.write('\\')
             wide = is_wide(node)
             if wide:
@@ -103,7 +103,7 @@ def emit(node: Node) -> str:
                 out.write(')')
             return
 
-        if isinstance(node, LookaheadExpr):
+        if isinstance(node, MageLookaheadExpr):
             out.write('!' if node.is_negated else '&')
             wide = is_wide(node)
             if wide:
@@ -113,7 +113,7 @@ def emit(node: Node) -> str:
                 out.write(')')
             return
 
-        if isinstance(node, RepeatExpr):
+        if isinstance(node, MageRepeatExpr):
             if node.min == 0 and node.max == 1:
                 wide = is_wide(node.expr)
                 if wide:

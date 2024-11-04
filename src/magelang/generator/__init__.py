@@ -3,7 +3,7 @@ import importlib
 from pathlib import Path
 from typing import Any
 
-from magelang.ast import Grammar
+from magelang.ast import MageGrammar
 from magelang.util import Files
 
 here = Path(__file__).parent.resolve()
@@ -19,7 +19,7 @@ def get_generator_languages() -> list[str]:
     return list(_generate_by_language.keys())
 
 def generate(
-    grammar: Grammar,
+    grammar: MageGrammar,
     lang: str,
     prefix: str = '',
     cst_parent_pointers: bool = False,

@@ -7,13 +7,13 @@ type Edge = str
 
 class Prefix:
 
-    def  __init__(self, rules: list[Rule] | None = None) -> None:
+    def  __init__(self, rules: list[MageRule] | None = None) -> None:
         if rules is None:
             rules = []
         self.rules = rules
         self.prefixes: Prefixes | None = None
 
-    def add_rule(self, rule: Rule) -> None:
+    def add_rule(self, rule: MageRule) -> None:
         self.rules.append(rule)
 
     def nest(self) -> 'Prefixes':
@@ -24,15 +24,15 @@ class Prefix:
 Prefixes = dict[Edge, Prefix];
 
 # FIXME make this transform target all ChoiceExpr
-def extract_prefixes(grammar: Grammar) -> Grammar:
+def extract_prefixes(grammar: MageGrammar) -> MageGrammar:
 
     global_prefixes = Prefixes()
 
-    def populate(rule: Rule) -> None:
+    def populate(rule: MageRule) -> None:
         prefixes = global_prefixes
         def visit(expr: Expr, is_last: bool) -> bool:
             nonlocal prefixes
-            if isinstance(expr, LitExpr):
+            if isinstance(expr, MageLitExpr):
                 prefix = None
                 for ch in expr.text:
                     if ch not in prefixes:
@@ -42,31 +42,31 @@ def extract_prefixes(grammar: Grammar) -> Grammar:
                 if is_last:
                     cast(Prefix, prefix).add_rule(rule)
                 return True
-            if isinstance(expr, SeqExpr):
+            if isinstance(expr, MageSeqExpr):
                 for i, element in enumerate(expr.elements):
                     if not visit(element, i == len(expr.elements)-1):
                         return False
                 return True
-            if isinstance(expr, ChoiceExpr):
+            if isinstance(expr, MageChoiceExpr):
                 can_continue = True
                 for element in expr.elements:
                     if not visit(element, is_last):
                         can_continue = False
                 return can_continue
-            if isinstance(expr, RepeatExpr) \
-                or isinstance(expr, RefExpr):
+            if isinstance(expr, MageRepeatExpr) \
+                or isinstance(expr, MageRefExpr):
                 return False
             raise RuntimeError(f'unexpected {expr}')
         if rule.expr is not None:
             visit(rule.expr, True)
 
     def char_at(expr: Expr, i: int) -> str | None:
-        if isinstance(expr, SeqExpr):
+        if isinstance(expr, MageSeqExpr):
             for child in expr.elements:
                 char = char_at(child, i)
                 if char is not None:
                     return char
-        if isinstance(expr, LitExpr):
+        if isinstance(expr, MageLitExpr):
             if i < len(expr.text):
                 return expr.text[i]
 
@@ -75,7 +75,7 @@ def extract_prefixes(grammar: Grammar) -> Grammar:
 
     def build_expr(edge: Edge) -> Expr:
         if isinstance(edge, str):
-            return LitExpr(text=edge)
+            return MageLitExpr(text=edge)
         assert_never(edge)
 
     def generate(prefixes: Prefixes) -> Expr:
@@ -89,9 +89,9 @@ def extract_prefixes(grammar: Grammar) -> Grammar:
             if data.prefixes is not None and len(data.prefixes) > 0:
                 seq_elements.append(generate(data.prefixes))
             # seq_elements.append(ChoiceExpr(choice_elements))
-            expr = SeqExpr(elements=seq_elements)
+            expr = MageSeqExpr(elements=seq_elements)
             expr.rules = data.rules
             elements.append(expr)
-        return ChoiceExpr(elements=elements)
+        return MageChoiceExpr(elements=elements)
 
-    return Grammar([ Rule(flags=PUBLIC | FORCE_TOKEN, name='$token', expr=generate(global_prefixes))])
+    return MageGrammar([ MageRule(flags=PUBLIC | FORCE_TOKEN, name='$token', expr=generate(global_prefixes))])

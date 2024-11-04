@@ -5,7 +5,7 @@ from magelang.eval import accepts
 
 from ..ast import *
 
-def extract_literals(grammar: Grammar) -> Grammar:
+def extract_literals(grammar: MageGrammar) -> MageGrammar:
 
     new_rules = []
 
@@ -42,19 +42,20 @@ def extract_literals(grammar: Grammar) -> Grammar:
             # Fall back to naming the individual characters
             return '_'.join(names[ch] for ch in text)
 
-    def rewriter(expr: Expr) -> Expr | None:
-        if isinstance(expr, LitExpr):
+    def rewriter(expr: MageExpr) -> MageExpr:
+        if isinstance(expr, MageLitExpr):
             name = str_to_name(expr.text)
             if name is None:
                 name = generate_token_name()
             if expr.text not in literal_to_name:
                 literal_to_name[expr.text] = name
-            return RefExpr(name)
+            return MageRefExpr(name)
+        return rewrite_each_child_expr(expr, rewriter)
 
     for rule in grammar.rules:
         if grammar.is_parse_rule(rule):
             assert(rule.expr is not None)
-            new_rules.append(rule.derive(expr=rewrite_expr(rule.expr, rewriter)))
+            new_rules.append(rule.derive(expr=rewriter(rule.expr)))
         else:
             new_rules.append(rule)
 
@@ -63,7 +64,7 @@ def extract_literals(grammar: Grammar) -> Grammar:
         flags = PUBLIC | FORCE_TOKEN
         if name in keywords:
             flags |= FORCE_KEYWORD
-        new_rules.append(Rule(comment=None, decorators=[], flags=flags, name=name, expr=LitExpr(literal), type_name=string_rule_type))
+        new_rules.append(MageRule(comment=None, decorators=[], flags=flags, name=name, expr=MageLitExpr(literal), type_name=string_rule_type))
 
-    return Grammar(new_rules)
+    return MageGrammar(new_rules)
 

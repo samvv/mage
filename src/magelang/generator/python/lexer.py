@@ -3,14 +3,14 @@ from typing import assert_never
 
 from magelang.ast import *
 from magelang.lang.python.cst import *
-from magelang.ast import Grammar
+from magelang.ast import MageGrammar
 from magelang.treespec import TokenSpec, grammar_to_specs
 from magelang.util import NameGenerator, nonnull
 from .util import build_cond, build_or, rule_type_to_py_type, to_class_name
 
 
 def generate_lexer(
-    grammar: Grammar,
+    grammar: MageGrammar,
     prefix = '',
 ) -> PyModule:
 
@@ -57,7 +57,7 @@ def generate_lexer(
 
     def contin() -> list[PyStmt]: return [ PyContinueStmt() ]
 
-    def lex_visit_backtrack_on_fail(expr: Expr, success: Callable[[], list[PyStmt]]) -> list[PyStmt]:
+    def lex_visit_backtrack_on_fail(expr: MageExpr, success: Callable[[], list[PyStmt]]) -> list[PyStmt]:
         keep_name = generate_temporary(prefix='keep_')
         return [
             PyAssignStmt(PyNamedPattern(keep_name), value=PyNamedExpr(char_offset_name)),
@@ -65,7 +65,7 @@ def generate_lexer(
             PyAssignStmt(PyNamedPattern(char_offset_name), value=PyNamedExpr(keep_name)),
         ]
 
-    def lex_visit(expr: Expr, success: Callable[[], list[PyStmt]]) -> list[PyStmt]:
+    def lex_visit(expr: MageExpr, success: Callable[[], list[PyStmt]]) -> list[PyStmt]:
 
         if expr.action is not None:
             rule = expr.action
@@ -92,13 +92,13 @@ def generate_lexer(
                 PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(to_class_name(nonnull(rule).name, prefix)), args=token_args))
             ]
 
-        if isinstance(expr, RefExpr):
+        if isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
             assert(rule is not None)
             assert(rule.expr is not None)
             return lex_visit(rule.expr, success)
 
-        if isinstance(expr, LookaheadExpr):
+        if isinstance(expr, MageLookaheadExpr):
             keep_name = generate_temporary(prefix='keep_')
             matches_name = generate_temporary(prefix='matches_')
             if expr.is_negated:
@@ -121,7 +121,7 @@ def generate_lexer(
                 PyAssignStmt(PyNamedPattern(char_offset_name), value=PyNamedExpr(keep_name)),
             ]
 
-        if isinstance(expr, LitExpr):
+        if isinstance(expr, MageLitExpr):
 
             def next_char(k: int) -> list[PyStmt]:
                 if k == len(expr.text):
@@ -147,7 +147,7 @@ def generate_lexer(
 
             return next_char(0)
 
-        if isinstance(expr, SeqExpr):
+        if isinstance(expr, MageSeqExpr):
 
             def next_element(n: int) -> list[PyStmt]:
                 if n == len(expr.elements):
@@ -156,7 +156,7 @@ def generate_lexer(
 
             return next_element(0)
 
-        if isinstance(expr, CharSetExpr):
+        if isinstance(expr, MageCharSetExpr):
 
             ch_name = generate_temporary(prefix='ch_')
 
@@ -177,7 +177,7 @@ def generate_lexer(
                 )]),
             ]
 
-        if isinstance(expr, RepeatExpr):
+        if isinstance(expr, MageRepeatExpr):
 
             if expr.min == 0 and expr.max == 1:
                 return lex_visit_backtrack_on_fail(expr.expr, success)
@@ -217,7 +217,7 @@ def generate_lexer(
 
             return out
 
-        if isinstance(expr, ChoiceExpr):
+        if isinstance(expr, MageChoiceExpr):
 
             out: list[PyStmt] = []
             for element in expr.elements:
@@ -243,7 +243,7 @@ def generate_lexer(
         rule.expr.action = rule
         choices.append(rule.expr)
 
-    body.extend(lex_visit(ChoiceExpr(choices), noop))
+    body.extend(lex_visit(MageChoiceExpr(choices), noop))
 
     body.append(PyRaiseStmt(expr=PyCallExpr(operator=PyNamedExpr('ScanError'), args=[])))
 

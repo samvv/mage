@@ -3,25 +3,29 @@ import argparse
 from pathlib import Path
 
 from .logging import error
-from .util import pipe
+from .util import pipe, unreachable
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser
 from .passes import *
 from .emitter import emit
-from .generator import generate, get_generator_languages
+# from .generator import generate, get_generator_languages
+from .ir import generate_ir
+from .lang.python import emit as py_emit
 
 project_dir = Path(__file__).parent.parent.parent
 modules_dir = Path(__file__).parent
 
-def _load_grammar(filename: str) -> Grammar:
+supported_languages = [ 'python', 'rust' ]
+
+def _load_grammar(filename: str) -> MageGrammar:
     with open(filename, 'r') as f:
         text = f.read()
     scanner = Scanner(text, filename=filename)
     parser = Parser(scanner)
     return parser.parse_grammar()
 
-def _run_checks(grammar: Grammar) -> Grammar:
+def _run_checks(grammar: MageGrammar) -> MageGrammar:
     return pipe(grammar, check_token_no_parse, check_undefined, check_overlapping_charset_intervals, check_neg_charset_intervals)
 
 def _do_generate(args) -> int:
@@ -50,11 +54,10 @@ def _do_generate(args) -> int:
     enable_lexer = args.feat_all if args.feat_lexer is None else args.feat_lexer
     enable_emitter = args.feat_all if args.feat_emitter is None else args.feat_emitter
 
-    prefix = prefix + '_' if prefix else ''
+    # prefix = prefix + '_' if prefix else ''
 
-    for fname, text in generate(
+    for fname, code in generate_ir(
         grammar,
-        lang,
         prefix=prefix,
         cst_parent_pointers=cst_parent_pointers,
         debug=debug,
@@ -64,6 +67,12 @@ def _do_generate(args) -> int:
         enable_visitor=enable_visitor,
         enable_lexer=enable_lexer
     ):
+        if lang == 'python':
+            text = py_emit(pipe(code, ir_to_python))
+        elif lang == 'rust':
+            text = rust_emit(pipe(code, ir_to_rust))
+        else:
+            unreachable()
         out_path = dest_dir / fname
         out_path.parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, 'w') as f:
@@ -89,7 +98,7 @@ def _do_dump(args) -> int:
     parser = Parser(scanner)
     grammar = parser.parse_grammar()
     for name in args.name:
-        grammar = passes[name](grammar)
+        grammar = mage_passes[name](grammar)
     print(emit(grammar))
     return 0
 
@@ -113,7 +122,7 @@ def main() -> int:
 
     generate_parser = subparsers.add_parser('generate', help='Generate programming code from a grammar')
  
-    generate_parser.add_argument('lang', choices=get_generator_languages(), help='The name of the template to use')
+    generate_parser.add_argument('lang', choices=supported_languages, help='The name of the template to use')
     generate_parser.add_argument('file', nargs=1, help='A path to a grammar file')
     generate_parser.add_argument('--debug', action=argparse.BooleanOptionalAction, help='Generate extra checks that may affect performance')
     generate_parser.add_argument('--skip-checks', action=argparse.BooleanOptionalAction, help='Skip all sanity checks for the given grammar')

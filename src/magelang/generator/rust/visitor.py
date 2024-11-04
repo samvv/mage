@@ -1,10 +1,10 @@
 
-from magelang.ast import Grammar
+from magelang.ast import MageGrammar
 from magelang.lang.rust.cst import RustNode, RustSourceFile
 
 
 def generate_visitor(
-    grammar: Grammar,
+    grammar: MageGrammar,
     prefix: str = '',
     debug: bool = False
 ) -> RustNode:

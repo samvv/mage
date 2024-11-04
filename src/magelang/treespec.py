@@ -3,15 +3,14 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Any, Iterable, Iterator, assert_never, cast
 
-from magelang.util import NameGenerator, to_snake_case
-
+from .util import NameGenerator, plural, to_snake_case
 from .ast import *
 
 type Type = ExternType | NodeType | TokenType | VariantType | NeverType | TupleType | ListType | PunctType | UnionType | NoneType | AnyType
 
 class TypeBase:
 
-    def __init__(self, before: list[Expr] | None = None, after: list[Expr] | None = None) -> None:
+    def __init__(self, before: list[MageExpr] | None = None, after: list[MageExpr] | None = None) -> None:
         if before is None:
             before = []
         if after is None:
@@ -95,7 +94,7 @@ class TupleType(TypeBase):
     A type that allows values to contain a specific sequence of types.
     """
 
-    def __init__(self, element_types: list[Type], before: list[Expr] | None = None, after: list[Expr] | None = None) -> None:
+    def __init__(self, element_types: list[Type], before: list[MageExpr] | None = None, after: list[MageExpr] | None = None) -> None:
         super().__init__(before, after)
         self.element_types = element_types
 
@@ -103,8 +102,8 @@ class TupleType(TypeBase):
         self,
         *,
         element_types: list[Type] | None = None,
-        before: list[Expr] | None = None,
-        after: list[Expr] | None = None
+        before: list[MageExpr] | None = None,
+        after: list[MageExpr] | None = None
     ) -> 'TupleType':
         if element_types is None:
             element_types = list(self.element_types)
@@ -125,7 +124,7 @@ class ListType(TypeBase):
     A type that allows multiple values of the same underlying type.
     """
 
-    def __init__(self, element_type: Type, required: bool, before: list[Expr] | None = None, after: list[Expr] | None = None) -> None:
+    def __init__(self, element_type: Type, required: bool, before: list[MageExpr] | None = None, after: list[MageExpr] | None = None) -> None:
         super().__init__(before, after)
         self.element_type = element_type
         self.required = required
@@ -135,8 +134,8 @@ class ListType(TypeBase):
         *,
         element_type: Type | None = None,
         required: bool | None = None,
-        before: list[Expr] | None = None,
-        after: list[Expr] | None = None
+        before: list[MageExpr] | None = None,
+        after: list[MageExpr] | None = None
     ) -> 'ListType':
         if element_type is None:
             element_type = self.element_type
@@ -164,8 +163,8 @@ class PunctType(TypeBase):
         element_type: Type,
         separator_type: Type,
         required: bool,
-        before: list[Expr] | None = None,
-        after: list[Expr] | None = None
+        before: list[MageExpr] | None = None,
+        after: list[MageExpr] | None = None
     ) -> None:
         super().__init__(before, after)
         self.element_type = element_type
@@ -178,8 +177,8 @@ class PunctType(TypeBase):
         element_type: Type | None = None,
         separator_type: Type | None = None,
         required: bool | None = None,
-        before: list[Expr] | None = None,
-        after: list[Expr] | None = None
+        before: list[MageExpr] | None = None,
+        after: list[MageExpr] | None = None
     ) -> 'PunctType':
         if element_type is None:
             element_type = self.element_type
@@ -204,7 +203,7 @@ class UnionType(TypeBase):
     A type where any of the member types are valid.
     """
 
-    def __init__(self, types: list[Type], before: list[Expr] | None = None, after: list[Expr] | None = None) -> None:
+    def __init__(self, types: list[Type], before: list[MageExpr] | None = None, after: list[MageExpr] | None = None) -> None:
         super().__init__(before, after)
         self.types = types
 
@@ -212,8 +211,8 @@ class UnionType(TypeBase):
         self,
         *,
         types: list[Type] | None = None,
-        before: list[Expr] | None = None,
-        after: list[Expr] | None = None
+        before: list[MageExpr] | None = None,
+        after: list[MageExpr] | None = None
     ) -> 'UnionType':
         if types is None:
             types = list(self.types)
@@ -268,10 +267,7 @@ class AnyType(TypeBase):
     def __repr__(self) -> str:
         return 'AnyType()'
 
-def rewrite_each_type(ty: Type, proc: Callable[[Type], Type | None]) -> Type:
-    updated = proc(ty)
-    if updated is not None:
-        return updated
+def rewrite_each_child_type(ty: Type, proc: Callable[[Type], Type]) -> Type:
     if isinstance(ty, NoneType) \
         or isinstance(ty, AnyType) \
         or isinstance(ty, NeverType) \
@@ -279,13 +275,13 @@ def rewrite_each_type(ty: Type, proc: Callable[[Type], Type | None]) -> Type:
         or isinstance(ty, ExternType):
         return ty
     if isinstance(ty, ListType):
-        new_element_type = rewrite_each_type(ty.element_type, proc)
+        new_element_type = proc(ty.element_type)
         if new_element_type is ty.element_type:
             return ty
         return ty.derive(element_type=new_element_type)
     if isinstance(ty, PunctType):
-        new_element_type = rewrite_each_type(ty.element_type, proc)
-        new_separator_type = rewrite_each_type(ty.separator_type, proc)
+        new_element_type = proc(ty.element_type)
+        new_separator_type = proc(ty.separator_type)
         if new_element_type is ty.element_type and new_separator_type is ty.separator_type:
             return ty
         return ty.derive(element_type=new_element_type, separator_type=new_separator_type)
@@ -293,7 +289,7 @@ def rewrite_each_type(ty: Type, proc: Callable[[Type], Type | None]) -> Type:
         new_types = list[Type]()
         changed = False
         for ty_2 in ty.element_types:
-            new_ty_2 = rewrite_each_type(ty_2, proc)
+            new_ty_2 = proc(ty_2)
             if new_ty_2 is not ty_2:
                 changed = True
             new_types.append(new_ty_2)
@@ -304,7 +300,7 @@ def rewrite_each_type(ty: Type, proc: Callable[[Type], Type | None]) -> Type:
         new_types = list[Type]()
         changed = False
         for ty_2 in ty.types:
-            new_ty_2 = rewrite_each_type(ty_2, proc)
+            new_ty_2 = proc(ty_2)
             if new_ty_2 is not ty_2:
                 changed = True
             new_types.append(new_ty_2)
@@ -321,15 +317,14 @@ class Field:
     """
     name: str
     ty: Type
-    expr: Expr
+    expr: MageExpr # FIXME Remove me after emitter refactor
 
 @dataclass
 class SpecBase:
-    rule: Rule | None
+    name: str
 
 @dataclass
 class TokenSpec(SpecBase):
-    name: str
     field_type: str
     is_static: bool
 
@@ -340,7 +335,6 @@ class NodeSpec(SpecBase):
 
 @dataclass
 class VariantSpec(SpecBase):
-    name: str
     members: list[tuple[str, Type]]
 
 Spec = TokenSpec | NodeSpec | VariantSpec
@@ -398,10 +392,10 @@ def get_optional_element(ty: Type) -> Type:
 def make_unit() -> Type:
     return TupleType(list())
 
-def is_unit(ty: Type) -> bool:
+def is_unit_type(ty: Type) -> bool:
     return isinstance(ty, TupleType) and len(ty.element_types) == 0
 
-def is_static(ty: Type, specs: Specs) -> bool:
+def is_static_type(ty: Type, specs: Specs) -> bool:
     visited = set[str]()
     def visit(ty: Type) -> bool:
         if isinstance(ty, ExternType):
@@ -482,24 +476,24 @@ def mangle_type(ty: Type) -> str:
         return 'any'
     assert_never(ty)
 
-def infer_type(expr: Expr, grammar: Grammar) -> Type:
+def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
 
     buffer = list()
 
-    def visit(expr: Expr) -> Type:
+    def visit(expr: MageExpr) -> Type:
         nonlocal buffer
 
-        if isinstance(expr, HideExpr):
+        if isinstance(expr, MageHideExpr):
             buffer.append(expr.expr)
             # TODO return some internal constant rather than a public type
             return make_unit()
 
-        if isinstance(expr, ListExpr):
+        if isinstance(expr, MageListExpr):
             element_field = visit(expr.element)
             separator_field = visit(expr.separator)
             return PunctType(element_field, separator_field, expr.min_count > 0)
 
-        if isinstance(expr, RefExpr):
+        if isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
             if rule is None:
                 return AnyType()
@@ -515,10 +509,10 @@ def infer_type(expr: Expr, grammar: Grammar) -> Type:
                 return VariantType(rule.name)
             return NodeType(rule.name)
 
-        if isinstance(expr, LitExpr) or isinstance(expr, CharSetExpr):
+        if isinstance(expr, MageLitExpr) or isinstance(expr, MageCharSetExpr):
             assert(False) # literals should already have been eliminated
 
-        if isinstance(expr, RepeatExpr):
+        if isinstance(expr, MageRepeatExpr):
             element_type = visit(expr.expr)
             if expr.max == 0:
                 return make_unit()
@@ -530,11 +524,11 @@ def infer_type(expr: Expr, grammar: Grammar) -> Type:
                 ty = ListType(element_type, expr.min > 0)
             return ty
 
-        if isinstance(expr, SeqExpr):
+        if isinstance(expr, MageSeqExpr):
             types = list()
             for element in expr.elements:
                 ty = visit(element)
-                if is_unit(ty):
+                if is_unit_type(ty):
                     continue
                 ty.before.extend(buffer)
                 buffer = []
@@ -543,10 +537,10 @@ def infer_type(expr: Expr, grammar: Grammar) -> Type:
                 return types[0]
             return TupleType(types)
 
-        if isinstance(expr, LookaheadExpr):
+        if isinstance(expr, MageLookaheadExpr):
             return make_unit()
 
-        if isinstance(expr, ChoiceExpr):
+        if isinstance(expr, MageChoiceExpr):
             return UnionType(list(visit(element) for element in expr.elements))
 
         assert_never(expr)
@@ -618,15 +612,16 @@ def do_types_shallow_overlap(a: Type, b: Type) -> bool:
     return False
 
 def expand_variant_types(ty: Type, *, specs: Specs) -> Type:
-    def rewriter(ty: Type) -> Type | None:
+    def rewriter(ty: Type) -> Type:
         if isinstance(ty, VariantType):
             types = list()
             spec = specs.lookup(ty.name)
             assert(isinstance(spec, VariantSpec))
             for _, ty_2 in spec.members:
-                types.append(rewrite_each_type(ty_2, rewriter))
+                types.append(rewrite_each_child_type(ty_2, rewriter))
             return UnionType(types, before=list(ty.before), after=list(ty.after))
-    return rewrite_each_type(ty, rewriter)
+        return rewrite_each_child_type(ty, rewriter)
+    return rewriter(ty)
 
 def simplify_type(ty: Type) -> Type:
     if isinstance(ty, NoneType) \
@@ -654,6 +649,8 @@ def simplify_type(ty: Type) -> Type:
             if isinstance(ty_2, AnyType):
                 return AnyType(before=list(ty_2.before), after=list(ty_2.after))
             types.append(simplify_type(ty_2))
+        if len(types) == 0:
+            return NeverType()
         types.sort()
         iterator = iter(types)
         prev = next(iterator)
@@ -667,10 +664,8 @@ def simplify_type(ty: Type) -> Type:
                 continue
             dedup_types.append(curr)
             prev = curr
-        if len(dedup_types) == 0:
-            return NeverType()
         if len(dedup_types) == 1:
-            return types[0]
+            return dedup_types[0]
         return ty.derive(types=dedup_types)
     assert_never(ty)
 
@@ -856,56 +851,58 @@ def merge_similar_types(ty: Type) -> Type:
     # call `simplify_type`.
     return simplify_type(UnionType(types))
 
-def plural(name: str) -> str:
-    return name if name.endswith('s') else f'{name}s'
-
-def get_field_name(expr: Expr) -> str | None:
+def get_field_name(expr: MageExpr) -> str | None:
     if expr.label is not None:
         return expr.label
-    if isinstance(expr, RefExpr):
+    if isinstance(expr, MageRefExpr):
         return expr.name
-    if isinstance(expr, RepeatExpr):
+    if isinstance(expr, MageRepeatExpr):
         element_label = get_field_name(expr.expr)
         if element_label is not None:
             if expr.max > 1:
                 return plural(element_label)
             return element_label
         return None
-    if isinstance(expr, ListExpr) or isinstance(expr, CharSetExpr) or isinstance(expr, ChoiceExpr):
+    if isinstance(expr, MageListExpr):
+        element_label = get_field_name(expr.element)
+        if element_label is not None:
+            return plural(element_label)
+        return None
+    if isinstance(expr, MageCharSetExpr) or isinstance(expr, MageChoiceExpr):
         return None
     raise RuntimeError(f'unexpected {expr}')
 
-def get_fields(expr: Expr, grammar: Grammar, include_hidden: bool = False) -> Generator[Field | Expr, None, None]:
+def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = False) -> Generator[Field | MageExpr, None, None]:
 
     generator = NameGenerator()
 
     def generate_field_name() -> str:
         return generator(prefix='field_')
 
-    def visit(expr: Expr, rule_name: str | None) -> Generator[Field | Expr, None, None]:
+    def visit(expr: MageExpr, rule_name: str | None) -> Generator[Field | MageExpr, None, None]:
 
-        if isinstance(expr, LookaheadExpr):
+        if isinstance(expr, MageLookaheadExpr):
             return
 
-        if isinstance(expr, RefExpr):
+        if isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
             if rule is not None and rule.expr is not None and not rule.is_public:
                 yield from visit(rule.expr, rule.name)
                 return
 
-        if isinstance(expr, HideExpr):
+        if isinstance(expr, MageHideExpr):
             if include_hidden:
                 yield from visit(expr.expr, rule_name)
             else:
                 yield expr.expr
             return
 
-        if isinstance(expr, SeqExpr):
+        if isinstance(expr, MageSeqExpr):
             for element in expr.elements:
                 yield from visit(element, rule_name)
             return
 
-        if isinstance(expr, LitExpr) or isinstance(expr, CharSetExpr):
+        if isinstance(expr, MageLitExpr) or isinstance(expr, MageCharSetExpr):
             assert(False) # literals should already have been eliminated by previous passes
 
         field_name = rule_name or get_field_name(expr) or generate_field_name()
@@ -916,7 +913,7 @@ def get_fields(expr: Expr, grammar: Grammar, include_hidden: bool = False) -> Ge
 
     return visit(expr, None)
 
-def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
+def grammar_to_specs(grammar: MageGrammar, include_hidden = False) -> Specs:
 
     field_counter = 0
     def generate_field_name() -> str:
@@ -925,10 +922,10 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
         field_counter += 1
         return name
 
-    def get_member_name(expr: Expr) -> str:
+    def get_member_name(expr: MageExpr) -> str:
         if expr.label is not None:
             return expr.label
-        if isinstance(expr, RefExpr):
+        if isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
             if rule is None:
                 return expr.name
@@ -937,12 +934,12 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
             return rule.name
         raise NotImplementedError()
 
-    def get_variants(expr: Expr) -> Generator[tuple[str, Type], None, None]:
-        if isinstance(expr, ChoiceExpr):
+    def get_variants(expr: MageExpr) -> Generator[tuple[str, Type], None, None]:
+        if isinstance(expr, MageChoiceExpr):
             for element in expr.elements:
                 yield from get_variants(element)
             return
-        if isinstance(expr, SeqExpr):
+        if isinstance(expr, MageSeqExpr):
             names = []
             types = list()
             for element in expr.elements:
@@ -952,7 +949,7 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
             return
         yield get_member_name(expr), infer_type(expr, grammar)
 
-    def get_field_members(expr: Expr) -> Iterable[Field]:
+    def get_field_members(expr: MageExpr) -> Iterable[Field]:
         return cast(Iterable[Field], filter(lambda element: isinstance(element, Field), get_fields(expr, grammar, include_hidden=include_hidden)))
 
     def rename_duplicate_members(members: list[Field]) -> list[Field]:
@@ -973,16 +970,16 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
         # only Rule(is_extern=True) can have an empty expression
         assert(rule.expr is not None)
         if grammar.is_token_rule(rule):
-            specs.add(TokenSpec(rule, rule.name, rule.type_name, grammar.is_static_token(rule.expr) if rule.expr is not None else False))
+            specs.add(TokenSpec(rule.name, rule.type_name, grammar.is_static_token_rule(rule) if rule.expr is not None else False))
             continue
         if grammar.is_variant_rule(rule):
-            specs.add(VariantSpec(rule, rule.name, list(get_variants(rule.expr))))
+            specs.add(VariantSpec(rule.name, list(get_variants(rule.expr))))
             continue
         field_counter = 0
         assert(rule.expr is not None)
         members = list(get_field_members(rule.expr))
         rename_duplicate_members(members)
-        specs.add(NodeSpec(rule, rule.name, members))
+        specs.add(NodeSpec(rule.name, members))
 
     # specs.add(VariantSpec(None, 'keyword', list((rule.name, TokenType(rule.name)) for rule in grammar.rules if rule.is_keyword)))
     # specs.add(VariantSpec(None, 'token', list((spec.name, TokenType(spec.name)) for spec in specs if isinstance(spec, TokenSpec))))
@@ -991,3 +988,63 @@ def grammar_to_specs(grammar: Grammar, include_hidden = False) -> Specs:
 
     return specs
 
+
+# def cst_to_ast(specs: Specs) -> Specs:
+
+#     def rewriter(ty: Type) -> Type:
+#         # if is_static_type(ty, specs=specs):
+#         #     return make_unit()
+#         if isinstance(ty, TokenType):
+#             spec = specs.lookup(ty.name)
+#             assert(isinstance(spec, TokenSpec))
+#             return ExternType(spec.field_type)
+#         # if isinstance(ty, VariantType):
+#         #     spec = specs.lookup(ty.name)
+#         #     assert(isinstance(spec, VariantSpec))
+#         #     only_tokens = True
+#         #     for _, member in spec.members:
+#         #         if not isinstance(member, TokenType):
+#         #             only_tokens = False
+#         #             break
+#         #     if only_tokens:
+#         #         print(spec.name)
+#         #         return None
+#         # if isinstance(ty, TupleType):
+#         #     new_element_types = []
+#         #     for el_ty in ty.element_types:
+#         #         new_el_ty = rewrite_each_type(el_ty, rewrite)
+#         #         if new_el_ty is None:
+#         #             continue
+#         #         new_element_types.append(new_el_ty)
+#         #     return TupleType(new_element_types)
+#         return rewrite_each_child_type(ty, rewriter)
+
+#     def rewrite_spec(spec: Spec) -> Spec | None:
+#         if isinstance(spec, TokenSpec):
+#             return None
+#         if isinstance(spec, ConstEnumSpec):
+#             return spec
+#         if isinstance(spec, VariantSpec):
+#             new_members = []
+#             for name, ty in spec.members:
+#                 new_members.append((name, rewriter(ty)))
+#             return VariantSpec(spec.name, new_members)
+#         if isinstance(spec, NodeSpec):
+#             new_fields = []
+#             for field in spec.fields:
+#                 new_ty = rewriter(field.ty)
+#                 if new_ty is None:
+#                     continue
+#                 new_fields.append(Field(field.name, new_ty, field.expr))
+#             return NodeSpec(spec.name, new_fields)
+#         assert_never(spec)
+
+#     new_specs = Specs()
+
+#     for spec in specs:
+#         new_spec = rewrite_spec(spec)
+#         if new_spec is None:
+#             continue
+#         new_specs.add(new_spec)
+
+#     return new_specs

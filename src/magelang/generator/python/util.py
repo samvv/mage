@@ -302,7 +302,7 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
 
         return coerced_type, PyCallExpr(PyNamedExpr(coerce_fn_name), args=[ value ])
 
-    def gen_coerce_body(ty: Type, forbid_none: bool) -> Generator[tuple[Type, list[PyStmt]], None, None]:
+    def gen_coerce_body(ty: Type, forbid_none: bool) -> Generator[tuple[Type, list[PyStmt]]]:
 
         if isinstance(ty, UnionType):
 
@@ -414,7 +414,7 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
 
             new_elements_name = f'new_{param_name}'
 
-            if is_static(ty.element_type, specs=specs):
+            if is_static_type(ty.element_type, specs=specs):
                 yield ExternType(integer_rule_type), [
                     PyAssignStmt(PyNamedPattern(new_elements_name), value=PyCallExpr(PyNamedExpr('Punctuated'))),
                     PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyNamedExpr(param_name) ]), body= [
@@ -579,7 +579,7 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
 
             new_elements_name = f'new_elements'
 
-            if is_static(ty.element_type, specs=specs):
+            if is_static_type(ty.element_type, specs=specs):
                 yield ExternType(integer_rule_type), [
                     PyAssignStmt(PyNamedPattern(new_elements_name), value=PyCallExpr(PyNamedExpr('list'))),
                     PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyNamedExpr(param_name) ]), body= [

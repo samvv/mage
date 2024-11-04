@@ -1,5 +1,5 @@
 
-from magelang.ast import Grammar
+from magelang.ast import MageGrammar
 from magelang.treespec import grammar_to_specs
 from magelang.util import Files
 from magelang.lang.rust.emitter import rust_emit as emit # FIXME
@@ -10,7 +10,7 @@ from magelang.lang.rust.emitter import rust_emit as emit # FIXME
 #from .emitter import generate_emitter
 
 def generate(
-    grammar: Grammar,
+    grammar: MageGrammar,
     prefix = '',
     cst_parent_pointers = False,
     debug = False,

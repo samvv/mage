@@ -2,8 +2,6 @@
 from collections import deque
 from typing import cast
 
-from intervaltree.intervaltree import warn
-
 from .ast import *
 from .scanner import *
 
@@ -51,7 +49,7 @@ class Parser:
             raise ParseError(token, _tt_ident)
         return self._get_token()
 
-    def _parse_prim_expr(self) -> Expr:
+    def _parse_prim_expr(self) -> MageExpr:
         t1 = self._peek_token(1)
         label = None
         if t1.type == TT_COLON:
@@ -66,25 +64,25 @@ class Parser:
                 t2 = self._peek_token()
             self._get_token()
             elements, ci = cast(tuple[list, bool], t2.value)
-            expr = CharSetExpr(elements=elements, ci=ci, invert=invert)
+            expr = MageCharSetExpr(elements=elements, ci=ci, invert=invert)
         elif t2.type == TT_LPAREN:
             self._get_token()
             expr = self.parse_expr()
             self._expect_token(TT_RPAREN)
         elif _is_ident(t2):
             self._get_token()
-            expr = RefExpr(name=token_to_string(t2))
+            expr = MageRefExpr(name=token_to_string(t2))
         elif t2.type == TT_STR:
             self._get_token()
             assert(isinstance(t2.value, str))
-            expr = LitExpr(text=t2.value)
+            expr = MageLitExpr(text=t2.value)
         else:
             raise ParseError(t2, [ TT_LBRACE, TT_LPAREN, TT_IDENT, TT_STR ])
         if label is not None:
             expr.label = label.value
         return expr
 
-    def _parse_maybe_list_expr(self) -> Expr:
+    def _parse_maybe_list_expr(self) -> MageExpr:
         element = self._parse_prim_expr()
         t0 = self._peek_token()
         if t0.type == TT_PERC:
@@ -97,10 +95,10 @@ class Parser:
                 self._get_token()
                 count += 1
             separator = self._parse_prim_expr()
-            return ListExpr(element=element, separator=separator, min_count=count)
+            return MageListExpr(element=element, separator=separator, min_count=count)
         return element
 
-    def _parse_expr_with_prefixes(self) -> Expr:
+    def _parse_expr_with_prefixes(self) -> MageExpr:
         tokens = []
         while True:
             t0 = self._peek_token()
@@ -111,16 +109,16 @@ class Parser:
         expr = self._parse_maybe_list_expr()
         for ty in reversed(tokens):
             if ty == TT_EXCL:
-                expr = LookaheadExpr(expr=expr, is_negated=True)
+                expr = MageLookaheadExpr(expr=expr, is_negated=True)
             elif ty == TT_EXCL:
-                expr = LookaheadExpr(expr=expr, is_negated=False)
+                expr = MageLookaheadExpr(expr=expr, is_negated=False)
             elif ty == TT_SLASH:
-                expr = HideExpr(expr=expr)
+                expr = MageHideExpr(expr=expr)
             else:
                 raise RuntimeError(f'unexpected token type {token_type_descriptions[ty]}')
         return expr
 
-    def _parse_expr_with_suffixes(self) -> Expr:
+    def _parse_expr_with_suffixes(self) -> MageExpr:
         t0 = self._peek_token(0)
         t1 = self._peek_token(1)
         label = None
@@ -133,13 +131,13 @@ class Parser:
             t1 = self._peek_token()
             if t1.type == TT_PLUS:
                 self._get_token()
-                expr = RepeatExpr(min=1, max=POSINF, expr=expr)
+                expr = MageRepeatExpr(min=1, max=POSINF, expr=expr)
             elif t1.type == TT_STAR:
                 self._get_token()
-                expr = RepeatExpr(min=0, max=POSINF, expr=expr)
+                expr = MageRepeatExpr(min=0, max=POSINF, expr=expr)
             elif t1.type == TT_QUEST:
                 self._get_token()
-                expr = RepeatExpr(min=0, max=1, expr=expr)
+                expr = MageRepeatExpr(min=0, max=1, expr=expr)
             elif t1.type == TT_LBRACE:
                 self._get_token()
                 min = cast(int, self._expect_token(TT_INT).value)
@@ -153,7 +151,7 @@ class Parser:
                         self._get_token()
                         max = cast(int, t3.value)
                 self._expect_token(TT_RBRACE)
-                expr = RepeatExpr(min=min, max=max, expr=expr)
+                expr = MageRepeatExpr(min=min, max=max, expr=expr)
             else:
                 break
         expr.label = label
@@ -167,7 +165,7 @@ class Parser:
                    or t1.type == TT_EQUAL \
                    or t0.type == TT_TOKEN and t2.type == TT_EQUAL
 
-    def _parse_expr_sequence(self) -> Expr:
+    def _parse_expr_sequence(self) -> MageExpr:
         elements = [ self._parse_expr_with_suffixes() ]
         while True:
             t0 = self._peek_token(0)
@@ -176,9 +174,9 @@ class Parser:
             elements.append(self._parse_expr_with_suffixes())
         if len(elements) == 1:
             return elements[0]
-        return SeqExpr(elements=elements)
+        return MageSeqExpr(elements=elements)
 
-    def parse_expr(self) -> Expr:
+    def parse_expr(self) -> MageExpr:
         elements = [ self._parse_expr_sequence() ]
         while True:
             t0 = self._peek_token()
@@ -188,9 +186,9 @@ class Parser:
             elements.append(self._parse_expr_sequence())
         if len(elements) == 1:
             return elements[0]
-        return ChoiceExpr(elements=elements)
+        return MageChoiceExpr(elements=elements)
 
-    def parse_rule(self) -> Rule:
+    def parse_rule(self) -> MageRule:
         comment = self.scanner.take_comment()
         decorators = []
         while True:
@@ -220,17 +218,17 @@ class Parser:
             self._get_token()
             type_name = token_to_string(self._get_ident())
         if flags & EXTERN:
-            return Rule(name=t0.value, expr=None, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
+            return MageRule(name=t0.value, expr=None, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
         self._expect_token(TT_EQUAL)
         expr = self.parse_expr()
-        return Rule(name=t0.value, expr=expr, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
+        return MageRule(name=t0.value, expr=expr, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
 
-    def parse_grammar(self) -> Grammar:
+    def parse_grammar(self) -> MageGrammar:
         elements = []
         while True:
             t0 = self._peek_token()
             if t0.type == TT_EOF:
                 break
             elements.append(self.parse_rule())
-        return Grammar(elements)
+        return MageGrammar(elements)
 

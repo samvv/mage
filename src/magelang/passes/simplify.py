@@ -1,47 +1,49 @@
 
-from ..ast import *
+from magelang.ast import *
 
-def simplify(grammar: Grammar) -> Grammar:
+def simplify(grammar: MageGrammar) -> MageGrammar:
 
-    def make_fail() -> Expr:
-        return ChoiceExpr([])
+    def make_fail() -> MageExpr:
+        return MageChoiceExpr([])
 
-    def make_empty(rules: list[Rule] | None = None) -> Expr:
-        return SeqExpr([], rules=rules)
+    def make_empty(rules: list[MageRule] | None = None) -> MageExpr:
+        return MageSeqExpr([], rules=rules)
 
-    def is_fail(expr: Expr) -> bool:
-        return isinstance(expr, ChoiceExpr) and expr.elements == 0
+    def is_fail(expr: MageExpr) -> bool:
+        return isinstance(expr, MageChoiceExpr) and expr.elements == 0
 
-    def is_empty(expr: Expr) -> bool:
-        return isinstance(expr, SeqExpr) and expr.elements == 0
+    def is_empty(expr: MageExpr) -> bool:
+        return isinstance(expr, MageSeqExpr) and expr.elements == 0
 
-    def flatten_choice(elements: list[Expr]) -> Generator[Expr, None, None]:
+    def flatten_choice(elements: list[MageExpr]) -> Generator[MageExpr, None, None]:
         for expr in elements:
-            if isinstance(expr, ChoiceExpr):
+            if isinstance(expr, MageChoiceExpr):
                 yield from flatten_choice(expr.elements)
             else:
                 yield visit(expr)
 
-    def flatten_seq(elements: list[Expr]) -> Generator[Expr, None, None]:
+    def flatten_seq(elements: list[MageExpr]) -> Generator[MageExpr, None, None]:
         for expr in elements:
-            if isinstance(expr, SeqExpr):
+            if isinstance(expr, MageSeqExpr):
                 yield from flatten_seq(expr.elements)
             else:
                 yield visit(expr)
 
-    def flatten(expr: Expr) -> Expr:
-        if isinstance(expr, ChoiceExpr):
-            return ChoiceExpr(list(flatten_choice(expr.elements)))
-        if isinstance(expr, SeqExpr):
-            return SeqExpr(list(flatten_seq(expr.elements)))
+    def flatten(expr: MageExpr) -> MageExpr:
+        if isinstance(expr, MageChoiceExpr):
+            return MageChoiceExpr(list(flatten_choice(expr.elements)))
+        if isinstance(expr, MageSeqExpr):
+            return MageSeqExpr(list(flatten_seq(expr.elements)))
         return expr
 
-    def visit(expr: Expr) -> Expr:
-        if isinstance(expr, LitExpr):
+    def visit(expr: MageExpr) -> MageExpr:
+
+        if isinstance(expr, MageLitExpr):
             if not expr.text:
                 return make_empty(expr.rules)
             return expr
-        if isinstance(expr, ChoiceExpr):
+
+        if isinstance(expr, MageChoiceExpr):
             new_elements = []
             has_empty = False
             empty_rules = []
@@ -61,7 +63,8 @@ def simplify(grammar: Grammar) -> Grammar:
                 new_elements[0].rules.extend(expr.rules)
                 return new_elements[0]
             return expr.derive(elements=new_elements)
-        if isinstance(expr, SeqExpr):
+
+        if isinstance(expr, MageSeqExpr):
             new_elements = []
             has_fail = False
             for new_element in flatten_seq(expr.elements):
@@ -80,22 +83,23 @@ def simplify(grammar: Grammar) -> Grammar:
                 return new_elements[0]
             return expr.derive(elements=new_elements)
 
-        if isinstance(expr, CharSetExpr):
+        if isinstance(expr, MageCharSetExpr):
 
-            assert(len(expr.elements) > 0)
+            if len(expr.elements) == 0:
+                return expr
 
-            normalized = []
+            normalized = list[tuple[str, str]]()
             for element in expr.elements:
                 if isinstance(element, tuple):
                     low, high = element
                 else:
                     low = element
                     high = element
-                normalized.append((ord(low), ord(high)))
+                normalized.append((low, high))
 
             normalized.sort()
 
-            new_elements = []
+            new_elements = list[CharSetElement]()
 
             # The list is now strongly sorted on the first key. Go from left to
             # right over the list, incrementing max_h each time the interval
@@ -107,20 +111,50 @@ def simplify(grammar: Grammar) -> Grammar:
                 if l <= prev_h:
                     prev_h = h
                     continue
-                new_elements.append((prev_l, max_h))
+                new_elements.append(prev_l if prev_l == max_h else (prev_l, max_h))
                 prev_l = l
                 prev_h = h
                 max_h = max(h, max_h)
+            new_elements.append(prev_l if prev_l == max_h else (prev_l, max_h))
 
             return expr.derive(elements=new_elements)
 
-        if isinstance(expr, RefExpr):
+        if isinstance(expr, MageRefExpr):
             # We visit each rule so no need to lookup the rule in the grammar
             return expr
-        if isinstance(expr, RepeatExpr) or isinstance(expr, HideExpr) or isinstance(expr, LookaheadExpr):
+
+        if isinstance(expr, MageRepeatExpr):
+            new_expr = visit(expr.expr)
+            if is_empty(new_expr):
+                return new_expr
+            if is_fail(new_expr):
+                return make_empty()
+            if expr.max == 0:
+                return make_empty()
+            if expr.min == 1 and expr.max == 1:
+                return expr
+            return expr.derive(expr=new_expr)
+
+        if isinstance(expr, MageHideExpr) or isinstance(expr, MageLookaheadExpr):
             return expr.derive(expr=visit(expr.expr))
-        if isinstance(expr, ListExpr):
-            return expr.derive(element=visit(expr.element))
+
+        if isinstance(expr, MageListExpr):
+            new_separator = visit(expr.separator)
+            new_element = visit(expr.element)
+            if is_empty(new_element):
+                return new_element
+            if is_fail(new_element):
+                return make_empty()
+            if is_fail(new_separator):
+                if expr.min_count == 0:
+                    return MageRepeatExpr(new_element, 0, 1)
+                if expr.min_count == 1:
+                    return new_element
+                return new_separator
+            if is_empty(new_separator):
+                return MageRepeatExpr(new_element, expr.min_count, POSINF)
+            return expr.derive(element=new_element, separator=new_separator)
+
         assert_never(expr)
 
     new_rules = []
@@ -133,5 +167,5 @@ def simplify(grammar: Grammar) -> Grammar:
         new_expr = flatten(visit(rule.expr))
         new_rules.append(rule.derive(expr=new_expr))
 
-    return Grammar(rules=new_rules)
+    return MageGrammar(rules=new_rules)
 

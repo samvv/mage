@@ -1,13 +1,13 @@
 
-from magelang.ast import Grammar
+from magelang.ast import MageGrammar
 from magelang.lang.python.emitter import emit
-from magelang.treespec import cst_to_ast, grammar_to_specs
+from magelang.treespec import grammar_to_specs
 from magelang.util import Files
 
 #from .tree_types import generate_tree_types
 
 def generate(
-    grammar: Grammar,
+    grammar: MageGrammar,
     prefix = '',
     cst_parent_pointers = False,
     debug = False,

@@ -1,12 +1,12 @@
 
 from magelang.logging import error, warn
-from magelang.ast import CharSetExpr, Expr, Grammar, for_each_expr
+from magelang.ast import MageCharSetExpr, MageExpr, MageGrammar, for_each_expr
 from magelang.emitter import escape
 
-def check_neg_charset_intervals(grammar: Grammar) -> Grammar:
+def check_neg_charset_intervals(grammar: MageGrammar) -> MageGrammar:
 
-    def check(expr: Expr) -> None:
-        if isinstance(expr, CharSetExpr):
+    def check(expr: MageExpr) -> None:
+        if isinstance(expr, MageCharSetExpr):
             for element in expr.elements:
                 if isinstance(element, tuple):
                     low, high = element

@@ -4,6 +4,10 @@ from typing import Any, Callable, Generic, Iterator, Never, Protocol, Sequence, 
 import re
 
 
+def plural(name: str) -> str:
+    return name if name.endswith('s') else f'{name}s'
+
+
 type Files = list[tuple[str, str]]
 
 

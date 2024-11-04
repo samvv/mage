@@ -276,12 +276,12 @@ class RustExclamationMark(_RustBaseToken):
 
 class RustPublic(_RustBaseNode):
 
-    def __init__(self, *, pub_keyword: 'RustPubKeyword | None' = None, restrict: 'tuple[RustOpenParen | None, RustInKeyword | None, RustPath, RustCloseParen | None] | None' = None) -> None:
+    def __init__(self, *, pub_keyword: 'RustPubKeyword | None' = None, restrict: 'RustPath | tuple[RustOpenParen | None, RustInKeyword | None, RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon], RustCloseParen | None] | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None) -> None:
         self.pub_keyword: RustPubKeyword = _coerce_union_2_token_pub_keyword_none_to_token_pub_keyword(pub_keyword)
-        self.restrict: tuple[RustOpenParen, RustInKeyword | None, RustPath, RustCloseParen] | None = _coerce_union_2_tuple_4_union_2_token_open_paren_none_union_2_token_in_keyword_none_node_path_union_2_token_close_paren_none_none_to_union_2_tuple_4_token_open_paren_union_2_token_in_keyword_none_node_path_token_close_paren_none(restrict)
+        self.restrict: tuple[RustOpenParen, RustInKeyword | None, RustPath, RustCloseParen] | None = _coerce_union_6_node_path_tuple_4_union_2_token_open_paren_none_union_2_token_in_keyword_none_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_union_2_token_close_paren_none_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_none_to_union_2_tuple_4_token_open_paren_union_2_token_in_keyword_none_node_path_token_close_paren_none(restrict)
 
     @no_type_check
-    def derive(self, pub_keyword: 'RustPubKeyword | None' = None, restrict: 'tuple[RustOpenParen | None, RustInKeyword | None, RustPath, RustCloseParen | None] | None' = None) -> 'RustPublic':
+    def derive(self, pub_keyword: 'RustPubKeyword | None' = None, restrict: 'RustPath | tuple[RustOpenParen | None, RustInKeyword | None, RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon], RustCloseParen | None] | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None) -> 'RustPublic':
         if pub_keyword is None:
             pub_keyword = self.pub_keyword
         if restrict is None:
@@ -417,13 +417,13 @@ class RustBoundLifetimes(_RustBaseNode):
 
 class RustTraitBound(_RustBaseNode):
 
-    def __init__(self, path: 'RustPath', *, modifier: 'RustTraitBoundModifier | None' = None, bound_lifetimes: 'RustBoundLifetimes | None' = None) -> None:
+    def __init__(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]', *, modifier: 'RustTraitBoundModifier | None' = None, bound_lifetimes: 'RustBoundLifetimes | None' = None) -> None:
         self.modifier: RustTraitBoundModifier | None = _coerce_union_2_node_trait_bound_modifier_none_to_union_2_node_trait_bound_modifier_none(modifier)
         self.bound_lifetimes: RustBoundLifetimes | None = _coerce_union_2_node_bound_lifetimes_none_to_union_2_node_bound_lifetimes_none(bound_lifetimes)
-        self.path: RustPath = _coerce_node_path_to_node_path(path)
+        self.path: RustPath = _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(path)
 
     @no_type_check
-    def derive(self, modifier: 'RustTraitBoundModifier | None' = None, bound_lifetimes: 'RustBoundLifetimes | None' = None, path: 'RustPath | None' = None) -> 'RustTraitBound':
+    def derive(self, modifier: 'RustTraitBoundModifier | None' = None, bound_lifetimes: 'RustBoundLifetimes | None' = None, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None) -> 'RustTraitBound':
         if modifier is None:
             modifier = self.modifier
         if bound_lifetimes is None:
@@ -642,12 +642,12 @@ class RustPath(_RustBaseNode):
     def count_segments(self) -> int:
         return len(self.segments)
 
-    def __init__(self, segments: 'Sequence[RustPathSegment] | Sequence[tuple[RustPathSegment, RustColonColon | None]] | Punctuated[RustPathSegment, RustColonColon]', *, leading_colon_colon: 'RustColonColon | None' = None) -> None:
+    def __init__(self, segments: 'Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]', *, leading_colon_colon: 'RustColonColon | None' = None) -> None:
         self.leading_colon_colon: RustColonColon | None = _coerce_union_2_token_colon_colon_none_to_union_2_token_colon_colon_none(leading_colon_colon)
-        self.segments: Punctuated[RustPathSegment, RustColonColon] = _coerce_union_3_list_node_path_segment_required_list_tuple_2_node_path_segment_union_2_token_colon_colon_none_required_punct_node_path_segment_token_colon_colon_required_to_punct_node_path_segment_token_colon_colon_required(segments)
+        self.segments: Punctuated[RustPathSegment, RustColonColon] = _coerce_union_3_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_punct_node_path_segment_token_colon_colon_required(segments)
 
     @no_type_check
-    def derive(self, leading_colon_colon: 'RustColonColon | None' = None, segments: 'Sequence[RustPathSegment] | Sequence[tuple[RustPathSegment, RustColonColon | None]] | Punctuated[RustPathSegment, RustColonColon] | None' = None) -> 'RustPath':
+    def derive(self, leading_colon_colon: 'RustColonColon | None' = None, segments: 'Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None) -> 'RustPath':
         if leading_colon_colon is None:
             leading_colon_colon = self.leading_colon_colon
         if segments is None:
@@ -661,15 +661,15 @@ class RustPath(_RustBaseNode):
 
 class RustQself(_RustBaseNode):
 
-    def __init__(self, type_expr: 'RustTypeExpr', path: 'RustPath', *, less_than: 'RustLessThan | None' = None, as_keyword: 'RustAsKeyword | None' = None, greater_than: 'RustGreaterThan | None' = None) -> None:
+    def __init__(self, type_expr: 'RustTypeExpr', path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]', *, less_than: 'RustLessThan | None' = None, as_keyword: 'RustAsKeyword | None' = None, greater_than: 'RustGreaterThan | None' = None) -> None:
         self.less_than: RustLessThan = _coerce_union_2_token_less_than_none_to_token_less_than(less_than)
         self.type_expr: RustTypeExpr = _coerce_variant_type_expr_to_variant_type_expr(type_expr)
         self.as_keyword: RustAsKeyword = _coerce_union_2_token_as_keyword_none_to_token_as_keyword(as_keyword)
-        self.path: RustPath = _coerce_node_path_to_node_path(path)
+        self.path: RustPath = _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(path)
         self.greater_than: RustGreaterThan = _coerce_union_2_token_greater_than_none_to_token_greater_than(greater_than)
 
     @no_type_check
-    def derive(self, less_than: 'RustLessThan | None' = None, type_expr: 'RustTypeExpr | None' = None, as_keyword: 'RustAsKeyword | None' = None, path: 'RustPath | None' = None, greater_than: 'RustGreaterThan | None' = None) -> 'RustQself':
+    def derive(self, less_than: 'RustLessThan | None' = None, type_expr: 'RustTypeExpr | None' = None, as_keyword: 'RustAsKeyword | None' = None, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None, greater_than: 'RustGreaterThan | None' = None) -> 'RustQself':
         if less_than is None:
             less_than = self.less_than
         if type_expr is None:
@@ -689,12 +689,12 @@ class RustQself(_RustBaseNode):
 
 class RustPathTypeExpr(_RustBaseNode):
 
-    def __init__(self, path: 'RustPath', *, qself: 'RustQself | None' = None) -> None:
+    def __init__(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]', *, qself: 'RustQself | None' = None) -> None:
         self.qself: RustQself | None = _coerce_union_2_node_qself_none_to_union_2_node_qself_none(qself)
-        self.path: RustPath = _coerce_node_path_to_node_path(path)
+        self.path: RustPath = _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(path)
 
     @no_type_check
-    def derive(self, qself: 'RustQself | None' = None, path: 'RustPath | None' = None) -> 'RustPathTypeExpr':
+    def derive(self, qself: 'RustQself | None' = None, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None) -> 'RustPathTypeExpr':
         if qself is None:
             qself = self.qself
         if path is None:
@@ -780,15 +780,15 @@ class RustNamedPattern(_RustBaseNode):
     def count_attrs(self) -> int:
         return len(self.attrs)
 
-    def __init__(self, name: 'RustIdent | str', *, attrs: 'Sequence[RustAttr] | None' = None, ref_keyword: 'RustRefKeyword | None' = None, mut_keyword: 'RustMutKeyword | None' = None, sub: 'RustNamedPattern | RustPattern | tuple[RustAtSign | None, RustNamedPattern | RustPattern] | None' = None) -> None:
-        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_node_attr_none_to_list_node_attr(attrs)
+    def __init__(self, name: 'RustIdent | str', *, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, ref_keyword: 'RustRefKeyword | None' = None, mut_keyword: 'RustMutKeyword | None' = None, sub: 'RustNamedPattern | RustPattern | RustIdent | tuple[RustAtSign | None, RustNamedPattern | RustPattern | RustIdent | str] | None | str' = None) -> None:
+        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(attrs)
         self.ref_keyword: RustRefKeyword | None = _coerce_union_2_token_ref_keyword_none_to_union_2_token_ref_keyword_none(ref_keyword)
         self.mut_keyword: RustMutKeyword | None = _coerce_union_2_token_mut_keyword_none_to_union_2_token_mut_keyword_none(mut_keyword)
         self.name: RustIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
-        self.sub: tuple[RustAtSign, RustPattern] | None = _coerce_union_4_node_named_pattern_node_pattern_tuple_2_union_2_token_at_sign_none_union_2_node_named_pattern_node_pattern_none_to_union_2_tuple_2_token_at_sign_node_pattern_none(sub)
+        self.sub: tuple[RustAtSign, RustPattern] | None = _coerce_union_6_node_named_pattern_node_pattern_token_ident_tuple_2_union_2_token_at_sign_none_union_4_node_named_pattern_node_pattern_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_at_sign_node_pattern_none(sub)
 
     @no_type_check
-    def derive(self, attrs: 'Sequence[RustAttr] | None' = None, ref_keyword: 'RustRefKeyword | None' = None, mut_keyword: 'RustMutKeyword | None' = None, name: 'RustIdent | None | str' = None, sub: 'RustNamedPattern | RustPattern | tuple[RustAtSign | None, RustNamedPattern | RustPattern] | None' = None) -> 'RustNamedPattern':
+    def derive(self, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, ref_keyword: 'RustRefKeyword | None' = None, mut_keyword: 'RustMutKeyword | None' = None, name: 'RustIdent | None | str' = None, sub: 'RustNamedPattern | RustPattern | RustIdent | tuple[RustAtSign | None, RustNamedPattern | RustPattern | RustIdent | str] | None | str' = None) -> 'RustNamedPattern':
         if attrs is None:
             attrs = self.attrs
         if ref_keyword is None:
@@ -808,11 +808,11 @@ class RustNamedPattern(_RustBaseNode):
 
 class RustPattern(_RustBaseNode):
 
-    def __init__(self, named_pattern: 'RustNamedPattern') -> None:
-        self.named_pattern: RustNamedPattern = _coerce_node_named_pattern_to_node_named_pattern(named_pattern)
+    def __init__(self, named_pattern: 'RustNamedPattern | RustIdent | str') -> None:
+        self.named_pattern: RustNamedPattern = _coerce_union_3_node_named_pattern_token_ident_extern_string_to_node_named_pattern(named_pattern)
 
     @no_type_check
-    def derive(self, named_pattern: 'RustNamedPattern | None' = None) -> 'RustPattern':
+    def derive(self, named_pattern: 'RustNamedPattern | RustIdent | None | str' = None) -> 'RustPattern':
         if named_pattern is None:
             named_pattern = self.named_pattern
         return RustPattern(named_pattern=named_pattern)
@@ -827,13 +827,13 @@ class RustPathExpr(_RustBaseNode):
     def count_attrs(self) -> int:
         return len(self.attrs)
 
-    def __init__(self, path: 'RustPath', *, attrs: 'Sequence[RustAttr] | None' = None, qself: 'RustQself | None' = None) -> None:
-        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_node_attr_none_to_list_node_attr(attrs)
+    def __init__(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]', *, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, qself: 'RustQself | None' = None) -> None:
+        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(attrs)
         self.qself: RustQself | None = _coerce_union_2_node_qself_none_to_union_2_node_qself_none(qself)
-        self.path: RustPath = _coerce_node_path_to_node_path(path)
+        self.path: RustPath = _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(path)
 
     @no_type_check
-    def derive(self, attrs: 'Sequence[RustAttr] | None' = None, qself: 'RustQself | None' = None, path: 'RustPath | None' = None) -> 'RustPathExpr':
+    def derive(self, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, qself: 'RustQself | None' = None, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None) -> 'RustPathExpr':
         if attrs is None:
             attrs = self.attrs
         if qself is None:
@@ -890,15 +890,15 @@ class RustStructExpr(_RustBaseNode):
     def count_field_(self) -> int:
         return len(self.field_)
 
-    def __init__(self, path: 'RustPath', *, open_brace: 'RustOpenBrace | None' = None, field_: 'Sequence[RustInit] | Sequence[tuple[RustInit, RustComma | None]] | Punctuated[RustInit, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
-        self.path: RustPath = _coerce_node_path_to_node_path(path)
+    def __init__(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]', *, open_brace: 'RustOpenBrace | None' = None, field_: 'Sequence[RustInit] | Sequence[tuple[RustInit, RustComma | None]] | Punctuated[RustInit, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
+        self.path: RustPath = _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(path)
         self.open_brace: RustOpenBrace = _coerce_union_2_token_open_brace_none_to_token_open_brace(open_brace)
         self.field_: Punctuated[RustInit, RustComma] = _coerce_union_4_list_node_init_list_tuple_2_node_init_union_2_token_comma_none_punct_node_init_token_comma_none_to_punct_node_init_token_comma(field_)
         self.comma: RustComma | None = _coerce_union_2_token_comma_none_to_union_2_token_comma_none(comma)
         self.close_brace: RustCloseBrace = _coerce_union_2_token_close_brace_none_to_token_close_brace(close_brace)
 
     @no_type_check
-    def derive(self, path: 'RustPath | None' = None, open_brace: 'RustOpenBrace | None' = None, field_: 'Sequence[RustInit] | Sequence[tuple[RustInit, RustComma | None]] | Punctuated[RustInit, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustStructExpr':
+    def derive(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None, open_brace: 'RustOpenBrace | None' = None, field_: 'Sequence[RustInit] | Sequence[tuple[RustInit, RustComma | None]] | Punctuated[RustInit, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustStructExpr':
         if path is None:
             path = self.path
         if open_brace is None:
@@ -1015,14 +1015,14 @@ class RustVariadicArg(_RustBaseNode):
     def count_attrs(self) -> int:
         return len(self.attrs)
 
-    def __init__(self, pattern: 'RustNamedPattern | RustPattern', *, attrs: 'Sequence[RustAttr] | None' = None, dot_dot_dot: 'RustDotDotDot | None' = None, comma: 'RustComma | None' = None) -> None:
-        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_node_attr_none_to_list_node_attr(attrs)
-        self.pattern: RustPattern = _coerce_union_2_node_named_pattern_node_pattern_to_node_pattern(pattern)
+    def __init__(self, pattern: 'RustNamedPattern | RustPattern | RustIdent | str', *, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, dot_dot_dot: 'RustDotDotDot | None' = None, comma: 'RustComma | None' = None) -> None:
+        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(attrs)
+        self.pattern: RustPattern = _coerce_union_4_node_named_pattern_node_pattern_token_ident_extern_string_to_node_pattern(pattern)
         self.dot_dot_dot: RustDotDotDot | None = _coerce_union_2_token_dot_dot_dot_none_to_union_2_token_dot_dot_dot_none(dot_dot_dot)
         self.comma: RustComma | None = _coerce_union_2_token_comma_none_to_union_2_token_comma_none(comma)
 
     @no_type_check
-    def derive(self, attrs: 'Sequence[RustAttr] | None' = None, pattern: 'RustNamedPattern | RustPattern | None' = None, dot_dot_dot: 'RustDotDotDot | None' = None, comma: 'RustComma | None' = None) -> 'RustVariadicArg':
+    def derive(self, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, pattern: 'RustNamedPattern | RustPattern | RustIdent | None | str' = None, dot_dot_dot: 'RustDotDotDot | None' = None, comma: 'RustComma | None' = None) -> 'RustVariadicArg':
         if attrs is None:
             attrs = self.attrs
         if pattern is None:
@@ -1043,8 +1043,8 @@ class RustSelfArg(_RustBaseNode):
     def count_attrs(self) -> int:
         return len(self.attrs)
 
-    def __init__(self, type_expr: 'RustTypeExpr', *, attrs: 'Sequence[RustAttr] | None' = None, reference: 'RustLifetime | RustIdent | tuple[RustAmpersand | None, RustLifetime | RustIdent | str] | None | str' = None, mut_keyword: 'RustMutKeyword | None' = None, self_keyword: 'RustSelfKeyword | None' = None, colon: 'RustColon | None' = None) -> None:
-        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_node_attr_none_to_list_node_attr(attrs)
+    def __init__(self, type_expr: 'RustTypeExpr', *, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, reference: 'RustLifetime | RustIdent | tuple[RustAmpersand | None, RustLifetime | RustIdent | str] | None | str' = None, mut_keyword: 'RustMutKeyword | None' = None, self_keyword: 'RustSelfKeyword | None' = None, colon: 'RustColon | None' = None) -> None:
+        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(attrs)
         self.reference: tuple[RustAmpersand, RustLifetime] | None = _coerce_union_5_node_lifetime_token_ident_tuple_2_union_2_token_ampersand_none_union_3_node_lifetime_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_ampersand_node_lifetime_none(reference)
         self.mut_keyword: RustMutKeyword | None = _coerce_union_2_token_mut_keyword_none_to_union_2_token_mut_keyword_none(mut_keyword)
         self.self_keyword: RustSelfKeyword = _coerce_union_2_token_self_keyword_none_to_token_self_keyword(self_keyword)
@@ -1052,7 +1052,7 @@ class RustSelfArg(_RustBaseNode):
         self.type_expr: RustTypeExpr = _coerce_variant_type_expr_to_variant_type_expr(type_expr)
 
     @no_type_check
-    def derive(self, attrs: 'Sequence[RustAttr] | None' = None, reference: 'RustLifetime | RustIdent | tuple[RustAmpersand | None, RustLifetime | RustIdent | str] | None | str' = None, mut_keyword: 'RustMutKeyword | None' = None, self_keyword: 'RustSelfKeyword | None' = None, colon: 'RustColon | None' = None, type_expr: 'RustTypeExpr | None' = None) -> 'RustSelfArg':
+    def derive(self, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, reference: 'RustLifetime | RustIdent | tuple[RustAmpersand | None, RustLifetime | RustIdent | str] | None | str' = None, mut_keyword: 'RustMutKeyword | None' = None, self_keyword: 'RustSelfKeyword | None' = None, colon: 'RustColon | None' = None, type_expr: 'RustTypeExpr | None' = None) -> 'RustSelfArg':
         if attrs is None:
             attrs = self.attrs
         if reference is None:
@@ -1077,14 +1077,14 @@ class RustTypedArg(_RustBaseNode):
     def count_attrs(self) -> int:
         return len(self.attrs)
 
-    def __init__(self, pattern: 'RustNamedPattern | RustPattern', type_expr: 'RustTypeExpr', *, attrs: 'Sequence[RustAttr] | None' = None, colon: 'RustColon | None' = None) -> None:
-        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_node_attr_none_to_list_node_attr(attrs)
-        self.pattern: RustPattern = _coerce_union_2_node_named_pattern_node_pattern_to_node_pattern(pattern)
+    def __init__(self, pattern: 'RustNamedPattern | RustPattern | RustIdent | str', type_expr: 'RustTypeExpr', *, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, colon: 'RustColon | None' = None) -> None:
+        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(attrs)
+        self.pattern: RustPattern = _coerce_union_4_node_named_pattern_node_pattern_token_ident_extern_string_to_node_pattern(pattern)
         self.colon: RustColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
         self.type_expr: RustTypeExpr = _coerce_variant_type_expr_to_variant_type_expr(type_expr)
 
     @no_type_check
-    def derive(self, attrs: 'Sequence[RustAttr] | None' = None, pattern: 'RustNamedPattern | RustPattern | None' = None, colon: 'RustColon | None' = None, type_expr: 'RustTypeExpr | None' = None) -> 'RustTypedArg':
+    def derive(self, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, pattern: 'RustNamedPattern | RustPattern | RustIdent | None | str' = None, colon: 'RustColon | None' = None, type_expr: 'RustTypeExpr | None' = None) -> 'RustTypedArg':
         if attrs is None:
             attrs = self.attrs
         if pattern is None:
@@ -1155,26 +1155,17 @@ class RustTypePredicate(_RustBaseNode):
 
 class RustGenerics(_RustBaseNode):
 
-    def count_params(self) -> int:
-        return len(self.params)
-
-    def __init__(self, *, less_than: 'RustLessThan | None' = None, params: 'Sequence[RustGenericParam] | Sequence[tuple[RustGenericParam, RustComma | None]] | Punctuated[RustGenericParam, RustComma] | None' = None, greater_than: 'RustGreaterThan | None' = None, where_clause: 'tuple[RustWhereKeyword | None, Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma]] | Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma] | None' = None) -> None:
-        self.less_than: RustLessThan = _coerce_union_2_token_less_than_none_to_token_less_than(less_than)
-        self.params: Punctuated[RustGenericParam, RustComma] = _coerce_union_4_list_variant_generic_param_list_tuple_2_variant_generic_param_union_2_token_comma_none_punct_variant_generic_param_token_comma_none_to_punct_variant_generic_param_token_comma(params)
-        self.greater_than: RustGreaterThan = _coerce_union_2_token_greater_than_none_to_token_greater_than(greater_than)
+    def __init__(self, *, params: 'tuple[RustLessThan | None, Sequence[RustGenericParam] | Sequence[tuple[RustGenericParam, RustComma | None]] | Punctuated[RustGenericParam, RustComma] | None, RustGreaterThan | None] | Sequence[RustGenericParam] | Sequence[tuple[RustGenericParam, RustComma | None]] | Punctuated[RustGenericParam, RustComma] | None' = None, where_clause: 'tuple[RustWhereKeyword | None, Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma]] | Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma] | None' = None) -> None:
+        self.params: tuple[RustLessThan, Punctuated[RustGenericParam, RustComma], RustGreaterThan] | None = _coerce_union_5_tuple_3_union_2_token_less_than_none_union_4_list_variant_generic_param_list_tuple_2_variant_generic_param_union_2_token_comma_none_punct_variant_generic_param_token_comma_none_union_2_token_greater_than_none_list_variant_generic_param_list_tuple_2_variant_generic_param_union_2_token_comma_none_punct_variant_generic_param_token_comma_none_to_union_2_tuple_3_token_less_than_punct_variant_generic_param_token_comma_token_greater_than_none(params)
         self.where_clause: tuple[RustWhereKeyword, Punctuated[RustWherePredicate, RustComma]] | None = _coerce_union_5_tuple_2_union_2_token_where_keyword_none_union_3_list_variant_where_predicate_required_list_tuple_2_variant_where_predicate_union_2_token_comma_none_required_punct_variant_where_predicate_token_comma_required_list_variant_where_predicate_required_list_tuple_2_variant_where_predicate_union_2_token_comma_none_required_punct_variant_where_predicate_token_comma_required_none_to_union_2_tuple_2_token_where_keyword_punct_variant_where_predicate_token_comma_required_none(where_clause)
 
     @no_type_check
-    def derive(self, less_than: 'RustLessThan | None' = None, params: 'Sequence[RustGenericParam] | Sequence[tuple[RustGenericParam, RustComma | None]] | Punctuated[RustGenericParam, RustComma] | None' = None, greater_than: 'RustGreaterThan | None' = None, where_clause: 'tuple[RustWhereKeyword | None, Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma]] | Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma] | None' = None) -> 'RustGenerics':
-        if less_than is None:
-            less_than = self.less_than
+    def derive(self, params: 'tuple[RustLessThan | None, Sequence[RustGenericParam] | Sequence[tuple[RustGenericParam, RustComma | None]] | Punctuated[RustGenericParam, RustComma] | None, RustGreaterThan | None] | Sequence[RustGenericParam] | Sequence[tuple[RustGenericParam, RustComma | None]] | Punctuated[RustGenericParam, RustComma] | None' = None, where_clause: 'tuple[RustWhereKeyword | None, Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma]] | Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma] | None' = None) -> 'RustGenerics':
         if params is None:
             params = self.params
-        if greater_than is None:
-            greater_than = self.greater_than
         if where_clause is None:
             where_clause = self.where_clause
-        return RustGenerics(less_than=less_than, params=params, greater_than=greater_than, where_clause=where_clause)
+        return RustGenerics(params=params, where_clause=where_clause)
 
     def parent(self) -> 'RustGenericsParent':
         assert(self._parent is not None)
@@ -1186,21 +1177,21 @@ class RustSignature(_RustBaseNode):
     def count_inputs(self) -> int:
         return len(self.inputs)
 
-    def __init__(self, name: 'RustIdent | str', *, const_keyword: 'RustConstKeyword | None' = None, async_keyword: 'RustAsyncKeyword | None' = None, unsafe_keyword: 'RustUnsafeKeyword | None' = None, abi: 'RustAbi | RustString | None | str' = None, fn_keyword: 'RustFnKeyword | None' = None, generics: 'RustGenerics | tuple[RustWhereKeyword | None, Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma]] | Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma] | None' = None, open_paren: 'RustOpenParen | None' = None, inputs: 'Sequence[RustArg] | Sequence[tuple[RustArg, RustComma | None]] | Punctuated[RustArg, RustComma] | None' = None, close_paren: 'RustCloseParen | None' = None, output: 'RustTypeExpr | tuple[RustRArrow | None, RustTypeExpr] | None' = None) -> None:
+    def __init__(self, name: 'RustIdent | str', *, const_keyword: 'RustConstKeyword | None' = None, async_keyword: 'RustAsyncKeyword | None' = None, unsafe_keyword: 'RustUnsafeKeyword | None' = None, abi: 'RustAbi | RustString | None | str' = None, fn_keyword: 'RustFnKeyword | None' = None, generics: 'RustGenerics | None' = None, open_paren: 'RustOpenParen | None' = None, inputs: 'Sequence[RustArg] | Sequence[tuple[RustArg, RustComma | None]] | Punctuated[RustArg, RustComma] | None' = None, close_paren: 'RustCloseParen | None' = None, output: 'RustTypeExpr | tuple[RustRArrow | None, RustTypeExpr] | None' = None) -> None:
         self.const_keyword: RustConstKeyword | None = _coerce_union_2_token_const_keyword_none_to_union_2_token_const_keyword_none(const_keyword)
         self.async_keyword: RustAsyncKeyword | None = _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none(async_keyword)
         self.unsafe_keyword: RustUnsafeKeyword | None = _coerce_union_2_token_unsafe_keyword_none_to_union_2_token_unsafe_keyword_none(unsafe_keyword)
         self.abi: RustAbi | None = _coerce_union_4_node_abi_token_string_none_extern_string_to_union_2_node_abi_none(abi)
         self.fn_keyword: RustFnKeyword = _coerce_union_2_token_fn_keyword_none_to_token_fn_keyword(fn_keyword)
         self.name: RustIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
-        self.generics: RustGenerics = _coerce_union_6_node_generics_tuple_2_union_2_token_where_keyword_none_union_3_list_variant_where_predicate_required_list_tuple_2_variant_where_predicate_union_2_token_comma_none_required_punct_variant_where_predicate_token_comma_required_list_variant_where_predicate_required_list_tuple_2_variant_where_predicate_union_2_token_comma_none_required_punct_variant_where_predicate_token_comma_required_none_to_node_generics(generics)
+        self.generics: RustGenerics = _coerce_union_2_node_generics_none_to_node_generics(generics)
         self.open_paren: RustOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
         self.inputs: Punctuated[RustArg, RustComma] = _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comma_none_punct_variant_arg_token_comma_none_to_punct_variant_arg_token_comma(inputs)
         self.close_paren: RustCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
         self.output: tuple[RustRArrow, RustTypeExpr] | None = _coerce_union_3_variant_type_expr_tuple_2_union_2_token_r_arrow_none_variant_type_expr_none_to_union_2_tuple_2_token_r_arrow_variant_type_expr_none(output)
 
     @no_type_check
-    def derive(self, const_keyword: 'RustConstKeyword | None' = None, async_keyword: 'RustAsyncKeyword | None' = None, unsafe_keyword: 'RustUnsafeKeyword | None' = None, abi: 'RustAbi | RustString | None | str' = None, fn_keyword: 'RustFnKeyword | None' = None, name: 'RustIdent | None | str' = None, generics: 'RustGenerics | tuple[RustWhereKeyword | None, Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma]] | Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma] | None' = None, open_paren: 'RustOpenParen | None' = None, inputs: 'Sequence[RustArg] | Sequence[tuple[RustArg, RustComma | None]] | Punctuated[RustArg, RustComma] | None' = None, close_paren: 'RustCloseParen | None' = None, output: 'RustTypeExpr | tuple[RustRArrow | None, RustTypeExpr] | None' = None) -> 'RustSignature':
+    def derive(self, const_keyword: 'RustConstKeyword | None' = None, async_keyword: 'RustAsyncKeyword | None' = None, unsafe_keyword: 'RustUnsafeKeyword | None' = None, abi: 'RustAbi | RustString | None | str' = None, fn_keyword: 'RustFnKeyword | None' = None, name: 'RustIdent | None | str' = None, generics: 'RustGenerics | None' = None, open_paren: 'RustOpenParen | None' = None, inputs: 'Sequence[RustArg] | Sequence[tuple[RustArg, RustComma | None]] | Punctuated[RustArg, RustComma] | None' = None, close_paren: 'RustCloseParen | None' = None, output: 'RustTypeExpr | tuple[RustRArrow | None, RustTypeExpr] | None' = None) -> 'RustSignature':
         if const_keyword is None:
             const_keyword = self.const_keyword
         if async_keyword is None:
@@ -1338,8 +1329,8 @@ class RustEnumItem(_RustBaseNode):
     def count_variants(self) -> int:
         return len(self.variants)
 
-    def __init__(self, name: 'RustIdent | str', *, attrs: 'Sequence[RustAttr] | None' = None, visibility: 'RustPublic | None' = None, enum_keyword: 'RustEnumKeyword | None' = None, open_brace: 'RustOpenBrace | None' = None, variants: 'Sequence[RustVariant] | Sequence[tuple[RustVariant, RustComma | None]] | Punctuated[RustVariant, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
-        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_node_attr_none_to_list_node_attr(attrs)
+    def __init__(self, name: 'RustIdent | str', *, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, visibility: 'RustPublic | None' = None, enum_keyword: 'RustEnumKeyword | None' = None, open_brace: 'RustOpenBrace | None' = None, variants: 'Sequence[RustVariant] | Sequence[tuple[RustVariant, RustComma | None]] | Punctuated[RustVariant, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
+        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(attrs)
         self.visibility: RustPublic | None = _coerce_union_2_node_public_none_to_union_2_node_public_none(visibility)
         self.enum_keyword: RustEnumKeyword = _coerce_union_2_token_enum_keyword_none_to_token_enum_keyword(enum_keyword)
         self.name: RustIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
@@ -1349,7 +1340,7 @@ class RustEnumItem(_RustBaseNode):
         self.close_brace: RustCloseBrace = _coerce_union_2_token_close_brace_none_to_token_close_brace(close_brace)
 
     @no_type_check
-    def derive(self, attrs: 'Sequence[RustAttr] | None' = None, visibility: 'RustPublic | None' = None, enum_keyword: 'RustEnumKeyword | None' = None, name: 'RustIdent | None | str' = None, open_brace: 'RustOpenBrace | None' = None, variants: 'Sequence[RustVariant] | Sequence[tuple[RustVariant, RustComma | None]] | Punctuated[RustVariant, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustEnumItem':
+    def derive(self, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, visibility: 'RustPublic | None' = None, enum_keyword: 'RustEnumKeyword | None' = None, name: 'RustIdent | None | str' = None, open_brace: 'RustOpenBrace | None' = None, variants: 'Sequence[RustVariant] | Sequence[tuple[RustVariant, RustComma | None]] | Punctuated[RustVariant, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustEnumItem':
         if attrs is None:
             attrs = self.attrs
         if visibility is None:
@@ -1375,11 +1366,11 @@ class RustEnumItem(_RustBaseNode):
 
 class RustMetaPath(_RustBaseNode):
 
-    def __init__(self, path: 'RustPath') -> None:
-        self.path: RustPath = _coerce_node_path_to_node_path(path)
+    def __init__(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]') -> None:
+        self.path: RustPath = _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(path)
 
     @no_type_check
-    def derive(self, path: 'RustPath | None' = None) -> 'RustMetaPath':
+    def derive(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None) -> 'RustMetaPath':
         if path is None:
             path = self.path
         return RustMetaPath(path=path)
@@ -1394,14 +1385,14 @@ class RustMetaBraced(_RustBaseNode):
     def count_tokens(self) -> int:
         return len(self.tokens)
 
-    def __init__(self, path: 'RustPath', *, open_brace: 'RustOpenBrace | None' = None, tokens: 'Sequence[RustToken] | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
-        self.path: RustPath = _coerce_node_path_to_node_path(path)
+    def __init__(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]', *, open_brace: 'RustOpenBrace | None' = None, tokens: 'Sequence[RustToken] | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
+        self.path: RustPath = _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(path)
         self.open_brace: RustOpenBrace = _coerce_union_2_token_open_brace_none_to_token_open_brace(open_brace)
         self.tokens: Sequence[RustToken] = _coerce_union_2_list_variant_token_none_to_list_variant_token(tokens)
         self.close_brace: RustCloseBrace = _coerce_union_2_token_close_brace_none_to_token_close_brace(close_brace)
 
     @no_type_check
-    def derive(self, path: 'RustPath | None' = None, open_brace: 'RustOpenBrace | None' = None, tokens: 'Sequence[RustToken] | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustMetaBraced':
+    def derive(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None, open_brace: 'RustOpenBrace | None' = None, tokens: 'Sequence[RustToken] | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustMetaBraced':
         if path is None:
             path = self.path
         if open_brace is None:
@@ -1422,14 +1413,14 @@ class RustMetaParenthesized(_RustBaseNode):
     def count_tokens(self) -> int:
         return len(self.tokens)
 
-    def __init__(self, path: 'RustPath', *, open_paren: 'RustOpenParen | None' = None, tokens: 'Sequence[RustToken] | None' = None, close_paren: 'RustCloseParen | None' = None) -> None:
-        self.path: RustPath = _coerce_node_path_to_node_path(path)
+    def __init__(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]', *, open_paren: 'RustOpenParen | None' = None, tokens: 'Sequence[RustToken] | None' = None, close_paren: 'RustCloseParen | None' = None) -> None:
+        self.path: RustPath = _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(path)
         self.open_paren: RustOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
         self.tokens: Sequence[RustToken] = _coerce_union_2_list_variant_token_none_to_list_variant_token(tokens)
         self.close_paren: RustCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
 
     @no_type_check
-    def derive(self, path: 'RustPath | None' = None, open_paren: 'RustOpenParen | None' = None, tokens: 'Sequence[RustToken] | None' = None, close_paren: 'RustCloseParen | None' = None) -> 'RustMetaParenthesized':
+    def derive(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None, open_paren: 'RustOpenParen | None' = None, tokens: 'Sequence[RustToken] | None' = None, close_paren: 'RustCloseParen | None' = None) -> 'RustMetaParenthesized':
         if path is None:
             path = self.path
         if open_paren is None:
@@ -1450,14 +1441,14 @@ class RustMetaBracketed(_RustBaseNode):
     def count_tokens(self) -> int:
         return len(self.tokens)
 
-    def __init__(self, path: 'RustPath', *, open_bracket: 'RustOpenBracket | None' = None, tokens: 'Sequence[RustToken] | None' = None, close_bracket: 'RustCloseBracket | None' = None) -> None:
-        self.path: RustPath = _coerce_node_path_to_node_path(path)
+    def __init__(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]', *, open_bracket: 'RustOpenBracket | None' = None, tokens: 'Sequence[RustToken] | None' = None, close_bracket: 'RustCloseBracket | None' = None) -> None:
+        self.path: RustPath = _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(path)
         self.open_bracket: RustOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
         self.tokens: Sequence[RustToken] = _coerce_union_2_list_variant_token_none_to_list_variant_token(tokens)
         self.close_bracket: RustCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
 
     @no_type_check
-    def derive(self, path: 'RustPath | None' = None, open_bracket: 'RustOpenBracket | None' = None, tokens: 'Sequence[RustToken] | None' = None, close_bracket: 'RustCloseBracket | None' = None) -> 'RustMetaBracketed':
+    def derive(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None, open_bracket: 'RustOpenBracket | None' = None, tokens: 'Sequence[RustToken] | None' = None, close_bracket: 'RustCloseBracket | None' = None) -> 'RustMetaBracketed':
         if path is None:
             path = self.path
         if open_bracket is None:
@@ -1475,13 +1466,13 @@ class RustMetaBracketed(_RustBaseNode):
 
 class RustMetaNameValue(_RustBaseNode):
 
-    def __init__(self, path: 'RustPath', expr: 'RustExpr', *, equals: 'RustEquals | None' = None) -> None:
-        self.path: RustPath = _coerce_node_path_to_node_path(path)
+    def __init__(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]', expr: 'RustExpr', *, equals: 'RustEquals | None' = None) -> None:
+        self.path: RustPath = _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(path)
         self.equals: RustEquals = _coerce_union_2_token_equals_none_to_token_equals(equals)
         self.expr: RustExpr = _coerce_variant_expr_to_variant_expr(expr)
 
     @no_type_check
-    def derive(self, path: 'RustPath | None' = None, equals: 'RustEquals | None' = None, expr: 'RustExpr | None' = None) -> 'RustMetaNameValue':
+    def derive(self, path: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None, equals: 'RustEquals | None' = None, expr: 'RustExpr | None' = None) -> 'RustMetaNameValue':
         if path is None:
             path = self.path
         if equals is None:
@@ -1531,8 +1522,8 @@ class RustStructItem(_RustBaseNode):
     def count_fields(self) -> int:
         return len(self.fields)
 
-    def __init__(self, name: 'RustIdent | str', *, attrs: 'Sequence[RustAttr] | None' = None, visibility: 'RustPublic | None' = None, struct_keyword: 'RustStructKeyword | None' = None, open_brace: 'RustOpenBrace | None' = None, fields: 'Sequence[RustField] | Sequence[tuple[RustField, RustComma | None]] | Punctuated[RustField, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
-        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_node_attr_none_to_list_node_attr(attrs)
+    def __init__(self, name: 'RustIdent | str', *, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, visibility: 'RustPublic | None' = None, struct_keyword: 'RustStructKeyword | None' = None, open_brace: 'RustOpenBrace | None' = None, fields: 'Sequence[RustField] | Sequence[tuple[RustField, RustComma | None]] | Punctuated[RustField, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
+        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(attrs)
         self.visibility: RustPublic | None = _coerce_union_2_node_public_none_to_union_2_node_public_none(visibility)
         self.struct_keyword: RustStructKeyword = _coerce_union_2_token_struct_keyword_none_to_token_struct_keyword(struct_keyword)
         self.name: RustIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
@@ -1542,7 +1533,7 @@ class RustStructItem(_RustBaseNode):
         self.close_brace: RustCloseBrace = _coerce_union_2_token_close_brace_none_to_token_close_brace(close_brace)
 
     @no_type_check
-    def derive(self, attrs: 'Sequence[RustAttr] | None' = None, visibility: 'RustPublic | None' = None, struct_keyword: 'RustStructKeyword | None' = None, name: 'RustIdent | None | str' = None, open_brace: 'RustOpenBrace | None' = None, fields: 'Sequence[RustField] | Sequence[tuple[RustField, RustComma | None]] | Punctuated[RustField, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustStructItem':
+    def derive(self, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, visibility: 'RustPublic | None' = None, struct_keyword: 'RustStructKeyword | None' = None, name: 'RustIdent | None | str' = None, open_brace: 'RustOpenBrace | None' = None, fields: 'Sequence[RustField] | Sequence[tuple[RustField, RustComma | None]] | Punctuated[RustField, RustComma] | None' = None, comma: 'RustComma | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustStructItem':
         if attrs is None:
             attrs = self.attrs
         if visibility is None:
@@ -1691,8 +1682,8 @@ class RustUseItem(_RustBaseNode):
     def count_path(self) -> int:
         return len(self.path)
 
-    def __init__(self, *, attrs: 'Sequence[RustAttr] | None' = None, visibility: 'RustPublic | None' = None, use_keyword: 'RustUseKeyword | None' = None, colon_colon: 'RustColonColon | None' = None, path: 'Sequence[RustIdent | tuple[RustIdent | str, RustColonColon | None] | str] | None' = None, semicolon: 'RustSemicolon | None' = None) -> None:
-        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_node_attr_none_to_list_node_attr(attrs)
+    def __init__(self, *, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, visibility: 'RustPublic | None' = None, use_keyword: 'RustUseKeyword | None' = None, colon_colon: 'RustColonColon | None' = None, path: 'Sequence[RustIdent | tuple[RustIdent | str, RustColonColon | None] | str] | None' = None, semicolon: 'RustSemicolon | None' = None) -> None:
+        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(attrs)
         self.visibility: RustPublic | None = _coerce_union_2_node_public_none_to_union_2_node_public_none(visibility)
         self.use_keyword: RustUseKeyword = _coerce_union_2_token_use_keyword_none_to_token_use_keyword(use_keyword)
         self.colon_colon: RustColonColon | None = _coerce_union_2_token_colon_colon_none_to_union_2_token_colon_colon_none(colon_colon)
@@ -1700,7 +1691,7 @@ class RustUseItem(_RustBaseNode):
         self.semicolon: RustSemicolon = _coerce_union_2_token_semicolon_none_to_token_semicolon(semicolon)
 
     @no_type_check
-    def derive(self, attrs: 'Sequence[RustAttr] | None' = None, visibility: 'RustPublic | None' = None, use_keyword: 'RustUseKeyword | None' = None, colon_colon: 'RustColonColon | None' = None, path: 'Sequence[RustIdent | tuple[RustIdent | str, RustColonColon | None] | str] | None' = None, semicolon: 'RustSemicolon | None' = None) -> 'RustUseItem':
+    def derive(self, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, visibility: 'RustPublic | None' = None, use_keyword: 'RustUseKeyword | None' = None, colon_colon: 'RustColonColon | None' = None, path: 'Sequence[RustIdent | tuple[RustIdent | str, RustColonColon | None] | str] | None' = None, semicolon: 'RustSemicolon | None' = None) -> 'RustUseItem':
         if attrs is None:
             attrs = self.attrs
         if visibility is None:
@@ -1725,8 +1716,8 @@ class RustFnImplElement(_RustBaseNode):
     def count_attrs(self) -> int:
         return len(self.attrs)
 
-    def __init__(self, signature: 'RustSignature', item: 'RustItem', last: 'RustExpr', *, attrs: 'Sequence[RustAttr] | None' = None, visibility: 'RustPublic | None' = None, default_keyword: 'RustDefaultKeyword | None' = None, open_brace: 'RustOpenBrace | None' = None, semicolon: 'RustSemicolon | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
-        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_node_attr_none_to_list_node_attr(attrs)
+    def __init__(self, signature: 'RustSignature', item: 'RustItem', last: 'RustExpr', *, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, visibility: 'RustPublic | None' = None, default_keyword: 'RustDefaultKeyword | None' = None, open_brace: 'RustOpenBrace | None' = None, semicolon: 'RustSemicolon | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
+        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(attrs)
         self.visibility: RustPublic | None = _coerce_union_2_node_public_none_to_union_2_node_public_none(visibility)
         self.default_keyword: RustDefaultKeyword | None = _coerce_union_2_token_default_keyword_none_to_union_2_token_default_keyword_none(default_keyword)
         self.signature: RustSignature = _coerce_node_signature_to_node_signature(signature)
@@ -1737,7 +1728,7 @@ class RustFnImplElement(_RustBaseNode):
         self.close_brace: RustCloseBrace = _coerce_union_2_token_close_brace_none_to_token_close_brace(close_brace)
 
     @no_type_check
-    def derive(self, attrs: 'Sequence[RustAttr] | None' = None, visibility: 'RustPublic | None' = None, default_keyword: 'RustDefaultKeyword | None' = None, signature: 'RustSignature | None' = None, open_brace: 'RustOpenBrace | None' = None, item: 'RustItem | None' = None, semicolon: 'RustSemicolon | None' = None, last: 'RustExpr | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustFnImplElement':
+    def derive(self, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, visibility: 'RustPublic | None' = None, default_keyword: 'RustDefaultKeyword | None' = None, signature: 'RustSignature | None' = None, open_brace: 'RustOpenBrace | None' = None, item: 'RustItem | None' = None, semicolon: 'RustSemicolon | None' = None, last: 'RustExpr | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustFnImplElement':
         if attrs is None:
             attrs = self.attrs
         if visibility is None:
@@ -1787,20 +1778,20 @@ class RustImplItem(_RustBaseNode):
     def count_impl_elements(self) -> int:
         return len(self.impl_elements)
 
-    def __init__(self, *, attrs: 'Sequence[RustAttr] | None' = None, default_keyword: 'RustDefaultKeyword | None' = None, unsafe_keyword: 'RustUnsafeKeyword | None' = None, impl_keyword: 'RustImplKeyword | None' = None, generics: 'RustGenerics | tuple[RustWhereKeyword | None, Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma]] | Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma] | None' = None, exclamation_mark: 'RustExclamationMark | None' = None, trait: 'tuple[RustPath, RustForKeyword | None, RustTypeExpr] | None' = None, open_brace: 'RustOpenBrace | None' = None, impl_elements: 'Sequence[RustFnImplElement | RustImplElement] | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
-        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_node_attr_none_to_list_node_attr(attrs)
+    def __init__(self, type_expr: 'RustTypeExpr', *, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, default_keyword: 'RustDefaultKeyword | None' = None, unsafe_keyword: 'RustUnsafeKeyword | None' = None, impl_keyword: 'RustImplKeyword | None' = None, generics: 'RustGenerics | None' = None, trait: 'RustPath | tuple[RustExclamationMark | None, RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon], RustForKeyword | None] | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None, open_brace: 'RustOpenBrace | None' = None, impl_elements: 'Sequence[RustFnImplElement | RustImplElement] | None' = None, close_brace: 'RustCloseBrace | None' = None) -> None:
+        self.attrs: Sequence[RustAttr] = _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(attrs)
         self.default_keyword: RustDefaultKeyword | None = _coerce_union_2_token_default_keyword_none_to_union_2_token_default_keyword_none(default_keyword)
         self.unsafe_keyword: RustUnsafeKeyword | None = _coerce_union_2_token_unsafe_keyword_none_to_union_2_token_unsafe_keyword_none(unsafe_keyword)
         self.impl_keyword: RustImplKeyword = _coerce_union_2_token_impl_keyword_none_to_token_impl_keyword(impl_keyword)
-        self.generics: RustGenerics = _coerce_union_6_node_generics_tuple_2_union_2_token_where_keyword_none_union_3_list_variant_where_predicate_required_list_tuple_2_variant_where_predicate_union_2_token_comma_none_required_punct_variant_where_predicate_token_comma_required_list_variant_where_predicate_required_list_tuple_2_variant_where_predicate_union_2_token_comma_none_required_punct_variant_where_predicate_token_comma_required_none_to_node_generics(generics)
-        self.exclamation_mark: RustExclamationMark | None = _coerce_union_2_token_exclamation_mark_none_to_union_2_token_exclamation_mark_none(exclamation_mark)
-        self.trait: tuple[RustPath, RustForKeyword, RustTypeExpr] | None = _coerce_union_2_tuple_3_node_path_union_2_token_for_keyword_none_variant_type_expr_none_to_union_2_tuple_3_node_path_token_for_keyword_variant_type_expr_none(trait)
+        self.generics: RustGenerics = _coerce_union_2_node_generics_none_to_node_generics(generics)
+        self.trait: tuple[RustExclamationMark | None, RustPath, RustForKeyword] | None = _coerce_union_6_node_path_tuple_3_union_2_token_exclamation_mark_none_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_union_2_token_for_keyword_none_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_none_to_union_2_tuple_3_union_2_token_exclamation_mark_none_node_path_token_for_keyword_none(trait)
+        self.type_expr: RustTypeExpr = _coerce_variant_type_expr_to_variant_type_expr(type_expr)
         self.open_brace: RustOpenBrace = _coerce_union_2_token_open_brace_none_to_token_open_brace(open_brace)
         self.impl_elements: Sequence[RustImplElement] = _coerce_union_2_list_union_2_node_fn_impl_element_node_impl_element_none_to_list_node_impl_element(impl_elements)
         self.close_brace: RustCloseBrace = _coerce_union_2_token_close_brace_none_to_token_close_brace(close_brace)
 
     @no_type_check
-    def derive(self, attrs: 'Sequence[RustAttr] | None' = None, default_keyword: 'RustDefaultKeyword | None' = None, unsafe_keyword: 'RustUnsafeKeyword | None' = None, impl_keyword: 'RustImplKeyword | None' = None, generics: 'RustGenerics | tuple[RustWhereKeyword | None, Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma]] | Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma] | None' = None, exclamation_mark: 'RustExclamationMark | None' = None, trait: 'tuple[RustPath, RustForKeyword | None, RustTypeExpr] | None' = None, open_brace: 'RustOpenBrace | None' = None, impl_elements: 'Sequence[RustFnImplElement | RustImplElement] | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustImplItem':
+    def derive(self, attrs: 'Sequence[RustAttr | RustMeta] | None' = None, default_keyword: 'RustDefaultKeyword | None' = None, unsafe_keyword: 'RustUnsafeKeyword | None' = None, impl_keyword: 'RustImplKeyword | None' = None, generics: 'RustGenerics | None' = None, trait: 'RustPath | tuple[RustExclamationMark | None, RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon], RustForKeyword | None] | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None' = None, type_expr: 'RustTypeExpr | None' = None, open_brace: 'RustOpenBrace | None' = None, impl_elements: 'Sequence[RustFnImplElement | RustImplElement] | None' = None, close_brace: 'RustCloseBrace | None' = None) -> 'RustImplItem':
         if attrs is None:
             attrs = self.attrs
         if default_keyword is None:
@@ -1811,17 +1802,17 @@ class RustImplItem(_RustBaseNode):
             impl_keyword = self.impl_keyword
         if generics is None:
             generics = self.generics
-        if exclamation_mark is None:
-            exclamation_mark = self.exclamation_mark
         if trait is None:
             trait = self.trait
+        if type_expr is None:
+            type_expr = self.type_expr
         if open_brace is None:
             open_brace = self.open_brace
         if impl_elements is None:
             impl_elements = self.impl_elements
         if close_brace is None:
             close_brace = self.close_brace
-        return RustImplItem(attrs=attrs, default_keyword=default_keyword, unsafe_keyword=unsafe_keyword, impl_keyword=impl_keyword, generics=generics, exclamation_mark=exclamation_mark, trait=trait, open_brace=open_brace, impl_elements=impl_elements, close_brace=close_brace)
+        return RustImplItem(attrs=attrs, default_keyword=default_keyword, unsafe_keyword=unsafe_keyword, impl_keyword=impl_keyword, generics=generics, trait=trait, type_expr=type_expr, open_brace=open_brace, impl_elements=impl_elements, close_brace=close_brace)
 
     def parent(self) -> 'RustImplItemParent':
         assert(self._parent is not None)
@@ -2159,6 +2150,75 @@ def _coerce_union_2_token_pub_keyword_none_to_token_pub_keyword(value: 'RustPubK
 
 
 @no_type_check
+def _coerce_union_2_token_ident_extern_string_to_token_ident(value: 'RustIdent | str') -> 'RustIdent':
+    if isinstance(value, str):
+        return RustIdent(value)
+    elif isinstance(value, RustIdent):
+        return value
+    else:
+        raise ValueError('the coercion from RustIdent | str to RustIdent failed')
+
+
+@no_type_check
+def _coerce_union_3_node_path_segment_token_ident_extern_string_to_node_path_segment(value: 'RustPathSegment | RustIdent | str') -> 'RustPathSegment':
+    if isinstance(value, RustIdent) or isinstance(value, str):
+        return RustPathSegment(_coerce_union_2_token_ident_extern_string_to_token_ident(value))
+    elif isinstance(value, RustPathSegment):
+        return value
+    else:
+        raise ValueError('the coercion from RustPathSegment | RustIdent | str to RustPathSegment failed')
+
+
+@no_type_check
+def _coerce_token_colon_colon_to_token_colon_colon(value: 'RustColonColon') -> 'RustColonColon':
+    return value
+
+
+@no_type_check
+def _coerce_union_3_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_punct_node_path_segment_token_colon_colon_required(value: 'Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]') -> 'Punctuated[RustPathSegment, RustColonColon]':
+    new_value = Punctuated()
+    iterator = iter(value)
+    try:
+        first_element = next(iterator)
+        while True:
+            try:
+                second_element = next(iterator)
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    element_separator = first_element[1]
+                    assert(element_separator is not None)
+                else:
+                    element_value = first_element
+                    element_separator = RustColonColon()
+                new_element_value = _coerce_union_3_node_path_segment_token_ident_extern_string_to_node_path_segment(element_value)
+                new_element_separator = _coerce_token_colon_colon_to_token_colon_colon(element_separator)
+                new_value.append(new_element_value, new_element_separator)
+                first_element = second_element
+            except StopIteration:
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    assert(first_element[1] is None)
+                else:
+                    element_value = first_element
+                new_element_value = _coerce_union_3_node_path_segment_token_ident_extern_string_to_node_path_segment(element_value)
+                new_value.append(new_element_value)
+                break
+    except StopIteration:
+        pass
+    return new_value
+
+
+@no_type_check
+def _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(value: 'RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon]') -> 'RustPath':
+    if isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
+        return RustPath(_coerce_union_3_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_punct_node_path_segment_token_colon_colon_required(value))
+    elif isinstance(value, RustPath):
+        return value
+    else:
+        raise ValueError('the coercion from RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] to RustPath failed')
+
+
+@no_type_check
 def _coerce_union_2_token_open_paren_none_to_token_open_paren(value: 'RustOpenParen | None') -> 'RustOpenParen':
     if value is None:
         return RustOpenParen()
@@ -2179,11 +2239,6 @@ def _coerce_union_2_token_in_keyword_none_to_union_2_token_in_keyword_none(value
 
 
 @no_type_check
-def _coerce_node_path_to_node_path(value: 'RustPath') -> 'RustPath':
-    return value
-
-
-@no_type_check
 def _coerce_union_2_token_close_paren_none_to_token_close_paren(value: 'RustCloseParen | None') -> 'RustCloseParen':
     if value is None:
         return RustCloseParen()
@@ -2194,13 +2249,15 @@ def _coerce_union_2_token_close_paren_none_to_token_close_paren(value: 'RustClos
 
 
 @no_type_check
-def _coerce_union_2_tuple_4_union_2_token_open_paren_none_union_2_token_in_keyword_none_node_path_union_2_token_close_paren_none_none_to_union_2_tuple_4_token_open_paren_union_2_token_in_keyword_none_node_path_token_close_paren_none(value: 'tuple[RustOpenParen | None, RustInKeyword | None, RustPath, RustCloseParen | None] | None') -> 'tuple[RustOpenParen, RustInKeyword | None, RustPath, RustCloseParen] | None':
-    if isinstance(value, tuple):
-        return (_coerce_union_2_token_open_paren_none_to_token_open_paren(value[0]), _coerce_union_2_token_in_keyword_none_to_union_2_token_in_keyword_none(value[1]), _coerce_node_path_to_node_path(value[2]), _coerce_union_2_token_close_paren_none_to_token_close_paren(value[3]))
+def _coerce_union_6_node_path_tuple_4_union_2_token_open_paren_none_union_2_token_in_keyword_none_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_union_2_token_close_paren_none_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_none_to_union_2_tuple_4_token_open_paren_union_2_token_in_keyword_none_node_path_token_close_paren_none(value: 'RustPath | tuple[RustOpenParen | None, RustInKeyword | None, RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon], RustCloseParen | None] | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None') -> 'tuple[RustOpenParen, RustInKeyword | None, RustPath, RustCloseParen] | None':
+    if isinstance(value, RustPath) or isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
+        return (RustOpenParen(), None, _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(value), RustCloseParen())
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_open_paren_none_to_token_open_paren(value[0]), _coerce_union_2_token_in_keyword_none_to_union_2_token_in_keyword_none(value[1]), _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(value[2]), _coerce_union_2_token_close_paren_none_to_token_close_paren(value[3]))
     elif value is None:
         return None
     else:
-        raise ValueError('the coercion from tuple[RustOpenParen | None, RustInKeyword | None, RustPath, RustCloseParen | None] | None to tuple[RustOpenParen, RustInKeyword | None, RustPath, RustCloseParen] | None failed')
+        raise ValueError('the coercion from RustPath | tuple[RustOpenParen | None, RustInKeyword | None, RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon], RustCloseParen | None] | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None to tuple[RustOpenParen, RustInKeyword | None, RustPath, RustCloseParen] | None failed')
 
 
 @no_type_check
@@ -2216,16 +2273,6 @@ def _coerce_union_2_token_equals_none_to_token_equals(value: 'RustEquals | None'
 @no_type_check
 def _coerce_variant_type_expr_to_variant_type_expr(value: 'RustTypeExpr') -> 'RustTypeExpr':
     return value
-
-
-@no_type_check
-def _coerce_union_2_token_ident_extern_string_to_token_ident(value: 'RustIdent | str') -> 'RustIdent':
-    if isinstance(value, str):
-        return RustIdent(value)
-    elif isinstance(value, RustIdent):
-        return value
-    else:
-        raise ValueError('the coercion from RustIdent | str to RustIdent failed')
 
 
 @no_type_check
@@ -2609,50 +2656,6 @@ def _coerce_union_2_token_colon_colon_none_to_union_2_token_colon_colon_none(val
 
 
 @no_type_check
-def _coerce_node_path_segment_to_node_path_segment(value: 'RustPathSegment') -> 'RustPathSegment':
-    return value
-
-
-@no_type_check
-def _coerce_token_colon_colon_to_token_colon_colon(value: 'RustColonColon') -> 'RustColonColon':
-    return value
-
-
-@no_type_check
-def _coerce_union_3_list_node_path_segment_required_list_tuple_2_node_path_segment_union_2_token_colon_colon_none_required_punct_node_path_segment_token_colon_colon_required_to_punct_node_path_segment_token_colon_colon_required(value: 'Sequence[RustPathSegment] | Sequence[tuple[RustPathSegment, RustColonColon | None]] | Punctuated[RustPathSegment, RustColonColon]') -> 'Punctuated[RustPathSegment, RustColonColon]':
-    new_value = Punctuated()
-    iterator = iter(value)
-    try:
-        first_element = next(iterator)
-        while True:
-            try:
-                second_element = next(iterator)
-                if isinstance(first_element, tuple):
-                    element_value = first_element[0]
-                    element_separator = first_element[1]
-                    assert(element_separator is not None)
-                else:
-                    element_value = first_element
-                    element_separator = RustColonColon()
-                new_element_value = _coerce_node_path_segment_to_node_path_segment(element_value)
-                new_element_separator = _coerce_token_colon_colon_to_token_colon_colon(element_separator)
-                new_value.append(new_element_value, new_element_separator)
-                first_element = second_element
-            except StopIteration:
-                if isinstance(first_element, tuple):
-                    element_value = first_element[0]
-                    assert(first_element[1] is None)
-                else:
-                    element_value = first_element
-                new_element_value = _coerce_node_path_segment_to_node_path_segment(element_value)
-                new_value.append(new_element_value)
-                break
-    except StopIteration:
-        pass
-    return new_value
-
-
-@no_type_check
 def _coerce_union_2_token_as_keyword_none_to_token_as_keyword(value: 'RustAsKeyword | None') -> 'RustAsKeyword':
     if value is None:
         return RustAsKeyword()
@@ -2713,21 +2716,31 @@ def _coerce_union_2_token_exclamation_mark_none_to_token_exclamation_mark(value:
 
 
 @no_type_check
-def _coerce_node_attr_to_node_attr(value: 'RustAttr') -> 'RustAttr':
+def _coerce_variant_meta_to_variant_meta(value: 'RustMeta') -> 'RustMeta':
     return value
 
 
 @no_type_check
-def _coerce_union_2_list_node_attr_none_to_list_node_attr(value: 'Sequence[RustAttr] | None') -> 'Sequence[RustAttr]':
+def _coerce_union_2_node_attr_variant_meta_to_node_attr(value: 'RustAttr | RustMeta') -> 'RustAttr':
+    if is_rust_meta(value):
+        return RustAttr(_coerce_variant_meta_to_variant_meta(value))
+    elif isinstance(value, RustAttr):
+        return value
+    else:
+        raise ValueError('the coercion from RustAttr | RustMeta to RustAttr failed')
+
+
+@no_type_check
+def _coerce_union_2_list_union_2_node_attr_variant_meta_none_to_list_node_attr(value: 'Sequence[RustAttr | RustMeta] | None') -> 'Sequence[RustAttr]':
     if value is None:
         return list()
     elif isinstance(value, list):
         new_elements = list()
         for value_element in value:
-            new_elements.append(_coerce_node_attr_to_node_attr(value_element))
+            new_elements.append(_coerce_union_2_node_attr_variant_meta_to_node_attr(value_element))
         return new_elements
     else:
-        raise ValueError('the coercion from Sequence[RustAttr] | None to Sequence[RustAttr] failed')
+        raise ValueError('the coercion from Sequence[RustAttr | RustMeta] | None to Sequence[RustAttr] failed')
 
 
 @no_type_check
@@ -2751,18 +2764,23 @@ def _coerce_union_2_token_mut_keyword_none_to_union_2_token_mut_keyword_none(val
 
 
 @no_type_check
-def _coerce_node_named_pattern_to_node_named_pattern(value: 'RustNamedPattern') -> 'RustNamedPattern':
-    return value
+def _coerce_union_3_node_named_pattern_token_ident_extern_string_to_node_named_pattern(value: 'RustNamedPattern | RustIdent | str') -> 'RustNamedPattern':
+    if isinstance(value, RustIdent) or isinstance(value, str):
+        return RustNamedPattern(_coerce_union_2_token_ident_extern_string_to_token_ident(value))
+    elif isinstance(value, RustNamedPattern):
+        return value
+    else:
+        raise ValueError('the coercion from RustNamedPattern | RustIdent | str to RustNamedPattern failed')
 
 
 @no_type_check
-def _coerce_union_2_node_named_pattern_node_pattern_to_node_pattern(value: 'RustNamedPattern | RustPattern') -> 'RustPattern':
-    if isinstance(value, RustNamedPattern):
-        return RustPattern(_coerce_node_named_pattern_to_node_named_pattern(value))
+def _coerce_union_4_node_named_pattern_node_pattern_token_ident_extern_string_to_node_pattern(value: 'RustNamedPattern | RustPattern | RustIdent | str') -> 'RustPattern':
+    if isinstance(value, RustNamedPattern) or isinstance(value, RustIdent) or isinstance(value, str):
+        return RustPattern(_coerce_union_3_node_named_pattern_token_ident_extern_string_to_node_named_pattern(value))
     elif isinstance(value, RustPattern):
         return value
     else:
-        raise ValueError('the coercion from RustNamedPattern | RustPattern to RustPattern failed')
+        raise ValueError('the coercion from RustNamedPattern | RustPattern | RustIdent | str to RustPattern failed')
 
 
 @no_type_check
@@ -2776,15 +2794,15 @@ def _coerce_union_2_token_at_sign_none_to_token_at_sign(value: 'RustAtSign | Non
 
 
 @no_type_check
-def _coerce_union_4_node_named_pattern_node_pattern_tuple_2_union_2_token_at_sign_none_union_2_node_named_pattern_node_pattern_none_to_union_2_tuple_2_token_at_sign_node_pattern_none(value: 'RustNamedPattern | RustPattern | tuple[RustAtSign | None, RustNamedPattern | RustPattern] | None') -> 'tuple[RustAtSign, RustPattern] | None':
-    if isinstance(value, RustNamedPattern) or isinstance(value, RustPattern):
-        return (RustAtSign(), _coerce_union_2_node_named_pattern_node_pattern_to_node_pattern(value))
+def _coerce_union_6_node_named_pattern_node_pattern_token_ident_tuple_2_union_2_token_at_sign_none_union_4_node_named_pattern_node_pattern_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_at_sign_node_pattern_none(value: 'RustNamedPattern | RustPattern | RustIdent | tuple[RustAtSign | None, RustNamedPattern | RustPattern | RustIdent | str] | None | str') -> 'tuple[RustAtSign, RustPattern] | None':
+    if isinstance(value, RustNamedPattern) or isinstance(value, RustPattern) or isinstance(value, RustIdent) or isinstance(value, str):
+        return (RustAtSign(), _coerce_union_4_node_named_pattern_node_pattern_token_ident_extern_string_to_node_pattern(value))
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_at_sign_none_to_token_at_sign(value[0]), _coerce_union_2_node_named_pattern_node_pattern_to_node_pattern(value[1]))
+        return (_coerce_union_2_token_at_sign_none_to_token_at_sign(value[0]), _coerce_union_4_node_named_pattern_node_pattern_token_ident_extern_string_to_node_pattern(value[1]))
     elif value is None:
         return None
     else:
-        raise ValueError('the coercion from RustNamedPattern | RustPattern | tuple[RustAtSign | None, RustNamedPattern | RustPattern] | None to tuple[RustAtSign, RustPattern] | None failed')
+        raise ValueError('the coercion from RustNamedPattern | RustPattern | RustIdent | tuple[RustAtSign | None, RustNamedPattern | RustPattern | RustIdent | str] | None | str to tuple[RustAtSign, RustPattern] | None failed')
 
 
 @no_type_check
@@ -3088,6 +3106,52 @@ def _coerce_union_3_list_variant_type_param_bound_required_list_tuple_2_variant_
 
 
 @no_type_check
+def _coerce_union_3_list_variant_generic_param_list_tuple_2_variant_generic_param_union_2_token_comma_none_punct_variant_generic_param_token_comma_to_punct_variant_generic_param_token_comma(value: 'Sequence[RustGenericParam] | Sequence[tuple[RustGenericParam, RustComma | None]] | Punctuated[RustGenericParam, RustComma]') -> 'Punctuated[RustGenericParam, RustComma]':
+    new_value = Punctuated()
+    iterator = iter(value)
+    try:
+        first_element = next(iterator)
+        while True:
+            try:
+                second_element = next(iterator)
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    element_separator = first_element[1]
+                    assert(element_separator is not None)
+                else:
+                    element_value = first_element
+                    element_separator = RustComma()
+                new_element_value = _coerce_variant_generic_param_to_variant_generic_param(element_value)
+                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_value.append(new_element_value, new_element_separator)
+                first_element = second_element
+            except StopIteration:
+                if isinstance(first_element, tuple):
+                    element_value = first_element[0]
+                    assert(first_element[1] is None)
+                else:
+                    element_value = first_element
+                new_element_value = _coerce_variant_generic_param_to_variant_generic_param(element_value)
+                new_value.append(new_element_value)
+                break
+    except StopIteration:
+        pass
+    return new_value
+
+
+@no_type_check
+def _coerce_union_5_tuple_3_union_2_token_less_than_none_union_4_list_variant_generic_param_list_tuple_2_variant_generic_param_union_2_token_comma_none_punct_variant_generic_param_token_comma_none_union_2_token_greater_than_none_list_variant_generic_param_list_tuple_2_variant_generic_param_union_2_token_comma_none_punct_variant_generic_param_token_comma_none_to_union_2_tuple_3_token_less_than_punct_variant_generic_param_token_comma_token_greater_than_none(value: 'tuple[RustLessThan | None, Sequence[RustGenericParam] | Sequence[tuple[RustGenericParam, RustComma | None]] | Punctuated[RustGenericParam, RustComma] | None, RustGreaterThan | None] | Sequence[RustGenericParam] | Sequence[tuple[RustGenericParam, RustComma | None]] | Punctuated[RustGenericParam, RustComma] | None') -> 'tuple[RustLessThan, Punctuated[RustGenericParam, RustComma], RustGreaterThan] | None':
+    if isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
+        return (RustLessThan(), _coerce_union_3_list_variant_generic_param_list_tuple_2_variant_generic_param_union_2_token_comma_none_punct_variant_generic_param_token_comma_to_punct_variant_generic_param_token_comma(value), RustGreaterThan())
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_less_than_none_to_token_less_than(value[0]), _coerce_union_4_list_variant_generic_param_list_tuple_2_variant_generic_param_union_2_token_comma_none_punct_variant_generic_param_token_comma_none_to_punct_variant_generic_param_token_comma(value[1]), _coerce_union_2_token_greater_than_none_to_token_greater_than(value[2]))
+    elif value is None:
+        return None
+    else:
+        raise ValueError('the coercion from tuple[RustLessThan | None, Sequence[RustGenericParam] | Sequence[tuple[RustGenericParam, RustComma | None]] | Punctuated[RustGenericParam, RustComma] | None, RustGreaterThan | None] | Sequence[RustGenericParam] | Sequence[tuple[RustGenericParam, RustComma | None]] | Punctuated[RustGenericParam, RustComma] | None to tuple[RustLessThan, Punctuated[RustGenericParam, RustComma], RustGreaterThan] | None failed')
+
+
+@no_type_check
 def _coerce_variant_where_predicate_to_variant_where_predicate(value: 'RustWherePredicate') -> 'RustWherePredicate':
     return value
 
@@ -3201,13 +3265,13 @@ def _coerce_union_2_token_fn_keyword_none_to_token_fn_keyword(value: 'RustFnKeyw
 
 
 @no_type_check
-def _coerce_union_6_node_generics_tuple_2_union_2_token_where_keyword_none_union_3_list_variant_where_predicate_required_list_tuple_2_variant_where_predicate_union_2_token_comma_none_required_punct_variant_where_predicate_token_comma_required_list_variant_where_predicate_required_list_tuple_2_variant_where_predicate_union_2_token_comma_none_required_punct_variant_where_predicate_token_comma_required_none_to_node_generics(value: 'RustGenerics | tuple[RustWhereKeyword | None, Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma]] | Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma] | None') -> 'RustGenerics':
-    if isinstance(value, tuple) or isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated) or (value is None):
-        return RustGenerics(_coerce_union_5_tuple_2_union_2_token_where_keyword_none_union_3_list_variant_where_predicate_required_list_tuple_2_variant_where_predicate_union_2_token_comma_none_required_punct_variant_where_predicate_token_comma_required_list_variant_where_predicate_required_list_tuple_2_variant_where_predicate_union_2_token_comma_none_required_punct_variant_where_predicate_token_comma_required_none_to_union_2_tuple_2_token_where_keyword_punct_variant_where_predicate_token_comma_required_none(value))
+def _coerce_union_2_node_generics_none_to_node_generics(value: 'RustGenerics | None') -> 'RustGenerics':
+    if value is None:
+        return RustGenerics()
     elif isinstance(value, RustGenerics):
         return value
     else:
-        raise ValueError('the coercion from RustGenerics | tuple[RustWhereKeyword | None, Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma]] | Sequence[RustWherePredicate] | Sequence[tuple[RustWherePredicate, RustComma | None]] | Punctuated[RustWherePredicate, RustComma] | None to RustGenerics failed')
+        raise ValueError('the coercion from RustGenerics | None to RustGenerics failed')
 
 
 @no_type_check
@@ -3413,11 +3477,6 @@ def _coerce_union_2_token_exclamation_mark_none_to_union_2_token_exclamation_mar
 
 
 @no_type_check
-def _coerce_variant_meta_to_variant_meta(value: 'RustMeta') -> 'RustMeta':
-    return value
-
-
-@no_type_check
 def _coerce_union_2_token_struct_keyword_none_to_token_struct_keyword(value: 'RustStructKeyword | None') -> 'RustStructKeyword':
     if value is None:
         return RustStructKeyword()
@@ -3545,13 +3604,15 @@ def _coerce_union_2_token_impl_keyword_none_to_token_impl_keyword(value: 'RustIm
 
 
 @no_type_check
-def _coerce_union_2_tuple_3_node_path_union_2_token_for_keyword_none_variant_type_expr_none_to_union_2_tuple_3_node_path_token_for_keyword_variant_type_expr_none(value: 'tuple[RustPath, RustForKeyword | None, RustTypeExpr] | None') -> 'tuple[RustPath, RustForKeyword, RustTypeExpr] | None':
-    if isinstance(value, tuple):
-        return (_coerce_node_path_to_node_path(value[0]), _coerce_union_2_token_for_keyword_none_to_token_for_keyword(value[1]), _coerce_variant_type_expr_to_variant_type_expr(value[2]))
+def _coerce_union_6_node_path_tuple_3_union_2_token_exclamation_mark_none_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_union_2_token_for_keyword_none_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_none_to_union_2_tuple_3_union_2_token_exclamation_mark_none_node_path_token_for_keyword_none(value: 'RustPath | tuple[RustExclamationMark | None, RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon], RustForKeyword | None] | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None') -> 'tuple[RustExclamationMark | None, RustPath, RustForKeyword] | None':
+    if isinstance(value, RustPath) or isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
+        return (None, _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(value), RustForKeyword())
+    elif isinstance(value, tuple):
+        return (_coerce_union_2_token_exclamation_mark_none_to_union_2_token_exclamation_mark_none(value[0]), _coerce_union_4_node_path_list_tuple_2_union_3_node_path_segment_token_ident_extern_string_union_2_token_colon_colon_none_required_list_union_3_node_path_segment_token_ident_extern_string_required_punct_union_3_node_path_segment_token_ident_extern_string_token_colon_colon_required_to_node_path(value[1]), _coerce_union_2_token_for_keyword_none_to_token_for_keyword(value[2]))
     elif value is None:
         return None
     else:
-        raise ValueError('the coercion from tuple[RustPath, RustForKeyword | None, RustTypeExpr] | None to tuple[RustPath, RustForKeyword, RustTypeExpr] | None failed')
+        raise ValueError('the coercion from RustPath | tuple[RustExclamationMark | None, RustPath | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon], RustForKeyword | None] | Sequence[tuple[RustPathSegment | RustIdent | str, RustColonColon | None]] | Sequence[RustPathSegment | RustIdent | str] | Punctuated[RustPathSegment | RustIdent | str, RustColonColon] | None to tuple[RustExclamationMark | None, RustPath, RustForKeyword] | None failed')
 
 
 @no_type_check
