@@ -105,7 +105,7 @@ def _do_dump(args) -> int:
 
 def main() -> int:
 
-    arg_parser = argparse.ArgumentParser()
+    arg_parser = argparse.ArgumentParser(prog='mage')
 
     subparsers = arg_parser.add_subparsers()
 
