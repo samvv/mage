@@ -57,7 +57,7 @@ def gen_shallow_instance_check(target: Expr, ty: Type) -> Expr:
     if isinstance(ty, UnionType):
         return make_or(gen_shallow_instance_check(target, el_ty) for el_ty in ty.types)
     if isinstance(ty, NoneType):
-        return IsNoneExpr(target)
+        return CallExpr(PathExpr(name_fn_is_none), [ target ])
     assert_never(ty)
 
 def do_types_shallow_overlap(left: Type, right: Type) -> bool:
