@@ -1,8 +1,7 @@
 
 from collections.abc import Iterator
 from typing import Generator, assert_never
-from magelang.logging import warn
-from magelang.util import is_iterator, to_camel_case, unreachable
+from magelang.util import is_iterator, panic, to_camel_case, todo
 from magelang.ir.ast import *
 from magelang.ir.constants import *
 from magelang.lang.python.cst import *
@@ -17,6 +16,16 @@ def _make_infix(it: Iterator[PyExpr], op: PyInfixOp, init: PyExpr) -> PyExpr:
     for expr in it:
         out = PyInfixExpr(left=out, op=op, right=expr)
     return out
+
+# Expressions that by now should only appear as statements
+type StmtExpr = BreakExpr | AssignExpr | ForExpr | LoopExpr | RetExpr
+
+def is_stmt_expr(expr: Expr) -> TypeGuard[StmtExpr]:
+    return isinstance(expr, BreakExpr) \
+        or isinstance(expr, AssignExpr) \
+        or isinstance(expr, ForExpr) \
+        or isinstance(expr, LoopExpr) \
+        or isinstance(expr, RetExpr)
 
 def ir_to_python(node: Program) -> PyModule:
 
@@ -63,7 +72,6 @@ def ir_to_python(node: Program) -> PyModule:
             alternatives.append(PyElifCase(test=test, body=body))
         return [ PyIfStmt(first=first, alternatives=alternatives, last=last) ]
 
-
     def visit_ir_expr(expr: Expr) -> PyExpr:
         if isinstance(expr, PathExpr):
             return PyNamedExpr(to_var_name(expr.name))
@@ -82,6 +90,8 @@ def ir_to_python(node: Program) -> PyModule:
                 args=list(visit_ir_expr(arg) for arg in expr.args)
             )
         if isinstance(expr, IsExpr):
+            if expr.name == name_variant_none: # FIXME
+                return PyInfixExpr(visit_ir_expr(expr.expr), PyIsKeyword(), PyNamedExpr('None'))
             return PyCallExpr(PyNamedExpr('isinstance'), args=[ visit_ir_expr(expr.expr), PyNamedExpr(to_type_name(expr.name)) ])
         if isinstance(expr, TupleExpr):
             return PyTupleExpr(elements=list(visit_ir_expr(element) for element in expr.elements))
@@ -89,7 +99,7 @@ def ir_to_python(node: Program) -> PyModule:
             return PySubscriptExpr(visit_ir_expr(expr.expr), [ PyConstExpr(expr.index) ])
         if isinstance(expr, NoneExpr):
             return PyNamedExpr('None')
-        assert_never(expr)
+        panic(f"Statement expressions such as {expr} should not occur here")
 
     def visit_ir_type(ty: Type) -> PyExpr:
         if isinstance(ty, AnyType):
@@ -141,7 +151,7 @@ def ir_to_python(node: Program) -> PyModule:
             body=body,
         )
 
-    def visit_ir_elements(elements: Sequence[Node]) -> list[PyStmt]:
+    def visit_ir_elements(elements: Sequence[ProgramElement | BodyElement]) -> list[PyStmt]:
         out = list[PyStmt]()
         for element in elements:
             if isinstance(element, StructDecl):
@@ -166,16 +176,20 @@ def ir_to_python(node: Program) -> PyModule:
                         return_type=visit_ir_type(element.returns),
                         body=visit_ir_elements(element.body),
                     ))
+            elif isinstance(element, VarDecl):
+                todo()
             elif isinstance(element, RetExpr):
                 out.append(PyRetStmt(expr=element.value and visit_ir_expr(element.value)))
             elif isinstance(element, CondExpr):
                 out.extend(make_cond((case.test and visit_ir_expr(case.test), visit_ir_elements(case.body)) for case in element.cases))
-            elif isinstance(element, FieldAssign):
+            elif isinstance(element, AssignExpr):
+                out.append(PyAssignStmt(PyNamedPattern(element.name), value=visit_ir_expr(element)))
+            elif isinstance(element, FieldAssignExpr):
                 out.append(PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), to_var_name(element.name)), value=visit_ir_expr(element.expr)))
-            elif is_expr(element):
-                out.append(PyExprStmt(visit_ir_expr(element)))
+            elif isinstance(element, BreakExpr):
+                out.append(PyBreakStmt())
             else:
-                unreachable()
+                out.append(PyExprStmt(visit_ir_expr(element)))
         return out
 
     return PyModule(stmts=visit_ir_elements(node.elements))

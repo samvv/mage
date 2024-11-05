@@ -87,7 +87,7 @@ class TupleIndexExpr(ExprBase):
     index: int
 
 @dataclass
-class FieldAssign(ExprBase):
+class FieldAssignExpr(ExprBase):
     name: str
     expr: Expr
 

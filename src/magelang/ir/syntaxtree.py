@@ -571,11 +571,11 @@ def gen_syntax_tree(
             ]
             new_body: Body = []
             fields.append(Field(name_field_span, PathType(name_type_span)))
-            new_body.append(FieldAssign(name_field_span, PathExpr(name_param_span)))
+            new_body.append(FieldAssignExpr(name_field_span, PathExpr(name_param_span)))
             if rule.expr is not None and not grammar.is_static_token_rule(rule):
                 fields.append(Field(name_param_value, mage_type_to_ir_type(rule.type_name)))
                 new_params.append(Param(name_param_value, mage_type_to_ir_type(rule.type_name)))
-                new_body.append(FieldAssign(name_field_value, PathExpr(name_param_value)))
+                new_body.append(FieldAssignExpr(name_field_value, PathExpr(name_param_value)))
             elements.append(StructDecl(
                 name=rename(rule.name),
                 fields=fields
@@ -602,7 +602,7 @@ def gen_syntax_tree(
                 fields=list(Field(spec.name, spec.ty) for spec in specs),
             ))
             new_params = list(Param(spec.name, spec.param_ty) for spec in specs)
-            new_body: Body = list(FieldAssign(spec.name, spec.coerced) for spec in specs)
+            new_body: Body = list(FieldAssignExpr(spec.name, spec.coerced) for spec in specs)
             elements.append(FuncDecl(
                 name=name_fn_constructor,
                 self=rename(rule.name),
