@@ -9,7 +9,7 @@ from .scanner import Scanner
 from .parser import Parser
 from .passes import *
 from .emitter import emit
-# from .generator import generate, get_generator_languages
+from .generator import generate
 from .ir import generate_ir
 from .lang.python import emit as py_emit
 
@@ -30,6 +30,7 @@ def _run_checks(grammar: MageGrammar) -> MageGrammar:
 
 def _do_generate(args) -> int:
 
+    engine = args.engine
     filename = args.file[0]
     lang = args.lang
     opt = not args.no_opt
@@ -56,27 +57,51 @@ def _do_generate(args) -> int:
 
     # prefix = prefix + '_' if prefix else ''
 
-    for fname, code in generate_ir(
-        grammar,
-        prefix=prefix,
-        cst_parent_pointers=cst_parent_pointers,
-        debug=debug,
-        enable_emitter=enable_emitter,
-        enable_cst=enable_cst,
-        enable_ast=enable_ast,
-        enable_visitor=enable_visitor,
-        enable_lexer=enable_lexer
-    ):
-        if lang == 'python':
-            text = py_emit(pipe(code, ir_to_python))
-        elif lang == 'rust':
-            text = rust_emit(pipe(code, ir_to_rust))
-        else:
-            unreachable()
-        out_path = dest_dir / fname
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, 'w') as f:
-            f.write(text)
+    if engine == 'old':
+
+        for fname, text in generate(
+            grammar,
+            lang,
+            prefix=prefix,
+            cst_parent_pointers=cst_parent_pointers,
+            debug=debug,
+            enable_emitter=enable_emitter,
+            enable_cst=enable_cst,
+            enable_ast=enable_ast,
+            enable_visitor=enable_visitor,
+            enable_lexer=enable_lexer
+        ):
+            out_path = dest_dir / fname
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(out_path, 'w') as f:
+                f.write(text)
+
+    elif engine == 'next':
+
+        for fname, code in generate_ir(
+            grammar,
+            prefix=prefix,
+            cst_parent_pointers=cst_parent_pointers,
+            debug=debug,
+            enable_emitter=enable_emitter,
+            enable_cst=enable_cst,
+            enable_ast=enable_ast,
+            enable_visitor=enable_visitor,
+            enable_lexer=enable_lexer
+        ):
+            if lang == 'python':
+                text = py_emit(pipe(code, ir_to_python))
+            elif lang == 'rust':
+                text = rust_emit(pipe(code, ir_to_rust))
+            else:
+                unreachable()
+            out_path = dest_dir / fname
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(out_path, 'w') as f:
+                f.write(text)
+
+    else:
+        panic("Unrecognised engine used")
 
     return 0
 
@@ -124,7 +149,8 @@ def main() -> int:
  
     generate_parser.add_argument('lang', choices=supported_languages, help='The name of the template to use')
     generate_parser.add_argument('file', nargs=1, help='A path to a grammar file')
-    generate_parser.add_argument('--debug', action=argparse.BooleanOptionalAction, help='Generate extra checks that may affect performance')
+    generate_parser.add_argument('--engine', default='old', help='Which engine to use')
+    generate_parser.add_argument('--debug', choices=[ 'old', 'next' ], action=argparse.BooleanOptionalAction, help='Generate extra checks that may affect performance')
     generate_parser.add_argument('--skip-checks', action=argparse.BooleanOptionalAction, help='Skip all sanity checks for the given grammar')
     generate_parser.add_argument('--no-opt', action=argparse.BooleanOptionalAction, help='Disable any optimisations')
     generate_parser.add_argument('--feat-all', action=argparse.BooleanOptionalAction, help='Enable all output features (off by default)')
