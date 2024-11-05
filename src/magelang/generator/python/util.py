@@ -10,7 +10,7 @@ from magelang.util import to_camel_case, is_iterator
 type Case = tuple[PyExpr | None, Sequence[PyStmt]]
 
 def namespaced(name: str, prefix: str) -> str:
-    return prefix + name if prefix else name
+    return prefix  + '_' + name if prefix else name
 
 def to_class_name(name: str, prefix: str) -> str:
     return to_camel_case(namespaced(name, prefix))

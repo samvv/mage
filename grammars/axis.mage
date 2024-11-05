@@ -1,0 +1,153 @@
+# The Axis Programming Language
+#
+# This grammar defines a generic re-targettable language, to be used as an
+# intermediatary language for code generation.
+
+# Tokens
+
+pub extern token name -> String
+
+pub extern token integer -> Integer
+
+pub extern token string -> String
+
+pub boolean
+  = 'true'
+  | 'false'
+
+# Shared parse rules
+
+block
+  = '{' elements:(body_element ';')* last:body_element? '}'
+
+# Patterns
+
+pub named_patt
+  = name
+
+pub tuple_patt
+  = '(' elements:(patt % ',') ')'
+
+pub variant_patt
+  = name '(' members:(type_expr % ',') ')'
+
+pub patt
+  = named_patt
+  | variant_patt
+
+# Expressions
+
+pub assign_expr
+  = patt ':=' expr
+
+pub block_expr
+  = block
+
+pub break_expr
+  = 'break' expr?
+
+pub call_expr
+  = expr '(' args:(expr % ',') ')'
+
+pub cond_case
+  = test:expr '=>' expr
+
+pub cond_expr
+  = 'cond' '{' cond_case+ '}'
+
+pub lit_expr
+  = literal:(string | integer | boolean)
+
+pub loop_expr
+  = 'loop' block
+
+pub new_expr
+  = 'new' name '(' args:(expr % ',') ')'
+
+pub match_arm
+  = patt '=>' expr
+
+# TDOO make the last ',' optional
+pub match_expr
+   = 'match' expr '{' arms:(match_arm  ',')+ '}'
+
+pub path_expr
+  = name
+
+pub ref_expr
+  = '&' expr
+
+pub ret_expr
+  = 'return' expr?
+
+pub expr
+  = assign_expr
+  | block_expr
+  | break_expr
+  | call_expr
+  | lit_expr
+  | loop_expr
+  | path_expr
+  | ref_expr
+  | ret_expr
+
+# Type expressions
+
+pub array_type_expr
+  = '[' type_expr ';' expr ']'
+
+pub path_type_expr
+  = name
+
+pub ref_type_expr
+  = '&' type_expr
+
+pub type_expr
+  = path_type_expr
+  | ref_type_expr
+  | array_type_expr
+
+# Declarations
+
+pub field
+  = name ':' type_expr
+
+pub struct_decl
+  = 'struct' name '{' (field % ',') '}'
+
+pub variant
+  = name '(' type_expr ')'
+
+pub enum_decl
+  = 'enum' name '{' (variant % ',') '}'
+
+pub body_element
+  = expr
+
+pub var_decl
+  = 'let' 'mut'? patt ':' type_expr init:('=' expr)?
+
+pub func_decl
+  = name self:('for' type_expr)? '{' body:body_element* '}'
+
+base_element
+  = enum_decl
+  | struct_decl
+  | var_decl
+  | func_decl
+  | module_decl
+
+pub module_element
+  = base_element
+
+pub module_decl
+  = 'mod' name '{' elements:module_element* '}'
+
+# Top-level parsing rules
+
+pub source_element
+  = base_element
+
+pub source_file
+  = elements:source_element*
+
