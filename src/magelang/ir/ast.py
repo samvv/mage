@@ -111,7 +111,7 @@ class ForExpr(ExprBase):
     body: Body
 
 @dataclass
-class ListExpr:
+class ListExpr(ExprBase):
     elements: Sequence[Expr]
 
 @dataclass
