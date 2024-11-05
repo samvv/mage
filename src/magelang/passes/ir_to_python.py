@@ -159,8 +159,13 @@ def ir_to_python(node: Program) -> PyModule:
                     expr=_make_infix((visit_ir_type(variant.ty) for variant in element.variants), PyVerticalBar(), make_never_type())
                 ))
             elif isinstance(element, FuncDecl):
-                if element.self is not None:
-                    pass # TODO
+                if element.self is None:
+                    out.append(PyFuncDef(
+                        name=to_var_name(element.name),
+                        params=list(PyNamedParam(PyNamedPattern(param.name), annotation=visit_ir_type(param.ty)) for param in element.params),
+                        return_type=visit_ir_type(element.returns),
+                        body=visit_ir_elements(element.body),
+                    ))
             elif isinstance(element, RetExpr):
                 out.append(PyRetStmt(expr=element.value and visit_ir_expr(element.value)))
             elif isinstance(element, CondExpr):
