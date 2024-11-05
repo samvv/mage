@@ -1,6 +1,5 @@
 
 from dataclasses import dataclass
-from re import PatternError
 from typing import Any, NewType, Sequence, TypeGuard
 
 type BodyElement = Expr | FuncDecl | VarDecl
