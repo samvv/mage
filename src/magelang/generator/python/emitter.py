@@ -211,7 +211,7 @@ def generate_emitter(
             if rule.expr is None:
                 # TODO cover this case
                 continue
-            if grammar.is_static_token_rule(rule.expr):
+            if grammar.is_static_token_rule(rule):
                 expr = PyConstExpr(static_expr_to_str(rule.expr))
             else:
                 expr = PyCallExpr(PyNamedExpr('str'), args=[ PyAttrExpr(PyNamedExpr(token_param_name), 'value') ])
