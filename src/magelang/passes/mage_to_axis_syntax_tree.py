@@ -3,6 +3,7 @@ from typing import Iterable, Iterator
 
 from magelang.ast import *
 from magelang.analysis import can_be_empty
+from magelang.manager import Context
 from magelang.ir.ast import *
 from magelang.ir.constants import *
 from magelang.util import NameGenerator, pipe, plural, to_snake_case, unreachable
@@ -110,10 +111,12 @@ def mangle_type(ty: Type) -> str:
         return 'none'
     assert_never(ty)
 
-def gen_syntax_tree(
+def mage_to_axis_syntax_tree(
     grammar: MageGrammar,
-    prefix: str = ''
+    ctx: Context,
 ) -> Program:
+
+    prefix = ctx.get_option('prefix')
 
     grammar = pipe(grammar, remove_hidden, simplify)
     elements = list[ProgramElement]()

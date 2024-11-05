@@ -9,9 +9,9 @@ from magelang.ast import MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar,
 from magelang.treespec import Field, get_fields, grammar_to_specs, infer_type, is_unit_type
 from magelang.lang.python.cst import *
 from magelang.util import unreachable
-from .util import Case, build_cond, gen_shallow_test, namespaced, to_class_name, build_isinstance
+from magelang.generator.python.util import Case, build_cond, gen_shallow_test, namespaced, to_class_name, build_isinstance
 
-def generate_emitter(
+def mage_to_python_emitter(
     grammar: MageGrammar,
     prefix = '',
     include_hidden: bool = False,

@@ -1,16 +1,21 @@
 
 from typing import assert_never
 
-from .util import build_is_none, build_or, build_union, gen_deep_test, gen_initializers, gen_py_type, namespaced, rule_type_to_py_type, to_class_name, quote_py_type
+from magelang.generator.python.util import build_is_none, build_or, build_union, gen_deep_test, gen_initializers, gen_py_type, namespaced, rule_type_to_py_type, to_class_name, quote_py_type
 from magelang.treespec import *
 from magelang.lang.python.cst import *
 from magelang.lang.python.emitter import emit
+from magelang.manager import Context
 
-def generate_tree(
-    specs: Specs,
-    prefix='',
-    gen_parent_pointers=False
+def mage_to_python_cst(
+    grammar: MageGrammar,
+    ctx: Context,
 ) -> PyModule:
+
+    specs = grammar_to_specs(grammar)
+
+    prefix= ctx.get_option('prefix')
+    gen_parent_pointers = ctx.get_option('cst_parent_pointers')
 
     base_syntax_class_name = '_' + to_class_name('base_syntax', prefix)
     base_node_class_name = '_' + to_class_name('base_node', prefix)
