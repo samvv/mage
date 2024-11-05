@@ -32,11 +32,17 @@ def to_snake_case(name: str) -> str:
         s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
+
 def todo() -> Never:
     raise NotImplementedError(f'This functionality has yet to be implemented.')
 
+
+def panic(message: str) -> Never:
+    raise RuntimeError(message)
+
+
 def unreachable() -> Never:
-    raise RuntimeError(f'Some code was executed that was not meant to be executed. This is a bug.')
+    panic(f'Some code was executed that was not meant to be executed. This is a bug.')
 
 
 _T = TypeVar('_T')
