@@ -584,6 +584,7 @@ def gen_syntax_tree(
                 name=name_fn_constructor,
                 self=rename(rule.name),
                 params=new_params,
+                returns=make_unit_type(),
                 body=new_body
             ))
         elif grammar.is_variant_rule(rule):
@@ -606,6 +607,7 @@ def gen_syntax_tree(
                 name=name_fn_constructor,
                 self=rename(rule.name),
                 params=new_params,
+                returns=make_unit_type(),
                 body=new_body,
             ))
         elif rule == grammar.skip_rule:

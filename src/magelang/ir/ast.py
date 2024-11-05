@@ -173,6 +173,7 @@ PUBLIC = VisFlags(1)
 class FuncDecl:
     name: str
     params: Sequence[Param]
+    returns: Type
     body: Body
     self: str | None = None
     flags: VisFlags = PRIVATE
