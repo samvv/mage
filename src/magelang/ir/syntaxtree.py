@@ -18,13 +18,13 @@ def mage_type_to_ir_type(name: str) -> Type:
 def make_and(elements: Iterator[Expr]) -> Expr:
     out = ConstExpr(True)
     for element in reversed(list(elements)):
-        out = AndExpr(element, out)
+        out = CallExpr(PathExpr(name_fn_and), [ element, out ])
     return out
 
 def make_or(elements: Iterator[Expr]) -> Expr:
     out = ConstExpr(True)
     for element in reversed(list(elements)):
-        out = OrExpr(element, out)
+        out = CallExpr(PathExpr(name_fn_or), [ element, out ])
     return out
 
 def make_optional_type(ty: Type) -> Type:
