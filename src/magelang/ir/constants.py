@@ -19,6 +19,8 @@ name_fn_iter = 'iter'
 name_fn_next = 'next'
 name_fn_punct_append = 'punct_append'
 name_fn_punct_append_final = 'punct_append_final'
+name_fn_and = 'and'
+name_fn_or = 'or'
 
 name_variant_some = 'some'
 name_variant_none = 'none'

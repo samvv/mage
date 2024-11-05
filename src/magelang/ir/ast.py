@@ -11,9 +11,9 @@ type Body = Sequence[BodyElement]
 class ExprBase:
     pass
 
-type Expr = BreakExpr | CondExpr | ConstExpr | CallExpr | OrExpr | PathExpr | TupleExpr | TupleIndexExpr | RetExpr | NewExpr | ForExpr | AssignExpr | LoopExpr | MatchExpr | BlockExpr | SpecialExpr
+type Expr = BreakExpr | CondExpr | ConstExpr | CallExpr | PathExpr | TupleExpr | TupleIndexExpr | RetExpr | NewExpr | ForExpr | AssignExpr | LoopExpr | MatchExpr | BlockExpr | SpecialExpr
 
-type SpecialExpr = AndExpr | IsExpr | NoneExpr | IsNoneExpr | FieldAssign 
+type SpecialExpr = IsExpr | NoneExpr | IsNoneExpr | FieldAssignExpr
 
 def is_expr(value: Any) -> TypeGuard[Expr]:
     return isinstance(value, ExprBase)
@@ -86,16 +86,6 @@ class TupleExpr(ExprBase):
 class TupleIndexExpr(ExprBase):
     expr: Expr
     index: int
-
-@dataclass
-class AndExpr(ExprBase):
-    left: Expr
-    right: Expr
-
-@dataclass
-class OrExpr(ExprBase):
-    left: Expr
-    right: Expr
 
 @dataclass
 class FieldAssign(ExprBase):

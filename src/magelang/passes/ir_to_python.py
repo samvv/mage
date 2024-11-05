@@ -67,13 +67,16 @@ def ir_to_python(node: Program) -> PyModule:
     def visit_ir_expr(expr: Expr) -> PyExpr:
         if isinstance(expr, PathExpr):
             return PyNamedExpr(to_var_name(expr.name))
-        if isinstance(expr, AndExpr):
-            return PyInfixExpr(visit_ir_expr(expr.left), PyAndKeyword(), visit_ir_expr(expr.right))
-        if isinstance(expr, OrExpr):
-            return PyInfixExpr(visit_ir_expr(expr.left), PyOrKeyword(), visit_ir_expr(expr.right))
         if isinstance(expr, ConstExpr):
             return PyConstExpr(expr.value)
         if isinstance(expr, CallExpr):
+            if isinstance(expr.func, PathExpr):
+                if expr.func.name == name_fn_and:
+                    assert(expr.args is not None)
+                    return PyInfixExpr(visit_ir_expr(expr.args[0]), PyAndKeyword(), visit_ir_expr(expr.args[1]))
+                if expr.func.name == name_fn_or:
+                    assert(expr.args is not None)
+                    return PyInfixExpr(visit_ir_expr(expr.args[0]), PyOrKeyword(), visit_ir_expr(expr.args[1]))
             return PyCallExpr(
                 visit_ir_expr(expr.func),
                 args=list(visit_ir_expr(arg) for arg in expr.args)
