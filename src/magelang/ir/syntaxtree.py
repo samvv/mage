@@ -239,6 +239,7 @@ def gen_syntax_tree(
 
         def gen_coerce_call(expr: MageExpr, value: Expr, allow_none: bool) -> tuple[Type, Expr]:
 
+            ty = infer_type(expr)
             cases = list[CondCase]()
             types = list[Type]()
             for coerce_ty, coerce_body in gen_coerce_fn_body(expr, allow_none):
@@ -247,7 +248,15 @@ def gen_syntax_tree(
 
             coerced_ty = UnionType(types)
 
-            fn_name = f'coerce_{mangle_type(coerced_ty)}_to_{mangle_type(infer_type(expr))}'
+            fn_name = f'coerce_{mangle_type(coerced_ty)}_to_{mangle_type(ty)}'
+
+            if fn_name not in defs:
+                defs[fn_name] = FuncDecl(
+                    name=fn_name,
+                    params=[ Param(value_param_name, coerced_ty) ],
+                    returns=ty,
+                    body=[ CondExpr(cases) ]
+                )
 
             return coerced_ty, CallExpr(PathExpr(fn_name), [ value ])
 
@@ -603,5 +612,7 @@ def gen_syntax_tree(
             pass
         else:
             unreachable()
+
+    elements.extend(defs.values())
 
     return Program(elements)
