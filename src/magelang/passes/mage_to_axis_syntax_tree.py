@@ -245,7 +245,7 @@ class mage_to_axis_syntax_tree(PassBase):
                 cases = list[CondCase]()
                 types = list[Type]()
                 for coerce_ty, coerce_body in gen_coerce_fn_body(expr, allow_none):
-                    cases.append(CondCase(gen_shallow_instance_check(PathExpr(value_param_name), coerce_ty), coerce_body))
+                    cases.append(CondCase(gen_shallow_instance_check(PathExpr(value_param_name), coerce_ty), BlockExpr(coerce_body)))
                     types.append(coerce_ty)
 
                 coerced_ty = UnionType(types)
@@ -380,9 +380,9 @@ class mage_to_axis_syntax_tree(PassBase):
                             CondCase(
                                 # FIXME does not handle nested tuples
                                 IsExpr(PathExpr(first_element_name), name_type_tuple),
-                                tuple_then,
+                                BlockExpr(tuple_then),
                             ),
-                            CondCase(None, plain_then),
+                            CondCase(None, BlockExpr(plain_then)),
                         ])
 
                     yield coerced_type, [
