@@ -2,10 +2,8 @@
 import argparse
 from pathlib import Path
 
-from magelang.manager import Context, apply, compose, each_value, distribute, identity, pipeline
-
+from .manager import Context, apply, compose, each_value, distribute, identity, pipeline
 from .logging import error
-from .util import pipe
 from .ast import *
 from .scanner import Scanner
 from .parser import Parser

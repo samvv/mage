@@ -13,7 +13,7 @@ from magelang.generator.python.util import Case, build_cond, gen_shallow_test, n
 
 def mage_to_python_emitter(
     grammar: MageGrammar,
-    prefix = '',
+    prefix: str = '',
     include_hidden: bool = False,
 ) -> PyModule:
 

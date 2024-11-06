@@ -1,9 +1,10 @@
 
 import inspect
 from abc import abstractmethod
-from typing import Any, Callable, Protocol, TypeVar, overload
+from typing import Any, Callable, Generic, Protocol, TypeVar, overload
+from warnings import warn
 
-from magelang.util import panic
+from magelang.util import Option, Some, panic
 
 _X = TypeVar('_X', contravariant=True)
 _Y = TypeVar('_Y', covariant=True)
@@ -18,8 +19,8 @@ class Context:
     def __init__(self, opts: dict[str, Any]) -> None:
         self.opts = opts
 
-    def get_option(self, name: str) -> Any:
-        return self.opts[name]
+    def get_option(self, name: str, default: Any = None) -> Any:
+        return self.opts.get(name, default)
 
 _K = TypeVar('_K')
 _K1 = TypeVar('_K1')
@@ -29,20 +30,34 @@ _R = TypeVar('_R')
 _S = TypeVar('_S')
 
 def apply(ctx: Context, input: _T, pass_: Pass[_T, _R]) -> _R:
-    def get_injectable(ty) -> Any:
+    def get_injectable(name: str, ty: type | None, default: Option[Any]) -> Any:
         if ty is Context:
             return ctx
+        if ty is bool or ty is str or ty is float or ty is int:
+            return ctx.get_option(name, default)
         else:
-            panic("Trying to inject an unknown type")
+            panic(f"Trying to inject an unknown type {ty} in {pass_}")
     args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations = inspect.getfullargspec(pass_)
     assert(varargs is None)
     assert(varkw is None)
     out_args = []
-    for arg in args[1:]:
-        if arg in annotations:
-            ty = annotations[arg]
-            out_args.append(get_injectable(ty))
+    for i, name in enumerate(args[1:]):
+        if name in annotations:
+            ty = annotations.get(name)
+            default = None
+            if defaults is not None:
+                k = i-(len(args)-len(defaults))
+                if k >= 0:
+                    default = Some(defaults[k])
+            out_args.append(get_injectable(name, ty, default))
     out_kwargs = {}
+    for name in kwonlyargs:
+        if name in annotations:
+            ty = annotations.get(name)
+            default = None
+            if kwonlydefaults is not None and name in kwonlydefaults:
+                default = Some(kwonlydefaults[name])
+            out_kwargs[name] = get_injectable(name, ty, default)
     return pass_(input, *out_args, **out_kwargs)
 
 def distribute(map: dict[_K, Pass[_T, _R]]) -> Pass[_T, dict[_K, _R]]:
@@ -180,7 +195,7 @@ def pipeline(p0: Pass[_T0, _T1], p1: Pass[_T1, _T2], p2: Pass[_T2, _T3], p3: Pas
 
 def pipeline(first: Pass, *passes: Pass) -> Pass:
     out = first
-    for pass_ in reversed(passes):
+    for pass_ in passes:
         out = compose(out, pass_)
     return out
 

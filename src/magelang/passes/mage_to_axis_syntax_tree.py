@@ -6,7 +6,7 @@ from magelang.analysis import can_be_empty
 from magelang.manager import Context
 from magelang.ir.ast import *
 from magelang.ir.constants import *
-from magelang.util import NameGenerator, pipe, plural, to_snake_case, unreachable
+from magelang.util import NameGenerator, plural, to_snake_case, unreachable
 from magelang.passes.simplify import simplify
 from magelang.passes.remove_hidden import remove_hidden
 
@@ -118,7 +118,7 @@ def mage_to_axis_syntax_tree(
 
     prefix = ctx.get_option('prefix')
 
-    grammar = pipe(grammar, remove_hidden, simplify)
+    grammar = pipe(grammar, remove_hidden, simplify) # FIXME
     elements = list[ProgramElement]()
 
     defs = dict[str, FuncDecl]()
