@@ -1,6 +1,5 @@
 
-from collections.abc import Iterator
-from typing import Generator, assert_never
+from typing import Generator, assert_never, Iterable, Iterator
 from magelang.util import is_iterator, panic, to_camel_case, todo
 from magelang.ir.ast import *
 from magelang.ir.constants import *
@@ -26,6 +25,8 @@ def is_stmt_expr(expr: Expr) -> TypeGuard[StmtExpr]:
         or isinstance(expr, ForExpr) \
         or isinstance(expr, LoopExpr) \
         or isinstance(expr, RetExpr)
+
+type PyCondCase = tuple[PyExpr | None, Sequence[PyStmt]]
 
 def axis_to_python(node: Program) -> PyModule:
 
@@ -54,7 +55,7 @@ def axis_to_python(node: Program) -> PyModule:
         add_import('typing', 'Any')
         return PyNamedExpr('Any')
 
-    def make_cond(iter: Iterator[tuple[PyExpr | None, Sequence[PyStmt]]]) -> list[PyStmt]:
+    def make_cond(iter: Iterable[PyCondCase] | Iterator[PyCondCase]) -> list[PyStmt]:
         cases = list(iter)
         if len(cases) == 0:
             return []
@@ -151,6 +152,14 @@ def axis_to_python(node: Program) -> PyModule:
             body=body,
         )
 
+    def visit_ir_patt(patt: Patt) -> PyPattern:
+        assert(not isinstance(patt, VariantPatt))
+        if isinstance(patt, NamedPatt):
+            return PyNamedPattern(patt.name)
+        if isinstance(patt, TuplePatt):
+            return PyTuplePattern(elements=list(visit_ir_patt(element) for element in patt.elements))
+        assert_never(patt)
+
     def visit_ir_elements(elements: Sequence[ProgramElement | BodyElement]) -> list[PyStmt]:
         out = list[PyStmt]()
         for element in elements:
@@ -181,9 +190,15 @@ def axis_to_python(node: Program) -> PyModule:
             elif isinstance(element, RetExpr):
                 out.append(PyRetStmt(expr=element.value and visit_ir_expr(element.value)))
             elif isinstance(element, CondExpr):
-                out.extend(make_cond((case.test and visit_ir_expr(case.test), visit_ir_elements(case.body)) for case in element.cases))
+                py_cases = list[PyCondCase]()
+                for case in element.cases:
+                    assert(isinstance(case.body, BlockExpr))
+                    py_test = visit_ir_expr(case.test)
+                    py_body = visit_ir_elements(case.body.body)
+                    py_cases.append((py_test, py_body))
+                out.extend(make_cond(py_cases))
             elif isinstance(element, AssignExpr):
-                out.append(PyAssignStmt(PyNamedPattern(element.name), value=visit_ir_expr(element)))
+                out.append(PyAssignStmt(visit_ir_patt(element.patt), value=visit_ir_expr(element)))
             elif isinstance(element, FieldAssignExpr):
                 out.append(PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), to_var_name(element.name)), value=visit_ir_expr(element.expr)))
             elif isinstance(element, BreakExpr):
