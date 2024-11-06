@@ -5,7 +5,9 @@
 
 # Tokens
 
-pub extern token name -> String
+@keyword
+pub token name
+  = [a-z_]i [a-z0-9]i*
 
 pub extern token integer -> Integer
 
