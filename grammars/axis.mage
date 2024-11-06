@@ -20,7 +20,7 @@ pub boolean
 # Shared parse rules
 
 block
-  = '{' elements:(body_element ';')* last:body_element? '}'
+  = '{' elements:body_element* last:expr? '}'
 
 # Patterns
 
@@ -55,7 +55,7 @@ pub cond_case
   = test:expr '=>' expr
 
 pub cond_expr
-  = 'cond' '{' cond_case+ '}'
+  = 'cond' '{' cases:cond_case+ '}'
 
 pub lit_expr
   = literal:(string | integer | boolean)
@@ -87,6 +87,7 @@ pub expr
   | block_expr
   | break_expr
   | call_expr
+  | cond_expr
   | lit_expr
   | loop_expr
   | path_expr
@@ -124,13 +125,17 @@ pub enum_decl
   = 'enum' name '{' (variant % ',') '}'
 
 pub body_element
-  = expr
+  = base_element
+  | expr_stmt
 
 pub var_decl
   = 'let' 'mut'? patt ':' type_expr init:('=' expr)?
 
 pub func_decl
   = name self_type:('for' type_expr)? '{' body:body_element* '}'
+
+pub expr_stmt
+  = expr ';'
 
 base_element
   = enum_decl
