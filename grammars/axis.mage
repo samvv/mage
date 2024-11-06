@@ -128,7 +128,7 @@ pub var_decl
   = 'let' 'mut'? patt ':' type_expr init:('=' expr)?
 
 pub func_decl
-  = name self:('for' type_expr)? '{' body:body_element* '}'
+  = name self_type:('for' type_expr)? '{' body:body_element* '}'
 
 base_element
   = enum_decl
