@@ -9,10 +9,20 @@ from magelang.util import Option, Some, panic
 _X = TypeVar('_X', contravariant=True)
 _Y = TypeVar('_Y', covariant=True)
 
-class Pass(Protocol[_X, _Y]):
+type Pass[_X, _Y] = PassFn[_X, _Y] | type[PassBase[_X, _Y]]
+
+class PassFn(Protocol[_X, _Y]):
 
     @abstractmethod
     def __call__(self, input: _X, /, *args, **kwargs) -> _Y: ...
+
+class PassBase(Generic[_X, _Y]):
+
+    @abstractmethod
+    def apply(self, input: _X, /, *args, **kwargs) -> _Y: ...
+
+    def get_depends(self) -> Pass:
+        return identity
 
 class Context:
 
@@ -29,36 +39,55 @@ _T = TypeVar('_T')
 _R = TypeVar('_R')
 _S = TypeVar('_S')
 
+class Returns(Protocol[_Y]):
+
+    def __call__(self, *args: Any, **kwds: Any) -> _Y: ...
+
 def apply(ctx: Context, input: _T, pass_: Pass[_T, _R]) -> _R:
-    def get_injectable(name: str, ty: type | None, default: Option[Any]) -> Any:
+
+    def get_dependency(name: str, ty: type | None, default: Option[Any]) -> Any:
         if ty is Context:
             return ctx
-        if ty is bool or ty is str or ty is float or ty is int:
+        if ty is None or ty is bool or ty is str or ty is float or ty is int:
             return ctx.get_option(name, default)
-        else:
-            panic(f"Trying to inject an unknown type {ty} in {pass_}")
-    args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations = inspect.getfullargspec(pass_)
-    assert(varargs is None)
-    assert(varkw is None)
-    out_args = []
-    for i, name in enumerate(args[1:]):
-        if name in annotations:
+        panic(f"Trying to inject an unknown type {ty} in {pass_}")
+
+    def apply_inject(fn: Returns[_Y], *in_args, **in_kwargs) -> _Y:
+
+        args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations = inspect.getfullargspec(fn)
+
+        # These structures are not supported
+        assert(varargs is None)
+        assert(varkw is None)
+
+        # `self` should be added by Python itself, not us
+        if 'self' in args:
+            args.remove('self')
+
+        out_args = list(in_args)
+        for i, name in enumerate(args[len(in_args):]):
             ty = annotations.get(name)
             default = None
             if defaults is not None:
-                k = i-(len(args)-len(defaults))
+                k = i+len(in_args)-(len(args)-len(defaults))
                 if k >= 0:
                     default = Some(defaults[k])
-            out_args.append(get_injectable(name, ty, default))
-    out_kwargs = {}
-    for name in kwonlyargs:
-        if name in annotations:
-            ty = annotations.get(name)
-            default = None
-            if kwonlydefaults is not None and name in kwonlydefaults:
-                default = Some(kwonlydefaults[name])
-            out_kwargs[name] = get_injectable(name, ty, default)
-    return pass_(input, *out_args, **out_kwargs)
+            out_args.append(get_dependency(name, ty, default))
+
+        out_kwargs = dict(in_kwargs)
+        for name in kwonlyargs:
+            if name not in in_kwargs:
+                ty = annotations.get(name)
+                default = None
+                if kwonlydefaults is not None and name in kwonlydefaults:
+                    default = Some(kwonlydefaults[name])
+                out_kwargs[name] = get_dependency(name, ty, default)
+
+        return fn(*out_args, **out_kwargs)
+
+    fn = apply_inject(pass_).apply if inspect.isclass(pass_) else pass_
+
+    return apply_inject(fn, input)
 
 def distribute(map: dict[_K, Pass[_T, _R]]) -> Pass[_T, dict[_K, _R]]:
 
