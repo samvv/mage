@@ -4,7 +4,7 @@
 from magelang.ir.ast import *
 from magelang.lang.rust import *
 
-def ir_to_rust(ir: Program) -> RustSourceFile:
+def axis_to_rust(program: Program) -> RustSourceFile:
 
     items = []
 

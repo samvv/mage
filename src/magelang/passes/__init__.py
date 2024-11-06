@@ -38,7 +38,8 @@ all_passes = {
     axis_to_python,
 }
 
-def get_pass_by_name(name: str) -> Pass | None:
+def get_pass_by_name(name: str) -> Pass[Any, Any]:
     for pass_ in all_passes:
         if pass_.__name__ == name:
             return pass_
+    raise RuntimeError(f"A pass named '{name}' was not found")

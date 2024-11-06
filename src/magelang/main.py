@@ -2,7 +2,7 @@
 import argparse
 from pathlib import Path
 
-from magelang.manager import Context, apply, each_value, distribute
+from magelang.manager import Context, apply, compose, each_value, distribute, identity, pipeline
 
 from .logging import error
 from .util import pipe
@@ -24,10 +24,11 @@ def _load_grammar(filename: str) -> MageGrammar:
     parser = Parser(scanner)
     return parser.parse_grammar()
 
-mage_check_passes = [ check_token_no_parse, check_undefined, check_overlapping_charset_intervals, check_neg_charset_intervals ]
+mage_check = pipeline(check_token_no_parse, check_undefined, check_overlapping_charset_intervals, check_neg_charset_intervals)
+mage_prepare_grammar = pipeline(inline, extract_literals, insert_magic_rules)
 
 def _run_checks(grammar: MageGrammar) -> MageGrammar:
-    return pipe(grammar, *mage_check_passes)
+    return apply(ctx, grammar, mage_check)
 
 def _do_generate(args) -> int:
 
@@ -41,20 +42,6 @@ def _do_generate(args) -> int:
     dest_dir = Path(args.out_dir)
     enable_linecol = True
 
-    passes: list[Pass[Any, Any]] = [
-        inline,
-        extract_literals,
-        insert_magic_rules,
-    ]
-
-    grammar = pipe(_load_grammar(filename))
-    if not skip_checks:
-        passes.extend(mage_check_passes)
-
-    # FIXME should only happen in the parser generator and lexer generator
-    #if opt:
-    #    grammar = pipe(grammar, extract_prefixes, simplify)
-
     opts = {
         'cst_parent_pointers': args.feat_all if args.feat_cst_parent_pointers is None else args.feat_cst_parent_pointers,
         'enable_visitor': args.feat_all if args.feat_visitor is None else args.feat_visitor,
@@ -67,31 +54,42 @@ def _do_generate(args) -> int:
 
     ctx = Context(opts)
 
+    # FIXME should only happen in the parser generator and lexer generator
+    #if opt:
+    #    pass_ = pipeline(pass_, extract_prefixes, simplify)
+
     grammar = _load_grammar(filename)
 
     if engine == 'old':
-        passes.extend([
+        mage_to_target = compose(
             distribute({
                 'cst.py': mage_to_python_cst,
                 'emitter.py': mage_to_python_emitter,
             }),
             each_value(python_to_text),
-        ])
+        )
     elif engine == 'next':
-        passes.extend([
+        if lang == 'python':
+            axis_to_target = each_value(pipeline(axis_to_python, python_to_text))
+        elif lang == 'rust':
+            axis_to_target = each_value(pipeline(axis_to_rust, rust_to_text))
+        else:
+            panic(f"Unrecognised language '{lang}'")
+        mage_to_target = pipeline(
             distribute({
                 'cst.axis': mage_to_axis_syntax_tree,
             }),
-        ])
-        if lang == 'python':
-            passes.extend(each_value(many([ axis_to_python, python_to_text ])))
-        elif lang == 'rust':
-            passes.extend(each_value(many([ axis_to_rust, rust_to_text ])))
+            axis_to_target
+        )
     else:
         panic("Unrecognised engine used")
 
-
-    files = apply(ctx, grammar, *passes)
+    grammar = _load_grammar(filename)
+    files = apply(ctx, grammar, pipeline(
+        mage_prepare_grammar,
+        mage_check if not skip_checks else identity,
+        mage_to_target
+    ))
     for fname, text in files.items():
         out_path = dest_dir / fname
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -119,8 +117,8 @@ def _do_dump(args) -> int:
     grammar = parser.parse_grammar()
     opts = {} # TODO
     ctx = Context(opts)
-    passes = list(get_pass_by_name(name) for name in args.name)
-    grammar = apply(ctx, grammar, *passes)
+    pass_ = pipeline(*(get_pass_by_name(name) for name in args.name))
+    grammar = apply(ctx, grammar, pass_)
     print(emit(grammar))
     return 0
 

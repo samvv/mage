@@ -27,7 +27,7 @@ def is_stmt_expr(expr: Expr) -> TypeGuard[StmtExpr]:
         or isinstance(expr, LoopExpr) \
         or isinstance(expr, RetExpr)
 
-def ir_to_python(node: Program) -> PyModule:
+def axis_to_python(node: Program) -> PyModule:
 
     imports = set[str]()
 
