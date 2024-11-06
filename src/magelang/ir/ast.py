@@ -21,11 +21,15 @@ def is_expr(value: Any) -> TypeGuard[Expr]:
 class PattBase:
     pass
 
-type Patt = NamedPatt | VariantPatt
+type Patt = NamedPatt | VariantPatt | TuplePatt
 
 @dataclass
 class NamedPatt(PattBase):
     name: str
+
+@dataclass
+class TuplePatt(PattBase):
+    elements: Sequence[Patt]
 
 @dataclass
 class VariantPatt(PattBase):
@@ -44,6 +48,12 @@ class MatchArm:
 @dataclass
 class BlockExpr(ExprBase):
     body: Body
+    last: Expr | None = None
+
+    def derive(self, **kwargs) -> 'BlockExpr':
+        body = self.body if 'body' not in kwargs else kwargs['body']
+        last = self.last if 'last' not in kwargs else kwargs['last']
+        return BlockExpr(body=body, last=last)
 
 @dataclass
 class MatchExpr(ExprBase):
@@ -101,12 +111,12 @@ class IsNoneExpr(ExprBase):
 
 @dataclass
 class AssignExpr(ExprBase):
-    name: str
-    value: Expr
+    patt: Patt
+    expr: Expr
 
 @dataclass
 class ForExpr(ExprBase):
-    bind: str
+    bind: Patt
     iter: Expr
     body: Body
 
@@ -153,8 +163,8 @@ class Param:
 
 @dataclass
 class CondCase:
-    test: Expr | None
-    body: Body
+    test: Expr
+    body: Expr
 
 @dataclass
 class CondExpr(ExprBase):
@@ -206,10 +216,14 @@ class EnumDecl:
     name: str
     variants: Sequence[Variant]
 
-type ProgramElement = StructDecl | EnumDecl | FuncDecl | VarDecl
+type ProgramElement = StructDecl | EnumDecl | FuncDecl | VarDecl | Expr
 
 @dataclass
 class Program:
     elements: Sequence[ProgramElement]
+
+    def derive(self, **kwargs) -> 'Program':
+        elements = self.elements if 'elements' not in kwargs else kwargs['elements']
+        return Program(elements=elements)
 
 type Node = Program | EnumDecl | StructDecl | FuncDecl | VarDecl | Expr | Type | Field | Variant | Param
