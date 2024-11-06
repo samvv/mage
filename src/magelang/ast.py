@@ -7,7 +7,7 @@ make handling the AST a bit easier.
 
 import sys
 from functools import cache, lru_cache
-from typing import TYPE_CHECKING, Callable, Generator, assert_never
+from typing import TYPE_CHECKING, Any, Callable, Generator, TypeGuard, assert_never
 from intervaltree import Interval, IntervalTree
 
 from magelang.logging import debug
@@ -517,6 +517,11 @@ class MageGrammar(MageNode):
 
     def lookup(self, name: str) -> MageRule | None:
         return self._rules_by_name.get(name)
+
+type MageSyntax = MageExpr | MageRule | MageGrammar
+
+def is_mage_syntax(value: Any) -> TypeGuard[MageSyntax]:
+    return isinstance(value, MageNode)
 
 def rewrite_each_child_expr(expr: MageExpr, proc: Callable[[MageExpr], MageExpr]) -> MageExpr:
     """
