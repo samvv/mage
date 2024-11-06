@@ -1,10 +1,14 @@
 
+import importlib.util
 import argparse
+from os import PathLike
 from pathlib import Path
+from pprint import pprint
 
 from .manager import Context, apply, compose, each_value, distribute, identity, pipeline
 from .logging import error
 from .ast import *
+from .lang.python.emitter import emit as py_emit
 from .scanner import Scanner
 from .parser import Parser
 from .passes import *
@@ -15,18 +19,15 @@ modules_dir = Path(__file__).parent
 
 supported_languages = [ 'python', 'rust' ]
 
-def _load_grammar(filename: str) -> MageGrammar:
+def _load_grammar(filename: PathLike) -> MageGrammar:
     with open(filename, 'r') as f:
         text = f.read()
-    scanner = Scanner(text, filename=filename)
+    scanner = Scanner(text, filename=str(filename))
     parser = Parser(scanner)
     return parser.parse_grammar()
 
 mage_check = pipeline(check_token_no_parse, check_undefined, check_overlapping_charset_intervals, check_neg_charset_intervals)
 mage_prepare_grammar = pipeline(inline, extract_literals, insert_magic_rules)
-
-def _run_checks(grammar: MageGrammar) -> MageGrammar:
-    return apply(ctx, grammar, mage_check)
 
 def _do_generate(args) -> int:
 
@@ -68,7 +69,7 @@ def _do_generate(args) -> int:
         )
     elif engine == 'next':
         if lang == 'python':
-            axis_to_target = each_value(pipeline(axis_to_python, python_to_text))
+            axis_to_target = each_value(pipeline(axis_lift_assign_expr, axis_to_python, python_to_text))
         elif lang == 'rust':
             axis_to_target = each_value(pipeline(axis_to_rust, rust_to_text))
         else:
@@ -103,23 +104,44 @@ def _do_check(args) -> int:
     scanner = Scanner(text, filename=filename)
     parser = Parser(scanner)
     grammar = parser.parse_grammar()
-    _run_checks(grammar)
+    opts = {}
+    ctx = Context(opts)
+    apply(ctx, grammar, mage_check)
     return 0
 
+def _load_script(path: Path) -> Any:
+    module_name = f'magelang.imported.{path.stem}'
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    assert(spec is not None)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    assert(spec.loader is not None)
+    spec.loader.exec_module(module)
+    return module
+
 def _do_dump(args) -> int:
-    filename = args.file[0]
-    with open(filename, 'r') as f:
-        text = f.read()
-    scanner = Scanner(text, filename=filename)
-    parser = Parser(scanner)
-    grammar = parser.parse_grammar()
+    filename = Path(args.file[0])
+    if filename.suffix == '.mage':
+        input = _load_grammar(filename)
+    elif filename.suffix == '.py':
+        input = _load_script(filename).output
+    else:
+        error(f'unrecognised file type: {filename.suffix}')
+        return 1
     opts = {} # TODO
     ctx = Context(opts)
     pass_ = pipeline(*(get_pass_by_name(name) for name in args.name))
-    grammar = apply(ctx, grammar, pass_)
-    print(emit(grammar))
+    result = apply(ctx, input, pass_)
+    if is_mage_syntax(result):
+        print(emit(result))
+    elif isinstance(result, Program):
+        pprint(result)
+    elif isinstance(result, PyModule):
+        print(py_emit(result))
+    else:
+        error('Did not know how to print the resulting structure.')
+        return 1
     return 0
-
 
 def main() -> int:
 
