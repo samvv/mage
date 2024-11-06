@@ -1,7 +1,9 @@
 
-from intervaltree.intervaltree import warn
 from magelang.ast import PUBLIC, MageChoiceExpr, MageGrammar, MageRefExpr, MageRule
 
+any_syntax_rule_name = 'syntax'
+any_keyword_rule_name = 'keyword'
+any_node_rule_name = 'node'
 any_token_rule_name = 'token'
 
 def insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
@@ -9,7 +11,7 @@ def insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
     rules = list(grammar.rules)
 
     rules.append(MageRule(
-        name='keyword',
+        name=any_keyword_rule_name,
         expr=MageChoiceExpr(list(MageRefExpr(rule.name) for rule in grammar.rules if rule.is_keyword)),
         flags=PUBLIC
     ))
@@ -21,13 +23,13 @@ def insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
     ))
 
     rules.append(MageRule(
-        name='node',
+        name=any_node_rule_name,
         expr=MageChoiceExpr(list(MageRefExpr(rule.name) for rule in grammar.rules if grammar.is_parse_rule(rule) and not grammar.is_variant_rule(rule))),
         flags=PUBLIC
     ))
 
     rules.append(MageRule(
-        name='syntax',
+        name=any_syntax_rule_name,
         expr=MageChoiceExpr([ MageRefExpr('node'), MageRefExpr('token') ]),
         flags=PUBLIC,
     ))
