@@ -76,7 +76,7 @@ def _do_generate(args) -> int:
             panic(f"Unrecognised language '{lang}'")
         mage_to_target = pipeline(
             distribute({
-                'cst.axis': MageToAxisSyntaxTree,
+                'cst.axis': mage_to_axis_syntax_tree,
             }),
             axis_to_target
         )

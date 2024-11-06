@@ -111,7 +111,7 @@ def mangle_type(ty: Type) -> str:
         return 'none'
     assert_never(ty)
 
-class MageToAxisSyntaxTree(PassBase):
+class mage_to_axis_syntax_tree(PassBase):
 
     def get_depends(self) -> Pass:
         return pipeline(remove_hidden, simplify)
