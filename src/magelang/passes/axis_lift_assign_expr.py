@@ -28,8 +28,6 @@ def axis_lift_assign_expr(source: Program) -> Program:
         if isinstance(expr, CondExpr):
             prev_body = []
             cases = []
-            # root_body = prev_body
-            # root_cases = cases
             for case in reversed(expr.cases):
                 if prev_body:
                     cases = [ CondCase(ConstExpr(True), CondExpr(cases)) ]
@@ -47,6 +45,23 @@ def axis_lift_assign_expr(source: Program) -> Program:
             ]
         if isinstance(expr, PathExpr):
             return expr, []
+        if isinstance(expr, BreakExpr):
+            if expr.value is not None:
+                new_value, before = rewrite_expr(expr.value)
+            else:
+                new_value = None
+                before = []
+            return BreakExpr(new_value), before
+        if isinstance(expr, CallExpr):
+            before = []
+            new_func, func_before = rewrite_expr(expr.func)
+            before.extend(func_before)
+            new_args = []
+            for arg in expr.args:
+                arg_expr, arg_before = rewrite_expr(arg)
+                before.extend(arg_before)
+                new_args.append(arg_expr)
+            return CallExpr(new_func, new_args), before
         return expr, [] # FIXME
         assert_never(expr)
 
