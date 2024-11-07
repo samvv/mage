@@ -100,7 +100,17 @@ def revolv_to_python(node: Program) -> PyModule:
             return PySubscriptExpr(visit_ir_expr(expr.expr), [ PyConstExpr(expr.index) ])
         if isinstance(expr, NoneExpr):
             return PyNamedExpr('None')
-        panic(f"Statement expressions such as {expr} should not occur here")
+        if isinstance(expr, EnumExpr):
+            if expr.name == name_variant_none:
+                return PyNamedExpr('None')
+            if expr.name == name_variant_some:
+                return visit_ir_expr(expr.args[0])
+            return PyCallExpr(PyNamedExpr(expr.name), args=list(visit_ir_expr(arg) for arg in expr.args))
+        if isinstance(expr, NewExpr):
+            return PyCallExpr(PyNamedExpr(expr.name), args=list(visit_ir_expr(arg) for arg in expr.args))
+        if is_stmt_expr(expr):
+            panic(f"Statement expressions such as {expr} should not occur here")
+        panic(f"Expression should have been covered: {expr}")
 
     def visit_ir_type(ty: Type) -> PyExpr:
         if isinstance(ty, AnyType):
@@ -160,6 +170,14 @@ def revolv_to_python(node: Program) -> PyModule:
             return PyTuplePattern(elements=list(visit_ir_patt(element) for element in patt.elements))
         assert_never(patt)
 
+    def block_to_body(expr: Expr) -> list[BodyElement]:
+        if not isinstance(expr, BlockExpr):
+            return [ expr ]
+        out = list(expr.body)
+        if expr.last is not None:
+            out.append(expr.last)
+        return out
+
     def visit_ir_elements(elements: Sequence[ProgramElement | BodyElement]) -> list[PyStmt]:
         out = list[PyStmt]()
         for element in elements:
@@ -192,9 +210,9 @@ def revolv_to_python(node: Program) -> PyModule:
             elif isinstance(element, CondExpr):
                 py_cases = list[PyCondCase]()
                 for case in element.cases:
-                    assert(isinstance(case.body, BlockExpr))
+                    body = block_to_body(case.body)
                     py_test = visit_ir_expr(case.test)
-                    py_body = visit_ir_elements(case.body.body)
+                    py_body = visit_ir_elements(body)
                     py_cases.append((py_test, py_body))
                 out.extend(make_cond(py_cases))
             elif isinstance(element, AssignExpr):
