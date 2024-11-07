@@ -66,7 +66,7 @@ class PathExpr(ExprBase):
 
 @dataclass
 class BreakExpr(ExprBase):
-    pass
+    value: Expr | None = None
 
 @dataclass
 class CallExpr(ExprBase):
