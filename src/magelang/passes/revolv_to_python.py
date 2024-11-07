@@ -1,5 +1,5 @@
 
-from typing import Generator, assert_never, Iterable, Iterator
+from typing import Generator, TypeIs, assert_never, Iterable, Iterator
 from magelang.util import is_iterator, panic, to_camel_case, todo
 from magelang.lang.revolv.ast import *
 from magelang.ir.constants import *
@@ -19,7 +19,7 @@ def _make_infix(it: Iterator[PyExpr], op: PyInfixOp, init: PyExpr) -> PyExpr:
 # Expressions that by now should only appear as statements
 type StmtExpr = BreakExpr | AssignExpr | ForExpr | LoopExpr | RetExpr
 
-def is_stmt_expr(expr: Expr) -> TypeGuard[StmtExpr]:
+def is_stmt_expr(expr: Expr) -> TypeIs[StmtExpr]:
     return isinstance(expr, BreakExpr) \
         or isinstance(expr, AssignExpr) \
         or isinstance(expr, ForExpr) \
