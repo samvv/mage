@@ -9,7 +9,7 @@ from magelang.ast import MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar,
 from magelang.treespec import Field, get_fields, grammar_to_specs, infer_type, is_unit_type
 from magelang.lang.python.cst import *
 from magelang.util import unreachable
-from magelang.generator.python.util import Case, build_cond, gen_shallow_test, namespaced, to_py_class_name, build_isinstance
+from magelang.generator.python.util import PyCondCase, build_cond, gen_shallow_test, namespaced, to_py_class_name, build_isinstance
 
 def mage_to_python_emitter(
     grammar: MageGrammar,
@@ -144,7 +144,7 @@ def mage_to_python_emitter(
                 #     yield from gen_emit_expr(choices[0], target)
                 pass
             else:
-                cases: list[Case] = []
+                cases: list[PyCondCase] = []
                 for element in expr.elements:
                     body = list(gen_emit_expr(element, target, skip))
                     if body:
