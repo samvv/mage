@@ -3,7 +3,7 @@ from magelang.ast import MageGrammar
 from magelang.treespec import *
 from magelang.lang.python.cst import *
 from magelang.util import NameGenerator
-from .util import build_cond, Case, build_isinstance, gen_shallow_test, namespaced, to_class_name
+from .util import build_cond, PyCondCase, build_isinstance, gen_shallow_test, namespaced, to_py_class_name
 
 def generate_visitor(
     specs: Specs,
@@ -15,9 +15,9 @@ def generate_visitor(
 
     proc_param_name = 'proc'
     value_param_name = 'node'
-    token_type_name = to_class_name('token', prefix)
-    node_type_name = to_class_name('node', prefix)
-    syntax_type_name = to_class_name('syntax', prefix)
+    token_type_name = to_py_class_name('token', prefix)
+    node_type_name = to_py_class_name('node', prefix)
+    syntax_type_name = to_py_class_name('syntax', prefix)
     is_token_name = f'is_{namespaced('token', prefix)}'
     for_each_syntax_name = f'for_each_{namespaced('syntax', prefix)}'
 
@@ -120,7 +120,7 @@ def generate_visitor(
                         operator=PyNamedExpr('isinstance'),
                         args=[
                             PyNamedExpr(value_param_name),
-                            PyNamedExpr(to_class_name(spec.name, prefix))
+                            PyNamedExpr(to_py_class_name(spec.name, prefix))
                         ]
                     ),
                     body=if_body
@@ -132,7 +132,7 @@ def generate_visitor(
                 body.append(PyIfStmt(first=PyIfCase(
                     test=build_isinstance(
                         PyNamedExpr(value_param_name),
-                        PyNamedExpr(to_class_name(spec.name, prefix))
+                        PyNamedExpr(to_py_class_name(spec.name, prefix))
                     ),
                     body=[
                         PyRetStmt(),
@@ -150,11 +150,11 @@ def generate_visitor(
             params=[
                 PyNamedParam(
                     PyNamedPattern(value_param_name),
-                    annotation=PyNamedExpr(to_class_name(name, prefix))
+                    annotation=PyNamedExpr(to_py_class_name(name, prefix))
                 ),
                 PyNamedParam(
                     PyNamedPattern(proc_param_name),
-                    annotation=PySubscriptExpr(expr=PyNamedExpr('Callable'), slices=[ PyListExpr(elements=[ PyNamedExpr(to_class_name(name, prefix)) ]), PyNamedExpr('None') ])
+                    annotation=PySubscriptExpr(expr=PyNamedExpr('Callable'), slices=[ PyListExpr(elements=[ PyNamedExpr(to_py_class_name(name, prefix)) ]), PyNamedExpr('None') ])
                 ),
             ],
             body=body,

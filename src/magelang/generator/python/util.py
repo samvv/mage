@@ -7,15 +7,15 @@ from magelang.lang.python.cst import *
 from magelang.logging import warn
 from magelang.util import to_camel_case, is_iterator
 
-type Case = tuple[PyExpr | None, Sequence[PyStmt]]
+type PyCondCase = tuple[PyExpr | None, Sequence[PyStmt]]
 
 def namespaced(name: str, prefix: str) -> str:
     return prefix  + '_' + name if prefix else name
 
-def to_class_name(name: str, prefix: str) -> str:
+def to_py_class_name(name: str, prefix: str) -> str:
     return to_camel_case(namespaced(name, prefix))
 
-def build_cond(cases: Sequence[Case]) -> list[PyStmt]:
+def build_cond(cases: Sequence[PyCondCase]) -> list[PyStmt]:
     if len(cases) == 0:
         return []
     test, body = cases[0]
@@ -67,7 +67,7 @@ def quote_py_type(expr: PyExpr) -> PyExpr:
 
 def gen_py_type(ty: Type, prefix: str) -> PyExpr:
     if isinstance(ty, NodeType) or isinstance(ty, VariantType) or isinstance(ty, TokenType):
-        return PyNamedExpr(to_class_name(ty.name, prefix))
+        return PyNamedExpr(to_py_class_name(ty.name, prefix))
     if isinstance(ty, ListType):
         return PySubscriptExpr(expr=PyNamedExpr('Sequence'), slices=[ gen_py_type(ty.element_type, prefix) ])
     if isinstance(ty, PunctType):
@@ -117,7 +117,7 @@ def gen_shallow_test(ty: Type, target: PyExpr, prefix: str) -> PyExpr:
     if isinstance(ty, VariantType):
         return PyCallExpr(operator=PyNamedExpr(f'is_{namespaced(ty.name, prefix)}'), args=[ target ])
     if isinstance(ty, NodeType) or isinstance(ty, TokenType):
-        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr(to_class_name(ty.name, prefix)) ])
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr(to_py_class_name(ty.name, prefix)) ])
     if isinstance(ty, NoneType):
         return build_is_none(target)
     if isinstance(ty, TupleType):
@@ -140,7 +140,7 @@ def gen_deep_test(ty: Type, target: PyExpr, *, prefix: str) -> PyExpr:
     if isinstance(ty, VariantType):
         return PyCallExpr(operator=PyNamedExpr(f'is_{namespaced(ty.name, prefix)}'), args=[ target ])
     if isinstance(ty, NodeType) or isinstance(ty, TokenType):
-        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr(to_class_name(ty.name, prefix)) ])
+        return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr(to_py_class_name(ty.name, prefix)) ])
     if isinstance(ty, NoneType):
         return build_is_none(target)
     if isinstance(ty, TupleType):
@@ -242,7 +242,7 @@ def gen_default_constructor(ty: Type, *, specs: Specs, prefix: str) -> PyExpr:
     if isinstance(ty, NoneType):
         return PyNamedExpr('None')
     if isinstance(ty, NodeType) or isinstance(ty, TokenType):
-        return PyCallExpr(operator=PyNamedExpr(to_class_name(ty.name, prefix)))
+        return PyCallExpr(operator=PyNamedExpr(to_py_class_name(ty.name, prefix)))
     if isinstance(ty, ListType):
         return PyCallExpr(operator=PyNamedExpr('list'))
     if isinstance(ty, PunctType):
@@ -264,7 +264,7 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
 
     def gen_coerce_call(ty: Type, value: PyExpr, forbid_none: bool) -> tuple[Type, PyExpr]:
 
-        cases: list[Case] = []
+        cases: list[PyCondCase] = []
         types = list[Type]()
         for coerce_ty, coerce_body in gen_coerce_body(ty, forbid_none):
             cases.append((gen_shallow_test(coerce_ty, PyNamedExpr(param_name), prefix), coerce_body))
@@ -350,7 +350,7 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
             spec = specs.lookup(ty.name)
             assert(isinstance(spec, NodeSpec))
 
-            this_class_name = to_class_name(ty.name, prefix)
+            this_class_name = to_py_class_name(ty.name, prefix)
 
             optional_fields: list[Field] = []
             required_fields: list[Field] = []
@@ -398,7 +398,7 @@ def gen_initializers(field_type: Type, value: PyExpr, *, specs: Specs, prefix: s
                 yield ExternType(spec.field_type), [
                     PyRetStmt(
                         expr=PyCallExpr(
-                            operator=PyNamedExpr(to_class_name(ty.name, prefix)),
+                            operator=PyNamedExpr(to_py_class_name(ty.name, prefix)),
                             args=[ PyNamedExpr(param_name) ]
                         )
                     )

@@ -1,7 +1,7 @@
 
 from typing import assert_never
 
-from magelang.generator.python.util import build_is_none, build_or, build_union, gen_deep_test, gen_initializers, gen_py_type, namespaced, rule_type_to_py_type, to_class_name, quote_py_type
+from magelang.generator.python.util import build_cond, build_is_none, build_or, build_union, gen_deep_test, gen_initializers, gen_py_type, gen_shallow_test, namespaced, rule_type_to_py_type, to_py_class_name, quote_py_type, build_isinstance, PyCondCase
 from magelang.treespec import *
 from magelang.lang.python.cst import *
 from magelang.lang.python.emitter import emit
@@ -17,9 +17,9 @@ def mage_to_python_cst(
     prefix= ctx.get_option('prefix')
     gen_parent_pointers = ctx.get_option('cst_parent_pointers')
 
-    base_syntax_class_name = '_' + to_class_name('base_syntax', prefix)
-    base_node_class_name = '_' + to_class_name('base_node', prefix)
-    base_token_class_name = '_' + to_class_name('base_token', prefix)
+    base_syntax_class_name = '_' + to_py_class_name('base_syntax', prefix)
+    base_node_class_name = '_' + to_py_class_name('base_node', prefix)
+    base_token_class_name = '_' + to_py_class_name('base_token', prefix)
 
     parent_nodes = dict[str, set[str]]()
 
@@ -127,14 +127,14 @@ def mage_to_python_cst(
 
             body.append(PyFuncDef(name='__init__', params=params, body=init_body))
 
-        stmts.append(PyClassDef(name=to_class_name(spec.name, prefix), bases=[ base_token_class_name ], body=body))
+        stmts.append(PyClassDef(name=to_py_class_name(spec.name, prefix), bases=[ base_token_class_name ], body=body))
 
     for spec in specs:
 
         if not isinstance(spec, NodeSpec):
             continue
 
-        this_class_name = to_class_name(spec.name, prefix)
+        this_class_name = to_py_class_name(spec.name, prefix)
 
         body: list[PyStmt] = []
         params: list[PyParam] = []
@@ -225,10 +225,10 @@ def mage_to_python_cst(
          ))
 
         if gen_parent_pointers:
-            parent_type_name = f'{to_class_name(spec.name, prefix)}Parent'
+            parent_type_name = f'{to_py_class_name(spec.name, prefix)}Parent'
             # body.append(PyAssignStmt(PyNamedPattern('parent'), annotation=PyConstExpr(parent_type_name)))
             parent_type = get_parent_type(spec.name)
-            parent_type_name = f'{to_class_name(spec.name, prefix)}Parent'
+            parent_type_name = f'{to_py_class_name(spec.name, prefix)}Parent'
             # stmts.append(PyTypeAliasStmt(parent_type_name, gen_py_type(parent_type, prefix)))
             get_parent_body = []
             if isinstance(parent_type, NeverType):
@@ -251,7 +251,7 @@ def mage_to_python_cst(
         if not isinstance(spec, VariantSpec):
             continue
 
-        cls_name = to_class_name(spec.name, prefix)
+        cls_name = to_py_class_name(spec.name, prefix)
 
         stmts.append(PyTypeAliasStmt(cls_name, build_union(gen_py_type(ty, prefix) for _, ty in spec.members)))
 
@@ -266,23 +266,180 @@ def mage_to_python_cst(
             ],
         ))
 
-    # node_names: list[str] = []
-    # token_names: list[str] = []
-    # for spec in specs:
-    #     if isinstance(spec, TokenSpec):
-    #         token_names.append(spec.name)
-    #     elif isinstance(spec, NodeSpec):
-    #         node_names.append(spec.name)
-
     if gen_parent_pointers:
         for spec in specs:
             if not isinstance(spec, NodeSpec):
                 continue
             parent_type = get_parent_type(spec.name)
-            parent_type_name = f'{to_class_name(spec.name, prefix)}Parent'
+            parent_type_name = f'{to_py_class_name(spec.name, prefix)}Parent'
             stmts.append(PyTypeAliasStmt(parent_type_name, gen_py_type(parent_type, prefix)))
 
     stmts.extend(defs.values())
+
+    # Generate visitors
+
+    proc_param_name = 'proc'
+    node_param_name = 'node'
+
+    def gen_visitor(name: str) -> PyFuncDef:
+
+        generate_temporary = NameGenerator()
+
+        main_spec = specs.lookup(name)
+        main_type = spec_to_type(main_spec)
+
+        body: list[PyStmt] = []
+
+        def gen_each_field(spec: NodeSpec, target: PyExpr) -> Generator[PyStmt, None, None]:
+            for field in spec.fields:
+                if contains_type(field.ty, main_type, specs=specs):
+                    yield from gen_proc_call(field.ty, PyAttrExpr(expr=target, name=field.name))
+
+        def gen_proc_call(ty: Type, target: PyExpr) -> Generator[PyStmt, None, None]:
+            if is_type_assignable(ty, main_type, specs=specs):
+                yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ target ]))
+                return
+            if isinstance(ty, NoneType):
+                return
+            if isinstance(ty, ExternType):
+                return
+            if isinstance(ty, VariantType):
+                spec = specs.lookup(ty.name)
+                assert(isinstance(spec, VariantSpec))
+                cases = []
+                for _, ty_2 in spec.members:
+                    body = list(gen_proc_call(ty_2, target))
+                    if body:
+                        cases.append((
+                            gen_shallow_test(ty_2, target, prefix),
+                            body
+                        ))
+                yield from build_cond(cases)
+                return
+            if isinstance(ty, NodeType):
+                spec = specs.lookup(ty.name)
+                assert(isinstance(spec, NodeSpec))
+                yield from gen_each_field(spec, target)
+                return
+            if isinstance(ty, TokenType):
+                return
+            if isinstance(ty, TupleType):
+                for i, element_type in enumerate(ty.element_types):
+                    yield from gen_proc_call(element_type, PySubscriptExpr(expr=target, slices=[ PyConstExpr(literal=i) ]))
+                return
+            if isinstance(ty, ListType):
+                element_name = generate_temporary(prefix='element')
+                yield PyForStmt(pattern=PyNamedPattern(element_name), expr=target, body=list(gen_proc_call(ty.element_type, PyNamedExpr(element_name))))
+                return
+            if isinstance(ty, PunctType):
+                element_name = generate_temporary(prefix='element')
+                separator_name = generate_temporary(prefix='separator')
+                yield PyForStmt(
+                    pattern=PyTuplePattern(
+                        elements=[
+                            PyNamedPattern(element_name),
+                            PyNamedPattern(separator_name)
+                        ],
+                    ),
+                    expr=PyAttrExpr(target, 'elements'),
+                    body=[
+                        *gen_proc_call(ty.element_type, PyNamedExpr(element_name)),
+                        *gen_proc_call(ty.separator_type, PyNamedExpr(separator_name)),
+                    ]
+                )
+                yield PyIfStmt(first=PyIfCase(
+                    test=PyInfixExpr(PyAttrExpr(target, 'last'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')),
+                    body=list(gen_proc_call(ty.element_type, PyAttrExpr(target, 'last')))
+                ))
+                return
+            if isinstance(ty, UnionType):
+                cases: list[PyCondCase] = []
+                for element_type in ty.types:
+                    body = list(gen_proc_call(element_type, target))
+                    if body:
+                        cases.append((
+                            gen_shallow_test(element_type, target, prefix),
+                            body
+                        ))
+                yield from build_cond(cases)
+                return
+            raise RuntimeError(f'unexpected {ty}')
+
+        for spec in specs:
+
+            if not is_type_assignable(spec_to_type(spec), main_type, specs=specs):
+                continue
+
+            if isinstance(spec, NodeSpec):
+
+                # We're going to start a new scope, so all previous temporary names may be used once again
+                generate_temporary.reset()
+
+                if_body = list(gen_each_field(spec, PyNamedExpr(node_param_name)))
+                if_body.append(PyRetStmt())
+                body.append(PyIfStmt(first=PyIfCase(
+                    test=PyCallExpr(
+                        operator=PyNamedExpr('isinstance'),
+                        args=[
+                            PyNamedExpr(node_param_name),
+                            PyNamedExpr(to_py_class_name(spec.name, prefix))
+                        ]
+                    ),
+                    body=if_body
+                )))
+
+            elif isinstance(spec, TokenSpec):
+
+                # body.append(PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ PyNamedExpr(node_param_name) ])))
+                body.append(PyIfStmt(first=PyIfCase(
+                    test=build_isinstance(
+                        PyNamedExpr(node_param_name),
+                        PyNamedExpr(to_py_class_name(spec.name, prefix))
+                    ),
+                    body=[
+                        PyRetStmt(),
+                    ],
+                )))
+
+        decorators = []
+        if not debug:
+            # We add `@typing.no_type_check` to drastically improve the performance of the type checker.
+            decorators.append(PyDecorator(PyNamedExpr('no_type_check')))
+
+        return PyFuncDef(
+            decorators=decorators,
+            name=f'for_each_{namespaced(name, prefix)}',
+            params=[
+                PyNamedParam(
+                    PyNamedPattern(node_param_name),
+                    annotation=PyNamedExpr(to_py_class_name(name, prefix))
+                ),
+                PyNamedParam(
+                    PyNamedPattern(proc_param_name),
+                    annotation=PySubscriptExpr(expr=PyNamedExpr('Callable'), slices=[ PyListExpr(elements=[ PyNamedExpr(to_py_class_name(name, prefix)) ]), PyNamedExpr('None') ])
+                ),
+            ],
+            body=body,
+        )
+
+    variant_visitors = list(gen_visitor(spec.name) for spec in specs if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
+
+    stmts.extend([
+        PyImportFromStmt(
+            PyAbsolutePath('typing'),
+            aliases=[
+                PyFromAlias('Callable'),
+                PyFromAlias('no_type_check'),
+            ]
+        ),
+        PyImportFromStmt(
+            PyRelativePath(dots=1, name=PyQualName('cst')),
+            aliases=[ PyFromAlias(PyAsterisk()) ]
+        ),
+        *variant_visitors,
+    ])
+
+    variant_visitors = list(gen_visitor(spec.name) for spec in specs if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
 
     return PyModule(stmts=stmts)
 

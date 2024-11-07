@@ -4,14 +4,14 @@ import marko
 from magelang.util import NameGenerator
 from magelang.ast import MageGrammar
 from magelang.lang.python.cst import *
-from .util import build_isinstance, get_marko_element_text, to_class_name
+from .util import build_isinstance, get_marko_element_text, to_py_class_name
 
 def generate_test_lexer(
     grammar: MageGrammar,
     prefix = '',
 ) -> PyModule:
 
-    lexer_class_name = to_class_name('lexer', prefix)
+    lexer_class_name = to_py_class_name('lexer', prefix)
 
     stmts: list[PyStmt] = [
         PyImportFromStmt(
@@ -28,7 +28,7 @@ def generate_test_lexer(
     for rule in grammar.rules:
         if not grammar.is_token_rule(rule) or rule.comment is None:
             continue
-        this_class_name = to_class_name(rule.name, prefix)
+        this_class_name = to_py_class_name(rule.name, prefix)
         doc = marko.parse(dedent(rule.comment))
         i = 0
         for child in doc.children:

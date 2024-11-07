@@ -9,7 +9,7 @@ from magelang.ast import MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar,
 from magelang.treespec import Field, get_fields, grammar_to_specs, infer_type, is_unit_type
 from magelang.lang.python.cst import *
 from magelang.util import unreachable
-from magelang.generator.python.util import Case, build_cond, gen_shallow_test, namespaced, to_class_name, build_isinstance
+from magelang.generator.python.util import Case, build_cond, gen_shallow_test, namespaced, to_py_class_name, build_isinstance
 
 def mage_to_python_emitter(
     grammar: MageGrammar,
@@ -217,7 +217,7 @@ def mage_to_python_emitter(
                 expr = PyCallExpr(PyNamedExpr('str'), args=[ PyAttrExpr(PyNamedExpr(token_param_name), 'value') ])
             emit_token_body.append(
                 PyIfStmt(PyIfCase(
-                    test=build_isinstance(PyNamedExpr(token_param_name), PyNamedExpr(to_class_name(rule.name, prefix))),
+                    test=build_isinstance(PyNamedExpr(token_param_name), PyNamedExpr(to_py_class_name(rule.name, prefix))),
                     body=[ PyRetStmt(expr=expr) ]
                 ))
             )
@@ -238,7 +238,7 @@ def mage_to_python_emitter(
                     if_body.extend(gen_emit_expr(expr, None, skip))
             if_body.append(PyRetStmt())
             visit_node_body.append(PyIfStmt(first=PyIfCase(
-                test=build_isinstance(PyNamedExpr(param_name), PyNamedExpr(to_class_name(rule.name, prefix))),
+                test=build_isinstance(PyNamedExpr(param_name), PyNamedExpr(to_py_class_name(rule.name, prefix))),
                 body=if_body
             )))
 

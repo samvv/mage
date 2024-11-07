@@ -6,7 +6,7 @@ from magelang.lang.python.cst import *
 from magelang.ast import MageGrammar
 from magelang.treespec import TokenSpec, grammar_to_specs
 from magelang.util import NameGenerator, nonnull
-from .util import build_cond, build_or, rule_type_to_py_type, to_class_name
+from .util import build_cond, build_or, rule_type_to_py_type, to_py_class_name
 
 
 def generate_lexer(
@@ -14,8 +14,8 @@ def generate_lexer(
     prefix = '',
 ) -> PyModule:
 
-    lexer_class_name = to_class_name('lexer', prefix)
-    token_type_name = to_class_name('token', prefix)
+    lexer_class_name = to_py_class_name('lexer', prefix)
+    token_type_name = to_py_class_name('token', prefix)
 
     specs = grammar_to_specs(grammar)
 
@@ -89,7 +89,7 @@ def generate_lexer(
             success = lambda: [
                 *old_success(),
                 PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), '_curr_offset'), value=PyNamedExpr(char_offset_name)),
-                PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(to_class_name(nonnull(rule).name, prefix)), args=token_args))
+                PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(to_py_class_name(nonnull(rule).name, prefix)), args=token_args))
             ]
 
         if isinstance(expr, MageRefExpr):

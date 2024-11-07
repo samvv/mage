@@ -1,5 +1,5 @@
 
-from .util import build_union, gen_initializers, gen_py_type, namespaced, rule_type_to_py_type, to_class_name, quote_py_type
+from .util import build_union, gen_initializers, gen_py_type, namespaced, rule_type_to_py_type, to_py_class_name, quote_py_type
 from magelang.lang.python.cst import *
 from magelang.lang.python.emitter import emit
 from magelang.treespec import *
@@ -10,8 +10,8 @@ def generate_tree_types(
     gen_parent_pointers = False
 ) -> PyModule:
 
-    base_token_class_name = to_class_name('base_token', prefix)
-    base_node_class_name = to_class_name('base_node', prefix)
+    base_token_class_name = to_py_class_name('base_token', prefix)
+    base_node_class_name = to_py_class_name('base_node', prefix)
 
     stmts: list[PyStmt] = [
         PyImportFromStmt(PyAbsolutePath(PyQualName('typing')), aliases=[
@@ -25,19 +25,19 @@ def generate_tree_types(
             PyFromAlias('Punctuated'),
         ]),
         PyTypeAliasStmt(
-            to_class_name('syntax', prefix),
+            to_py_class_name('syntax', prefix),
             build_union([
-                PyNamedExpr(to_class_name('node', prefix)),
-                PyNamedExpr(to_class_name('token', prefix))
+                PyNamedExpr(to_py_class_name('node', prefix)),
+                PyNamedExpr(to_py_class_name('token', prefix))
             ])
         ),
         PyTypeAliasStmt(
-            to_class_name('token', prefix),
-            build_union(PyNamedExpr(to_class_name(spec.name, prefix)) for spec in specs if isinstance(spec, TokenSpec))
+            to_py_class_name('token', prefix),
+            build_union(PyNamedExpr(to_py_class_name(spec.name, prefix)) for spec in specs if isinstance(spec, TokenSpec))
         ),
         PyTypeAliasStmt(
-            to_class_name('node', prefix),
-            build_union(PyNamedExpr(to_class_name(spec.name, prefix)) for spec in specs if isinstance(spec, NodeSpec))
+            to_py_class_name('node', prefix),
+            build_union(PyNamedExpr(to_py_class_name(spec.name, prefix)) for spec in specs if isinstance(spec, NodeSpec))
         ),
         PyClassDef(
             name=base_token_class_name,
@@ -55,7 +55,7 @@ def generate_tree_types(
 
         if isinstance(spec, NodeSpec):
 
-            this_class_name = to_class_name(spec.name, prefix)
+            this_class_name = to_py_class_name(spec.name, prefix)
 
             body: list[PyStmt] = []
 
@@ -155,7 +155,7 @@ def generate_tree_types(
                 body.append(PyAssignStmt(PyNamedPattern('value'), annotation=rule_type_to_py_type(spec.field_type)))
 
             stmts.append(PyClassDef(
-                name=to_class_name(spec.name, prefix),
+                name=to_py_class_name(spec.name, prefix),
                 bases=[ base_token_class_name ],
                 body=body,
             ))
@@ -164,14 +164,14 @@ def generate_tree_types(
         return PyFuncDef(
             name=f'is_{namespaced(name, prefix)}',
             params=[ PyNamedParam(PyNamedPattern('value'), annotation=PyNamedExpr('Any')) ],
-            return_type=PySubscriptExpr(PyNamedExpr('TypeGuard'), [ PyNamedExpr(to_class_name(name, prefix)) ]),
+            return_type=PySubscriptExpr(PyNamedExpr('TypeGuard'), [ PyNamedExpr(to_py_class_name(name, prefix)) ]),
             body=PyExprStmt(PyEllipsisExpr()),
         )
 
     for spec in specs:
         if not isinstance(spec, VariantSpec):
             continue
-        this_class_name = to_class_name(spec.name, prefix)
+        this_class_name = to_py_class_name(spec.name, prefix)
         assert(len(spec.members) > 0)
         stmts.append(PyTypeAliasStmt(this_class_name, build_union(gen_py_type(ty, prefix) for _, ty in spec.members)))
         stmts.append(build_instance_pred(spec.name))
