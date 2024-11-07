@@ -16,7 +16,7 @@ from .revolv_lift_assign_expr import *
 from .rust_to_text import *
 from .mage_to_python_cst import *
 from .mage_to_python_emitter import *
-from .mage_to_axis_syntax_tree import *
+from .mage_to_revolv_syntax_tree import *
 from .python_to_text import *
 from .simplify import *
 

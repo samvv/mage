@@ -10,12 +10,43 @@ type Body = Sequence[BodyElement]
 class ExprBase:
     pass
 
-type Expr = BreakExpr | CondExpr | ConstExpr | CallExpr | PathExpr | TupleExpr | TupleIndexExpr | RetExpr | NewExpr | ForExpr | AssignExpr | LoopExpr | MatchExpr | BlockExpr | SpecialExpr
+type Expr = BreakExpr | CondExpr | LitExpr | CallExpr | PathExpr | TupleExpr | TupleIndexExpr | RetExpr | NewExpr | ForExpr | AssignExpr | LoopExpr | MatchExpr | BlockExpr | SpecialExpr | ConExpr
 
-type SpecialExpr = IsExpr | NoneExpr | IsNoneExpr | FieldAssignExpr
+type SpecialExpr = IsExpr | FieldAssignExpr
 
 def is_expr(value: Any) -> TypeGuard[Expr]:
     return isinstance(value, ExprBase)
+
+type Type = AnyType | NeverType | PathType | TupleType | UnionType | NoneType
+
+@dataclass
+class TypeBase:
+    pass
+
+@dataclass
+class NoneType(TypeBase):
+    pass
+
+@dataclass
+class PathType(TypeBase):
+    name: str
+    args: Sequence[Type] | None = None
+
+@dataclass
+class TupleType(TypeBase):
+    types: Sequence[Type]
+
+@dataclass
+class AnyType(TypeBase):
+    pass
+
+@dataclass
+class NeverType(TypeBase):
+    pass
+
+@dataclass
+class UnionType(TypeBase):
+    types: Sequence[Type]
 
 @dataclass
 class PattBase:
@@ -79,12 +110,17 @@ class NewExpr(ExprBase):
     args: Sequence[Expr]
 
 @dataclass
+class ConExpr(ExprBase):
+    name: str
+    args: Sequence[Type]
+
+@dataclass
 class IsExpr(ExprBase):
     expr: Expr
     name: str
 
 @dataclass
-class ConstExpr(ExprBase):
+class LitExpr(ExprBase):
     value: str | int | bool
 
 @dataclass
@@ -116,44 +152,13 @@ class AssignExpr(ExprBase):
 
 @dataclass
 class ForExpr(ExprBase):
-    bind: Patt
+    patt: Patt
     iter: Expr
     body: Body
 
 @dataclass
 class ListExpr(ExprBase):
     elements: Sequence[Expr]
-
-@dataclass
-class TypeBase:
-    pass
-
-type Type = AnyType | NeverType | PathType | TupleType | UnionType | NoneType
-
-@dataclass
-class NoneType(TypeBase):
-    pass
-
-@dataclass
-class PathType(TypeBase):
-    name: str
-    args: Sequence[Type] | None = None
-
-@dataclass
-class TupleType(TypeBase):
-    types: Sequence[Type]
-
-@dataclass
-class AnyType(TypeBase):
-    pass
-
-@dataclass
-class NeverType(TypeBase):
-    pass
-
-@dataclass
-class UnionType(TypeBase):
-    types: Sequence[Type]
 
 @dataclass
 class Param:

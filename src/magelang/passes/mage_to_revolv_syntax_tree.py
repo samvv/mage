@@ -17,19 +17,25 @@ def mage_type_to_ir_type(name: str) -> Type:
     return PathType(to_snake_case(name))
 
 def make_and(elements: Iterator[Expr]) -> Expr:
-    out = ConstExpr(True)
+    out = LitExpr(True)
     for element in reversed(list(elements)):
         out = CallExpr(PathExpr(name_fn_and), [ element, out ])
     return out
 
 def make_or(elements: Iterator[Expr]) -> Expr:
-    out = ConstExpr(True)
+    out = LitExpr(True)
     for element in reversed(list(elements)):
         out = CallExpr(PathExpr(name_fn_or), [ element, out ])
     return out
 
 def make_optional_type(ty: Type) -> Type:
     return UnionType([ ty, NoneType() ])
+
+def make_none() -> Expr:
+    return ConExpr(name_variant_none, [])
+
+def make_is_none(target: Expr) -> Expr:
+    return CallExpr(PathExpr(name_fn_is_none), [ target ])
 
 def make_array_type(element: Type) -> Type:
     return PathType(name_type_array, [ element ])
@@ -52,9 +58,9 @@ def gen_shallow_instance_check(target: Expr, ty: Type) -> Expr:
     if isinstance(ty, TupleType):
         return make_and(gen_shallow_instance_check(TupleIndexExpr(target, i), el_ty) for i, el_ty in enumerate(ty.types))
     if isinstance(ty, AnyType):
-        return ConstExpr(True)
+        return LitExpr(True)
     if isinstance(ty, NeverType):
-        return ConstExpr(False)
+        return LitExpr(False)
     if isinstance(ty, UnionType):
         return make_or(gen_shallow_instance_check(target, el_ty) for el_ty in ty.types)
     if isinstance(ty, NoneType):
@@ -291,12 +297,12 @@ class mage_to_revolv_syntax_tree(PassBase):
                     yield from ((ty, stmts) for i, (ty, stmts) in enumerate(results) if i not in rejected)
 
                     if has_none:
-                        yield NoneType(), [ RetExpr(NoneExpr()) ]
+                        yield NoneType(), [ RetExpr(make_none()) ]
 
                     return
 
                 if allow_coerce_from_none and is_default_constructible(expr):
-                    yield NoneType(), [ RetExpr(NoneExpr()) ]
+                    yield NoneType(), [ RetExpr(make_none()) ]
 
                 if isinstance(expr, MageRefExpr):
 
@@ -350,8 +356,8 @@ class mage_to_revolv_syntax_tree(PassBase):
 
                     if grammar.is_static(expr.element):
                         yield PathType(name_type_integer), [
-                            AssignExpr(new_elements_name, make_empty_punct()),
-                            ForExpr('_', CallExpr(PathExpr(name_fn_range), [ ConstExpr(0), PathExpr(value_param_name) ]), [
+                            AssignExpr(NamedPatt(new_elements_name), make_empty_punct()),
+                            ForExpr(NamedPatt('_'), CallExpr(PathExpr(name_fn_range), [ LitExpr(0), PathExpr(value_param_name) ]), [
                                 # FIXME does not append the separator
                                 CallExpr(PathExpr(name_fn_punct_append), [ PathExpr(new_elements_name), gen_default_constructor(expr.element) ])
                             ]),
@@ -368,26 +374,26 @@ class mage_to_revolv_syntax_tree(PassBase):
                     ])
 
                     def gen_unwrap(last = False) -> Generator[BodyElement]:
-                        tuple_then: list[BodyElement] = [ AssignExpr(value_name, TupleIndexExpr(PathExpr(first_element_name), 0)) ]
-                        plain_then: list[BodyElement] = [ AssignExpr(value_name, PathExpr(first_element_name)) ]
+                        tuple_then: list[BodyElement] = [ AssignExpr(NamedPatt(value_name), TupleIndexExpr(PathExpr(first_element_name), 0)) ]
+                        plain_then: list[BodyElement] = [ AssignExpr(NamedPatt(value_name), PathExpr(first_element_name)) ]
                         if last:
-                            tuple_then.append(CallExpr(PathExpr(name_fn_assert), [ IsNoneExpr(TupleIndexExpr(PathExpr(first_element_name), 1)) ]))
+                            tuple_then.append(CallExpr(PathExpr(name_fn_assert), [ make_is_none(TupleIndexExpr(PathExpr(first_element_name), 1)) ]))
                         else:
-                            tuple_then.append(AssignExpr(separator_name, TupleIndexExpr(PathExpr(first_element_name), 1)))
-                            tuple_then.append(CallExpr(PathExpr(name_fn_assert), [ IsNoneExpr(PathExpr(separator_name)) ]))
-                            plain_then.append(AssignExpr(separator_name, gen_default_constructor(expr.separator)))
+                            tuple_then.append(AssignExpr(NamedPatt(separator_name), TupleIndexExpr(PathExpr(first_element_name), 1)))
+                            tuple_then.append(CallExpr(PathExpr(name_fn_assert), [ make_is_none(PathExpr(separator_name)) ]))
+                            plain_then.append(AssignExpr(NamedPatt(separator_name), gen_default_constructor(expr.separator)))
                         yield CondExpr([
                             CondCase(
                                 # FIXME does not handle nested tuples
                                 IsExpr(PathExpr(first_element_name), name_type_tuple),
                                 BlockExpr(tuple_then),
                             ),
-                            CondCase(None, BlockExpr(plain_then)),
+                            CondCase(LitExpr(True), BlockExpr(plain_then)),
                         ])
 
                     yield coerced_type, [
-                        AssignExpr(new_elements_name, NewExpr(name_type_punct, [])),
-                        AssignExpr(elements_iter_name, CallExpr(PathExpr(name_fn_iter), [ PathExpr(value_param_name) ])),
+                        AssignExpr(NamedPatt(new_elements_name), NewExpr(name_type_punct, [])),
+                        AssignExpr(NamedPatt(elements_iter_name), CallExpr(PathExpr(name_fn_iter), [ PathExpr(value_param_name) ])),
                         MatchExpr(CallExpr(PathExpr(name_fn_next), [ PathExpr(elements_iter_name) ]), [
                             MatchArm(VariantPatt(name_variant_some, [ NamedPatt(first_element_name) ]), LoopExpr([
                                 MatchExpr(CallExpr(PathExpr(name_fn_next), [ PathExpr(elements_iter_name) ]), [
@@ -395,17 +401,17 @@ class mage_to_revolv_syntax_tree(PassBase):
                                         VariantPatt(name_variant_some, [ NamedPatt(second_element_name) ]),
                                         BlockExpr([
                                             *gen_unwrap(),
-                                            AssignExpr(new_value_name, value_expr),
-                                            AssignExpr(new_separator_name, separator_expr),
+                                            AssignExpr(NamedPatt(new_value_name), value_expr),
+                                            AssignExpr(NamedPatt(new_separator_name), separator_expr),
                                             CallExpr(PathExpr(name_fn_punct_append), [ PathExpr(new_elements_name), PathExpr(new_value_name), PathExpr(new_separator_name) ]),
-                                            AssignExpr(first_element_name, PathExpr(second_element_name)),
+                                            AssignExpr(NamedPatt(first_element_name), PathExpr(second_element_name)),
                                         ])
                                     ),
                                     MatchArm(
                                         VariantPatt(name_variant_none, []),
                                         BlockExpr([
                                             *gen_unwrap(last=True),
-                                            AssignExpr(new_value_name, value_expr),
+                                            AssignExpr(NamedPatt(new_value_name), value_expr),
                                             CallExpr(PathExpr(name_fn_punct_append_final), [ PathExpr(new_value_name) ]),
                                             BreakExpr(),
                                         ])
@@ -428,8 +434,8 @@ class mage_to_revolv_syntax_tree(PassBase):
 
                     if grammar.is_static(expr.expr):
                         yield PathType(name_type_integer), [
-                            AssignExpr(new_elements_name, make_empty_array()),
-                            ForExpr('_', CallExpr(PathExpr(name_fn_range), [ ConstExpr(0), PathExpr(value_param_name) ]), [
+                            AssignExpr(NamedPatt(new_elements_name), make_empty_array()),
+                            ForExpr(NamedPatt('_'), CallExpr(PathExpr(name_fn_range), [ LitExpr(0), PathExpr(value_param_name) ]), [
                                 CallExpr(PathExpr(name_fn_append), [ PathExpr(new_elements_name), gen_default_constructor(expr.expr) ])
                             ]),
                             RetExpr(PathExpr(new_elements_name))
@@ -438,8 +444,8 @@ class mage_to_revolv_syntax_tree(PassBase):
                     element_type, element_expr = gen_coerce_call(expr.expr, PathExpr(element_name), False)
 
                     yield make_array_type(element_type), [
-                        AssignExpr(new_elements_name, make_empty_array()),
-                        ForExpr(element_name, PathExpr(value_param_name), [
+                        AssignExpr(NamedPatt(new_elements_name), make_empty_array()),
+                        ForExpr(NamedPatt(element_name), PathExpr(value_param_name), [
                             CallExpr(PathExpr(name_fn_append), [ element_expr ]),
                         ]),
                         RetExpr(PathExpr(new_elements_name)),
@@ -569,7 +575,7 @@ class mage_to_revolv_syntax_tree(PassBase):
                 name_field_span = 'span'
                 fields = list[Field]()
                 new_params = [
-                    Param(name_param_span, make_optional_type(PathType(name_type_span)), NoneExpr())
+                    Param(name_param_span, make_optional_type(PathType(name_type_span)), make_none())
                 ]
                 new_body: Body = []
                 fields.append(Field(name_field_span, PathType(name_type_span)))

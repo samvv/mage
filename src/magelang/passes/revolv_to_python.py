@@ -76,7 +76,7 @@ def revolv_to_python(node: Program) -> PyModule:
     def visit_ir_expr(expr: Expr) -> PyExpr:
         if isinstance(expr, PathExpr):
             return PyNamedExpr(to_var_name(expr.name))
-        if isinstance(expr, ConstExpr):
+        if isinstance(expr, LitExpr):
             return PyConstExpr(expr.value)
         if isinstance(expr, CallExpr):
             if isinstance(expr.func, PathExpr):
