@@ -32,7 +32,7 @@ def make_optional_type(ty: Type) -> Type:
     return UnionType([ ty, NoneType() ])
 
 def make_none() -> Expr:
-    return ConExpr(name_variant_none, [])
+    return EnumExpr(name_variant_none, [])
 
 def make_is_none(target: Expr) -> Expr:
     return CallExpr(PathExpr(name_fn_is_none), [ target ])

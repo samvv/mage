@@ -10,7 +10,7 @@ type Body = Sequence[BodyElement]
 class ExprBase:
     pass
 
-type Expr = BreakExpr | CondExpr | LitExpr | CallExpr | PathExpr | TupleExpr | TupleIndexExpr | RetExpr | NewExpr | ForExpr | AssignExpr | LoopExpr | MatchExpr | BlockExpr | SpecialExpr | ConExpr
+type Expr = BreakExpr | CondExpr | LitExpr | CallExpr | PathExpr | TupleExpr | TupleIndexExpr | RetExpr | NewExpr | ForExpr | AssignExpr | LoopExpr | MatchExpr | BlockExpr | SpecialExpr | EnumExpr
 
 type SpecialExpr = IsExpr | FieldAssignExpr
 
@@ -110,7 +110,7 @@ class NewExpr(ExprBase):
     args: Sequence[Expr]
 
 @dataclass
-class ConExpr(ExprBase):
+class EnumExpr(ExprBase):
     name: str
     args: Sequence[Type]
 
