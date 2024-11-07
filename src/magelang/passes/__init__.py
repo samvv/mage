@@ -10,9 +10,9 @@ from .remove_hidden import *
 from .inline import *
 from .insert_magic_rules import *
 from .insert_skip import *
-from .axis_to_rust import *
-from .axis_to_python import *
-from .axis_lift_assign_expr import *
+from .revolv_to_rust import *
+from .revolv_to_python import *
+from .revolv_lift_assign_expr import *
 from .rust_to_text import *
 from .mage_to_python_cst import *
 from .mage_to_python_emitter import *
@@ -34,10 +34,10 @@ all_passes = {
     simplify,
     mage_to_python_cst,
     mage_to_python_emitter,
-    mage_to_axis_syntax_tree,
-    axis_to_rust,
-    axis_to_python,
-    axis_lift_assign_expr,
+    mage_to_revolv_syntax_tree,
+    revolv_to_rust,
+    revolv_to_python,
+    revolv_lift_assign_expr,
 }
 
 def get_pass_by_name(name: str) -> Pass[Any, Any]:

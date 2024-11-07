@@ -1,10 +1,10 @@
 
 # TODO extract union types and create 'anonymous' enumerations for these types
 
-from magelang.ir.ast import *
+from magelang.lang.revolv.ast import *
 from magelang.lang.rust import *
 
-def axis_to_rust(program: Program) -> RustSourceFile:
+def revolv_to_rust(program: Program) -> RustSourceFile:
 
     items = []
 

@@ -1,5 +1,5 @@
 
-from magelang.logging import error, warn
+from magelang.logging import error
 from magelang.ast import MageCharSetExpr, MageExpr, MageGrammar, for_each_expr
 from magelang.emitter import escape
 

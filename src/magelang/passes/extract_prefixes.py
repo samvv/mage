@@ -30,7 +30,7 @@ def extract_prefixes(grammar: MageGrammar) -> MageGrammar:
 
     def populate(rule: MageRule) -> None:
         prefixes = global_prefixes
-        def visit(expr: Expr, is_last: bool) -> bool:
+        def visit(expr: MageExpr, is_last: bool) -> bool:
             nonlocal prefixes
             if isinstance(expr, MageLitExpr):
                 prefix = None
@@ -60,7 +60,7 @@ def extract_prefixes(grammar: MageGrammar) -> MageGrammar:
         if rule.expr is not None:
             visit(rule.expr, True)
 
-    def char_at(expr: Expr, i: int) -> str | None:
+    def char_at(expr: MageExpr, i: int) -> str | None:
         if isinstance(expr, MageSeqExpr):
             for child in expr.elements:
                 char = char_at(child, i)
@@ -73,12 +73,12 @@ def extract_prefixes(grammar: MageGrammar) -> MageGrammar:
     for rule in grammar.rules:
         populate(rule)
 
-    def build_expr(edge: Edge) -> Expr:
+    def build_expr(edge: Edge) -> MageExpr:
         if isinstance(edge, str):
             return MageLitExpr(text=edge)
         assert_never(edge)
 
-    def generate(prefixes: Prefixes) -> Expr:
+    def generate(prefixes: Prefixes) -> MageExpr:
         elements = []
         for edge, data in prefixes.items():
             seq_elements = []

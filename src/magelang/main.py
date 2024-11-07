@@ -69,16 +69,16 @@ def _do_generate(args) -> int:
         )
     elif engine == 'next':
         if lang == 'python':
-            axis_to_target = each_value(pipeline(axis_lift_assign_expr, axis_to_python, python_to_text))
+            revolv_to_target = each_value(pipeline(revolv_lift_assign_expr, revolv_to_python, python_to_text))
         elif lang == 'rust':
-            axis_to_target = each_value(pipeline(axis_to_rust, rust_to_text))
+            revolv_to_target = each_value(pipeline(revolv_to_rust, rust_to_text))
         else:
             panic(f"Unrecognised language '{lang}'")
         mage_to_target = pipeline(
             distribute({
-                'cst.axis': mage_to_axis_syntax_tree,
+                'cst.rev': mage_to_revolv_syntax_tree,
             }),
-            axis_to_target
+            revolv_to_target
         )
     else:
         panic("Unrecognised engine used")

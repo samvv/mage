@@ -4,7 +4,7 @@ from typing import Iterable, Iterator
 from magelang.ast import *
 from magelang.analysis import can_be_empty
 from magelang.manager import Context, Pass, PassBase, pipeline
-from magelang.ir.ast import *
+from magelang.lang.revolv.ast import *
 from magelang.ir.constants import *
 from magelang.util import NameGenerator, plural, to_snake_case, unreachable
 from magelang.passes.simplify import simplify
@@ -111,7 +111,7 @@ def mangle_type(ty: Type) -> str:
         return 'none'
     assert_never(ty)
 
-class mage_to_axis_syntax_tree(PassBase):
+class mage_to_revolv_syntax_tree(PassBase):
 
     def get_depends(self) -> Pass:
         return pipeline(remove_hidden, simplify)
