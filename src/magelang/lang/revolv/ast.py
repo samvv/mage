@@ -112,7 +112,7 @@ class NewExpr(ExprBase):
 @dataclass
 class EnumExpr(ExprBase):
     name: str
-    args: Sequence[Type]
+    args: Sequence[Expr]
 
 @dataclass
 class IsExpr(ExprBase):
