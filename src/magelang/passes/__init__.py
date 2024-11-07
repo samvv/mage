@@ -32,6 +32,8 @@ all_passes = {
     insert_skip,
     remove_hidden,
     simplify,
+    rust_to_text,
+    python_to_text,
     mage_to_python_cst,
     mage_to_python_emitter,
     mage_to_revolv_syntax_tree,
