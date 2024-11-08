@@ -326,9 +326,19 @@ pub except_handler
 pub try_stmt
   = 'try' ':' body handlers:except_handler* else_clause:('else' ':' body)? finally_clause:('finally' ':' body)?
 
+pub base_arg
+  = class_base_arg
+  | keyword_base_arg
+
+pub class_base_arg
+  = name:ident
+
+pub keyword_base_arg
+  = name:ident '=' expr
+
 # TODO add keyworded bases
 pub class_def
-  = decorator* 'class' name:ident bases:('(' (ident % ',') ')')? ':' body
+  = decorator* 'class' name:ident bases:('(' (base_arg % ',') ')')? ':' body
 
 pub param
   = rest_pos_param
