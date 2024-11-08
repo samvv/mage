@@ -404,6 +404,17 @@ def emit(node: PyNode) -> str:
         if isinstance(node, PyComma):
             out.write(' ')
 
+    def visit_base_arg(node: PyBaseArg) -> None:
+        if isinstance(node, PyKeywordBaseArg):
+            visit_token(node.name)
+            visit_token(node.equals)
+            visit_expr(node.expr)
+            return
+        if isinstance(node, PyClassBaseArg):
+            visit_token(node.name)
+            return
+        assert_never(node)
+
     def visit_stmt(node: PyStmt) -> None:
 
         if isinstance(node, PyGlobalStmt):
@@ -603,11 +614,11 @@ def emit(node: PyNode) -> str:
             visit_token(node.class_keyword)
             out.write(' ')
             visit_token(node.name)
-            if node.bases:
+            if node.bases is not None:
                 open_paren, elements, close_paren = node.bases
                 visit_token(open_paren)
-                for name, comma in elements:
-                    visit_token(name)
+                for arg, comma in elements:
+                    visit_base_arg(arg)
                     if comma is not None:
                         visit_token(comma)
                 visit_token(close_paren)
