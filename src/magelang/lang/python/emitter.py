@@ -237,6 +237,15 @@ def emit_token(node: PyToken) -> str:
     if isinstance(node, PyAmpersand):
         return '&'
 
+    if isinstance(node, PyPercent):
+        return '%'
+
+    if isinstance(node, PySlash):
+        return '/'
+
+    if isinstance(node, PyAsteriskAsterisk):
+        return '**'
+
     assert_never(node)
 
 def emit(node: PyNode) -> str:
@@ -558,7 +567,7 @@ def emit(node: PyNode) -> str:
             visit_token(node.name)
             visit_token(node.open_paren)
             for param, comma in node.params:
-                visit(param)
+                visit_param(param)
                 if comma is not None:
                     visit_token(comma)
             visit_token(node.close_paren)
@@ -635,19 +644,7 @@ def emit(node: PyNode) -> str:
 
         assert_never(node)
 
-    def visit(node: PyNode) -> None:
-
-        if is_py_pattern(node):
-            visit_pattern(node)
-            return
-
-        if is_py_expr(node):
-            visit_expr(node)
-            return
-
-        if is_py_stmt(node):
-            visit_stmt(node)
-            return
+    def visit_param(node: PyParam) -> None:
 
         if isinstance(node, PyNamedParam):
             visit_pattern(node.pattern)
@@ -662,6 +659,43 @@ def emit(node: PyNode) -> str:
                 visit_token(equals)
                 out.write(' ')
                 visit_expr(expr)
+            return
+
+        if isinstance(node, PyRestKeywordParam):
+            visit_token(node.asterisk_asterisk)
+            if node.name is not None:
+                visit_token(node.name)
+            return
+
+        if isinstance(node, PyRestPosParam):
+            visit_token(node.asterisk)
+            if node.name is not None:
+                visit_token(node.name)
+            return
+
+        if isinstance(node, PyKwSepParam):
+            visit_token(node.asterisk)
+            return
+
+        if isinstance(node, PyPosSepParam):
+            visit_token(node.slash)
+            return
+
+        assert_never(node)
+
+
+    def visit(node: PyNode) -> None:
+
+        if is_py_pattern(node):
+            visit_pattern(node)
+            return
+
+        if is_py_expr(node):
+            visit_expr(node)
+            return
+
+        if is_py_stmt(node):
+            visit_stmt(node)
             return
 
         if isinstance(node, PyPosSepParam):
@@ -762,7 +796,7 @@ def emit(node: PyNode) -> str:
                 out.write('\n\n\n')
             return
 
-        assert_never(node)
+        panic(f"Unexpected {node}")
 
     visit(node)
 
