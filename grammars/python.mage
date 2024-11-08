@@ -341,10 +341,10 @@ pub named_param
   = pattern annotation:(':' expr)? default:('=' expr)?
 
 pub rest_pos_param
-  = '*' name:ident
+  = '*' name:ident annotation:(':' expr)?
 
 pub rest_keyword_param
-  = '**' name:ident
+  = '**' name:ident annotation:(':' expr)?
 
 pub pos_sep_param
   = '/'
