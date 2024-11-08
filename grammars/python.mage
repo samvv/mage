@@ -110,6 +110,7 @@ pub expr
   | const_expr
   | ellipsis_expr
   | generator_expr
+  | if_expr
   | infix_expr
   | list_expr
   | named_expr
@@ -130,6 +131,9 @@ pub comprehension
 
 pub generator_expr
   = element:expr generators:comprehension+
+
+pub if_expr
+  = 'if' test:expr 'then' then:expr 'else' alt:expr
 
 @wrap
 pub const_expr
