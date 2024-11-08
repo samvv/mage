@@ -970,12 +970,12 @@ class PyImportStmt(_PyBaseNode):
     def count_aliases(self) -> int:
         return len(self.aliases)
 
-    def __init__(self, aliases: 'Sequence[PyAlias] | Sequence[tuple[PyAlias, PyComma | None]] | Punctuated[PyAlias, PyComma]', *, import_keyword: 'PyImportKeyword | None' = None) -> None:
+    def __init__(self, aliases: 'Sequence[tuple[PyAlias | PyPath, PyComma | None]] | Sequence[PyAlias | PyPath] | Punctuated[PyAlias | PyPath, PyComma]', *, import_keyword: 'PyImportKeyword | None' = None) -> None:
         self.import_keyword: PyImportKeyword = _coerce_union_2_token_import_keyword_none_to_token_import_keyword(import_keyword)
-        self.aliases: Punctuated[PyAlias, PyComma] = _coerce_union_3_list_node_alias_required_list_tuple_2_node_alias_union_2_token_comma_none_required_punct_node_alias_token_comma_required_to_punct_node_alias_token_comma_required(aliases)
+        self.aliases: Punctuated[PyAlias, PyComma] = _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_comma_none_required_list_union_2_node_alias_variant_path_required_punct_union_2_node_alias_variant_path_token_comma_required_to_punct_node_alias_token_comma_required(aliases)
 
     @no_type_check
-    def derive(self, import_keyword: 'PyImportKeyword | None' = None, aliases: 'Sequence[PyAlias] | Sequence[tuple[PyAlias, PyComma | None]] | Punctuated[PyAlias, PyComma] | None' = None) -> 'PyImportStmt':
+    def derive(self, import_keyword: 'PyImportKeyword | None' = None, aliases: 'Sequence[tuple[PyAlias | PyPath, PyComma | None]] | Sequence[PyAlias | PyPath] | Punctuated[PyAlias | PyPath, PyComma] | None' = None) -> 'PyImportStmt':
         if import_keyword is None:
             import_keyword = self.import_keyword
         if aliases is None:
@@ -992,14 +992,14 @@ class PyImportFromStmt(_PyBaseNode):
     def count_aliases(self) -> int:
         return len(self.aliases)
 
-    def __init__(self, path: 'PyPath', aliases: 'Sequence[PyFromAlias] | Sequence[tuple[PyFromAlias, PyComma | None]] | Punctuated[PyFromAlias, PyComma]', *, from_keyword: 'PyFromKeyword | None' = None, import_keyword: 'PyImportKeyword | None' = None) -> None:
+    def __init__(self, path: 'PyPath', aliases: 'Sequence[tuple[PyFromAlias | PyAsterisk | PyIdent | str, PyComma | None]] | Sequence[PyFromAlias | PyAsterisk | PyIdent | str] | Punctuated[PyFromAlias | PyAsterisk | PyIdent | str, PyComma]', *, from_keyword: 'PyFromKeyword | None' = None, import_keyword: 'PyImportKeyword | None' = None) -> None:
         self.from_keyword: PyFromKeyword = _coerce_union_2_token_from_keyword_none_to_token_from_keyword(from_keyword)
         self.path: PyPath = _coerce_variant_path_to_variant_path(path)
         self.import_keyword: PyImportKeyword = _coerce_union_2_token_import_keyword_none_to_token_import_keyword(import_keyword)
-        self.aliases: Punctuated[PyFromAlias, PyComma] = _coerce_union_3_list_node_from_alias_required_list_tuple_2_node_from_alias_union_2_token_comma_none_required_punct_node_from_alias_token_comma_required_to_punct_node_from_alias_token_comma_required(aliases)
+        self.aliases: Punctuated[PyFromAlias, PyComma] = _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_ident_extern_string_union_2_token_comma_none_required_list_union_4_node_from_alias_token_asterisk_token_ident_extern_string_required_punct_union_4_node_from_alias_token_asterisk_token_ident_extern_string_token_comma_required_to_punct_node_from_alias_token_comma_required(aliases)
 
     @no_type_check
-    def derive(self, from_keyword: 'PyFromKeyword | None' = None, path: 'PyPath | None' = None, import_keyword: 'PyImportKeyword | None' = None, aliases: 'Sequence[PyFromAlias] | Sequence[tuple[PyFromAlias, PyComma | None]] | Punctuated[PyFromAlias, PyComma] | None' = None) -> 'PyImportFromStmt':
+    def derive(self, from_keyword: 'PyFromKeyword | None' = None, path: 'PyPath | None' = None, import_keyword: 'PyImportKeyword | None' = None, aliases: 'Sequence[tuple[PyFromAlias | PyAsterisk | PyIdent | str, PyComma | None]] | Sequence[PyFromAlias | PyAsterisk | PyIdent | str] | Punctuated[PyFromAlias | PyAsterisk | PyIdent | str, PyComma] | None' = None) -> 'PyImportFromStmt':
         if from_keyword is None:
             from_keyword = self.from_keyword
         if path is None:
@@ -1540,17 +1540,20 @@ class PyNamedParam(_PyBaseNode):
 
 class PyRestPosParam(_PyBaseNode):
 
-    def __init__(self, name: 'PyIdent | str', *, asterisk: 'PyAsterisk | None' = None) -> None:
+    def __init__(self, name: 'PyIdent | str', *, asterisk: 'PyAsterisk | None' = None, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None) -> None:
         self.asterisk: PyAsterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(asterisk)
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
 
     @no_type_check
-    def derive(self, asterisk: 'PyAsterisk | None' = None, name: 'PyIdent | None | str' = None) -> 'PyRestPosParam':
+    def derive(self, asterisk: 'PyAsterisk | None' = None, name: 'PyIdent | None | str' = None, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None) -> 'PyRestPosParam':
         if asterisk is None:
             asterisk = self.asterisk
         if name is None:
             name = self.name
-        return PyRestPosParam(asterisk=asterisk, name=name)
+        if annotation is None:
+            annotation = self.annotation
+        return PyRestPosParam(asterisk=asterisk, name=name, annotation=annotation)
 
     def parent(self) -> 'PyRestPosParamParent':
         assert(self._parent is not None)
@@ -1559,17 +1562,20 @@ class PyRestPosParam(_PyBaseNode):
 
 class PyRestKeywordParam(_PyBaseNode):
 
-    def __init__(self, name: 'PyIdent | str', *, asterisk_asterisk: 'PyAsteriskAsterisk | None' = None) -> None:
+    def __init__(self, name: 'PyIdent | str', *, asterisk_asterisk: 'PyAsteriskAsterisk | None' = None, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None) -> None:
         self.asterisk_asterisk: PyAsteriskAsterisk = _coerce_union_2_token_asterisk_asterisk_none_to_token_asterisk_asterisk(asterisk_asterisk)
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
 
     @no_type_check
-    def derive(self, asterisk_asterisk: 'PyAsteriskAsterisk | None' = None, name: 'PyIdent | None | str' = None) -> 'PyRestKeywordParam':
+    def derive(self, asterisk_asterisk: 'PyAsteriskAsterisk | None' = None, name: 'PyIdent | None | str' = None, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None) -> 'PyRestKeywordParam':
         if asterisk_asterisk is None:
             asterisk_asterisk = self.asterisk_asterisk
         if name is None:
             name = self.name
-        return PyRestKeywordParam(asterisk_asterisk=asterisk_asterisk, name=name)
+        if annotation is None:
+            annotation = self.annotation
+        return PyRestKeywordParam(asterisk_asterisk=asterisk_asterisk, name=name, annotation=annotation)
 
     def parent(self) -> 'PyRestKeywordParamParent':
         assert(self._parent is not None)
@@ -1757,11 +1763,11 @@ def is_py_keyword(value: Any) -> TypeGuard[PyKeyword]:
     return isinstance(value, PyWhileKeyword) or isinstance(value, PyTypeKeyword) or isinstance(value, PyTryKeyword) or isinstance(value, PyReturnKeyword) or isinstance(value, PyRaiseKeyword) or isinstance(value, PyPassKeyword) or isinstance(value, PyOrKeyword) or isinstance(value, PyNotKeyword) or isinstance(value, PyNonlocalKeyword) or isinstance(value, PyIsKeyword) or isinstance(value, PyInKeyword) or isinstance(value, PyImportKeyword) or isinstance(value, PyIfKeyword) or isinstance(value, PyGlobalKeyword) or isinstance(value, PyFromKeyword) or isinstance(value, PyForKeyword) or isinstance(value, PyFinallyKeyword) or isinstance(value, PyExceptKeyword) or isinstance(value, PyElseKeyword) or isinstance(value, PyElifKeyword) or isinstance(value, PyDelKeyword) or isinstance(value, PyDefKeyword) or isinstance(value, PyContinueKeyword) or isinstance(value, PyClassKeyword) or isinstance(value, PyBreakKeyword) or isinstance(value, PyAsyncKeyword) or isinstance(value, PyAsKeyword) or isinstance(value, PyAndKeyword)
 
 
-type PyToken = PyIdent | PyFloat | PyInteger | PyString | PyTilde | PyVerticalBar | PyWhileKeyword | PyTypeKeyword | PyTryKeyword | PyReturnKeyword | PyRaiseKeyword | PyPassKeyword | PyOrKeyword | PyNotKeyword | PyNonlocalKeyword | PyIsKeyword | PyInKeyword | PyImportKeyword | PyIfKeyword | PyGlobalKeyword | PyFromKeyword | PyForKeyword | PyFinallyKeyword | PyExceptKeyword | PyElseKeyword | PyElifKeyword | PyDelKeyword | PyDefKeyword | PyContinueKeyword | PyClassKeyword | PyBreakKeyword | PyAsyncKeyword | PyAsKeyword | PyAndKeyword | PyCaret | PyCloseBracket | PyOpenBracket | PyAtSign | PyGreaterThanGreaterThan | PyGreaterThanEquals | PyGreaterThan | PyEqualsEquals | PyEquals | PyLessThanEquals | PyLessThanLessThan | PyLessThan | PySemicolon | PyColon | PySlashSlash | PySlash | PyDotDotDot | PyDot | PyRArrow | PyHyphen | PyComma | PyPlus | PyAsteriskAsterisk | PyAsterisk | PyCloseParen | PyOpenParen | PyAmpersand | PyPercent | PyHashtag | PyExclamationMarkEquals | PyCarriageReturnLineFeed | PyLineFeed
+type PyToken = str | str | PyIdent | PyFloat | PyInteger | PyString | PyTilde | PyVerticalBar | PyWhileKeyword | PyTypeKeyword | PyTryKeyword | PyReturnKeyword | PyRaiseKeyword | PyPassKeyword | PyOrKeyword | PyNotKeyword | PyNonlocalKeyword | PyIsKeyword | PyInKeyword | PyImportKeyword | PyIfKeyword | PyGlobalKeyword | PyFromKeyword | PyForKeyword | PyFinallyKeyword | PyExceptKeyword | PyElseKeyword | PyElifKeyword | PyDelKeyword | PyDefKeyword | PyContinueKeyword | PyClassKeyword | PyBreakKeyword | PyAsyncKeyword | PyAsKeyword | PyAndKeyword | PyCaret | PyCloseBracket | PyOpenBracket | PyAtSign | PyGreaterThanGreaterThan | PyGreaterThanEquals | PyGreaterThan | PyEqualsEquals | PyEquals | PyLessThanEquals | PyLessThanLessThan | PyLessThan | PySemicolon | PyColon | PySlashSlash | PySlash | PyDotDotDot | PyDot | PyRArrow | PyHyphen | PyComma | PyPlus | PyAsteriskAsterisk | PyAsterisk | PyCloseParen | PyOpenParen | PyAmpersand | PyPercent | PyHashtag | PyExclamationMarkEquals | PyCarriageReturnLineFeed | PyLineFeed
 
 
 def is_py_token(value: Any) -> TypeGuard[PyToken]:
-    return isinstance(value, PyIdent) or isinstance(value, PyFloat) or isinstance(value, PyInteger) or isinstance(value, PyString) or isinstance(value, PyTilde) or isinstance(value, PyVerticalBar) or isinstance(value, PyWhileKeyword) or isinstance(value, PyTypeKeyword) or isinstance(value, PyTryKeyword) or isinstance(value, PyReturnKeyword) or isinstance(value, PyRaiseKeyword) or isinstance(value, PyPassKeyword) or isinstance(value, PyOrKeyword) or isinstance(value, PyNotKeyword) or isinstance(value, PyNonlocalKeyword) or isinstance(value, PyIsKeyword) or isinstance(value, PyInKeyword) or isinstance(value, PyImportKeyword) or isinstance(value, PyIfKeyword) or isinstance(value, PyGlobalKeyword) or isinstance(value, PyFromKeyword) or isinstance(value, PyForKeyword) or isinstance(value, PyFinallyKeyword) or isinstance(value, PyExceptKeyword) or isinstance(value, PyElseKeyword) or isinstance(value, PyElifKeyword) or isinstance(value, PyDelKeyword) or isinstance(value, PyDefKeyword) or isinstance(value, PyContinueKeyword) or isinstance(value, PyClassKeyword) or isinstance(value, PyBreakKeyword) or isinstance(value, PyAsyncKeyword) or isinstance(value, PyAsKeyword) or isinstance(value, PyAndKeyword) or isinstance(value, PyCaret) or isinstance(value, PyCloseBracket) or isinstance(value, PyOpenBracket) or isinstance(value, PyAtSign) or isinstance(value, PyGreaterThanGreaterThan) or isinstance(value, PyGreaterThanEquals) or isinstance(value, PyGreaterThan) or isinstance(value, PyEqualsEquals) or isinstance(value, PyEquals) or isinstance(value, PyLessThanEquals) or isinstance(value, PyLessThanLessThan) or isinstance(value, PyLessThan) or isinstance(value, PySemicolon) or isinstance(value, PyColon) or isinstance(value, PySlashSlash) or isinstance(value, PySlash) or isinstance(value, PyDotDotDot) or isinstance(value, PyDot) or isinstance(value, PyRArrow) or isinstance(value, PyHyphen) or isinstance(value, PyComma) or isinstance(value, PyPlus) or isinstance(value, PyAsteriskAsterisk) or isinstance(value, PyAsterisk) or isinstance(value, PyCloseParen) or isinstance(value, PyOpenParen) or isinstance(value, PyAmpersand) or isinstance(value, PyPercent) or isinstance(value, PyHashtag) or isinstance(value, PyExclamationMarkEquals) or isinstance(value, PyCarriageReturnLineFeed) or isinstance(value, PyLineFeed)
+    return isinstance(value, str) or isinstance(value, str) or isinstance(value, PyIdent) or isinstance(value, PyFloat) or isinstance(value, PyInteger) or isinstance(value, PyString) or isinstance(value, PyTilde) or isinstance(value, PyVerticalBar) or isinstance(value, PyWhileKeyword) or isinstance(value, PyTypeKeyword) or isinstance(value, PyTryKeyword) or isinstance(value, PyReturnKeyword) or isinstance(value, PyRaiseKeyword) or isinstance(value, PyPassKeyword) or isinstance(value, PyOrKeyword) or isinstance(value, PyNotKeyword) or isinstance(value, PyNonlocalKeyword) or isinstance(value, PyIsKeyword) or isinstance(value, PyInKeyword) or isinstance(value, PyImportKeyword) or isinstance(value, PyIfKeyword) or isinstance(value, PyGlobalKeyword) or isinstance(value, PyFromKeyword) or isinstance(value, PyForKeyword) or isinstance(value, PyFinallyKeyword) or isinstance(value, PyExceptKeyword) or isinstance(value, PyElseKeyword) or isinstance(value, PyElifKeyword) or isinstance(value, PyDelKeyword) or isinstance(value, PyDefKeyword) or isinstance(value, PyContinueKeyword) or isinstance(value, PyClassKeyword) or isinstance(value, PyBreakKeyword) or isinstance(value, PyAsyncKeyword) or isinstance(value, PyAsKeyword) or isinstance(value, PyAndKeyword) or isinstance(value, PyCaret) or isinstance(value, PyCloseBracket) or isinstance(value, PyOpenBracket) or isinstance(value, PyAtSign) or isinstance(value, PyGreaterThanGreaterThan) or isinstance(value, PyGreaterThanEquals) or isinstance(value, PyGreaterThan) or isinstance(value, PyEqualsEquals) or isinstance(value, PyEquals) or isinstance(value, PyLessThanEquals) or isinstance(value, PyLessThanLessThan) or isinstance(value, PyLessThan) or isinstance(value, PySemicolon) or isinstance(value, PyColon) or isinstance(value, PySlashSlash) or isinstance(value, PySlash) or isinstance(value, PyDotDotDot) or isinstance(value, PyDot) or isinstance(value, PyRArrow) or isinstance(value, PyHyphen) or isinstance(value, PyComma) or isinstance(value, PyPlus) or isinstance(value, PyAsteriskAsterisk) or isinstance(value, PyAsterisk) or isinstance(value, PyCloseParen) or isinstance(value, PyOpenParen) or isinstance(value, PyAmpersand) or isinstance(value, PyPercent) or isinstance(value, PyHashtag) or isinstance(value, PyExclamationMarkEquals) or isinstance(value, PyCarriageReturnLineFeed) or isinstance(value, PyLineFeed)
 
 
 type PyNode = PySlice | PyNamedPattern | PyAttrPattern | PySubscriptPattern | PyStarredPattern | PyListPattern | PyTuplePattern | PyEllipsisExpr | PyGuard | PyComprehension | PyGeneratorExpr | PyConstExpr | PyNestExpr | PyNamedExpr | PyAttrExpr | PySubscriptExpr | PyStarredExpr | PyListExpr | PyTupleExpr | PyKeywordArg | PyCallExpr | PyPrefixExpr | PyInfixExpr | PyQualName | PyAbsolutePath | PyRelativePath | PyAlias | PyFromAlias | PyImportStmt | PyImportFromStmt | PyRetStmt | PyExprStmt | PyAugAssignStmt | PyAssignStmt | PyPassStmt | PyGlobalStmt | PyNonlocalStmt | PyIfCase | PyElifCase | PyElseCase | PyIfStmt | PyDeleteStmt | PyRaiseStmt | PyForStmt | PyWhileStmt | PyBreakStmt | PyContinueStmt | PyTypeAliasStmt | PyExceptHandler | PyTryStmt | PyClassDef | PyNamedParam | PyRestPosParam | PyRestKeywordParam | PyPosSepParam | PyKwSepParam | PyDecorator | PyFuncDef | PyModule
@@ -1799,7 +1805,7 @@ type PyListPatternParent = PyAssignStmt | PyAttrPattern | PyAugAssignStmt | PyCo
 type PyTuplePatternParent = PyAssignStmt | PyAttrPattern | PyAugAssignStmt | PyComprehension | PyDeleteStmt | PyForStmt | PyListPattern | PyNamedParam | PySubscriptPattern | PyTuplePattern
 
 
-type PyEllipsisExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PyEllipsisExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
 type PyGuardParent = PyComprehension
@@ -1808,43 +1814,43 @@ type PyGuardParent = PyComprehension
 type PyComprehensionParent = PyGeneratorExpr
 
 
-type PyGeneratorExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PyGeneratorExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
-type PyConstExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PyConstExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
-type PyNestExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PyNestExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
-type PyNamedExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PyNamedExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
-type PyAttrExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PyAttrExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
-type PySubscriptExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PySubscriptExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
-type PyStarredExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PyStarredExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
-type PyListExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PyListExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
-type PyTupleExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PyTupleExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
 type PyKeywordArgParent = PyCallExpr
 
 
-type PyCallExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PyCallExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
-type PyPrefixExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PyPrefixExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
-type PyInfixExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
+type PyInfixExprParent = PyAssignStmt | PyAttrExpr | PyAugAssignStmt | PyCallExpr | PyComprehension | PyDecorator | PyElifCase | PyExceptHandler | PyExprStmt | PyForStmt | PyFuncDef | PyGeneratorExpr | PyGuard | PyIfCase | PyInfixExpr | PyKeywordArg | PyListExpr | PyNamedParam | PyNestExpr | PyPrefixExpr | PyRaiseStmt | PyRestKeywordParam | PyRestPosParam | PyRetStmt | PySlice | PyStarredExpr | PyStarredPattern | PySubscriptExpr | PyTupleExpr | PyTypeAliasStmt | PyWhileStmt
 
 
 type PyQualNameParent = PyAbsolutePath | PyRelativePath
@@ -2522,12 +2528,17 @@ def _coerce_union_2_token_import_keyword_none_to_token_import_keyword(value: 'Py
 
 
 @no_type_check
-def _coerce_node_alias_to_node_alias(value: 'PyAlias') -> 'PyAlias':
-    return value
+def _coerce_union_2_node_alias_variant_path_to_node_alias(value: 'PyAlias | PyPath') -> 'PyAlias':
+    if is_py_path(value):
+        return PyAlias(_coerce_variant_path_to_variant_path(value))
+    elif isinstance(value, PyAlias):
+        return value
+    else:
+        raise ValueError('the coercion from PyAlias | PyPath to PyAlias failed')
 
 
 @no_type_check
-def _coerce_union_3_list_node_alias_required_list_tuple_2_node_alias_union_2_token_comma_none_required_punct_node_alias_token_comma_required_to_punct_node_alias_token_comma_required(value: 'Sequence[PyAlias] | Sequence[tuple[PyAlias, PyComma | None]] | Punctuated[PyAlias, PyComma]') -> 'Punctuated[PyAlias, PyComma]':
+def _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_comma_none_required_list_union_2_node_alias_variant_path_required_punct_union_2_node_alias_variant_path_token_comma_required_to_punct_node_alias_token_comma_required(value: 'Sequence[tuple[PyAlias | PyPath, PyComma | None]] | Sequence[PyAlias | PyPath] | Punctuated[PyAlias | PyPath, PyComma]') -> 'Punctuated[PyAlias, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -2542,7 +2553,7 @@ def _coerce_union_3_list_node_alias_required_list_tuple_2_node_alias_union_2_tok
                 else:
                     element_value = first_element
                     element_separator = PyComma()
-                new_element_value = _coerce_node_alias_to_node_alias(element_value)
+                new_element_value = _coerce_union_2_node_alias_variant_path_to_node_alias(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
                 new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
@@ -2552,7 +2563,7 @@ def _coerce_union_3_list_node_alias_required_list_tuple_2_node_alias_union_2_tok
                     assert(first_element[1] is None)
                 else:
                     element_value = first_element
-                new_element_value = _coerce_node_alias_to_node_alias(element_value)
+                new_element_value = _coerce_union_2_node_alias_variant_path_to_node_alias(element_value)
                 new_value.append(new_element_value)
                 break
     except StopIteration:
@@ -2571,12 +2582,17 @@ def _coerce_union_2_token_from_keyword_none_to_token_from_keyword(value: 'PyFrom
 
 
 @no_type_check
-def _coerce_node_from_alias_to_node_from_alias(value: 'PyFromAlias') -> 'PyFromAlias':
-    return value
+def _coerce_union_4_node_from_alias_token_asterisk_token_ident_extern_string_to_node_from_alias(value: 'PyFromAlias | PyAsterisk | PyIdent | str') -> 'PyFromAlias':
+    if isinstance(value, PyAsterisk) or isinstance(value, PyIdent) or isinstance(value, str):
+        return PyFromAlias(_coerce_union_3_token_asterisk_token_ident_extern_string_to_union_2_token_asterisk_token_ident(value))
+    elif isinstance(value, PyFromAlias):
+        return value
+    else:
+        raise ValueError('the coercion from PyFromAlias | PyAsterisk | PyIdent | str to PyFromAlias failed')
 
 
 @no_type_check
-def _coerce_union_3_list_node_from_alias_required_list_tuple_2_node_from_alias_union_2_token_comma_none_required_punct_node_from_alias_token_comma_required_to_punct_node_from_alias_token_comma_required(value: 'Sequence[PyFromAlias] | Sequence[tuple[PyFromAlias, PyComma | None]] | Punctuated[PyFromAlias, PyComma]') -> 'Punctuated[PyFromAlias, PyComma]':
+def _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_ident_extern_string_union_2_token_comma_none_required_list_union_4_node_from_alias_token_asterisk_token_ident_extern_string_required_punct_union_4_node_from_alias_token_asterisk_token_ident_extern_string_token_comma_required_to_punct_node_from_alias_token_comma_required(value: 'Sequence[tuple[PyFromAlias | PyAsterisk | PyIdent | str, PyComma | None]] | Sequence[PyFromAlias | PyAsterisk | PyIdent | str] | Punctuated[PyFromAlias | PyAsterisk | PyIdent | str, PyComma]') -> 'Punctuated[PyFromAlias, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -2591,7 +2607,7 @@ def _coerce_union_3_list_node_from_alias_required_list_tuple_2_node_from_alias_u
                 else:
                     element_value = first_element
                     element_separator = PyComma()
-                new_element_value = _coerce_node_from_alias_to_node_from_alias(element_value)
+                new_element_value = _coerce_union_4_node_from_alias_token_asterisk_token_ident_extern_string_to_node_from_alias(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
                 new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
@@ -2601,7 +2617,7 @@ def _coerce_union_3_list_node_from_alias_required_list_tuple_2_node_from_alias_u
                     assert(first_element[1] is None)
                 else:
                     element_value = first_element
-                new_element_value = _coerce_node_from_alias_to_node_from_alias(element_value)
+                new_element_value = _coerce_union_4_node_from_alias_token_asterisk_token_ident_extern_string_to_node_from_alias(element_value)
                 new_value.append(new_element_value)
                 break
     except StopIteration:
@@ -3225,5 +3241,599 @@ def _coerce_union_2_list_variant_stmt_none_to_list_variant_stmt(value: 'Sequence
         return new_elements
     else:
         raise ValueError('the coercion from Sequence[PyStmt] | None to Sequence[PyStmt] failed')
+
+
+from typing import Callable, no_type_check
+
+
+from .cst import *
+
+
+def for_each_py_pattern(node: PyPattern, proc: Callable[[PyPattern], None]):
+    if isinstance(node, PyNamedPattern):
+        return
+    if isinstance(node, PyAttrPattern):
+        proc(node.pattern)
+        return
+    if isinstance(node, PySubscriptPattern):
+        proc(node.pattern)
+        for (element, separator) in node.slices.elements:
+            if is_py_pattern(element):
+                proc(element)
+        if node.slices.last is not None:
+            if is_py_pattern(node.slices.last):
+                proc(node.slices.last)
+        return
+    if isinstance(node, PyStarredPattern):
+        return
+    if isinstance(node, PyListPattern):
+        for (element, separator) in node.elements.elements:
+            proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
+        return
+    if isinstance(node, PyTuplePattern):
+        for (element, separator) in node.elements.elements:
+            proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
+        return
+
+
+def for_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], None]):
+    if isinstance(node, PyEllipsisExpr):
+        return
+    if isinstance(node, PyGeneratorExpr):
+        proc(node.element)
+        return
+    if isinstance(node, PyConstExpr):
+        return
+    if isinstance(node, PyNestExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, PyNamedExpr):
+        return
+    if isinstance(node, PyAttrExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, PySubscriptExpr):
+        proc(node.expr)
+        for (element, separator) in node.slices.elements:
+            if isinstance(element, PySlice):
+                if is_py_expr(element.lower):
+                    proc(element.lower)
+                if is_py_expr(element.upper):
+                    proc(element.upper)
+                if isinstance(element.step, tuple):
+                    proc(element.step[1])
+            elif is_py_expr(element):
+                proc(element)
+        if node.slices.last is not None:
+            if isinstance(node.slices.last, PySlice):
+                if is_py_expr(node.slices.last.lower):
+                    proc(node.slices.last.lower)
+                if is_py_expr(node.slices.last.upper):
+                    proc(node.slices.last.upper)
+                if isinstance(node.slices.last.step, tuple):
+                    proc(node.slices.last.step[1])
+            elif is_py_expr(node.slices.last):
+                proc(node.slices.last)
+        return
+    if isinstance(node, PyStarredExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, PyListExpr):
+        for (element, separator) in node.elements.elements:
+            proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
+        return
+    if isinstance(node, PyTupleExpr):
+        for (element, separator) in node.elements.elements:
+            proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
+        return
+    if isinstance(node, PyCallExpr):
+        proc(node.operator)
+        return
+    if isinstance(node, PyPrefixExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, PyInfixExpr):
+        proc(node.left)
+        proc(node.right)
+        return
+
+
+def for_each_py_arg(node: PyArg, proc: Callable[[PyArg], None]):
+    if isinstance(node, PyEllipsisExpr):
+        return
+    if isinstance(node, PyGeneratorExpr):
+        proc(node.element)
+        return
+    if isinstance(node, PyConstExpr):
+        return
+    if isinstance(node, PyNestExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, PyNamedExpr):
+        return
+    if isinstance(node, PyAttrExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, PySubscriptExpr):
+        proc(node.expr)
+        for (element, separator) in node.slices.elements:
+            if isinstance(element, PySlice):
+                if is_py_expr(element.lower):
+                    proc(element.lower)
+                if is_py_expr(element.upper):
+                    proc(element.upper)
+                if isinstance(element.step, tuple):
+                    proc(element.step[1])
+            elif is_py_expr(element):
+                proc(element)
+        if node.slices.last is not None:
+            if isinstance(node.slices.last, PySlice):
+                if is_py_expr(node.slices.last.lower):
+                    proc(node.slices.last.lower)
+                if is_py_expr(node.slices.last.upper):
+                    proc(node.slices.last.upper)
+                if isinstance(node.slices.last.step, tuple):
+                    proc(node.slices.last.step[1])
+            elif is_py_expr(node.slices.last):
+                proc(node.slices.last)
+        return
+    if isinstance(node, PyStarredExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, PyListExpr):
+        for (element, separator) in node.elements.elements:
+            proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
+        return
+    if isinstance(node, PyTupleExpr):
+        for (element, separator) in node.elements.elements:
+            proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
+        return
+    if isinstance(node, PyKeywordArg):
+        proc(node.expr)
+        return
+    if isinstance(node, PyCallExpr):
+        proc(node.operator)
+        for (element, separator) in node.args.elements:
+            proc(element)
+        if node.args.last is not None:
+            proc(node.args.last)
+        return
+    if isinstance(node, PyPrefixExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, PyInfixExpr):
+        proc(node.left)
+        proc(node.right)
+        return
+
+
+def for_each_py_stmt(node: PyStmt, proc: Callable[[PyStmt], None]):
+    if isinstance(node, PyImportStmt):
+        return
+    if isinstance(node, PyImportFromStmt):
+        return
+    if isinstance(node, PyRetStmt):
+        return
+    if isinstance(node, PyExprStmt):
+        return
+    if isinstance(node, PyAugAssignStmt):
+        return
+    if isinstance(node, PyAssignStmt):
+        return
+    if isinstance(node, PyPassStmt):
+        return
+    if isinstance(node, PyGlobalStmt):
+        return
+    if isinstance(node, PyNonlocalStmt):
+        return
+    if isinstance(node, PyIfStmt):
+        return
+    if isinstance(node, PyDeleteStmt):
+        return
+    if isinstance(node, PyRaiseStmt):
+        return
+    if isinstance(node, PyForStmt):
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element in node.body:
+                proc(element)
+        if isinstance(node.else_clause, tuple):
+            if is_py_stmt(node.else_clause[2]):
+                proc(node.else_clause[2])
+            elif isinstance(node.else_clause[2], list):
+                for element_1 in node.else_clause[2]:
+                    proc(element_1)
+        return
+    if isinstance(node, PyWhileStmt):
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element in node.body:
+                proc(element)
+        if isinstance(node.else_clause, tuple):
+            if is_py_stmt(node.else_clause[2]):
+                proc(node.else_clause[2])
+            elif isinstance(node.else_clause[2], list):
+                for element_1 in node.else_clause[2]:
+                    proc(element_1)
+        return
+    if isinstance(node, PyBreakStmt):
+        return
+    if isinstance(node, PyContinueStmt):
+        return
+    if isinstance(node, PyTypeAliasStmt):
+        return
+    if isinstance(node, PyTryStmt):
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element in node.body:
+                proc(element)
+        if isinstance(node.else_clause, tuple):
+            if is_py_stmt(node.else_clause[2]):
+                proc(node.else_clause[2])
+            elif isinstance(node.else_clause[2], list):
+                for element_1 in node.else_clause[2]:
+                    proc(element_1)
+        if isinstance(node.finally_clause, tuple):
+            if is_py_stmt(node.finally_clause[2]):
+                proc(node.finally_clause[2])
+            elif isinstance(node.finally_clause[2], list):
+                for element_2 in node.finally_clause[2]:
+                    proc(element_2)
+        return
+    if isinstance(node, PyClassDef):
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element in node.body:
+                proc(element)
+        return
+    if isinstance(node, PyFuncDef):
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element in node.body:
+                proc(element)
+        return
+
+
+def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
+    if isinstance(node, PySlice):
+        if is_py_expr(node.lower):
+            proc(node.lower)
+        if is_py_expr(node.upper):
+            proc(node.upper)
+        if isinstance(node.step, tuple):
+            proc(node.step[1])
+        return
+    if isinstance(node, PyNamedPattern):
+        return
+    if isinstance(node, PyAttrPattern):
+        proc(node.pattern)
+        return
+    if isinstance(node, PySubscriptPattern):
+        proc(node.pattern)
+        for (element, separator) in node.slices.elements:
+            if isinstance(element, PySlice):
+                proc(element)
+            elif is_py_pattern(element):
+                proc(element)
+        if node.slices.last is not None:
+            if isinstance(node.slices.last, PySlice):
+                proc(node.slices.last)
+            elif is_py_pattern(node.slices.last):
+                proc(node.slices.last)
+        return
+    if isinstance(node, PyStarredPattern):
+        proc(node.expr)
+        return
+    if isinstance(node, PyListPattern):
+        for (element, separator) in node.elements.elements:
+            proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
+        return
+    if isinstance(node, PyTuplePattern):
+        for (element, separator) in node.elements.elements:
+            proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
+        return
+    if isinstance(node, PyEllipsisExpr):
+        return
+    if isinstance(node, PyGuard):
+        proc(node.expr)
+        return
+    if isinstance(node, PyComprehension):
+        proc(node.pattern)
+        proc(node.target)
+        for element in node.guards:
+            proc(element)
+        return
+    if isinstance(node, PyGeneratorExpr):
+        proc(node.element)
+        for element in node.generators:
+            proc(element)
+        return
+    if isinstance(node, PyConstExpr):
+        return
+    if isinstance(node, PyNestExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, PyNamedExpr):
+        return
+    if isinstance(node, PyAttrExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, PySubscriptExpr):
+        proc(node.expr)
+        for (element, separator) in node.slices.elements:
+            if isinstance(element, PySlice):
+                proc(element)
+            elif is_py_expr(element):
+                proc(element)
+        if node.slices.last is not None:
+            if isinstance(node.slices.last, PySlice):
+                proc(node.slices.last)
+            elif is_py_expr(node.slices.last):
+                proc(node.slices.last)
+        return
+    if isinstance(node, PyStarredExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, PyListExpr):
+        for (element, separator) in node.elements.elements:
+            proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
+        return
+    if isinstance(node, PyTupleExpr):
+        for (element, separator) in node.elements.elements:
+            proc(element)
+        if node.elements.last is not None:
+            proc(node.elements.last)
+        return
+    if isinstance(node, PyKeywordArg):
+        proc(node.expr)
+        return
+    if isinstance(node, PyCallExpr):
+        proc(node.operator)
+        for (element, separator) in node.args.elements:
+            proc(element)
+        if node.args.last is not None:
+            proc(node.args.last)
+        return
+    if isinstance(node, PyPrefixExpr):
+        proc(node.expr)
+        return
+    if isinstance(node, PyInfixExpr):
+        proc(node.left)
+        proc(node.right)
+        return
+    if isinstance(node, PyQualName):
+        return
+    if isinstance(node, PyAbsolutePath):
+        proc(node.name)
+        return
+    if isinstance(node, PyRelativePath):
+        if isinstance(node.name, PyQualName):
+            proc(node.name)
+        return
+    if isinstance(node, PyAlias):
+        proc(node.path)
+        return
+    if isinstance(node, PyFromAlias):
+        return
+    if isinstance(node, PyImportStmt):
+        for (element, separator) in node.aliases.elements:
+            proc(element)
+        if node.aliases.last is not None:
+            proc(node.aliases.last)
+        return
+    if isinstance(node, PyImportFromStmt):
+        proc(node.path)
+        for (element, separator) in node.aliases.elements:
+            proc(element)
+        if node.aliases.last is not None:
+            proc(node.aliases.last)
+        return
+    if isinstance(node, PyRetStmt):
+        if is_py_expr(node.expr):
+            proc(node.expr)
+        return
+    if isinstance(node, PyExprStmt):
+        proc(node.expr)
+        return
+    if isinstance(node, PyAugAssignStmt):
+        proc(node.pattern)
+        if isinstance(node.annotation, tuple):
+            proc(node.annotation[1])
+        proc(node.expr)
+        return
+    if isinstance(node, PyAssignStmt):
+        proc(node.pattern)
+        if isinstance(node.annotation, tuple):
+            proc(node.annotation[1])
+        if isinstance(node.value, tuple):
+            proc(node.value[1])
+        return
+    if isinstance(node, PyPassStmt):
+        return
+    if isinstance(node, PyGlobalStmt):
+        return
+    if isinstance(node, PyNonlocalStmt):
+        return
+    if isinstance(node, PyIfCase):
+        proc(node.test)
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element in node.body:
+                proc(element)
+        return
+    if isinstance(node, PyElifCase):
+        proc(node.test)
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element in node.body:
+                proc(element)
+        return
+    if isinstance(node, PyElseCase):
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element in node.body:
+                proc(element)
+        return
+    if isinstance(node, PyIfStmt):
+        proc(node.first)
+        for element in node.alternatives:
+            proc(element)
+        if isinstance(node.last, PyElseCase):
+            proc(node.last)
+        return
+    if isinstance(node, PyDeleteStmt):
+        proc(node.pattern)
+        return
+    if isinstance(node, PyRaiseStmt):
+        proc(node.expr)
+        if isinstance(node.cause, tuple):
+            proc(node.cause[1])
+        return
+    if isinstance(node, PyForStmt):
+        proc(node.pattern)
+        proc(node.expr)
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element in node.body:
+                proc(element)
+        if isinstance(node.else_clause, tuple):
+            if is_py_stmt(node.else_clause[2]):
+                proc(node.else_clause[2])
+            elif isinstance(node.else_clause[2], list):
+                for element_1 in node.else_clause[2]:
+                    proc(element_1)
+        return
+    if isinstance(node, PyWhileStmt):
+        proc(node.expr)
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element in node.body:
+                proc(element)
+        if isinstance(node.else_clause, tuple):
+            if is_py_stmt(node.else_clause[2]):
+                proc(node.else_clause[2])
+            elif isinstance(node.else_clause[2], list):
+                for element_1 in node.else_clause[2]:
+                    proc(element_1)
+        return
+    if isinstance(node, PyBreakStmt):
+        return
+    if isinstance(node, PyContinueStmt):
+        return
+    if isinstance(node, PyTypeAliasStmt):
+        if isinstance(node.type_params, tuple):
+            for (element, separator) in node.type_params[1].elements:
+                proc(element)
+            if node.type_params[1].last is not None:
+                proc(node.type_params[1].last)
+        proc(node.expr)
+        return
+    if isinstance(node, PyExceptHandler):
+        proc(node.expr)
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element in node.body:
+                proc(element)
+        return
+    if isinstance(node, PyTryStmt):
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element in node.body:
+                proc(element)
+        for element_1 in node.handlers:
+            proc(element_1)
+        if isinstance(node.else_clause, tuple):
+            if is_py_stmt(node.else_clause[2]):
+                proc(node.else_clause[2])
+            elif isinstance(node.else_clause[2], list):
+                for element_2 in node.else_clause[2]:
+                    proc(element_2)
+        if isinstance(node.finally_clause, tuple):
+            if is_py_stmt(node.finally_clause[2]):
+                proc(node.finally_clause[2])
+            elif isinstance(node.finally_clause[2], list):
+                for element_3 in node.finally_clause[2]:
+                    proc(element_3)
+        return
+    if isinstance(node, PyClassDef):
+        for element in node.decorators:
+            proc(element)
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element_1 in node.body:
+                proc(element_1)
+        return
+    if isinstance(node, PyNamedParam):
+        proc(node.pattern)
+        if isinstance(node.annotation, tuple):
+            proc(node.annotation[1])
+        if isinstance(node.default, tuple):
+            proc(node.default[1])
+        return
+    if isinstance(node, PyRestPosParam):
+        if isinstance(node.annotation, tuple):
+            proc(node.annotation[1])
+        return
+    if isinstance(node, PyRestKeywordParam):
+        if isinstance(node.annotation, tuple):
+            proc(node.annotation[1])
+        return
+    if isinstance(node, PyPosSepParam):
+        return
+    if isinstance(node, PyKwSepParam):
+        return
+    if isinstance(node, PyDecorator):
+        proc(node.expr)
+        return
+    if isinstance(node, PyFuncDef):
+        for element in node.decorators:
+            proc(element)
+        for (element_1, separator) in node.params.elements:
+            proc(element_1)
+        if node.params.last is not None:
+            proc(node.params.last)
+        if isinstance(node.return_type, tuple):
+            proc(node.return_type[1])
+        if is_py_stmt(node.body):
+            proc(node.body)
+        elif isinstance(node.body, list):
+            for element_2 in node.body:
+                proc(element_2)
+        return
+    if isinstance(node, PyModule):
+        for element in node.stmts:
+            proc(element)
+        return
 
 
