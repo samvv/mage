@@ -665,12 +665,20 @@ def emit(node: PyNode) -> str:
             visit_token(node.asterisk_asterisk)
             if node.name is not None:
                 visit_token(node.name)
+            if node.annotation is not None:
+                visit_token(node.annotation[0])
+                out.write(' ')
+                visit_expr(node.annotation[1])
             return
 
         if isinstance(node, PyRestPosParam):
             visit_token(node.asterisk)
             if node.name is not None:
                 visit_token(node.name)
+            if node.annotation is not None:
+                visit_token(node.annotation[0])
+                out.write(' ')
+                visit_expr(node.annotation[1])
             return
 
         if isinstance(node, PyKwSepParam):
