@@ -35,22 +35,23 @@ def _do_generate(args) -> int:
     filename = args.file[0]
     lang = args.lang
     opt = not args.no_opt
-    debug = args.debug
     skip_checks = args.skip_checks
     prefix = args.prefix
     dest_dir = Path(args.out_dir)
     enable_linecol = True
 
-    enable_cst = args.feat_all if args.feat_cst is None else args.feat_cst
-    enable_ast = args.feat_all if args.feat_ast is None else args.feat_ast
-    enable_lexer = args.feat_all if args.feat_lexer is None else args.feat_lexer
-    enable_emitter = args.feat_all if args.feat_emitter is None else args.feat_emitter
-    enable_cst_parent_pointers = args.feat_all if args.feat_cst_parent_pointers is None else args.feat_cst_parent_pointers
-    enable_ast_parent_pointers = args.feat_all if args.feat_ast_parent_pointers is None else args.feat_ast_parent_pointers
-    enable_visitor = args.feat_all if args.feat_visitor is None else args.feat_visitor
+    enable_asserts = args.enable_asserts
+    enable_cst = args.enable_all if args.enable_cst is None else args.enable_cst
+    enable_ast = args.enable_all if args.enable_ast is None else args.enable_ast
+    enable_lexer = args.enable_all if args.enable_lexer is None else args.enable_lexer
+    enable_emitter = args.enable_all if args.enable_emitter is None else args.enable_emitter
+    enable_cst_parent_pointers = args.enable_all if args.enable_cst_parent_pointers is None else args.enable_cst_parent_pointers
+    enable_ast_parent_pointers = args.enable_all if args.enable_ast_parent_pointers is None else args.enable_ast_parent_pointers
+    enable_visitor = args.enable_all if args.enable_visitor is None else args.enable_visitor
 
     opts = {
-        'prefix': prefix
+        'prefix': prefix,
+        'enable_asserts': enable_asserts,
     }
 
     ctx = Context(opts)
@@ -169,18 +170,19 @@ def main() -> int:
     generate_parser.add_argument('lang', choices=supported_languages, help='The name of the template to use')
     generate_parser.add_argument('file', nargs=1, help='A path to a grammar file')
     generate_parser.add_argument('--engine', default='old', choices=[ 'old', 'next' ], help='Which engine to use')
-    generate_parser.add_argument('--debug', action=argparse.BooleanOptionalAction, help='Generate extra checks that may affect performance')
+    generate_parser.add_argument('--enable-asserts', action=argparse.BooleanOptionalAction, default=False, help='Generate extra checks that may affect performance')
     generate_parser.add_argument('--skip-checks', action=argparse.BooleanOptionalAction, help='Skip all sanity checks for the given grammar')
     generate_parser.add_argument('--no-opt', action=argparse.BooleanOptionalAction, help='Disable any optimisations')
-    generate_parser.add_argument('--feat-all', action=argparse.BooleanOptionalAction, help='Enable all output features (off by default)')
-    generate_parser.add_argument('--feat-linecol', action=argparse.BooleanOptionalAction, help='Track line/column information during lexing (unless grammar requires it off by default)')
-    generate_parser.add_argument('--feat-cst-parent-pointers', action=argparse.BooleanOptionalAction, help='Generate references to the parent of a CST node (off by default)')
-    generate_parser.add_argument('--feat-ast-parent-pointers', action=argparse.BooleanOptionalAction, help='Generate references to the parent of an AST node (off by default)')
-    generate_parser.add_argument('--feat-ast', action=argparse.BooleanOptionalAction, default=True, help='Generate an abstract syntax tree (on by default)')
-    generate_parser.add_argument('--feat-cst', action=argparse.BooleanOptionalAction, default=True, help='Generate a concrete syntax tree (on by default)')
-    generate_parser.add_argument('--feat-lexer', action=argparse.BooleanOptionalAction, default=True, help='Generate a lexer (on by default)')
-    generate_parser.add_argument('--feat-visitor', action=argparse.BooleanOptionalAction, default=True, help='Generate AST/CST visitors (on by default)')
-    generate_parser.add_argument('--feat-emitter', action=argparse.BooleanOptionalAction, default=True, help='Generate a highly experimental emitter (on by default)')
+    generate_parser.add_argument('--enable-all', action=argparse.BooleanOptionalAction, help='Enable all output features (off by default)')
+    generate_parser.add_argument('--enable-linecol', action=argparse.BooleanOptionalAction, help='Track line/column information during lexing (unless grammar requires it off by default)')
+    generate_parser.add_argument('--enable-cst-parent-pointers', action=argparse.BooleanOptionalAction, help='Generate references to the parent of a CST node (off by default)')
+    generate_parser.add_argument('--enable-ast-parent-pointers', action=argparse.BooleanOptionalAction, help='Generate references to the parent of an AST node (off by default)')
+    generate_parser.add_argument('--enable-ast', action=argparse.BooleanOptionalAction, default=True, help='Generate an abstract syntax tree (on by default)')
+    generate_parser.add_argument('--enable-cst', action=argparse.BooleanOptionalAction, default=True, help='Generate a concrete syntax tree (on by default)')
+    generate_parser.add_argument('--enable-lexer', action=argparse.BooleanOptionalAction, default=True, help='Generate a parser (on by default)')
+    generate_parser.add_argument('--enable-parser', action=argparse.BooleanOptionalAction, default=True, help='Generate a lexer (on by default)')
+    generate_parser.add_argument('--enable-visitor', action=argparse.BooleanOptionalAction, default=True, help='Generate AST/CST visitors (on by default)')
+    generate_parser.add_argument('--enable-emitter', action=argparse.BooleanOptionalAction, default=True, help='Generate a highly experimental emitter (on by default)')
     generate_parser.add_argument('--force', action=argparse.BooleanOptionalAction, help='Ignore errors and always overwrite files that already exist')
     generate_parser.add_argument('--out-dir', default='output', help='Where to place the generated files')
     generate_parser.add_argument('--prefix', default='', help='Prefix all rules in the grammar with this value')
