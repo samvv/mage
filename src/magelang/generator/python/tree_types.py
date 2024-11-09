@@ -1,5 +1,5 @@
 
-from .util import build_union, gen_initializers, gen_py_type, namespaced, rule_type_to_py_type, to_py_class_name, quote_py_type
+from .util import build_union, gen_coercions, gen_py_type, namespaced, rule_type_to_py_type, to_py_class_name, quote_py_type
 from magelang.lang.python.cst import *
 from magelang.lang.python.emitter import emit
 from magelang.treespec import *
@@ -68,7 +68,7 @@ def generate_tree_types(
             init_optional = []
 
             for field in spec.fields:
-                param_type, _ = gen_initializers(field.ty, PyNamedExpr('_'), defs=defs, specs=specs, prefix=prefix)
+                param_type, _ = gen_coercions(field.ty, PyNamedExpr('_'), defs=defs, specs=specs, prefix=prefix)
                 param_type_str = emit(gen_py_type(param_type, prefix))
                 body.append(PyAssignStmt(
                     PyNamedPattern(field.name),

@@ -1,6 +1,9 @@
 
+from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Generic, Iterable, Iterator, Sequence, TypeVar, assert_never
+from collections.abc import Collection, Reversible, Sequence
+import sys
+from typing import Any, Iterable, Iterator, Protocol, SupportsIndex, TypeVar, assert_never, overload
 
 
 EOF = '\uFFFF'
@@ -44,34 +47,138 @@ class BaseToken(BaseSyntax):
         self.span = span
 
 
-_E_contra = TypeVar('_E_contra', contravariant=True)
-_P_contra = TypeVar('_P_contra', contravariant=True)
+_Element_cov = TypeVar('_Element_cov', covariant=True)
+_Separator_cov = TypeVar('_Separator_cov', covariant=True)
 
+_T_co = TypeVar('_T_co', covariant=True)
 
-class Punctuated(Generic[_E_contra, _P_contra]):
+class SequenceLike(Reversible[_T_co], Collection[_T_co], Protocol[_T_co]):
+    @overload
+    @abstractmethod
+    def __getitem__(self, index: int, /) -> _T_co: ...
+    @overload
+    @abstractmethod
+    def __getitem__(self, index: slice, /) -> 'SequenceLike[_T_co]': ...
+    @abstractmethod
+    def __getitem__(self, index: int | slice) -> '_T_co | SequenceLike[_T_co]':
+        raise NotImplementedError()
+    # Mixin methods
+    def index(self, value: Any, start: SupportsIndex = 0, stop: SupportsIndex = ..., /) -> int: ...
+    def count(self, value: Any, /) -> int: ...
+    def __contains__(self, value: object, /) -> bool: ...
+    def __iter__(self) -> Iterator[_T_co]: ...
+    def __reversed__(self) -> Iterator[_T_co]: ...
 
-    def __init__(self, elements: Iterable[tuple[_E_contra, _P_contra | None]] | None = None) -> None:
-        self.elements: list[tuple[_E_contra, _P_contra]] = []
-        self.last: _E_contra | None = None
-        if elements is not None:
-          for element, sep  in elements:
-              self.append(element, sep)
+class ImmutableList(SequenceLike[_T_co]):
+    pass
 
-    def append(self, element: _E_contra, separator: _P_contra | None = None) -> None:
-        if separator is None:
-            assert(self.last is None)
-            self.last = element
-        else:
-            self.elements.append((element, separator))
+ImmutableList.register(list) # type: ignore
+
+_T = TypeVar('_T')
+
+class List(ImmutableList[_T]):
+
+    def __init__(self, value: 'Iterable[_T] | None' = None) -> None:
+        """
+        Create a new `List` from either another List or any iterable
+        producing values that will be stored in this list.
+        """
+        super().__init__()
+        self._storage = list(value) if value is not None else []
 
     def __len__(self) -> int:
-        return len(self.elements) + 1 if self.last is not None else 0
+        return len(self._storage)
 
-    def __iter__(self) -> Iterator[tuple[_E_contra, _P_contra | None]]:
-        for item in self.elements:
-            yield item
-        if self.last is not None:
-            yield self.last, None
+    def __contains__(self, value: object) -> bool:
+        return value in self._storage
+
+    def __gt__(self, value: object, /) -> bool:
+        if not isinstance(value, List):
+            raise TypeError()
+        return self._storage > value._storage
+
+    def __ge__(self, value: object, /) -> bool:
+        if not isinstance(value, List):
+            raise TypeError()
+        return self._storage >= value._storage
+
+    def __lt__(self, value: object, /) -> bool:
+        if not isinstance(value, List):
+            raise TypeError()
+        return self._storage < value._storage
+
+    def __le__(self, value: object, /) -> bool:
+        if not isinstance(value, List):
+            raise TypeError()
+        return self._storage <= value._storage
+
+    def __reversed__(self) -> Iterator[_T]:
+        return reversed(self._storage)
+
+    def prepend(self, value: _T, /) -> None:
+        self._storage.insert(0, value)
+
+    def append(self, value: _T, /) -> None:
+        self._storage.append(value)
+
+    def insert(self, index: SupportsIndex, value: _T, /) -> None:
+        self._storage.insert(index, value)
+
+    def index(self, value: _T, start: SupportsIndex = 0, stop: SupportsIndex = sys.maxsize, /) -> int:
+        return self._storage.index(value, start, stop)
+
+    def count(self, value: _T, /) -> int:
+        return self._storage.count(value)
+
+    def __iter__(self) -> Iterator[_T]:
+        return iter(self._storage)
+
+    @overload
+    def __getitem__(self, index: int) -> '_T': ...
+
+    @overload
+    def __getitem__(self, index: slice) -> 'List[_T]': ...
+
+    def __getitem__(self, index: int | slice) -> '_T | List[_T]':
+        return List(self._storage[index]) \
+            if isinstance(index, slice) \
+            else self._storage[index]
+
+class ImmutablePunct(SequenceLike[tuple[_Element_cov, _Separator_cov | None]]):
+
+    @property
+    def elements(self) -> Iterable[_Element_cov]: ...
+
+    @property
+    def separators(self) -> Iterable[_Separator_cov | None]: ...
+
+_Element = TypeVar('_Element')
+_Separator = TypeVar('_Separator')
+
+class Punctuated(ImmutablePunct[_Element, _Separator], List[tuple[_Element, _Separator | None]]):
+
+    def push(self, element: _Element, separator: _Separator | None = None) -> None: # FIXME
+        super().append((element, separator))
+
+    def push_final(self, element: _Element, separator: _Separator | None = None) -> None:
+        super().append((element, separator))
+
+    @property
+    def last(self) -> _Separator | None:
+        return self[-1][1] if self else None
+
+    @property
+    def separators(self) -> Iterable[_Separator | None]:
+        for _, sep in self:
+            yield sep
+
+    @property
+    def elements(self) -> Iterable[_Element]:
+        for element, _ in self:
+            yield element
+
+
+ImmutablePunct.register(Punctuated) # type: ignore
 
 
 class ScanError(RuntimeError):

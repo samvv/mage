@@ -1,7 +1,7 @@
 
 from typing import assert_never
 
-from magelang.generator.python.util import build_cond, build_is_none, build_or, build_union, gen_deep_test, gen_initializers, gen_py_type, gen_shallow_test, namespaced, rule_type_to_py_type, to_py_class_name, quote_py_type, build_isinstance, PyCondCase
+from magelang.generator.python.util import build_cond, build_is_none, build_or, build_union, gen_deep_test, gen_coercions, gen_py_type, gen_shallow_test, namespaced, rule_type_to_py_type, to_py_class_name, quote_py_type, build_isinstance, PyCondCase
 from magelang.logging import warn
 from magelang.treespec import *
 from magelang.passes.insert_magic_rules import any_node_rule_name, any_token_rule_name, any_syntax_rule_name
@@ -85,11 +85,14 @@ def mage_to_python_cst(
             PyFromAlias('Never'),
             PyFromAlias('Unpack'),
             PyFromAlias('Sequence'),
+            PyFromAlias('Callable'),
             PyFromAlias('no_type_check'),
         ]),
         PyImportFromStmt(PyAbsolutePath(PyQualName(modules=[ 'magelang' ], name='runtime')), aliases=[
             PyFromAlias('BaseSyntax'),
             PyFromAlias('Punctuated'),
+            PyFromAlias('ImmutablePunct'),
+            PyFromAlias('ImmutableList'),
             PyFromAlias('Span'),
         ]),
         PyClassDef(base_syntax_class_name, bases=[ PyClassBaseArg('BaseSyntax') ], body=[
@@ -170,31 +173,33 @@ def mage_to_python_cst(
         #     PyKwSepParam(),
         # ]
 
-        required: list[PyParam] = []
-        optional: list[PyParam] = []
+        required_params: list[PyParam] = []
+        optional_params: list[PyParam] = []
 
         for field in spec.fields:
 
-            param_type, param_expr = gen_initializers(field.ty, PyNamedExpr(field.name), defs=defs, specs=specs, prefix=prefix)
+            type_with_coercions, coerce_fn = gen_coercions(field.ty, defs=defs, specs=specs, prefix=prefix)
             init_body.append(PyAssignStmt(
                 pattern=PyAttrPattern(
                     pattern=PyNamedPattern('self'),
                     name=field.name
                 ),
                 annotation=gen_py_type(field.ty, prefix),
-                value=param_expr,
+                value=PyCallExpr(coerce_fn, args=[ PyNamedExpr(field.name) ]),
             ))
 
-            param_type_str = emit(gen_py_type(param_type, prefix))
+            param_type = type_with_coercions
+
+            param_type_str = emit(gen_py_type(param_type, prefix=prefix, immutable=True))
 
             if is_optional(param_type):
-                optional.append(PyNamedParam(
+                optional_params.append(PyNamedParam(
                     pattern=PyNamedPattern(field.name),
                     annotation=PyConstExpr(literal=param_type_str),
                     default=PyNamedExpr('None')
                 ))
             else:
-                required.append(PyNamedParam(
+                required_params.append(PyNamedParam(
                     pattern=PyNamedPattern(field.name),
                     annotation=PyConstExpr(param_type_str),
                 ))
@@ -211,22 +216,25 @@ def mage_to_python_cst(
 
             derive_kwargs_body.append(PyAssignStmt(
                 pattern=PyNamedPattern(field.name),
-                annotation=quote_py_type(gen_py_type(param_type, prefix=prefix)),
+                annotation=quote_py_type(gen_py_type(param_type, prefix=prefix, immutable=True)),
             ))
             derive_args.append(PyKeywordArg(field.name, PyNamedExpr(field.name)))
-            # derive_body.append(PyIfExpr(
-            #     PyInfixExpr(PyNamedExpr(field.name), PyInKeyword(), PyNamedExpr('kwargs')),
-            #     param_expr,
-            #     PyAttrExpr(PyNamedExpr('self'), field.name)
-            # ))
+            derive_body.append(PyAssignStmt(
+                PyNamedPattern(field.name),
+                value=PyIfExpr(
+                    PyCallExpr(coerce_fn, args=[ PySubscriptExpr(PyNamedExpr('kwargs'), [ PyConstExpr(field.name) ]) ]),
+                    PyInfixExpr(PyConstExpr(field.name), PyInKeyword(), PyNamedExpr('kwargs')),
+                    PyAttrExpr(PyNamedExpr('self'), field.name)
+                )
+            ))
 
         if not spec.fields:
             init_body.append(PyPassStmt())
 
-        init_params.extend(required)
-        if optional:
+        init_params.extend(required_params)
+        if optional_params:
             init_params.append(PyKwSepParam())
-            init_params.extend(optional)
+            init_params.extend(optional_params)
 
         body.append(PyFuncDef(
             name='__init__',
@@ -269,7 +277,7 @@ def mage_to_python_cst(
         # ))
         derive_decorators = []
         if not enable_asserts:
-            derive_decorators.append(PyNamedExpr('no_type_check'))
+            derive_decorators.append(PyDecorator(PyNamedExpr('no_type_check')))
         body.append(PyFuncDef(
              decorators=derive_decorators,
              name='derive',
@@ -365,9 +373,9 @@ def mage_to_python_cst(
         def gen_each_field(spec: NodeSpec, target: PyExpr) -> Generator[PyStmt, None, None]:
             for field in spec.fields:
                 if contains_type(field.ty, main_type, specs=specs):
-                    yield from gen_proc_call(field.ty, PyAttrExpr(expr=target, name=field.name))
+                    yield from gen_proc_calls(field.ty, PyAttrExpr(expr=target, name=field.name))
 
-        def gen_proc_call(ty: Type, target: PyExpr) -> Generator[PyStmt, None, None]:
+        def gen_proc_calls(ty: Type, target: PyExpr) -> Generator[PyStmt, None, None]:
             if is_type_assignable(ty, main_type, specs=specs):
                 yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ target ]))
                 return
@@ -380,7 +388,7 @@ def mage_to_python_cst(
                 assert(isinstance(spec, VariantSpec))
                 cases = []
                 for _, ty_2 in spec.members:
-                    body = list(gen_proc_call(ty_2, target))
+                    body = list(gen_proc_calls(ty_2, target))
                     if body:
                         cases.append((
                             gen_shallow_test(ty_2, target, prefix),
@@ -397,11 +405,11 @@ def mage_to_python_cst(
                 return
             if isinstance(ty, TupleType):
                 for i, element_type in enumerate(ty.element_types):
-                    yield from gen_proc_call(element_type, PySubscriptExpr(expr=target, slices=[ PyConstExpr(literal=i) ]))
+                    yield from gen_proc_calls(element_type, PySubscriptExpr(expr=target, slices=[ PyConstExpr(literal=i) ]))
                 return
             if isinstance(ty, ListType):
                 element_name = generate_temporary(prefix='element')
-                yield PyForStmt(pattern=PyNamedPattern(element_name), expr=target, body=list(gen_proc_call(ty.element_type, PyNamedExpr(element_name))))
+                yield PyForStmt(pattern=PyNamedPattern(element_name), expr=target, body=list(gen_proc_calls(ty.element_type, PyNamedExpr(element_name))))
                 return
             if isinstance(ty, PunctType):
                 element_name = generate_temporary(prefix='element')
@@ -413,21 +421,21 @@ def mage_to_python_cst(
                             PyNamedPattern(separator_name)
                         ],
                     ),
-                    expr=PyAttrExpr(target, 'elements'),
+                    expr=target,
                     body=[
-                        *gen_proc_call(ty.element_type, PyNamedExpr(element_name)),
-                        *gen_proc_call(ty.separator_type, PyNamedExpr(separator_name)),
+                        *gen_proc_calls(ty.element_type, PyNamedExpr(element_name)),
+                        *gen_proc_calls(ty.separator_type, PyNamedExpr(separator_name)),
                     ]
                 )
-                yield PyIfStmt(first=PyIfCase(
-                    test=PyInfixExpr(PyAttrExpr(target, 'last'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')),
-                    body=list(gen_proc_call(ty.element_type, PyAttrExpr(target, 'last')))
-                ))
+                # yield PyIfStmt(first=PyIfCase(
+                #     test=PyInfixExpr(PyAttrExpr(target, 'last'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')),
+                #     body=list(gen_proc_calls(ty.element_type, PyAttrExpr(target, 'last')))
+                # ))
                 return
             if isinstance(ty, UnionType):
                 cases: list[PyCondCase] = []
                 for element_type in ty.types:
-                    body = list(gen_proc_call(element_type, target))
+                    body = list(gen_proc_calls(element_type, target))
                     if body:
                         cases.append((
                             gen_shallow_test(element_type, target, prefix),
@@ -496,20 +504,7 @@ def mage_to_python_cst(
 
     variant_visitors = list(gen_visitor(spec.name) for spec in specs if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
 
-    stmts.extend([
-        PyImportFromStmt(
-            PyAbsolutePath('typing'),
-            aliases=[
-                PyFromAlias('Callable'),
-                PyFromAlias('no_type_check'),
-            ]
-        ),
-        PyImportFromStmt(
-            PyRelativePath(dots=1, name=PyQualName('cst')),
-            aliases=[ PyFromAlias(PyAsterisk()) ]
-        ),
-        *variant_visitors,
-    ])
+    stmts.extend(variant_visitors)
 
     variant_visitors = list(gen_visitor(spec.name) for spec in specs if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
 

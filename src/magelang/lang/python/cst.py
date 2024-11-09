@@ -1,7 +1,7 @@
-from typing import Any, TypeGuard, TypedDict, Never, Unpack, Sequence, no_type_check
+from typing import Any, TypeGuard, TypedDict, Never, Unpack, Sequence, Callable, no_type_check
 
 
-from magelang.runtime import BaseSyntax, Punctuated, Span
+from magelang.runtime import BaseSyntax, Punctuated, ImmutablePunct, ImmutableList, Span
 
 
 class _PyBaseSyntax(BaseSyntax):
@@ -377,7 +377,12 @@ class PySlice(_PyBaseNode):
         self.upper: PyExpr | None = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(upper)
         self.step: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(step)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PySliceDeriveKwargs]) -> 'PySlice':
+        lower = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(kwargs['lower']) if 'lower' in kwargs else self.lower
+        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        upper = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(kwargs['upper']) if 'upper' in kwargs else self.upper
+        step = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(kwargs['step']) if 'step' in kwargs else self.step
         return PySlice(lower=lower, colon=colon, upper=upper, step=step)
 
     def parent(self) -> 'PySliceParent':
@@ -395,7 +400,9 @@ class PyNamedPattern(_PyBaseNode):
     def __init__(self, name: 'PyIdent | str') -> None:
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyNamedPatternDeriveKwargs]) -> 'PyNamedPattern':
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
         return PyNamedPattern(name=name)
 
     def parent(self) -> 'PyNamedPatternParent':
@@ -419,7 +426,11 @@ class PyAttrPattern(_PyBaseNode):
         self.dot: PyDot = _coerce_union_2_token_dot_none_to_token_dot(dot)
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyAttrPatternDeriveKwargs]) -> 'PyAttrPattern':
+        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        dot = _coerce_union_2_token_dot_none_to_token_dot(kwargs['dot']) if 'dot' in kwargs else self.dot
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
         return PyAttrPattern(pattern=pattern, dot=dot, name=name)
 
     def parent(self) -> 'PyAttrPatternParent':
@@ -433,7 +444,7 @@ class PySubscriptPatternDeriveKwargs(TypedDict, total=False):
 
     open_bracket: 'PyOpenBracket | None'
 
-    slices: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | Punctuated[PySlice | PyPattern, PyComma]'
+    slices: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | ImmutablePunct[PySlice | PyPattern, PyComma]'
 
     close_bracket: 'PyCloseBracket | None'
 
@@ -443,13 +454,18 @@ class PySubscriptPattern(_PyBaseNode):
     def count_slices(self) -> int:
         return len(self.slices)
 
-    def __init__(self, pattern: 'PyPattern', slices: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | Punctuated[PySlice | PyPattern, PyComma]', *, open_bracket: 'PyOpenBracket | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+    def __init__(self, pattern: 'PyPattern', slices: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | ImmutablePunct[PySlice | PyPattern, PyComma]', *, open_bracket: 'PyOpenBracket | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
         self.open_bracket: PyOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
         self.slices: Punctuated[PySlice | PyPattern, PyComma] = _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_token_comma_none_required_list_union_2_node_slice_variant_pattern_required_punct_union_2_node_slice_variant_pattern_token_comma_required_to_punct_union_2_node_slice_variant_pattern_token_comma_required(slices)
         self.close_bracket: PyCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PySubscriptPatternDeriveKwargs]) -> 'PySubscriptPattern':
+        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        open_bracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(kwargs['open_bracket']) if 'open_bracket' in kwargs else self.open_bracket
+        slices = _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_token_comma_none_required_list_union_2_node_slice_variant_pattern_required_punct_union_2_node_slice_variant_pattern_token_comma_required_to_punct_union_2_node_slice_variant_pattern_token_comma_required(kwargs['slices']) if 'slices' in kwargs else self.slices
+        close_bracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(kwargs['close_bracket']) if 'close_bracket' in kwargs else self.close_bracket
         return PySubscriptPattern(pattern=pattern, open_bracket=open_bracket, slices=slices, close_bracket=close_bracket)
 
     def parent(self) -> 'PySubscriptPatternParent':
@@ -470,7 +486,10 @@ class PyStarredPattern(_PyBaseNode):
         self.asterisk: PyAsterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(asterisk)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyStarredPatternDeriveKwargs]) -> 'PyStarredPattern':
+        asterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(kwargs['asterisk']) if 'asterisk' in kwargs else self.asterisk
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyStarredPattern(asterisk=asterisk, expr=expr)
 
     def parent(self) -> 'PyStarredPatternParent':
@@ -482,7 +501,7 @@ class PyListPatternDeriveKwargs(TypedDict, total=False):
 
     open_bracket: 'PyOpenBracket | None'
 
-    elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma] | None'
+    elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | ImmutablePunct[PyPattern, PyComma] | None'
 
     close_bracket: 'PyCloseBracket | None'
 
@@ -492,12 +511,16 @@ class PyListPattern(_PyBaseNode):
     def count_elements(self) -> int:
         return len(self.elements)
 
-    def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+    def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | ImmutablePunct[PyPattern, PyComma] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         self.open_bracket: PyOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
         self.elements: Punctuated[PyPattern, PyComma] = _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(elements)
         self.close_bracket: PyCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyListPatternDeriveKwargs]) -> 'PyListPattern':
+        open_bracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(kwargs['open_bracket']) if 'open_bracket' in kwargs else self.open_bracket
+        elements = _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(kwargs['elements']) if 'elements' in kwargs else self.elements
+        close_bracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(kwargs['close_bracket']) if 'close_bracket' in kwargs else self.close_bracket
         return PyListPattern(open_bracket=open_bracket, elements=elements, close_bracket=close_bracket)
 
     def parent(self) -> 'PyListPatternParent':
@@ -509,7 +532,7 @@ class PyTuplePatternDeriveKwargs(TypedDict, total=False):
 
     open_paren: 'PyOpenParen | None'
 
-    elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma] | None'
+    elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | ImmutablePunct[PyPattern, PyComma] | None'
 
     close_paren: 'PyCloseParen | None'
 
@@ -519,12 +542,16 @@ class PyTuplePattern(_PyBaseNode):
     def count_elements(self) -> int:
         return len(self.elements)
 
-    def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
+    def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | ImmutablePunct[PyPattern, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
         self.elements: Punctuated[PyPattern, PyComma] = _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(elements)
         self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyTuplePatternDeriveKwargs]) -> 'PyTuplePattern':
+        open_paren = _coerce_union_2_token_open_paren_none_to_token_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
+        elements = _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(kwargs['elements']) if 'elements' in kwargs else self.elements
+        close_paren = _coerce_union_2_token_close_paren_none_to_token_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
         return PyTuplePattern(open_paren=open_paren, elements=elements, close_paren=close_paren)
 
     def parent(self) -> 'PyTuplePatternParent':
@@ -542,7 +569,9 @@ class PyEllipsisExpr(_PyBaseNode):
     def __init__(self, *, dot_dot_dot: 'PyDotDotDot | None' = None) -> None:
         self.dot_dot_dot: PyDotDotDot = _coerce_union_2_token_dot_dot_dot_none_to_token_dot_dot_dot(dot_dot_dot)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyEllipsisExprDeriveKwargs]) -> 'PyEllipsisExpr':
+        dot_dot_dot = _coerce_union_2_token_dot_dot_dot_none_to_token_dot_dot_dot(kwargs['dot_dot_dot']) if 'dot_dot_dot' in kwargs else self.dot_dot_dot
         return PyEllipsisExpr(dot_dot_dot=dot_dot_dot)
 
     def parent(self) -> 'PyEllipsisExprParent':
@@ -563,7 +592,10 @@ class PyGuard(_PyBaseNode):
         self.if_keyword: PyIfKeyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(if_keyword)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyGuardDeriveKwargs]) -> 'PyGuard':
+        if_keyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(kwargs['if_keyword']) if 'if_keyword' in kwargs else self.if_keyword
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyGuard(if_keyword=if_keyword, expr=expr)
 
     def parent(self) -> 'PyGuardParent':
@@ -597,9 +629,16 @@ class PyComprehension(_PyBaseNode):
         self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
         self.in_keyword: PyInKeyword = _coerce_union_2_token_in_keyword_none_to_token_in_keyword(in_keyword)
         self.target: PyExpr = _coerce_variant_expr_to_variant_expr(target)
-        self.guards: Sequence[PyGuard] = _coerce_union_2_list_union_2_node_guard_variant_expr_none_to_list_node_guard(guards)
+        self.guards: list[PyGuard] = _coerce_union_2_list_union_2_node_guard_variant_expr_none_to_list_node_guard(guards)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyComprehensionDeriveKwargs]) -> 'PyComprehension':
+        async_keyword = _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none(kwargs['async_keyword']) if 'async_keyword' in kwargs else self.async_keyword
+        for_keyword = _coerce_union_2_token_for_keyword_none_to_token_for_keyword(kwargs['for_keyword']) if 'for_keyword' in kwargs else self.for_keyword
+        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        in_keyword = _coerce_union_2_token_in_keyword_none_to_token_in_keyword(kwargs['in_keyword']) if 'in_keyword' in kwargs else self.in_keyword
+        target = _coerce_variant_expr_to_variant_expr(kwargs['target']) if 'target' in kwargs else self.target
+        guards = _coerce_union_2_list_union_2_node_guard_variant_expr_none_to_list_node_guard(kwargs['guards']) if 'guards' in kwargs else self.guards
         return PyComprehension(async_keyword=async_keyword, for_keyword=for_keyword, pattern=pattern, in_keyword=in_keyword, target=target, guards=guards)
 
     def parent(self) -> 'PyComprehensionParent':
@@ -621,9 +660,12 @@ class PyGeneratorExpr(_PyBaseNode):
 
     def __init__(self, element: 'PyExpr', generators: 'Sequence[PyComprehension]') -> None:
         self.element: PyExpr = _coerce_variant_expr_to_variant_expr(element)
-        self.generators: Sequence[PyComprehension] = _coerce_list_node_comprehension_required_to_list_node_comprehension_required(generators)
+        self.generators: list[PyComprehension] = _coerce_list_node_comprehension_required_to_list_node_comprehension_required(generators)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyGeneratorExprDeriveKwargs]) -> 'PyGeneratorExpr':
+        element = _coerce_variant_expr_to_variant_expr(kwargs['element']) if 'element' in kwargs else self.element
+        generators = _coerce_list_node_comprehension_required_to_list_node_comprehension_required(kwargs['generators']) if 'generators' in kwargs else self.generators
         return PyGeneratorExpr(element=element, generators=generators)
 
     def parent(self) -> 'PyGeneratorExprParent':
@@ -653,7 +695,13 @@ class PyIfExpr(_PyBaseNode):
         self.else_keyword: PyElseKeyword = _coerce_union_2_token_else_keyword_none_to_token_else_keyword(else_keyword)
         self.alt: PyExpr = _coerce_variant_expr_to_variant_expr(alt)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyIfExprDeriveKwargs]) -> 'PyIfExpr':
+        then = _coerce_variant_expr_to_variant_expr(kwargs['then']) if 'then' in kwargs else self.then
+        if_keyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(kwargs['if_keyword']) if 'if_keyword' in kwargs else self.if_keyword
+        test = _coerce_variant_expr_to_variant_expr(kwargs['test']) if 'test' in kwargs else self.test
+        else_keyword = _coerce_union_2_token_else_keyword_none_to_token_else_keyword(kwargs['else_keyword']) if 'else_keyword' in kwargs else self.else_keyword
+        alt = _coerce_variant_expr_to_variant_expr(kwargs['alt']) if 'alt' in kwargs else self.alt
         return PyIfExpr(then=then, if_keyword=if_keyword, test=test, else_keyword=else_keyword, alt=alt)
 
     def parent(self) -> 'PyIfExprParent':
@@ -671,7 +719,9 @@ class PyConstExpr(_PyBaseNode):
     def __init__(self, literal: 'PyFloat | PyInteger | PyString | float | int | str') -> None:
         self.literal: PyFloat | PyInteger | PyString = _coerce_union_6_token_float_token_integer_token_string_extern_float_extern_integer_extern_string_to_union_3_token_float_token_integer_token_string(literal)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyConstExprDeriveKwargs]) -> 'PyConstExpr':
+        literal = _coerce_union_6_token_float_token_integer_token_string_extern_float_extern_integer_extern_string_to_union_3_token_float_token_integer_token_string(kwargs['literal']) if 'literal' in kwargs else self.literal
         return PyConstExpr(literal=literal)
 
     def parent(self) -> 'PyConstExprParent':
@@ -695,7 +745,11 @@ class PyNestExpr(_PyBaseNode):
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
         self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyNestExprDeriveKwargs]) -> 'PyNestExpr':
+        open_paren = _coerce_union_2_token_open_paren_none_to_token_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        close_paren = _coerce_union_2_token_close_paren_none_to_token_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
         return PyNestExpr(open_paren=open_paren, expr=expr, close_paren=close_paren)
 
     def parent(self) -> 'PyNestExprParent':
@@ -713,7 +767,9 @@ class PyNamedExpr(_PyBaseNode):
     def __init__(self, name: 'PyIdent | str') -> None:
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyNamedExprDeriveKwargs]) -> 'PyNamedExpr':
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
         return PyNamedExpr(name=name)
 
     def parent(self) -> 'PyNamedExprParent':
@@ -737,7 +793,11 @@ class PyAttrExpr(_PyBaseNode):
         self.dot: PyDot = _coerce_union_2_token_dot_none_to_token_dot(dot)
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyAttrExprDeriveKwargs]) -> 'PyAttrExpr':
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        dot = _coerce_union_2_token_dot_none_to_token_dot(kwargs['dot']) if 'dot' in kwargs else self.dot
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
         return PyAttrExpr(expr=expr, dot=dot, name=name)
 
     def parent(self) -> 'PyAttrExprParent':
@@ -751,7 +811,7 @@ class PySubscriptExprDeriveKwargs(TypedDict, total=False):
 
     open_bracket: 'PyOpenBracket | None'
 
-    slices: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | Punctuated[PySlice | PyExpr, PyComma]'
+    slices: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | ImmutablePunct[PySlice | PyExpr, PyComma]'
 
     close_bracket: 'PyCloseBracket | None'
 
@@ -761,13 +821,18 @@ class PySubscriptExpr(_PyBaseNode):
     def count_slices(self) -> int:
         return len(self.slices)
 
-    def __init__(self, expr: 'PyExpr', slices: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | Punctuated[PySlice | PyExpr, PyComma]', *, open_bracket: 'PyOpenBracket | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+    def __init__(self, expr: 'PyExpr', slices: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | ImmutablePunct[PySlice | PyExpr, PyComma]', *, open_bracket: 'PyOpenBracket | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
         self.open_bracket: PyOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
         self.slices: Punctuated[PySlice | PyExpr, PyComma] = _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_comma_none_required_list_union_2_node_slice_variant_expr_required_punct_union_2_node_slice_variant_expr_token_comma_required_to_punct_union_2_node_slice_variant_expr_token_comma_required(slices)
         self.close_bracket: PyCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PySubscriptExprDeriveKwargs]) -> 'PySubscriptExpr':
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        open_bracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(kwargs['open_bracket']) if 'open_bracket' in kwargs else self.open_bracket
+        slices = _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_comma_none_required_list_union_2_node_slice_variant_expr_required_punct_union_2_node_slice_variant_expr_token_comma_required_to_punct_union_2_node_slice_variant_expr_token_comma_required(kwargs['slices']) if 'slices' in kwargs else self.slices
+        close_bracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(kwargs['close_bracket']) if 'close_bracket' in kwargs else self.close_bracket
         return PySubscriptExpr(expr=expr, open_bracket=open_bracket, slices=slices, close_bracket=close_bracket)
 
     def parent(self) -> 'PySubscriptExprParent':
@@ -788,7 +853,10 @@ class PyStarredExpr(_PyBaseNode):
         self.asterisk: PyAsterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(asterisk)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyStarredExprDeriveKwargs]) -> 'PyStarredExpr':
+        asterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(kwargs['asterisk']) if 'asterisk' in kwargs else self.asterisk
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyStarredExpr(asterisk=asterisk, expr=expr)
 
     def parent(self) -> 'PyStarredExprParent':
@@ -800,7 +868,7 @@ class PyListExprDeriveKwargs(TypedDict, total=False):
 
     open_bracket: 'PyOpenBracket | None'
 
-    elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None'
+    elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None'
 
     close_bracket: 'PyCloseBracket | None'
 
@@ -810,12 +878,16 @@ class PyListExpr(_PyBaseNode):
     def count_elements(self) -> int:
         return len(self.elements)
 
-    def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+    def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
         self.open_bracket: PyOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
         self.elements: Punctuated[PyExpr, PyComma] = _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(elements)
         self.close_bracket: PyCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyListExprDeriveKwargs]) -> 'PyListExpr':
+        open_bracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(kwargs['open_bracket']) if 'open_bracket' in kwargs else self.open_bracket
+        elements = _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(kwargs['elements']) if 'elements' in kwargs else self.elements
+        close_bracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(kwargs['close_bracket']) if 'close_bracket' in kwargs else self.close_bracket
         return PyListExpr(open_bracket=open_bracket, elements=elements, close_bracket=close_bracket)
 
     def parent(self) -> 'PyListExprParent':
@@ -827,7 +899,7 @@ class PyTupleExprDeriveKwargs(TypedDict, total=False):
 
     open_paren: 'PyOpenParen | None'
 
-    elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None'
+    elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None'
 
     close_paren: 'PyCloseParen | None'
 
@@ -837,12 +909,16 @@ class PyTupleExpr(_PyBaseNode):
     def count_elements(self) -> int:
         return len(self.elements)
 
-    def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
+    def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
         self.elements: Punctuated[PyExpr, PyComma] = _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(elements)
         self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyTupleExprDeriveKwargs]) -> 'PyTupleExpr':
+        open_paren = _coerce_union_2_token_open_paren_none_to_token_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
+        elements = _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(kwargs['elements']) if 'elements' in kwargs else self.elements
+        close_paren = _coerce_union_2_token_close_paren_none_to_token_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
         return PyTupleExpr(open_paren=open_paren, elements=elements, close_paren=close_paren)
 
     def parent(self) -> 'PyTupleExprParent':
@@ -866,7 +942,11 @@ class PyKeywordArg(_PyBaseNode):
         self.equals: PyEquals = _coerce_union_2_token_equals_none_to_token_equals(equals)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyKeywordArgDeriveKwargs]) -> 'PyKeywordArg':
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        equals = _coerce_union_2_token_equals_none_to_token_equals(kwargs['equals']) if 'equals' in kwargs else self.equals
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyKeywordArg(name=name, equals=equals, expr=expr)
 
     def parent(self) -> 'PyKeywordArgParent':
@@ -880,7 +960,7 @@ class PyCallExprDeriveKwargs(TypedDict, total=False):
 
     open_paren: 'PyOpenParen | None'
 
-    args: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | Punctuated[PyArg, PyComma] | None'
+    args: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | ImmutablePunct[PyArg, PyComma] | None'
 
     close_paren: 'PyCloseParen | None'
 
@@ -890,13 +970,18 @@ class PyCallExpr(_PyBaseNode):
     def count_args(self) -> int:
         return len(self.args)
 
-    def __init__(self, operator: 'PyExpr', *, open_paren: 'PyOpenParen | None' = None, args: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | Punctuated[PyArg, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
+    def __init__(self, operator: 'PyExpr', *, open_paren: 'PyOpenParen | None' = None, args: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | ImmutablePunct[PyArg, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
         self.operator: PyExpr = _coerce_variant_expr_to_variant_expr(operator)
         self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
         self.args: Punctuated[PyArg, PyComma] = _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comma_none_punct_variant_arg_token_comma_none_to_punct_variant_arg_token_comma(args)
         self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyCallExprDeriveKwargs]) -> 'PyCallExpr':
+        operator = _coerce_variant_expr_to_variant_expr(kwargs['operator']) if 'operator' in kwargs else self.operator
+        open_paren = _coerce_union_2_token_open_paren_none_to_token_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
+        args = _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comma_none_punct_variant_arg_token_comma_none_to_punct_variant_arg_token_comma(kwargs['args']) if 'args' in kwargs else self.args
+        close_paren = _coerce_union_2_token_close_paren_none_to_token_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
         return PyCallExpr(operator=operator, open_paren=open_paren, args=args, close_paren=close_paren)
 
     def parent(self) -> 'PyCallExprParent':
@@ -917,7 +1002,10 @@ class PyPrefixExpr(_PyBaseNode):
         self.prefix_op: PyPrefixOp = _coerce_variant_prefix_op_to_variant_prefix_op(prefix_op)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyPrefixExprDeriveKwargs]) -> 'PyPrefixExpr':
+        prefix_op = _coerce_variant_prefix_op_to_variant_prefix_op(kwargs['prefix_op']) if 'prefix_op' in kwargs else self.prefix_op
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyPrefixExpr(prefix_op=prefix_op, expr=expr)
 
     def parent(self) -> 'PyPrefixExprParent':
@@ -941,7 +1029,11 @@ class PyInfixExpr(_PyBaseNode):
         self.op: PyInfixOp = _coerce_variant_infix_op_to_variant_infix_op(op)
         self.right: PyExpr = _coerce_variant_expr_to_variant_expr(right)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyInfixExprDeriveKwargs]) -> 'PyInfixExpr':
+        left = _coerce_variant_expr_to_variant_expr(kwargs['left']) if 'left' in kwargs else self.left
+        op = _coerce_variant_infix_op_to_variant_infix_op(kwargs['op']) if 'op' in kwargs else self.op
+        right = _coerce_variant_expr_to_variant_expr(kwargs['right']) if 'right' in kwargs else self.right
         return PyInfixExpr(left=left, op=op, right=right)
 
     def parent(self) -> 'PyInfixExprParent':
@@ -962,10 +1054,13 @@ class PyQualName(_PyBaseNode):
         return len(self.modules)
 
     def __init__(self, name: 'PyIdent | str', *, modules: 'Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None' = None) -> None:
-        self.modules: Sequence[tuple[PyIdent, PyDot]] = _coerce_union_2_list_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_none_to_list_tuple_2_token_ident_token_dot(modules)
+        self.modules: list[tuple[PyIdent, PyDot]] = _coerce_union_2_list_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_none_to_list_tuple_2_token_ident_token_dot(modules)
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyQualNameDeriveKwargs]) -> 'PyQualName':
+        modules = _coerce_union_2_list_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_none_to_list_tuple_2_token_ident_token_dot(kwargs['modules']) if 'modules' in kwargs else self.modules
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
         return PyQualName(modules=modules, name=name)
 
     def parent(self) -> 'PyQualNameParent':
@@ -983,7 +1078,9 @@ class PyAbsolutePath(_PyBaseNode):
     def __init__(self, name: 'PyQualName | PyIdent | str') -> None:
         self.name: PyQualName = _coerce_union_3_node_qual_name_token_ident_extern_string_to_node_qual_name(name)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyAbsolutePathDeriveKwargs]) -> 'PyAbsolutePath':
+        name = _coerce_union_3_node_qual_name_token_ident_extern_string_to_node_qual_name(kwargs['name']) if 'name' in kwargs else self.name
         return PyAbsolutePath(name=name)
 
     def parent(self) -> 'PyAbsolutePathParent':
@@ -1004,10 +1101,13 @@ class PyRelativePath(_PyBaseNode):
         return len(self.dots)
 
     def __init__(self, dots: 'Sequence[PyDot] | int', *, name: 'PyQualName | PyIdent | None | str' = None) -> None:
-        self.dots: Sequence[PyDot] = _coerce_union_2_list_token_dot_required_extern_integer_to_list_token_dot_required(dots)
+        self.dots: list[PyDot] = _coerce_union_2_list_token_dot_required_extern_integer_to_list_token_dot_required(dots)
         self.name: PyQualName | None = _coerce_union_4_node_qual_name_token_ident_none_extern_string_to_union_2_node_qual_name_none(name)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyRelativePathDeriveKwargs]) -> 'PyRelativePath':
+        dots = _coerce_union_2_list_token_dot_required_extern_integer_to_list_token_dot_required(kwargs['dots']) if 'dots' in kwargs else self.dots
+        name = _coerce_union_4_node_qual_name_token_ident_none_extern_string_to_union_2_node_qual_name_none(kwargs['name']) if 'name' in kwargs else self.name
         return PyRelativePath(dots=dots, name=name)
 
     def parent(self) -> 'PyRelativePathParent':
@@ -1028,7 +1128,10 @@ class PyAlias(_PyBaseNode):
         self.path: PyPath = _coerce_variant_path_to_variant_path(path)
         self.asname: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(asname)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyAliasDeriveKwargs]) -> 'PyAlias':
+        path = _coerce_variant_path_to_variant_path(kwargs['path']) if 'path' in kwargs else self.path
+        asname = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(kwargs['asname']) if 'asname' in kwargs else self.asname
         return PyAlias(path=path, asname=asname)
 
     def parent(self) -> 'PyAliasParent':
@@ -1049,7 +1152,10 @@ class PyFromAlias(_PyBaseNode):
         self.name: PyAsterisk | PyIdent = _coerce_union_3_token_asterisk_token_ident_extern_string_to_union_2_token_asterisk_token_ident(name)
         self.asname: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(asname)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyFromAliasDeriveKwargs]) -> 'PyFromAlias':
+        name = _coerce_union_3_token_asterisk_token_ident_extern_string_to_union_2_token_asterisk_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        asname = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(kwargs['asname']) if 'asname' in kwargs else self.asname
         return PyFromAlias(name=name, asname=asname)
 
     def parent(self) -> 'PyFromAliasParent':
@@ -1061,7 +1167,7 @@ class PyImportStmtDeriveKwargs(TypedDict, total=False):
 
     import_keyword: 'PyImportKeyword | None'
 
-    aliases: 'Sequence[tuple[PyAlias | PyPath, PyComma | None]] | Sequence[PyAlias | PyPath] | Punctuated[PyAlias | PyPath, PyComma]'
+    aliases: 'Sequence[tuple[PyAlias | PyPath, PyComma | None]] | Sequence[PyAlias | PyPath] | ImmutablePunct[PyAlias | PyPath, PyComma]'
 
 
 class PyImportStmt(_PyBaseNode):
@@ -1069,11 +1175,14 @@ class PyImportStmt(_PyBaseNode):
     def count_aliases(self) -> int:
         return len(self.aliases)
 
-    def __init__(self, aliases: 'Sequence[tuple[PyAlias | PyPath, PyComma | None]] | Sequence[PyAlias | PyPath] | Punctuated[PyAlias | PyPath, PyComma]', *, import_keyword: 'PyImportKeyword | None' = None) -> None:
+    def __init__(self, aliases: 'Sequence[tuple[PyAlias | PyPath, PyComma | None]] | Sequence[PyAlias | PyPath] | ImmutablePunct[PyAlias | PyPath, PyComma]', *, import_keyword: 'PyImportKeyword | None' = None) -> None:
         self.import_keyword: PyImportKeyword = _coerce_union_2_token_import_keyword_none_to_token_import_keyword(import_keyword)
         self.aliases: Punctuated[PyAlias, PyComma] = _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_comma_none_required_list_union_2_node_alias_variant_path_required_punct_union_2_node_alias_variant_path_token_comma_required_to_punct_node_alias_token_comma_required(aliases)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyImportStmtDeriveKwargs]) -> 'PyImportStmt':
+        import_keyword = _coerce_union_2_token_import_keyword_none_to_token_import_keyword(kwargs['import_keyword']) if 'import_keyword' in kwargs else self.import_keyword
+        aliases = _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_comma_none_required_list_union_2_node_alias_variant_path_required_punct_union_2_node_alias_variant_path_token_comma_required_to_punct_node_alias_token_comma_required(kwargs['aliases']) if 'aliases' in kwargs else self.aliases
         return PyImportStmt(import_keyword=import_keyword, aliases=aliases)
 
     def parent(self) -> 'PyImportStmtParent':
@@ -1089,7 +1198,7 @@ class PyImportFromStmtDeriveKwargs(TypedDict, total=False):
 
     import_keyword: 'PyImportKeyword | None'
 
-    aliases: 'Sequence[tuple[PyFromAlias | PyAsterisk | PyIdent | str, PyComma | None]] | Sequence[PyFromAlias | PyAsterisk | PyIdent | str] | Punctuated[PyFromAlias | PyAsterisk | PyIdent | str, PyComma]'
+    aliases: 'Sequence[tuple[PyFromAlias | PyAsterisk | PyIdent | str, PyComma | None]] | Sequence[PyFromAlias | PyAsterisk | PyIdent | str] | ImmutablePunct[PyFromAlias | PyAsterisk | PyIdent | str, PyComma]'
 
 
 class PyImportFromStmt(_PyBaseNode):
@@ -1097,13 +1206,18 @@ class PyImportFromStmt(_PyBaseNode):
     def count_aliases(self) -> int:
         return len(self.aliases)
 
-    def __init__(self, path: 'PyPath', aliases: 'Sequence[tuple[PyFromAlias | PyAsterisk | PyIdent | str, PyComma | None]] | Sequence[PyFromAlias | PyAsterisk | PyIdent | str] | Punctuated[PyFromAlias | PyAsterisk | PyIdent | str, PyComma]', *, from_keyword: 'PyFromKeyword | None' = None, import_keyword: 'PyImportKeyword | None' = None) -> None:
+    def __init__(self, path: 'PyPath', aliases: 'Sequence[tuple[PyFromAlias | PyAsterisk | PyIdent | str, PyComma | None]] | Sequence[PyFromAlias | PyAsterisk | PyIdent | str] | ImmutablePunct[PyFromAlias | PyAsterisk | PyIdent | str, PyComma]', *, from_keyword: 'PyFromKeyword | None' = None, import_keyword: 'PyImportKeyword | None' = None) -> None:
         self.from_keyword: PyFromKeyword = _coerce_union_2_token_from_keyword_none_to_token_from_keyword(from_keyword)
         self.path: PyPath = _coerce_variant_path_to_variant_path(path)
         self.import_keyword: PyImportKeyword = _coerce_union_2_token_import_keyword_none_to_token_import_keyword(import_keyword)
         self.aliases: Punctuated[PyFromAlias, PyComma] = _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_ident_extern_string_union_2_token_comma_none_required_list_union_4_node_from_alias_token_asterisk_token_ident_extern_string_required_punct_union_4_node_from_alias_token_asterisk_token_ident_extern_string_token_comma_required_to_punct_node_from_alias_token_comma_required(aliases)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyImportFromStmtDeriveKwargs]) -> 'PyImportFromStmt':
+        from_keyword = _coerce_union_2_token_from_keyword_none_to_token_from_keyword(kwargs['from_keyword']) if 'from_keyword' in kwargs else self.from_keyword
+        path = _coerce_variant_path_to_variant_path(kwargs['path']) if 'path' in kwargs else self.path
+        import_keyword = _coerce_union_2_token_import_keyword_none_to_token_import_keyword(kwargs['import_keyword']) if 'import_keyword' in kwargs else self.import_keyword
+        aliases = _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_ident_extern_string_union_2_token_comma_none_required_list_union_4_node_from_alias_token_asterisk_token_ident_extern_string_required_punct_union_4_node_from_alias_token_asterisk_token_ident_extern_string_token_comma_required_to_punct_node_from_alias_token_comma_required(kwargs['aliases']) if 'aliases' in kwargs else self.aliases
         return PyImportFromStmt(from_keyword=from_keyword, path=path, import_keyword=import_keyword, aliases=aliases)
 
     def parent(self) -> 'PyImportFromStmtParent':
@@ -1124,7 +1238,10 @@ class PyRetStmt(_PyBaseNode):
         self.return_keyword: PyReturnKeyword = _coerce_union_2_token_return_keyword_none_to_token_return_keyword(return_keyword)
         self.expr: PyExpr | None = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(expr)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyRetStmtDeriveKwargs]) -> 'PyRetStmt':
+        return_keyword = _coerce_union_2_token_return_keyword_none_to_token_return_keyword(kwargs['return_keyword']) if 'return_keyword' in kwargs else self.return_keyword
+        expr = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyRetStmt(return_keyword=return_keyword, expr=expr)
 
     def parent(self) -> 'PyRetStmtParent':
@@ -1142,7 +1259,9 @@ class PyExprStmt(_PyBaseNode):
     def __init__(self, expr: 'PyExpr') -> None:
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyExprStmtDeriveKwargs]) -> 'PyExprStmt':
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyExprStmt(expr=expr)
 
     def parent(self) -> 'PyExprStmtParent':
@@ -1172,7 +1291,13 @@ class PyAugAssignStmt(_PyBaseNode):
         self.equals: PyEquals = _coerce_union_2_token_equals_none_to_token_equals(equals)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyAugAssignStmtDeriveKwargs]) -> 'PyAugAssignStmt':
+        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        annotation = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
+        op = _coerce_union_13_token_ampersand_token_asterisk_token_asterisk_asterisk_token_at_sign_token_caret_token_greater_than_greater_than_token_hyphen_token_less_than_less_than_token_percent_token_plus_token_slash_token_slash_slash_token_vertical_bar_to_union_13_token_ampersand_token_asterisk_token_asterisk_asterisk_token_at_sign_token_caret_token_greater_than_greater_than_token_hyphen_token_less_than_less_than_token_percent_token_plus_token_slash_token_slash_slash_token_vertical_bar(kwargs['op']) if 'op' in kwargs else self.op
+        equals = _coerce_union_2_token_equals_none_to_token_equals(kwargs['equals']) if 'equals' in kwargs else self.equals
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyAugAssignStmt(pattern=pattern, annotation=annotation, op=op, equals=equals, expr=expr)
 
     def parent(self) -> 'PyAugAssignStmtParent':
@@ -1196,7 +1321,11 @@ class PyAssignStmt(_PyBaseNode):
         self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
         self.value: tuple[PyEquals, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_none_to_union_2_tuple_2_token_equals_variant_expr_none(value)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyAssignStmtDeriveKwargs]) -> 'PyAssignStmt':
+        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        annotation = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
+        value = _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_none_to_union_2_tuple_2_token_equals_variant_expr_none(kwargs['value']) if 'value' in kwargs else self.value
         return PyAssignStmt(pattern=pattern, annotation=annotation, value=value)
 
     def parent(self) -> 'PyAssignStmtParent':
@@ -1214,7 +1343,9 @@ class PyPassStmt(_PyBaseNode):
     def __init__(self, *, pass_keyword: 'PyPassKeyword | None' = None) -> None:
         self.pass_keyword: PyPassKeyword = _coerce_union_2_token_pass_keyword_none_to_token_pass_keyword(pass_keyword)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyPassStmtDeriveKwargs]) -> 'PyPassStmt':
+        pass_keyword = _coerce_union_2_token_pass_keyword_none_to_token_pass_keyword(kwargs['pass_keyword']) if 'pass_keyword' in kwargs else self.pass_keyword
         return PyPassStmt(pass_keyword=pass_keyword)
 
     def parent(self) -> 'PyPassStmtParent':
@@ -1226,7 +1357,7 @@ class PyGlobalStmtDeriveKwargs(TypedDict, total=False):
 
     global_keyword: 'PyGlobalKeyword | None'
 
-    names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma]'
+    names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | ImmutablePunct[PyIdent | str, PyComma]'
 
 
 class PyGlobalStmt(_PyBaseNode):
@@ -1234,11 +1365,14 @@ class PyGlobalStmt(_PyBaseNode):
     def count_names(self) -> int:
         return len(self.names)
 
-    def __init__(self, names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma]', *, global_keyword: 'PyGlobalKeyword | None' = None) -> None:
+    def __init__(self, names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | ImmutablePunct[PyIdent | str, PyComma]', *, global_keyword: 'PyGlobalKeyword | None' = None) -> None:
         self.global_keyword: PyGlobalKeyword = _coerce_union_2_token_global_keyword_none_to_token_global_keyword(global_keyword)
         self.names: Punctuated[PyIdent, PyComma] = _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(names)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyGlobalStmtDeriveKwargs]) -> 'PyGlobalStmt':
+        global_keyword = _coerce_union_2_token_global_keyword_none_to_token_global_keyword(kwargs['global_keyword']) if 'global_keyword' in kwargs else self.global_keyword
+        names = _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(kwargs['names']) if 'names' in kwargs else self.names
         return PyGlobalStmt(global_keyword=global_keyword, names=names)
 
     def parent(self) -> 'PyGlobalStmtParent':
@@ -1250,7 +1384,7 @@ class PyNonlocalStmtDeriveKwargs(TypedDict, total=False):
 
     nonlocal_keyword: 'PyNonlocalKeyword | None'
 
-    names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma]'
+    names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | ImmutablePunct[PyIdent | str, PyComma]'
 
 
 class PyNonlocalStmt(_PyBaseNode):
@@ -1258,11 +1392,14 @@ class PyNonlocalStmt(_PyBaseNode):
     def count_names(self) -> int:
         return len(self.names)
 
-    def __init__(self, names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma]', *, nonlocal_keyword: 'PyNonlocalKeyword | None' = None) -> None:
+    def __init__(self, names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | ImmutablePunct[PyIdent | str, PyComma]', *, nonlocal_keyword: 'PyNonlocalKeyword | None' = None) -> None:
         self.nonlocal_keyword: PyNonlocalKeyword = _coerce_union_2_token_nonlocal_keyword_none_to_token_nonlocal_keyword(nonlocal_keyword)
         self.names: Punctuated[PyIdent, PyComma] = _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(names)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyNonlocalStmtDeriveKwargs]) -> 'PyNonlocalStmt':
+        nonlocal_keyword = _coerce_union_2_token_nonlocal_keyword_none_to_token_nonlocal_keyword(kwargs['nonlocal_keyword']) if 'nonlocal_keyword' in kwargs else self.nonlocal_keyword
+        names = _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(kwargs['names']) if 'names' in kwargs else self.names
         return PyNonlocalStmt(nonlocal_keyword=nonlocal_keyword, names=names)
 
     def parent(self) -> 'PyNonlocalStmtParent':
@@ -1287,9 +1424,14 @@ class PyIfCase(_PyBaseNode):
         self.if_keyword: PyIfKeyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(if_keyword)
         self.test: PyExpr = _coerce_variant_expr_to_variant_expr(test)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyIfCaseDeriveKwargs]) -> 'PyIfCase':
+        if_keyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(kwargs['if_keyword']) if 'if_keyword' in kwargs else self.if_keyword
+        test = _coerce_variant_expr_to_variant_expr(kwargs['test']) if 'test' in kwargs else self.test
+        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
         return PyIfCase(if_keyword=if_keyword, test=test, colon=colon, body=body)
 
     def parent(self) -> 'PyIfCaseParent':
@@ -1314,9 +1456,14 @@ class PyElifCase(_PyBaseNode):
         self.elif_keyword: PyElifKeyword = _coerce_union_2_token_elif_keyword_none_to_token_elif_keyword(elif_keyword)
         self.test: PyExpr = _coerce_variant_expr_to_variant_expr(test)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyElifCaseDeriveKwargs]) -> 'PyElifCase':
+        elif_keyword = _coerce_union_2_token_elif_keyword_none_to_token_elif_keyword(kwargs['elif_keyword']) if 'elif_keyword' in kwargs else self.elif_keyword
+        test = _coerce_variant_expr_to_variant_expr(kwargs['test']) if 'test' in kwargs else self.test
+        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
         return PyElifCase(elif_keyword=elif_keyword, test=test, colon=colon, body=body)
 
     def parent(self) -> 'PyElifCaseParent':
@@ -1338,9 +1485,13 @@ class PyElseCase(_PyBaseNode):
     def __init__(self, body: 'PyStmt | Sequence[PyStmt]', *, else_keyword: 'PyElseKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
         self.else_keyword: PyElseKeyword = _coerce_union_2_token_else_keyword_none_to_token_else_keyword(else_keyword)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyElseCaseDeriveKwargs]) -> 'PyElseCase':
+        else_keyword = _coerce_union_2_token_else_keyword_none_to_token_else_keyword(kwargs['else_keyword']) if 'else_keyword' in kwargs else self.else_keyword
+        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
         return PyElseCase(else_keyword=else_keyword, colon=colon, body=body)
 
     def parent(self) -> 'PyElseCaseParent':
@@ -1364,10 +1515,14 @@ class PyIfStmt(_PyBaseNode):
 
     def __init__(self, first: 'PyIfCase', *, alternatives: 'Sequence[PyElifCase] | None' = None, last: 'PyElseCase | PyStmt | Sequence[PyStmt] | None' = None) -> None:
         self.first: PyIfCase = _coerce_node_if_case_to_node_if_case(first)
-        self.alternatives: Sequence[PyElifCase] = _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(alternatives)
+        self.alternatives: list[PyElifCase] = _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(alternatives)
         self.last: PyElseCase | None = _coerce_union_4_node_else_case_variant_stmt_list_variant_stmt_required_none_to_union_2_node_else_case_none(last)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyIfStmtDeriveKwargs]) -> 'PyIfStmt':
+        first = _coerce_node_if_case_to_node_if_case(kwargs['first']) if 'first' in kwargs else self.first
+        alternatives = _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(kwargs['alternatives']) if 'alternatives' in kwargs else self.alternatives
+        last = _coerce_union_4_node_else_case_variant_stmt_list_variant_stmt_required_none_to_union_2_node_else_case_none(kwargs['last']) if 'last' in kwargs else self.last
         return PyIfStmt(first=first, alternatives=alternatives, last=last)
 
     def parent(self) -> 'PyIfStmtParent':
@@ -1388,7 +1543,10 @@ class PyDeleteStmt(_PyBaseNode):
         self.del_keyword: PyDelKeyword = _coerce_union_2_token_del_keyword_none_to_token_del_keyword(del_keyword)
         self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyDeleteStmtDeriveKwargs]) -> 'PyDeleteStmt':
+        del_keyword = _coerce_union_2_token_del_keyword_none_to_token_del_keyword(kwargs['del_keyword']) if 'del_keyword' in kwargs else self.del_keyword
+        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
         return PyDeleteStmt(del_keyword=del_keyword, pattern=pattern)
 
     def parent(self) -> 'PyDeleteStmtParent':
@@ -1412,7 +1570,11 @@ class PyRaiseStmt(_PyBaseNode):
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
         self.cause: tuple[PyFromKeyword, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_from_keyword_none_variant_expr_none_to_union_2_tuple_2_token_from_keyword_variant_expr_none(cause)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyRaiseStmtDeriveKwargs]) -> 'PyRaiseStmt':
+        raise_keyword = _coerce_union_2_token_raise_keyword_none_to_token_raise_keyword(kwargs['raise_keyword']) if 'raise_keyword' in kwargs else self.raise_keyword
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        cause = _coerce_union_3_variant_expr_tuple_2_union_2_token_from_keyword_none_variant_expr_none_to_union_2_tuple_2_token_from_keyword_variant_expr_none(kwargs['cause']) if 'cause' in kwargs else self.cause
         return PyRaiseStmt(raise_keyword=raise_keyword, expr=expr, cause=cause)
 
     def parent(self) -> 'PyRaiseStmtParent':
@@ -1445,10 +1607,18 @@ class PyForStmt(_PyBaseNode):
         self.in_keyword: PyInKeyword = _coerce_union_2_token_in_keyword_none_to_token_in_keyword(in_keyword)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
-        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(else_clause)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(else_clause)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyForStmtDeriveKwargs]) -> 'PyForStmt':
+        for_keyword = _coerce_union_2_token_for_keyword_none_to_token_for_keyword(kwargs['for_keyword']) if 'for_keyword' in kwargs else self.for_keyword
+        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        in_keyword = _coerce_union_2_token_in_keyword_none_to_token_in_keyword(kwargs['in_keyword']) if 'in_keyword' in kwargs else self.in_keyword
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
+        else_clause = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(kwargs['else_clause']) if 'else_clause' in kwargs else self.else_clause
         return PyForStmt(for_keyword=for_keyword, pattern=pattern, in_keyword=in_keyword, expr=expr, colon=colon, body=body, else_clause=else_clause)
 
     def parent(self) -> 'PyForStmtParent':
@@ -1475,10 +1645,16 @@ class PyWhileStmt(_PyBaseNode):
         self.while_keyword: PyWhileKeyword = _coerce_union_2_token_while_keyword_none_to_token_while_keyword(while_keyword)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
-        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(else_clause)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(else_clause)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyWhileStmtDeriveKwargs]) -> 'PyWhileStmt':
+        while_keyword = _coerce_union_2_token_while_keyword_none_to_token_while_keyword(kwargs['while_keyword']) if 'while_keyword' in kwargs else self.while_keyword
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
+        else_clause = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(kwargs['else_clause']) if 'else_clause' in kwargs else self.else_clause
         return PyWhileStmt(while_keyword=while_keyword, expr=expr, colon=colon, body=body, else_clause=else_clause)
 
     def parent(self) -> 'PyWhileStmtParent':
@@ -1496,7 +1672,9 @@ class PyBreakStmt(_PyBaseNode):
     def __init__(self, *, break_keyword: 'PyBreakKeyword | None' = None) -> None:
         self.break_keyword: PyBreakKeyword = _coerce_union_2_token_break_keyword_none_to_token_break_keyword(break_keyword)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyBreakStmtDeriveKwargs]) -> 'PyBreakStmt':
+        break_keyword = _coerce_union_2_token_break_keyword_none_to_token_break_keyword(kwargs['break_keyword']) if 'break_keyword' in kwargs else self.break_keyword
         return PyBreakStmt(break_keyword=break_keyword)
 
     def parent(self) -> 'PyBreakStmtParent':
@@ -1514,7 +1692,9 @@ class PyContinueStmt(_PyBaseNode):
     def __init__(self, *, continue_keyword: 'PyContinueKeyword | None' = None) -> None:
         self.continue_keyword: PyContinueKeyword = _coerce_union_2_token_continue_keyword_none_to_token_continue_keyword(continue_keyword)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyContinueStmtDeriveKwargs]) -> 'PyContinueStmt':
+        continue_keyword = _coerce_union_2_token_continue_keyword_none_to_token_continue_keyword(kwargs['continue_keyword']) if 'continue_keyword' in kwargs else self.continue_keyword
         return PyContinueStmt(continue_keyword=continue_keyword)
 
     def parent(self) -> 'PyContinueStmtParent':
@@ -1528,7 +1708,7 @@ class PyTypeAliasStmtDeriveKwargs(TypedDict, total=False):
 
     name: 'PyIdent | str'
 
-    type_params: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None'
+    type_params: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None'
 
     equals: 'PyEquals | None'
 
@@ -1537,14 +1717,20 @@ class PyTypeAliasStmtDeriveKwargs(TypedDict, total=False):
 
 class PyTypeAliasStmt(_PyBaseNode):
 
-    def __init__(self, name: 'PyIdent | str', expr: 'PyExpr', *, type_keyword: 'PyTypeKeyword | None' = None, type_params: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None' = None, equals: 'PyEquals | None' = None) -> None:
+    def __init__(self, name: 'PyIdent | str', expr: 'PyExpr', *, type_keyword: 'PyTypeKeyword | None' = None, type_params: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None' = None, equals: 'PyEquals | None' = None) -> None:
         self.type_keyword: PyTypeKeyword = _coerce_union_2_token_type_keyword_none_to_token_type_keyword(type_keyword)
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
         self.type_params: tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None = _coerce_union_5_tuple_3_union_2_token_open_bracket_none_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_union_2_token_close_bracket_none_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_union_2_tuple_3_token_open_bracket_punct_variant_expr_token_comma_token_close_bracket_none(type_params)
         self.equals: PyEquals = _coerce_union_2_token_equals_none_to_token_equals(equals)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyTypeAliasStmtDeriveKwargs]) -> 'PyTypeAliasStmt':
+        type_keyword = _coerce_union_2_token_type_keyword_none_to_token_type_keyword(kwargs['type_keyword']) if 'type_keyword' in kwargs else self.type_keyword
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        type_params = _coerce_union_5_tuple_3_union_2_token_open_bracket_none_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_union_2_token_close_bracket_none_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_union_2_tuple_3_token_open_bracket_punct_variant_expr_token_comma_token_close_bracket_none(kwargs['type_params']) if 'type_params' in kwargs else self.type_params
+        equals = _coerce_union_2_token_equals_none_to_token_equals(kwargs['equals']) if 'equals' in kwargs else self.equals
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyTypeAliasStmt(type_keyword=type_keyword, name=name, type_params=type_params, equals=equals, expr=expr)
 
     def parent(self) -> 'PyTypeAliasStmtParent':
@@ -1572,9 +1758,15 @@ class PyExceptHandler(_PyBaseNode):
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
         self.binder: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(binder)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyExceptHandlerDeriveKwargs]) -> 'PyExceptHandler':
+        except_keyword = _coerce_union_2_token_except_keyword_none_to_token_except_keyword(kwargs['except_keyword']) if 'except_keyword' in kwargs else self.except_keyword
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        binder = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(kwargs['binder']) if 'binder' in kwargs else self.binder
+        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
         return PyExceptHandler(except_keyword=except_keyword, expr=expr, binder=binder, colon=colon, body=body)
 
     def parent(self) -> 'PyExceptHandlerParent':
@@ -1605,12 +1797,19 @@ class PyTryStmt(_PyBaseNode):
     def __init__(self, body: 'PyStmt | Sequence[PyStmt]', *, try_keyword: 'PyTryKeyword | None' = None, colon: 'PyColon | None' = None, handlers: 'Sequence[PyExceptHandler] | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None, finally_clause: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> None:
         self.try_keyword: PyTryKeyword = _coerce_union_2_token_try_keyword_none_to_token_try_keyword(try_keyword)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
-        self.handlers: Sequence[PyExceptHandler] = _coerce_union_2_list_node_except_handler_none_to_list_node_except_handler(handlers)
-        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(else_clause)
-        self.finally_clause: tuple[PyFinallyKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(finally_clause)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.handlers: list[PyExceptHandler] = _coerce_union_2_list_node_except_handler_none_to_list_node_except_handler(handlers)
+        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(else_clause)
+        self.finally_clause: tuple[PyFinallyKeyword, PyColon, PyStmt | list[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(finally_clause)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyTryStmtDeriveKwargs]) -> 'PyTryStmt':
+        try_keyword = _coerce_union_2_token_try_keyword_none_to_token_try_keyword(kwargs['try_keyword']) if 'try_keyword' in kwargs else self.try_keyword
+        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
+        handlers = _coerce_union_2_list_node_except_handler_none_to_list_node_except_handler(kwargs['handlers']) if 'handlers' in kwargs else self.handlers
+        else_clause = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(kwargs['else_clause']) if 'else_clause' in kwargs else self.else_clause
+        finally_clause = _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(kwargs['finally_clause']) if 'finally_clause' in kwargs else self.finally_clause
         return PyTryStmt(try_keyword=try_keyword, colon=colon, body=body, handlers=handlers, else_clause=else_clause, finally_clause=finally_clause)
 
     def parent(self) -> 'PyTryStmtParent':
@@ -1628,7 +1827,9 @@ class PyClassBaseArg(_PyBaseNode):
     def __init__(self, name: 'PyIdent | str') -> None:
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyClassBaseArgDeriveKwargs]) -> 'PyClassBaseArg':
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
         return PyClassBaseArg(name=name)
 
     def parent(self) -> 'PyClassBaseArgParent':
@@ -1652,7 +1853,11 @@ class PyKeywordBaseArg(_PyBaseNode):
         self.equals: PyEquals = _coerce_union_2_token_equals_none_to_token_equals(equals)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyKeywordBaseArgDeriveKwargs]) -> 'PyKeywordBaseArg':
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        equals = _coerce_union_2_token_equals_none_to_token_equals(kwargs['equals']) if 'equals' in kwargs else self.equals
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyKeywordBaseArg(name=name, equals=equals, expr=expr)
 
     def parent(self) -> 'PyKeywordBaseArgParent':
@@ -1668,7 +1873,7 @@ class PyClassDefDeriveKwargs(TypedDict, total=False):
 
     name: 'PyIdent | str'
 
-    bases: 'tuple[PyOpenParen | None, Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | Punctuated[PyBaseArg, PyComma] | None, PyCloseParen | None] | Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | Punctuated[PyBaseArg, PyComma] | None'
+    bases: 'tuple[PyOpenParen | None, Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None, PyCloseParen | None] | Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None'
 
     colon: 'PyColon | None'
 
@@ -1680,15 +1885,22 @@ class PyClassDef(_PyBaseNode):
     def count_decorators(self) -> int:
         return len(self.decorators)
 
-    def __init__(self, name: 'PyIdent | str', body: 'PyStmt | Sequence[PyStmt]', *, decorators: 'Sequence[PyDecorator | PyExpr] | None' = None, class_keyword: 'PyClassKeyword | None' = None, bases: 'tuple[PyOpenParen | None, Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | Punctuated[PyBaseArg, PyComma] | None, PyCloseParen | None] | Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | Punctuated[PyBaseArg, PyComma] | None' = None, colon: 'PyColon | None' = None) -> None:
-        self.decorators: Sequence[PyDecorator] = _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(decorators)
+    def __init__(self, name: 'PyIdent | str', body: 'PyStmt | Sequence[PyStmt]', *, decorators: 'Sequence[PyDecorator | PyExpr] | None' = None, class_keyword: 'PyClassKeyword | None' = None, bases: 'tuple[PyOpenParen | None, Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None, PyCloseParen | None] | Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None' = None, colon: 'PyColon | None' = None) -> None:
+        self.decorators: list[PyDecorator] = _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(decorators)
         self.class_keyword: PyClassKeyword = _coerce_union_2_token_class_keyword_none_to_token_class_keyword(class_keyword)
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
         self.bases: tuple[PyOpenParen, Punctuated[PyBaseArg, PyComma], PyCloseParen] | None = _coerce_union_5_tuple_3_union_2_token_open_paren_none_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_union_2_token_close_paren_none_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_to_union_2_tuple_3_token_open_paren_punct_variant_base_arg_token_comma_token_close_paren_none(bases)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyClassDefDeriveKwargs]) -> 'PyClassDef':
+        decorators = _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(kwargs['decorators']) if 'decorators' in kwargs else self.decorators
+        class_keyword = _coerce_union_2_token_class_keyword_none_to_token_class_keyword(kwargs['class_keyword']) if 'class_keyword' in kwargs else self.class_keyword
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        bases = _coerce_union_5_tuple_3_union_2_token_open_paren_none_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_union_2_token_close_paren_none_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_to_union_2_tuple_3_token_open_paren_punct_variant_base_arg_token_comma_token_close_paren_none(kwargs['bases']) if 'bases' in kwargs else self.bases
+        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
         return PyClassDef(decorators=decorators, class_keyword=class_keyword, name=name, bases=bases, colon=colon, body=body)
 
     def parent(self) -> 'PyClassDefParent':
@@ -1712,7 +1924,11 @@ class PyNamedParam(_PyBaseNode):
         self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
         self.default: tuple[PyEquals, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_none_to_union_2_tuple_2_token_equals_variant_expr_none(default)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyNamedParamDeriveKwargs]) -> 'PyNamedParam':
+        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        annotation = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
+        default = _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_none_to_union_2_tuple_2_token_equals_variant_expr_none(kwargs['default']) if 'default' in kwargs else self.default
         return PyNamedParam(pattern=pattern, annotation=annotation, default=default)
 
     def parent(self) -> 'PyNamedParamParent':
@@ -1736,7 +1952,11 @@ class PyRestPosParam(_PyBaseNode):
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
         self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyRestPosParamDeriveKwargs]) -> 'PyRestPosParam':
+        asterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(kwargs['asterisk']) if 'asterisk' in kwargs else self.asterisk
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        annotation = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
         return PyRestPosParam(asterisk=asterisk, name=name, annotation=annotation)
 
     def parent(self) -> 'PyRestPosParamParent':
@@ -1760,7 +1980,11 @@ class PyRestKeywordParam(_PyBaseNode):
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
         self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyRestKeywordParamDeriveKwargs]) -> 'PyRestKeywordParam':
+        asterisk_asterisk = _coerce_union_2_token_asterisk_asterisk_none_to_token_asterisk_asterisk(kwargs['asterisk_asterisk']) if 'asterisk_asterisk' in kwargs else self.asterisk_asterisk
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        annotation = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
         return PyRestKeywordParam(asterisk_asterisk=asterisk_asterisk, name=name, annotation=annotation)
 
     def parent(self) -> 'PyRestKeywordParamParent':
@@ -1778,7 +2002,9 @@ class PyPosSepParam(_PyBaseNode):
     def __init__(self, *, slash: 'PySlash | None' = None) -> None:
         self.slash: PySlash = _coerce_union_2_token_slash_none_to_token_slash(slash)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyPosSepParamDeriveKwargs]) -> 'PyPosSepParam':
+        slash = _coerce_union_2_token_slash_none_to_token_slash(kwargs['slash']) if 'slash' in kwargs else self.slash
         return PyPosSepParam(slash=slash)
 
     def parent(self) -> 'PyPosSepParamParent':
@@ -1796,7 +2022,9 @@ class PyKwSepParam(_PyBaseNode):
     def __init__(self, *, asterisk: 'PyAsterisk | None' = None) -> None:
         self.asterisk: PyAsterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(asterisk)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyKwSepParamDeriveKwargs]) -> 'PyKwSepParam':
+        asterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(kwargs['asterisk']) if 'asterisk' in kwargs else self.asterisk
         return PyKwSepParam(asterisk=asterisk)
 
     def parent(self) -> 'PyKwSepParamParent':
@@ -1817,7 +2045,10 @@ class PyDecorator(_PyBaseNode):
         self.at_sign: PyAtSign = _coerce_union_2_token_at_sign_none_to_token_at_sign(at_sign)
         self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyDecoratorDeriveKwargs]) -> 'PyDecorator':
+        at_sign = _coerce_union_2_token_at_sign_none_to_token_at_sign(kwargs['at_sign']) if 'at_sign' in kwargs else self.at_sign
+        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyDecorator(at_sign=at_sign, expr=expr)
 
     def parent(self) -> 'PyDecoratorParent':
@@ -1837,7 +2068,7 @@ class PyFuncDefDeriveKwargs(TypedDict, total=False):
 
     open_paren: 'PyOpenParen | None'
 
-    params: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | Punctuated[PyParam, PyComma] | None'
+    params: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | ImmutablePunct[PyParam, PyComma] | None'
 
     close_paren: 'PyCloseParen | None'
 
@@ -1856,8 +2087,8 @@ class PyFuncDef(_PyBaseNode):
     def count_params(self) -> int:
         return len(self.params)
 
-    def __init__(self, name: 'PyIdent | str', body: 'PyStmt | Sequence[PyStmt]', *, decorators: 'Sequence[PyDecorator | PyExpr] | None' = None, async_keyword: 'PyAsyncKeyword | None' = None, def_keyword: 'PyDefKeyword | None' = None, open_paren: 'PyOpenParen | None' = None, params: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | Punctuated[PyParam, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None, return_type: 'PyExpr | tuple[PyRArrow | None, PyExpr] | None' = None, colon: 'PyColon | None' = None) -> None:
-        self.decorators: Sequence[PyDecorator] = _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(decorators)
+    def __init__(self, name: 'PyIdent | str', body: 'PyStmt | Sequence[PyStmt]', *, decorators: 'Sequence[PyDecorator | PyExpr] | None' = None, async_keyword: 'PyAsyncKeyword | None' = None, def_keyword: 'PyDefKeyword | None' = None, open_paren: 'PyOpenParen | None' = None, params: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | ImmutablePunct[PyParam, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None, return_type: 'PyExpr | tuple[PyRArrow | None, PyExpr] | None' = None, colon: 'PyColon | None' = None) -> None:
+        self.decorators: list[PyDecorator] = _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(decorators)
         self.async_keyword: PyAsyncKeyword | None = _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none(async_keyword)
         self.def_keyword: PyDefKeyword = _coerce_union_2_token_def_keyword_none_to_token_def_keyword(def_keyword)
         self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
@@ -1866,9 +2097,20 @@ class PyFuncDef(_PyBaseNode):
         self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
         self.return_type: tuple[PyRArrow, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_r_arrow_none_variant_expr_none_to_union_2_tuple_2_token_r_arrow_variant_expr_none(return_type)
         self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | Sequence[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyFuncDefDeriveKwargs]) -> 'PyFuncDef':
+        decorators = _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(kwargs['decorators']) if 'decorators' in kwargs else self.decorators
+        async_keyword = _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none(kwargs['async_keyword']) if 'async_keyword' in kwargs else self.async_keyword
+        def_keyword = _coerce_union_2_token_def_keyword_none_to_token_def_keyword(kwargs['def_keyword']) if 'def_keyword' in kwargs else self.def_keyword
+        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        open_paren = _coerce_union_2_token_open_paren_none_to_token_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
+        params = _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_comma_none_punct_variant_param_token_comma_none_to_punct_variant_param_token_comma(kwargs['params']) if 'params' in kwargs else self.params
+        close_paren = _coerce_union_2_token_close_paren_none_to_token_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
+        return_type = _coerce_union_3_variant_expr_tuple_2_union_2_token_r_arrow_none_variant_expr_none_to_union_2_tuple_2_token_r_arrow_variant_expr_none(kwargs['return_type']) if 'return_type' in kwargs else self.return_type
+        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
         return PyFuncDef(decorators=decorators, async_keyword=async_keyword, def_keyword=def_keyword, name=name, open_paren=open_paren, params=params, close_paren=close_paren, return_type=return_type, colon=colon, body=body)
 
     def parent(self) -> 'PyFuncDefParent':
@@ -1887,9 +2129,11 @@ class PyModule(_PyBaseNode):
         return len(self.stmts)
 
     def __init__(self, *, stmts: 'Sequence[PyStmt] | None' = None) -> None:
-        self.stmts: Sequence[PyStmt] = _coerce_union_2_list_variant_stmt_none_to_list_variant_stmt(stmts)
+        self.stmts: list[PyStmt] = _coerce_union_2_list_variant_stmt_none_to_list_variant_stmt(stmts)
 
+    @no_type_check
     def derive(self, **kwargs: Unpack[PyModuleDeriveKwargs]) -> 'PyModule':
+        stmts = _coerce_union_2_list_variant_stmt_none_to_list_variant_stmt(kwargs['stmts']) if 'stmts' in kwargs else self.stmts
         return PyModule(stmts=stmts)
 
     def parent(self) -> 'PyModuleParent':
@@ -2261,7 +2505,7 @@ def _coerce_token_comma_to_token_comma(value: 'PyComma') -> 'PyComma':
 
 
 @no_type_check
-def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_token_comma_none_required_list_union_2_node_slice_variant_pattern_required_punct_union_2_node_slice_variant_pattern_token_comma_required_to_punct_union_2_node_slice_variant_pattern_token_comma_required(value: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | Punctuated[PySlice | PyPattern, PyComma]') -> 'Punctuated[PySlice | PyPattern, PyComma]':
+def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_token_comma_none_required_list_union_2_node_slice_variant_pattern_required_punct_union_2_node_slice_variant_pattern_token_comma_required_to_punct_union_2_node_slice_variant_pattern_token_comma_required(value: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | ImmutablePunct[PySlice | PyPattern, PyComma]') -> 'Punctuated[PySlice | PyPattern, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -2278,7 +2522,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_toke
                     element_separator = PyComma()
                 new_element_value = _coerce_union_2_node_slice_variant_pattern_to_union_2_node_slice_variant_pattern(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.append(new_element_value, new_element_separator)
+                new_value.push(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -2287,7 +2531,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_toke
                 else:
                     element_value = first_element
                 new_element_value = _coerce_union_2_node_slice_variant_pattern_to_union_2_node_slice_variant_pattern(element_value)
-                new_value.append(new_element_value)
+                new_value.push_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -2315,7 +2559,7 @@ def _coerce_union_2_token_asterisk_none_to_token_asterisk(value: 'PyAsterisk | N
 
 
 @no_type_check
-def _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(value: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma] | None') -> 'Punctuated[PyPattern, PyComma]':
+def _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(value: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | ImmutablePunct[PyPattern, PyComma] | None') -> 'Punctuated[PyPattern, PyComma]':
     if value is None:
         return Punctuated()
     elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
@@ -2335,7 +2579,7 @@ def _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_to
                         element_separator = PyComma()
                     new_element_value = _coerce_variant_pattern_to_variant_pattern(element_value)
                     new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                    new_value.append(new_element_value, new_element_separator)
+                    new_value.push(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
                     if isinstance(first_element, tuple):
@@ -2344,13 +2588,13 @@ def _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_to
                     else:
                         element_value = first_element
                     new_element_value = _coerce_variant_pattern_to_variant_pattern(element_value)
-                    new_value.append(new_element_value)
+                    new_value.push_final(new_element_value)
                     break
         except StopIteration:
             pass
         return new_value
     else:
-        raise ValueError('the coercion from Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | Punctuated[PyPattern, PyComma] | None to Punctuated[PyPattern, PyComma] failed')
+        raise ValueError('the coercion from Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | ImmutablePunct[PyPattern, PyComma] | None to Punctuated[PyPattern, PyComma] failed')
 
 
 @no_type_check
@@ -2434,7 +2678,7 @@ def _coerce_union_2_node_guard_variant_expr_to_node_guard(value: 'PyGuard | PyEx
 
 
 @no_type_check
-def _coerce_union_2_list_union_2_node_guard_variant_expr_none_to_list_node_guard(value: 'Sequence[PyGuard | PyExpr] | None') -> 'Sequence[PyGuard]':
+def _coerce_union_2_list_union_2_node_guard_variant_expr_none_to_list_node_guard(value: 'Sequence[PyGuard | PyExpr] | None') -> 'list[PyGuard]':
     if value is None:
         return list()
     elif isinstance(value, list):
@@ -2443,7 +2687,7 @@ def _coerce_union_2_list_union_2_node_guard_variant_expr_none_to_list_node_guard
             new_elements.append(_coerce_union_2_node_guard_variant_expr_to_node_guard(value_element))
         return new_elements
     else:
-        raise ValueError('the coercion from Sequence[PyGuard | PyExpr] | None to Sequence[PyGuard] failed')
+        raise ValueError('the coercion from Sequence[PyGuard | PyExpr] | None to list[PyGuard] failed')
 
 
 @no_type_check
@@ -2452,7 +2696,7 @@ def _coerce_node_comprehension_to_node_comprehension(value: 'PyComprehension') -
 
 
 @no_type_check
-def _coerce_list_node_comprehension_required_to_list_node_comprehension_required(value: 'Sequence[PyComprehension]') -> 'Sequence[PyComprehension]':
+def _coerce_list_node_comprehension_required_to_list_node_comprehension_required(value: 'Sequence[PyComprehension]') -> 'list[PyComprehension]':
     new_elements = list()
     for value_element in value:
         new_elements.append(_coerce_node_comprehension_to_node_comprehension(value_element))
@@ -2498,7 +2742,7 @@ def _coerce_union_2_node_slice_variant_expr_to_union_2_node_slice_variant_expr(v
 
 
 @no_type_check
-def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_comma_none_required_list_union_2_node_slice_variant_expr_required_punct_union_2_node_slice_variant_expr_token_comma_required_to_punct_union_2_node_slice_variant_expr_token_comma_required(value: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | Punctuated[PySlice | PyExpr, PyComma]') -> 'Punctuated[PySlice | PyExpr, PyComma]':
+def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_comma_none_required_list_union_2_node_slice_variant_expr_required_punct_union_2_node_slice_variant_expr_token_comma_required_to_punct_union_2_node_slice_variant_expr_token_comma_required(value: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | ImmutablePunct[PySlice | PyExpr, PyComma]') -> 'Punctuated[PySlice | PyExpr, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -2515,7 +2759,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_c
                     element_separator = PyComma()
                 new_element_value = _coerce_union_2_node_slice_variant_expr_to_union_2_node_slice_variant_expr(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.append(new_element_value, new_element_separator)
+                new_value.push(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -2524,7 +2768,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_c
                 else:
                     element_value = first_element
                 new_element_value = _coerce_union_2_node_slice_variant_expr_to_union_2_node_slice_variant_expr(element_value)
-                new_value.append(new_element_value)
+                new_value.push_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -2532,7 +2776,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_c
 
 
 @no_type_check
-def _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(value: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None') -> 'Punctuated[PyExpr, PyComma]':
+def _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(value: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None') -> 'Punctuated[PyExpr, PyComma]':
     if value is None:
         return Punctuated()
     elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
@@ -2552,7 +2796,7 @@ def _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
                         element_separator = PyComma()
                     new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
                     new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                    new_value.append(new_element_value, new_element_separator)
+                    new_value.push(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
                     if isinstance(first_element, tuple):
@@ -2561,13 +2805,13 @@ def _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
                     else:
                         element_value = first_element
                     new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
-                    new_value.append(new_element_value)
+                    new_value.push_final(new_element_value)
                     break
         except StopIteration:
             pass
         return new_value
     else:
-        raise ValueError('the coercion from Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None to Punctuated[PyExpr, PyComma] failed')
+        raise ValueError('the coercion from Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None to Punctuated[PyExpr, PyComma] failed')
 
 
 @no_type_check
@@ -2586,7 +2830,7 @@ def _coerce_variant_arg_to_variant_arg(value: 'PyArg') -> 'PyArg':
 
 
 @no_type_check
-def _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comma_none_punct_variant_arg_token_comma_none_to_punct_variant_arg_token_comma(value: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | Punctuated[PyArg, PyComma] | None') -> 'Punctuated[PyArg, PyComma]':
+def _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comma_none_punct_variant_arg_token_comma_none_to_punct_variant_arg_token_comma(value: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | ImmutablePunct[PyArg, PyComma] | None') -> 'Punctuated[PyArg, PyComma]':
     if value is None:
         return Punctuated()
     elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
@@ -2606,7 +2850,7 @@ def _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comm
                         element_separator = PyComma()
                     new_element_value = _coerce_variant_arg_to_variant_arg(element_value)
                     new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                    new_value.append(new_element_value, new_element_separator)
+                    new_value.push(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
                     if isinstance(first_element, tuple):
@@ -2615,13 +2859,13 @@ def _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comm
                     else:
                         element_value = first_element
                     new_element_value = _coerce_variant_arg_to_variant_arg(element_value)
-                    new_value.append(new_element_value)
+                    new_value.push_final(new_element_value)
                     break
         except StopIteration:
             pass
         return new_value
     else:
-        raise ValueError('the coercion from Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | Punctuated[PyArg, PyComma] | None to Punctuated[PyArg, PyComma] failed')
+        raise ValueError('the coercion from Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | ImmutablePunct[PyArg, PyComma] | None to Punctuated[PyArg, PyComma] failed')
 
 
 @no_type_check
@@ -2645,7 +2889,7 @@ def _coerce_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_
 
 
 @no_type_check
-def _coerce_union_2_list_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_none_to_list_tuple_2_token_ident_token_dot(value: 'Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None') -> 'Sequence[tuple[PyIdent, PyDot]]':
+def _coerce_union_2_list_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_none_to_list_tuple_2_token_ident_token_dot(value: 'Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None') -> 'list[tuple[PyIdent, PyDot]]':
     if value is None:
         return list()
     elif isinstance(value, list):
@@ -2654,7 +2898,7 @@ def _coerce_union_2_list_union_3_token_ident_tuple_2_union_2_token_ident_extern_
             new_elements.append(_coerce_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_to_tuple_2_token_ident_token_dot(value_element))
         return new_elements
     else:
-        raise ValueError('the coercion from Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None to Sequence[tuple[PyIdent, PyDot]] failed')
+        raise ValueError('the coercion from Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None to list[tuple[PyIdent, PyDot]] failed')
 
 
 @no_type_check
@@ -2673,7 +2917,7 @@ def _coerce_token_dot_to_token_dot(value: 'PyDot') -> 'PyDot':
 
 
 @no_type_check
-def _coerce_union_2_list_token_dot_required_extern_integer_to_list_token_dot_required(value: 'Sequence[PyDot] | int') -> 'Sequence[PyDot]':
+def _coerce_union_2_list_token_dot_required_extern_integer_to_list_token_dot_required(value: 'Sequence[PyDot] | int') -> 'list[PyDot]':
     if isinstance(value, int):
         new_elements = list()
         for _ in range(0, value):
@@ -2685,7 +2929,7 @@ def _coerce_union_2_list_token_dot_required_extern_integer_to_list_token_dot_req
             new_elements.append(_coerce_token_dot_to_token_dot(value_element))
         return new_elements
     else:
-        raise ValueError('the coercion from Sequence[PyDot] | int to Sequence[PyDot] failed')
+        raise ValueError('the coercion from Sequence[PyDot] | int to list[PyDot] failed')
 
 
 @no_type_check
@@ -2760,7 +3004,7 @@ def _coerce_union_2_node_alias_variant_path_to_node_alias(value: 'PyAlias | PyPa
 
 
 @no_type_check
-def _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_comma_none_required_list_union_2_node_alias_variant_path_required_punct_union_2_node_alias_variant_path_token_comma_required_to_punct_node_alias_token_comma_required(value: 'Sequence[tuple[PyAlias | PyPath, PyComma | None]] | Sequence[PyAlias | PyPath] | Punctuated[PyAlias | PyPath, PyComma]') -> 'Punctuated[PyAlias, PyComma]':
+def _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_comma_none_required_list_union_2_node_alias_variant_path_required_punct_union_2_node_alias_variant_path_token_comma_required_to_punct_node_alias_token_comma_required(value: 'Sequence[tuple[PyAlias | PyPath, PyComma | None]] | Sequence[PyAlias | PyPath] | ImmutablePunct[PyAlias | PyPath, PyComma]') -> 'Punctuated[PyAlias, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -2777,7 +3021,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_c
                     element_separator = PyComma()
                 new_element_value = _coerce_union_2_node_alias_variant_path_to_node_alias(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.append(new_element_value, new_element_separator)
+                new_value.push(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -2786,7 +3030,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_c
                 else:
                     element_value = first_element
                 new_element_value = _coerce_union_2_node_alias_variant_path_to_node_alias(element_value)
-                new_value.append(new_element_value)
+                new_value.push_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -2814,7 +3058,7 @@ def _coerce_union_4_node_from_alias_token_asterisk_token_ident_extern_string_to_
 
 
 @no_type_check
-def _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_ident_extern_string_union_2_token_comma_none_required_list_union_4_node_from_alias_token_asterisk_token_ident_extern_string_required_punct_union_4_node_from_alias_token_asterisk_token_ident_extern_string_token_comma_required_to_punct_node_from_alias_token_comma_required(value: 'Sequence[tuple[PyFromAlias | PyAsterisk | PyIdent | str, PyComma | None]] | Sequence[PyFromAlias | PyAsterisk | PyIdent | str] | Punctuated[PyFromAlias | PyAsterisk | PyIdent | str, PyComma]') -> 'Punctuated[PyFromAlias, PyComma]':
+def _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_ident_extern_string_union_2_token_comma_none_required_list_union_4_node_from_alias_token_asterisk_token_ident_extern_string_required_punct_union_4_node_from_alias_token_asterisk_token_ident_extern_string_token_comma_required_to_punct_node_from_alias_token_comma_required(value: 'Sequence[tuple[PyFromAlias | PyAsterisk | PyIdent | str, PyComma | None]] | Sequence[PyFromAlias | PyAsterisk | PyIdent | str] | ImmutablePunct[PyFromAlias | PyAsterisk | PyIdent | str, PyComma]') -> 'Punctuated[PyFromAlias, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -2831,7 +3075,7 @@ def _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_id
                     element_separator = PyComma()
                 new_element_value = _coerce_union_4_node_from_alias_token_asterisk_token_ident_extern_string_to_node_from_alias(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.append(new_element_value, new_element_separator)
+                new_value.push(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -2840,7 +3084,7 @@ def _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_id
                 else:
                     element_value = first_element
                 new_element_value = _coerce_union_4_node_from_alias_token_asterisk_token_ident_extern_string_to_node_from_alias(element_value)
-                new_value.append(new_element_value)
+                new_value.push_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -2922,7 +3166,7 @@ def _coerce_union_2_token_global_keyword_none_to_token_global_keyword(value: 'Py
 
 
 @no_type_check
-def _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(value: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | Punctuated[PyIdent | str, PyComma]') -> 'Punctuated[PyIdent, PyComma]':
+def _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(value: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | ImmutablePunct[PyIdent | str, PyComma]') -> 'Punctuated[PyIdent, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -2939,7 +3183,7 @@ def _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token
                     element_separator = PyComma()
                 new_element_value = _coerce_union_2_token_ident_extern_string_to_token_ident(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.append(new_element_value, new_element_separator)
+                new_value.push(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -2948,7 +3192,7 @@ def _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token
                 else:
                     element_value = first_element
                 new_element_value = _coerce_union_2_token_ident_extern_string_to_token_ident(element_value)
-                new_value.append(new_element_value)
+                new_value.push_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -2971,7 +3215,7 @@ def _coerce_variant_stmt_to_variant_stmt(value: 'PyStmt') -> 'PyStmt':
 
 
 @no_type_check
-def _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value: 'PyStmt | Sequence[PyStmt]') -> 'PyStmt | Sequence[PyStmt]':
+def _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value: 'PyStmt | Sequence[PyStmt]') -> 'PyStmt | list[PyStmt]':
     if is_py_stmt(value):
         return value
     elif isinstance(value, list):
@@ -2980,7 +3224,7 @@ def _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_s
             new_elements.append(_coerce_variant_stmt_to_variant_stmt(value_element))
         return new_elements
     else:
-        raise ValueError('the coercion from PyStmt | Sequence[PyStmt] to PyStmt | Sequence[PyStmt] failed')
+        raise ValueError('the coercion from PyStmt | Sequence[PyStmt] to PyStmt | list[PyStmt] failed')
 
 
 @no_type_check
@@ -3004,7 +3248,7 @@ def _coerce_node_elif_case_to_node_elif_case(value: 'PyElifCase') -> 'PyElifCase
 
 
 @no_type_check
-def _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(value: 'Sequence[PyElifCase] | None') -> 'Sequence[PyElifCase]':
+def _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(value: 'Sequence[PyElifCase] | None') -> 'list[PyElifCase]':
     if value is None:
         return list()
     elif isinstance(value, list):
@@ -3013,7 +3257,7 @@ def _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(value: 'Sequ
             new_elements.append(_coerce_node_elif_case_to_node_elif_case(value_element))
         return new_elements
     else:
-        raise ValueError('the coercion from Sequence[PyElifCase] | None to Sequence[PyElifCase] failed')
+        raise ValueError('the coercion from Sequence[PyElifCase] | None to list[PyElifCase] failed')
 
 
 @no_type_check
@@ -3061,7 +3305,7 @@ def _coerce_union_3_variant_expr_tuple_2_union_2_token_from_keyword_none_variant
 
 
 @no_type_check
-def _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(value: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None':
+def _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(value: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None':
     if is_py_stmt(value) or isinstance(value, list):
         return (PyElseKeyword(), PyColon(), _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value))
     elif isinstance(value, tuple):
@@ -3069,7 +3313,7 @@ def _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2
     elif value is None:
         return None
     else:
-        raise ValueError('the coercion from PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None to tuple[PyElseKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None failed')
+        raise ValueError('the coercion from PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None to tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None failed')
 
 
 @no_type_check
@@ -3113,7 +3357,7 @@ def _coerce_union_2_token_type_keyword_none_to_token_type_keyword(value: 'PyType
 
 
 @no_type_check
-def _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_to_punct_variant_expr_token_comma(value: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma]') -> 'Punctuated[PyExpr, PyComma]':
+def _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_to_punct_variant_expr_token_comma(value: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma]') -> 'Punctuated[PyExpr, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -3130,7 +3374,7 @@ def _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
                     element_separator = PyComma()
                 new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.append(new_element_value, new_element_separator)
+                new_value.push(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -3139,7 +3383,7 @@ def _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
                 else:
                     element_value = first_element
                 new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
-                new_value.append(new_element_value)
+                new_value.push_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -3147,7 +3391,7 @@ def _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
 
 
 @no_type_check
-def _coerce_union_5_tuple_3_union_2_token_open_bracket_none_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_union_2_token_close_bracket_none_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_union_2_tuple_3_token_open_bracket_punct_variant_expr_token_comma_token_close_bracket_none(value: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None') -> 'tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None':
+def _coerce_union_5_tuple_3_union_2_token_open_bracket_none_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_union_2_token_close_bracket_none_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_union_2_tuple_3_token_open_bracket_punct_variant_expr_token_comma_token_close_bracket_none(value: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None') -> 'tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None':
     if isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
         return (PyOpenBracket(), _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_to_punct_variant_expr_token_comma(value), PyCloseBracket())
     elif isinstance(value, tuple):
@@ -3155,7 +3399,7 @@ def _coerce_union_5_tuple_3_union_2_token_open_bracket_none_union_4_list_variant
     elif value is None:
         return None
     else:
-        raise ValueError('the coercion from tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | Punctuated[PyExpr, PyComma] | None to tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None failed')
+        raise ValueError('the coercion from tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None to tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None failed')
 
 
 @no_type_check
@@ -3184,7 +3428,7 @@ def _coerce_node_except_handler_to_node_except_handler(value: 'PyExceptHandler')
 
 
 @no_type_check
-def _coerce_union_2_list_node_except_handler_none_to_list_node_except_handler(value: 'Sequence[PyExceptHandler] | None') -> 'Sequence[PyExceptHandler]':
+def _coerce_union_2_list_node_except_handler_none_to_list_node_except_handler(value: 'Sequence[PyExceptHandler] | None') -> 'list[PyExceptHandler]':
     if value is None:
         return list()
     elif isinstance(value, list):
@@ -3193,7 +3437,7 @@ def _coerce_union_2_list_node_except_handler_none_to_list_node_except_handler(va
             new_elements.append(_coerce_node_except_handler_to_node_except_handler(value_element))
         return new_elements
     else:
-        raise ValueError('the coercion from Sequence[PyExceptHandler] | None to Sequence[PyExceptHandler] failed')
+        raise ValueError('the coercion from Sequence[PyExceptHandler] | None to list[PyExceptHandler] failed')
 
 
 @no_type_check
@@ -3207,7 +3451,7 @@ def _coerce_union_2_token_finally_keyword_none_to_token_finally_keyword(value: '
 
 
 @no_type_check
-def _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(value: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyFinallyKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None':
+def _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(value: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyFinallyKeyword, PyColon, PyStmt | list[PyStmt]] | None':
     if is_py_stmt(value) or isinstance(value, list):
         return (PyFinallyKeyword(), PyColon(), _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value))
     elif isinstance(value, tuple):
@@ -3215,7 +3459,7 @@ def _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_unio
     elif value is None:
         return None
     else:
-        raise ValueError('the coercion from PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None to tuple[PyFinallyKeyword, PyColon, PyStmt | Sequence[PyStmt]] | None failed')
+        raise ValueError('the coercion from PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None to tuple[PyFinallyKeyword, PyColon, PyStmt | list[PyStmt]] | None failed')
 
 
 @no_type_check
@@ -3229,7 +3473,7 @@ def _coerce_union_2_node_decorator_variant_expr_to_node_decorator(value: 'PyDeco
 
 
 @no_type_check
-def _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(value: 'Sequence[PyDecorator | PyExpr] | None') -> 'Sequence[PyDecorator]':
+def _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(value: 'Sequence[PyDecorator | PyExpr] | None') -> 'list[PyDecorator]':
     if value is None:
         return list()
     elif isinstance(value, list):
@@ -3238,7 +3482,7 @@ def _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_d
             new_elements.append(_coerce_union_2_node_decorator_variant_expr_to_node_decorator(value_element))
         return new_elements
     else:
-        raise ValueError('the coercion from Sequence[PyDecorator | PyExpr] | None to Sequence[PyDecorator] failed')
+        raise ValueError('the coercion from Sequence[PyDecorator | PyExpr] | None to list[PyDecorator] failed')
 
 
 @no_type_check
@@ -3257,7 +3501,7 @@ def _coerce_variant_base_arg_to_variant_base_arg(value: 'PyBaseArg') -> 'PyBaseA
 
 
 @no_type_check
-def _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_to_punct_variant_base_arg_token_comma(value: 'Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | Punctuated[PyBaseArg, PyComma]') -> 'Punctuated[PyBaseArg, PyComma]':
+def _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_to_punct_variant_base_arg_token_comma(value: 'Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma]') -> 'Punctuated[PyBaseArg, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -3274,7 +3518,7 @@ def _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
                     element_separator = PyComma()
                 new_element_value = _coerce_variant_base_arg_to_variant_base_arg(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.append(new_element_value, new_element_separator)
+                new_value.push(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -3283,7 +3527,7 @@ def _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
                 else:
                     element_value = first_element
                 new_element_value = _coerce_variant_base_arg_to_variant_base_arg(element_value)
-                new_value.append(new_element_value)
+                new_value.push_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -3291,7 +3535,7 @@ def _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
 
 
 @no_type_check
-def _coerce_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_to_punct_variant_base_arg_token_comma(value: 'Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | Punctuated[PyBaseArg, PyComma] | None') -> 'Punctuated[PyBaseArg, PyComma]':
+def _coerce_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_to_punct_variant_base_arg_token_comma(value: 'Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None') -> 'Punctuated[PyBaseArg, PyComma]':
     if value is None:
         return Punctuated()
     elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
@@ -3311,7 +3555,7 @@ def _coerce_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
                         element_separator = PyComma()
                     new_element_value = _coerce_variant_base_arg_to_variant_base_arg(element_value)
                     new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                    new_value.append(new_element_value, new_element_separator)
+                    new_value.push(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
                     if isinstance(first_element, tuple):
@@ -3320,17 +3564,17 @@ def _coerce_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
                     else:
                         element_value = first_element
                     new_element_value = _coerce_variant_base_arg_to_variant_base_arg(element_value)
-                    new_value.append(new_element_value)
+                    new_value.push_final(new_element_value)
                     break
         except StopIteration:
             pass
         return new_value
     else:
-        raise ValueError('the coercion from Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | Punctuated[PyBaseArg, PyComma] | None to Punctuated[PyBaseArg, PyComma] failed')
+        raise ValueError('the coercion from Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None to Punctuated[PyBaseArg, PyComma] failed')
 
 
 @no_type_check
-def _coerce_union_5_tuple_3_union_2_token_open_paren_none_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_union_2_token_close_paren_none_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_to_union_2_tuple_3_token_open_paren_punct_variant_base_arg_token_comma_token_close_paren_none(value: 'tuple[PyOpenParen | None, Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | Punctuated[PyBaseArg, PyComma] | None, PyCloseParen | None] | Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | Punctuated[PyBaseArg, PyComma] | None') -> 'tuple[PyOpenParen, Punctuated[PyBaseArg, PyComma], PyCloseParen] | None':
+def _coerce_union_5_tuple_3_union_2_token_open_paren_none_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_union_2_token_close_paren_none_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_to_union_2_tuple_3_token_open_paren_punct_variant_base_arg_token_comma_token_close_paren_none(value: 'tuple[PyOpenParen | None, Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None, PyCloseParen | None] | Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None') -> 'tuple[PyOpenParen, Punctuated[PyBaseArg, PyComma], PyCloseParen] | None':
     if isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
         return (PyOpenParen(), _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_to_punct_variant_base_arg_token_comma(value), PyCloseParen())
     elif isinstance(value, tuple):
@@ -3338,7 +3582,7 @@ def _coerce_union_5_tuple_3_union_2_token_open_paren_none_union_4_list_variant_b
     elif value is None:
         return None
     else:
-        raise ValueError('the coercion from tuple[PyOpenParen | None, Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | Punctuated[PyBaseArg, PyComma] | None, PyCloseParen | None] | Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | Punctuated[PyBaseArg, PyComma] | None to tuple[PyOpenParen, Punctuated[PyBaseArg, PyComma], PyCloseParen] | None failed')
+        raise ValueError('the coercion from tuple[PyOpenParen | None, Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None, PyCloseParen | None] | Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None to tuple[PyOpenParen, Punctuated[PyBaseArg, PyComma], PyCloseParen] | None failed')
 
 
 @no_type_check
@@ -3387,7 +3631,7 @@ def _coerce_variant_param_to_variant_param(value: 'PyParam') -> 'PyParam':
 
 
 @no_type_check
-def _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_comma_none_punct_variant_param_token_comma_none_to_punct_variant_param_token_comma(value: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | Punctuated[PyParam, PyComma] | None') -> 'Punctuated[PyParam, PyComma]':
+def _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_comma_none_punct_variant_param_token_comma_none_to_punct_variant_param_token_comma(value: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | ImmutablePunct[PyParam, PyComma] | None') -> 'Punctuated[PyParam, PyComma]':
     if value is None:
         return Punctuated()
     elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
@@ -3407,7 +3651,7 @@ def _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_
                         element_separator = PyComma()
                     new_element_value = _coerce_variant_param_to_variant_param(element_value)
                     new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                    new_value.append(new_element_value, new_element_separator)
+                    new_value.push(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
                     if isinstance(first_element, tuple):
@@ -3416,13 +3660,13 @@ def _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_
                     else:
                         element_value = first_element
                     new_element_value = _coerce_variant_param_to_variant_param(element_value)
-                    new_value.append(new_element_value)
+                    new_value.push_final(new_element_value)
                     break
         except StopIteration:
             pass
         return new_value
     else:
-        raise ValueError('the coercion from Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | Punctuated[PyParam, PyComma] | None to Punctuated[PyParam, PyComma] failed')
+        raise ValueError('the coercion from Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | ImmutablePunct[PyParam, PyComma] | None to Punctuated[PyParam, PyComma] failed')
 
 
 @no_type_check
@@ -3448,7 +3692,7 @@ def _coerce_union_3_variant_expr_tuple_2_union_2_token_r_arrow_none_variant_expr
 
 
 @no_type_check
-def _coerce_union_2_list_variant_stmt_none_to_list_variant_stmt(value: 'Sequence[PyStmt] | None') -> 'Sequence[PyStmt]':
+def _coerce_union_2_list_variant_stmt_none_to_list_variant_stmt(value: 'Sequence[PyStmt] | None') -> 'list[PyStmt]':
     if value is None:
         return list()
     elif isinstance(value, list):
@@ -3457,15 +3701,10 @@ def _coerce_union_2_list_variant_stmt_none_to_list_variant_stmt(value: 'Sequence
             new_elements.append(_coerce_variant_stmt_to_variant_stmt(value_element))
         return new_elements
     else:
-        raise ValueError('the coercion from Sequence[PyStmt] | None to Sequence[PyStmt] failed')
+        raise ValueError('the coercion from Sequence[PyStmt] | None to list[PyStmt] failed')
 
 
-from typing import Callable, no_type_check
-
-
-from .cst import *
-
-
+@no_type_check
 def for_each_py_pattern(node: PyPattern, proc: Callable[[PyPattern], None]):
     if isinstance(node, PyNamedPattern):
         return
@@ -3474,29 +3713,23 @@ def for_each_py_pattern(node: PyPattern, proc: Callable[[PyPattern], None]):
         return
     if isinstance(node, PySubscriptPattern):
         proc(node.pattern)
-        for (element, separator) in node.slices.elements:
+        for (element, separator) in node.slices:
             if is_py_pattern(element):
                 proc(element)
-        if node.slices.last is not None:
-            if is_py_pattern(node.slices.last):
-                proc(node.slices.last)
         return
     if isinstance(node, PyStarredPattern):
         return
     if isinstance(node, PyListPattern):
         for (element, separator) in node.elements:
             proc(element)
-        if node.elements.last is not None:
-            proc(node.elements.last)
         return
     if isinstance(node, PyTuplePattern):
-        for (element, separator) in node.elements.elements:
+        for (element, separator) in node.elements:
             proc(element)
-        if node.elements.last is not None:
-            proc(node.elements.last)
         return
 
 
+@no_type_check
 def for_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], None]):
     if isinstance(node, PyEllipsisExpr):
         return
@@ -3520,7 +3753,7 @@ def for_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], None]):
         return
     if isinstance(node, PySubscriptExpr):
         proc(node.expr)
-        for (element, separator) in node.slices.elements:
+        for (element, separator) in node.slices:
             if isinstance(element, PySlice):
                 if is_py_expr(element.lower):
                     proc(element.lower)
@@ -3530,31 +3763,17 @@ def for_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], None]):
                     proc(element.step[1])
             elif is_py_expr(element):
                 proc(element)
-        if node.slices.last is not None:
-            if isinstance(node.slices.last, PySlice):
-                if is_py_expr(node.slices.last.lower):
-                    proc(node.slices.last.lower)
-                if is_py_expr(node.slices.last.upper):
-                    proc(node.slices.last.upper)
-                if isinstance(node.slices.last.step, tuple):
-                    proc(node.slices.last.step[1])
-            elif is_py_expr(node.slices.last):
-                proc(node.slices.last)
         return
     if isinstance(node, PyStarredExpr):
         proc(node.expr)
         return
     if isinstance(node, PyListExpr):
-        for (element, separator) in node.elements.elements:
+        for (element, separator) in node.elements:
             proc(element)
-        if node.elements.last is not None:
-            proc(node.elements.last)
         return
     if isinstance(node, PyTupleExpr):
-        for (element, separator) in node.elements.elements:
+        for (element, separator) in node.elements:
             proc(element)
-        if node.elements.last is not None:
-            proc(node.elements.last)
         return
     if isinstance(node, PyCallExpr):
         proc(node.operator)
@@ -3568,6 +3787,7 @@ def for_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], None]):
         return
 
 
+@no_type_check
 def for_each_py_arg(node: PyArg, proc: Callable[[PyArg], None]):
     if isinstance(node, PyEllipsisExpr):
         return
@@ -3591,7 +3811,7 @@ def for_each_py_arg(node: PyArg, proc: Callable[[PyArg], None]):
         return
     if isinstance(node, PySubscriptExpr):
         proc(node.expr)
-        for (element, separator) in node.slices.elements:
+        for (element, separator) in node.slices:
             if isinstance(element, PySlice):
                 if is_py_expr(element.lower):
                     proc(element.lower)
@@ -3601,41 +3821,25 @@ def for_each_py_arg(node: PyArg, proc: Callable[[PyArg], None]):
                     proc(element.step[1])
             elif is_py_expr(element):
                 proc(element)
-        if node.slices.last is not None:
-            if isinstance(node.slices.last, PySlice):
-                if is_py_expr(node.slices.last.lower):
-                    proc(node.slices.last.lower)
-                if is_py_expr(node.slices.last.upper):
-                    proc(node.slices.last.upper)
-                if isinstance(node.slices.last.step, tuple):
-                    proc(node.slices.last.step[1])
-            elif is_py_expr(node.slices.last):
-                proc(node.slices.last)
         return
     if isinstance(node, PyStarredExpr):
         proc(node.expr)
         return
     if isinstance(node, PyListExpr):
-        for (element, separator) in node.elements.elements:
+        for (element, separator) in node.elements:
             proc(element)
-        if node.elements.last is not None:
-            proc(node.elements.last)
         return
     if isinstance(node, PyTupleExpr):
-        for (element, separator) in node.elements.elements:
+        for (element, separator) in node.elements:
             proc(element)
-        if node.elements.last is not None:
-            proc(node.elements.last)
         return
     if isinstance(node, PyKeywordArg):
         proc(node.expr)
         return
     if isinstance(node, PyCallExpr):
         proc(node.operator)
-        for (element, separator) in node.args.elements:
+        for (element, separator) in node.args:
             proc(element)
-        if node.args.last is not None:
-            proc(node.args.last)
         return
     if isinstance(node, PyPrefixExpr):
         proc(node.expr)
@@ -3646,6 +3850,7 @@ def for_each_py_arg(node: PyArg, proc: Callable[[PyArg], None]):
         return
 
 
+@no_type_check
 def for_each_py_stmt(node: PyStmt, proc: Callable[[PyStmt], None]):
     if isinstance(node, PyImportStmt):
         return
@@ -3738,6 +3943,7 @@ def for_each_py_stmt(node: PyStmt, proc: Callable[[PyStmt], None]):
         return
 
 
+@no_type_check
 def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
     if isinstance(node, PySlice):
         if is_py_expr(node.lower):
@@ -3754,31 +3960,22 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
         return
     if isinstance(node, PySubscriptPattern):
         proc(node.pattern)
-        for (element, separator) in node.slices.elements:
+        for (element, separator) in node.slices:
             if isinstance(element, PySlice):
                 proc(element)
             elif is_py_pattern(element):
                 proc(element)
-        if node.slices.last is not None:
-            if isinstance(node.slices.last, PySlice):
-                proc(node.slices.last)
-            elif is_py_pattern(node.slices.last):
-                proc(node.slices.last)
         return
     if isinstance(node, PyStarredPattern):
         proc(node.expr)
         return
     if isinstance(node, PyListPattern):
-        for (element, separator) in node.elements.elements:
+        for (element, separator) in node.elements:
             proc(element)
-        if node.elements.last is not None:
-            proc(node.elements.last)
         return
     if isinstance(node, PyTuplePattern):
-        for (element, separator) in node.elements.elements:
+        for (element, separator) in node.elements:
             proc(element)
-        if node.elements.last is not None:
-            proc(node.elements.last)
         return
     if isinstance(node, PyEllipsisExpr):
         return
@@ -3813,41 +4010,30 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
         return
     if isinstance(node, PySubscriptExpr):
         proc(node.expr)
-        for (element, separator) in node.slices.elements:
+        for (element, separator) in node.slices:
             if isinstance(element, PySlice):
                 proc(element)
             elif is_py_expr(element):
                 proc(element)
-        if node.slices.last is not None:
-            if isinstance(node.slices.last, PySlice):
-                proc(node.slices.last)
-            elif is_py_expr(node.slices.last):
-                proc(node.slices.last)
         return
     if isinstance(node, PyStarredExpr):
         proc(node.expr)
         return
     if isinstance(node, PyListExpr):
-        for (element, separator) in node.elements.elements:
+        for (element, separator) in node.elements:
             proc(element)
-        if node.elements.last is not None:
-            proc(node.elements.last)
         return
     if isinstance(node, PyTupleExpr):
-        for (element, separator) in node.elements.elements:
+        for (element, separator) in node.elements:
             proc(element)
-        if node.elements.last is not None:
-            proc(node.elements.last)
         return
     if isinstance(node, PyKeywordArg):
         proc(node.expr)
         return
     if isinstance(node, PyCallExpr):
         proc(node.operator)
-        for (element, separator) in node.args.elements:
+        for (element, separator) in node.args:
             proc(element)
-        if node.args.last is not None:
-            proc(node.args.last)
         return
     if isinstance(node, PyPrefixExpr):
         proc(node.expr)
@@ -3871,17 +4057,13 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
     if isinstance(node, PyFromAlias):
         return
     if isinstance(node, PyImportStmt):
-        for (element, separator) in node.aliases.elements:
+        for (element, separator) in node.aliases:
             proc(element)
-        if node.aliases.last is not None:
-            proc(node.aliases.last)
         return
     if isinstance(node, PyImportFromStmt):
         proc(node.path)
-        for (element, separator) in node.aliases.elements:
+        for (element, separator) in node.aliases:
             proc(element)
-        if node.aliases.last is not None:
-            proc(node.aliases.last)
         return
     if isinstance(node, PyRetStmt):
         if is_py_expr(node.expr):
@@ -3982,10 +4164,8 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
         return
     if isinstance(node, PyTypeAliasStmt):
         if isinstance(node.type_params, tuple):
-            for (element, separator) in node.type_params[1].elements:
+            for (element, separator) in node.type_params[1]:
                 proc(element)
-            if node.type_params[1].last is not None:
-                proc(node.type_params[1].last)
         proc(node.expr)
         return
     if isinstance(node, PyExceptHandler):
@@ -4026,10 +4206,8 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
         for element in node.decorators:
             proc(element)
         if isinstance(node.bases, tuple):
-            for (element_1, separator) in node.bases[1].elements:
+            for (element_1, separator) in node.bases[1]:
                 proc(element_1)
-            if node.bases[1].last is not None:
-                proc(node.bases[1].last)
         if is_py_stmt(node.body):
             proc(node.body)
         elif isinstance(node.body, list):
@@ -4061,10 +4239,8 @@ def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
     if isinstance(node, PyFuncDef):
         for element in node.decorators:
             proc(element)
-        for (element_1, separator) in node.params.elements:
+        for (element_1, separator) in node.params:
             proc(element_1)
-        if node.params.last is not None:
-            proc(node.params.last)
         if isinstance(node.return_type, tuple):
             proc(node.return_type[1])
         if is_py_stmt(node.body):
