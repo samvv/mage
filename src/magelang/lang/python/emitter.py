@@ -295,6 +295,18 @@ def emit(node: PyNode) -> str:
                 out.write(')')
             return
 
+        if isinstance(node, PyIfExpr):
+            visit_expr(node.then)
+            out.write(' ')
+            visit_token(node.if_keyword)
+            out.write(' ')
+            visit_expr(node.test)
+            out.write(' ')
+            visit_token(node.else_keyword)
+            out.write(' ')
+            visit_expr(node.alt)
+            return
+
         if isinstance(node, PyNestExpr):
             visit_token(node.open_paren)
             visit_expr(node.expr)
