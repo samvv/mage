@@ -133,7 +133,7 @@ pub generator_expr
   = element:expr generators:comprehension+
 
 pub if_expr
-  = 'if' test:expr 'then' then:expr 'else' alt:expr
+  = then:expr 'if' test:expr 'else' alt:expr
 
 @wrap
 pub const_expr
