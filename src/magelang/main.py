@@ -168,8 +168,8 @@ def main() -> int:
  
     generate_parser.add_argument('lang', choices=supported_languages, help='The name of the template to use')
     generate_parser.add_argument('file', nargs=1, help='A path to a grammar file')
-    generate_parser.add_argument('--engine', default='old', help='Which engine to use')
-    generate_parser.add_argument('--debug', choices=[ 'old', 'next' ], action=argparse.BooleanOptionalAction, help='Generate extra checks that may affect performance')
+    generate_parser.add_argument('--engine', default='old', choices=[ 'old', 'next' ], help='Which engine to use')
+    generate_parser.add_argument('--debug', action=argparse.BooleanOptionalAction, help='Generate extra checks that may affect performance')
     generate_parser.add_argument('--skip-checks', action=argparse.BooleanOptionalAction, help='Skip all sanity checks for the given grammar')
     generate_parser.add_argument('--no-opt', action=argparse.BooleanOptionalAction, help='Disable any optimisations')
     generate_parser.add_argument('--feat-all', action=argparse.BooleanOptionalAction, help='Enable all output features (off by default)')
