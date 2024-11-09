@@ -2,24 +2,31 @@
 from typing import assert_never
 
 from magelang.generator.python.util import build_cond, build_is_none, build_or, build_union, gen_deep_test, gen_initializers, gen_py_type, gen_shallow_test, namespaced, rule_type_to_py_type, to_py_class_name, quote_py_type, build_isinstance, PyCondCase
+from magelang.logging import warn
 from magelang.treespec import *
+from magelang.passes.insert_magic_rules import any_node_rule_name, any_token_rule_name, any_syntax_rule_name
 from magelang.lang.python.cst import *
 from magelang.lang.python.emitter import emit
 from magelang.manager import Context
 
+def make_py_optional(ty: PyExpr) -> PyExpr:
+    return PyInfixExpr(ty, PyVerticalBar(), PyNamedExpr('None'))
+
 def mage_to_python_cst(
     grammar: MageGrammar,
-    ctx: Context,
+    prefix: str = '',
+    gen_parent_pointers: bool = True,
+    enable_asserts: bool = False,
 ) -> PyModule:
 
     specs = grammar_to_specs(grammar)
 
-    prefix= ctx.get_option('prefix')
-    gen_parent_pointers = ctx.get_option('cst_parent_pointers')
+    def get_base_class_name(name: str) -> str:
+        return '_' + to_py_class_name('base_' + name, prefix=prefix)
 
-    base_syntax_class_name = '_' + to_py_class_name('base_syntax', prefix)
-    base_node_class_name = '_' + to_py_class_name('base_node', prefix)
-    base_token_class_name = '_' + to_py_class_name('base_token', prefix)
+    base_syntax_class_name = get_base_class_name(any_syntax_rule_name)
+    base_node_class_name =  get_base_class_name(any_node_rule_name)
+    base_token_class_name = get_base_class_name(any_token_rule_name)
 
     parent_nodes = dict[str, set[str]]()
 
@@ -74,25 +81,35 @@ def mage_to_python_cst(
         PyImportFromStmt(PyAbsolutePath(PyQualName('typing')), aliases=[
             PyFromAlias('Any'),
             PyFromAlias('TypeGuard'),
+            PyFromAlias('TypedDict'),
             PyFromAlias('Never'),
+            PyFromAlias('Unpack'),
             PyFromAlias('Sequence'),
             PyFromAlias('no_type_check'),
         ]),
         PyImportFromStmt(PyAbsolutePath(PyQualName(modules=[ 'magelang' ], name='runtime')), aliases=[
-            PyFromAlias('BaseNode'),
-            PyFromAlias('BaseToken'),
+            PyFromAlias('BaseSyntax'),
             PyFromAlias('Punctuated'),
             PyFromAlias('Span'),
         ]),
-        PyClassDef(base_node_class_name, bases=[ 'BaseNode' ], body=[
+        PyClassDef(base_syntax_class_name, bases=[ PyClassBaseArg('BaseSyntax') ], body=[
             PyPassStmt(),
         ]),
-        PyClassDef(base_token_class_name, bases=[ 'BaseToken' ], body=[
+        PyClassDef(base_node_class_name, bases=[ PyClassBaseArg(base_syntax_class_name) ], body=[
             PyPassStmt(),
+        ]),
+        PyClassDef(base_token_class_name, bases=[ PyClassBaseArg(base_syntax_class_name) ], body=[
+            PyFuncDef(
+                name='__init__',
+                params=[ PyNamedParam(PyNamedPattern('self')), PyNamedParam(PyNamedPattern('span'), annotation=make_py_optional(PyNamedExpr('Span')), default=PyNamedExpr('None')) ],
+                body=[ PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), 'span'), value=PyNamedExpr('span')) ]
+            ),
         ]),
     ]
 
     defs = {}
+
+    # Generate token classes
 
     for spec in specs:
 
@@ -111,23 +128,25 @@ def mage_to_python_cst(
 
             init_body.append(PyExprStmt(expr=PyCallExpr(operator=PyAttrExpr(expr=PyCallExpr(operator=PyNamedExpr('super')), name='__init__'), args=[ (PyKeywordArg(name='span', expr=PyNamedExpr('span')), None) ])))
 
-            params: list[PyParam] = []
+            init_params: list[PyParam] = []
 
             # self
-            params.append(PyNamedParam(pattern=PyNamedPattern('self')))
+            init_params.append(PyNamedParam(pattern=PyNamedPattern('self')))
 
             # value: Type
-            params.append(PyNamedParam(pattern=PyNamedPattern('value'), annotation=rule_type_to_py_type(spec.field_type)))
+            init_params.append(PyNamedParam(pattern=PyNamedPattern('value'), annotation=rule_type_to_py_type(spec.field_type)))
 
             # span: Span | None = None
-            params.append(PyNamedParam(pattern=PyNamedPattern('span'), annotation=build_union([ PyNamedExpr('Span'), PyNamedExpr('None') ]), default=PyNamedExpr('None')))
+            init_params.append(PyNamedParam(pattern=PyNamedPattern('span'), annotation=build_union([ PyNamedExpr('Span'), PyNamedExpr('None') ]), default=PyNamedExpr('None')))
 
             # self.value = value
             init_body.append(PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern('self'), name='value'), value=PyNamedExpr('value')))
 
-            body.append(PyFuncDef(name='__init__', params=params, body=init_body))
+            body.append(PyFuncDef(name='__init__', params=init_params, body=init_body))
 
-        stmts.append(PyClassDef(name=to_py_class_name(spec.name, prefix), bases=[ base_token_class_name ], body=body))
+        stmts.append(PyClassDef(name=to_py_class_name(spec.name, prefix), bases=[ PyClassBaseArg(base_token_class_name) ], body=body))
+
+    # Generate node classes
 
     for spec in specs:
 
@@ -135,14 +154,21 @@ def mage_to_python_cst(
             continue
 
         this_class_name = to_py_class_name(spec.name, prefix)
+        derive_kwargs_class_name = to_py_class_name(spec.name + '_derive_kwargs', prefix)
 
         body: list[PyStmt] = []
-        params: list[PyParam] = []
+
+        init_params: list[PyParam] = []
         init_body: list[PyStmt] = []
 
-        derive_params: list[PyParam] = [
-            PyNamedParam(PyNamedPattern('self')),
-        ]
+        derive_kwargs_body = []
+        derive_body = []
+        derive_args = []
+
+        # derive_overload_params: list[PyParam] = [
+        #     PyNamedParam(PyNamedPattern('self')),
+        #     PyKwSepParam(),
+        # ]
 
         required: list[PyParam] = []
         optional: list[PyParam] = []
@@ -157,12 +183,6 @@ def mage_to_python_cst(
                 ),
                 annotation=gen_py_type(field.ty, prefix),
                 value=param_expr,
-            ))
-
-            derive_params.append(PyNamedParam(
-                pattern=PyNamedPattern(field.name),
-                annotation=quote_py_type(gen_py_type(simplify_type(make_optional(param_type)), prefix=prefix)),
-                default=PyNamedExpr('None'),
             ))
 
             param_type_str = emit(gen_py_type(param_type, prefix))
@@ -189,37 +209,71 @@ def mage_to_python_cst(
                     ]
                 ))
 
+            derive_kwargs_body.append(PyAssignStmt(
+                pattern=PyNamedPattern(field.name),
+                annotation=quote_py_type(gen_py_type(param_type, prefix=prefix)),
+            ))
+            derive_args.append(PyKeywordArg(field.name, PyNamedExpr(field.name)))
+            # derive_body.append(PyIfExpr(
+            #     PyInfixExpr(PyNamedExpr(field.name), PyInKeyword(), PyNamedExpr('kwargs')),
+            #     param_expr,
+            #     PyAttrExpr(PyNamedExpr('self'), field.name)
+            # ))
+
         if not spec.fields:
             init_body.append(PyPassStmt())
 
-        params.extend(required)
+        init_params.extend(required)
         if optional:
-            params.append(PyKwSepParam())
-            params.extend(optional)
+            init_params.append(PyKwSepParam())
+            init_params.extend(optional)
 
         body.append(PyFuncDef(
             name='__init__',
-            params=[ PyNamedParam(pattern=PyNamedPattern('self')), *params ],
+            params=[ PyNamedParam(pattern=PyNamedPattern('self')), *init_params ],
             return_type=PyNamedExpr('None'),
             body=init_body
         ))
 
-        derive_body = []
-        derive_args = []
+        stmts.append(PyClassDef(
+            name=derive_kwargs_class_name,
+            bases=[ PyClassBaseArg('TypedDict'), PyKeywordBaseArg('total', PyNamedExpr('False')) ],
+            body=derive_kwargs_body
+        ))
 
-        for field in spec.fields:
-            #coerce_type, coerce_expr = gen_initializers(field.ty, PyNamedExpr(field.name), specs=specs, defs=defs, prefix=prefix)
-            derive_body.append(PyIfStmt(first=PyIfCase(
-                test=build_is_none(PyNamedExpr(field.name)),
-                body=[ PyAssignStmt(PyNamedPattern(field.name), value=PyAttrExpr(PyNamedExpr('self'), field.name)) ],
-            )))
-            derive_args.append(PyKeywordArg(field.name, PyNamedExpr(field.name)))
+        # for field in spec.fields:
+        #     derive_body.append(PyAssignStmt(
+        #         PyNamedPattern(field.name),
+        #         value=PyCallExpr(
+        #             PyAttrExpr(PyNamedExpr('kwargs'), 'get'),
+        #             args=[
+        #                 PyConstExpr(field.name),
+        #                 PyAttrExpr(PyNamedExpr('self'), field.name)
+        #             ]
+        #         )
+        #     ))
+        #     # derive_body.append(PyIfStmt(first=PyIfCase(
+        #     #     test=build_is_none(PyNamedExpr(field.name)),
+        #     #     body=[ PyAssignStmt(PyNamedPattern(field.name), value=PyAttrExpr(PyNamedExpr('self'), field.name)) ],
+        #     # )))
+        #     derive_args.append(PyKeywordArg(field.name, PyNamedExpr(field.name)))
+
         derive_body.append(PyRetStmt(expr=PyCallExpr(PyNamedExpr(this_class_name), args=derive_args)))
 
+        # body.append(PyFuncDef(
+        #     decorators=[ PyDecorator(PyNamedExpr('overload')) ],
+        #     name='derive',
+        #     params=derive_overload_params,
+        #     return_type=PyConstExpr(this_class_name),
+        #     body=PyExprStmt(PyEllipsisExpr()),
+        # ))
+        derive_decorators = []
+        if not enable_asserts:
+            derive_decorators.append(PyNamedExpr('no_type_check'))
         body.append(PyFuncDef(
-             decorators=[ PyNamedExpr('no_type_check') ],
+             decorators=derive_decorators,
              name='derive',
-             params=derive_params,
+             params=[ PyNamedParam(PyNamedPattern('self')), PyRestKeywordParam('kwargs', annotation=PySubscriptExpr(PyNamedExpr('Unpack'), [ PyNamedExpr(derive_kwargs_class_name) ])) ],
              return_type=PyConstExpr(this_class_name),
              body=derive_body,
          ))
@@ -244,27 +298,43 @@ def mage_to_python_cst(
                 body=get_parent_body,
             ))
 
-        stmts.append(PyClassDef(name=this_class_name, bases=[ base_node_class_name ], body=body))
+        stmts.append(PyClassDef(name=this_class_name, bases=[ PyClassBaseArg(base_node_class_name) ], body=body))
+
+    # Generate variant classes and base classes
 
     for spec in specs:
 
         if not isinstance(spec, VariantSpec):
             continue
 
-        cls_name = to_py_class_name(spec.name, prefix)
+        type_name = to_py_class_name(spec.name, prefix)
 
-        stmts.append(PyTypeAliasStmt(cls_name, build_union(gen_py_type(ty, prefix) for _, ty in spec.members)))
+        stmts.append(PyTypeAliasStmt(type_name, build_union(gen_py_type(ty, prefix) for _, ty in spec.members)))
 
-        params: list[PyParam] = []
-        params.append(PyNamedParam(pattern=PyNamedPattern('value'), annotation=PyNamedExpr('Any')))
+        pred_params: Sequence[PyParam] = [
+            PyNamedParam(pattern=PyNamedPattern('value'), annotation=PyNamedExpr('Any'))
+        ]
+
+        # if is_cyclic(spec.name, specs=specs):
+        #     base_class_name = get_base_class_name(spec.name)
+        #     if spec.name not in [ any_node_rule_name, any_token_rule_name, any_syntax_rule_name ]:
+        #         stmts.append(PyClassDef(
+        #             name=base_class_name,
+        #             bases=[ PyClassBaseArg(base_node_class_name) ],
+        #             body=[ PyPassStmt() ]
+        #         ))
+        #     pred_expr = build_isinstance(PyNamedExpr('value'), PyNamedExpr(base_class_name))
+        # else:
+        pred_expr = build_or(gen_deep_test(ty, PyNamedExpr('value'), prefix=prefix) for _, ty in spec.members)
+
         stmts.append(PyFuncDef(
             name=f'is_{namespaced(spec.name, prefix)}',
-            params=params,
-            return_type=PySubscriptExpr(expr=PyNamedExpr('TypeGuard'), slices=[ PyNamedExpr(cls_name) ]),
-            body=[
-                PyRetStmt(expr=build_or(gen_deep_test(ty, PyNamedExpr('value'), prefix=prefix) for _, ty in spec.members))
-            ],
+            params=pred_params,
+            return_type=PySubscriptExpr(expr=PyNamedExpr('TypeGuard'), slices=[ PyNamedExpr(type_name) ]),
+            body=[ PyRetStmt(expr=pred_expr) ],
         ))
+
+    # Generate type aliases for parent fields
 
     if gen_parent_pointers:
         for spec in specs:
@@ -273,6 +343,8 @@ def mage_to_python_cst(
             parent_type = get_parent_type(spec.name)
             parent_type_name = f'{to_py_class_name(spec.name, prefix)}Parent'
             stmts.append(PyTypeAliasStmt(parent_type_name, gen_py_type(parent_type, prefix)))
+
+    # Add coercers and other generated helpers
 
     stmts.extend(defs.values())
 
@@ -402,7 +474,7 @@ def mage_to_python_cst(
                 )))
 
         decorators = []
-        if not debug:
+        if not enable_asserts:
             # We add `@typing.no_type_check` to drastically improve the performance of the type checker.
             decorators.append(PyDecorator(PyNamedExpr('no_type_check')))
 

@@ -41,13 +41,15 @@ def _do_generate(args) -> int:
     dest_dir = Path(args.out_dir)
     enable_linecol = True
 
+    enable_cst = args.feat_all if args.feat_cst is None else args.feat_cst
+    enable_ast = args.feat_all if args.feat_ast is None else args.feat_ast
+    enable_lexer = args.feat_all if args.feat_lexer is None else args.feat_lexer
+    enable_emitter = args.feat_all if args.feat_emitter is None else args.feat_emitter
+    enable_cst_parent_pointers = args.feat_all if args.feat_cst_parent_pointers is None else args.feat_cst_parent_pointers
+    enable_ast_parent_pointers = args.feat_all if args.feat_ast_parent_pointers is None else args.feat_ast_parent_pointers
+    enable_visitor = args.feat_all if args.feat_visitor is None else args.feat_visitor
+
     opts = {
-        'cst_parent_pointers': args.feat_all if args.feat_cst_parent_pointers is None else args.feat_cst_parent_pointers,
-        'enable_visitor': args.feat_all if args.feat_visitor is None else args.feat_visitor,
-        'enable_cst': args.feat_all if args.feat_cst is None else args.feat_cst,
-        'enable_ast': args.feat_all if args.feat_ast is None else args.feat_ast,
-        'enable_lexer': args.feat_all if args.feat_lexer is None else args.feat_lexer,
-        'enable_emitter': args.feat_all if args.feat_emitter is None else args.feat_emitter,
         'prefix': prefix
     }
 
@@ -60,11 +62,13 @@ def _do_generate(args) -> int:
     grammar = _load_grammar(filename)
 
     if engine == 'old':
+        files = dict[str, Pass[MageGrammar, PyModule]]()
+        if enable_cst:
+            files['cst.py'] = mage_to_python_cst
+        if enable_emitter:
+            files['emitter.py'] = mage_to_python_emitter
         mage_to_target = compose(
-            distribute({
-                'cst.py': mage_to_python_cst,
-                'emitter.py': mage_to_python_emitter,
-            }),
+            distribute(files),
             each_value(python_to_text),
         )
     elif engine == 'next':
@@ -171,6 +175,7 @@ def main() -> int:
     generate_parser.add_argument('--feat-all', action=argparse.BooleanOptionalAction, help='Enable all output features (off by default)')
     generate_parser.add_argument('--feat-linecol', action=argparse.BooleanOptionalAction, help='Track line/column information during lexing (unless grammar requires it off by default)')
     generate_parser.add_argument('--feat-cst-parent-pointers', action=argparse.BooleanOptionalAction, help='Generate references to the parent of a CST node (off by default)')
+    generate_parser.add_argument('--feat-ast-parent-pointers', action=argparse.BooleanOptionalAction, help='Generate references to the parent of an AST node (off by default)')
     generate_parser.add_argument('--feat-ast', action=argparse.BooleanOptionalAction, default=True, help='Generate an abstract syntax tree (on by default)')
     generate_parser.add_argument('--feat-cst', action=argparse.BooleanOptionalAction, default=True, help='Generate a concrete syntax tree (on by default)')
     generate_parser.add_argument('--feat-lexer', action=argparse.BooleanOptionalAction, default=True, help='Generate a lexer (on by default)')
