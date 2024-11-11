@@ -418,6 +418,13 @@ def mage_to_python_cst(
             if isinstance(ty, PunctType):
                 element_name = generate_temporary(prefix='element')
                 separator_name = generate_temporary(prefix='separator')
+                each_sep = list(gen_proc_calls(ty.separator_type, PyNamedExpr(separator_name)))
+                for_body = list(gen_proc_calls(ty.element_type, PyNamedExpr(element_name)))
+                if each_sep:
+                    for_body.append(PyIfStmt(first=PyIfCase(
+                        test=PyInfixExpr(PyNamedExpr(separator_name), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')),
+                        body=each_sep,
+                    )))
                 yield PyForStmt(
                     pattern=PyTuplePattern(
                         elements=[
@@ -426,10 +433,7 @@ def mage_to_python_cst(
                         ],
                     ),
                     expr=target,
-                    body=[
-                        *gen_proc_calls(ty.element_type, PyNamedExpr(element_name)),
-                        *gen_proc_calls(ty.separator_type, PyNamedExpr(separator_name)),
-                    ]
+                    body=for_body
                 )
                 # yield PyIfStmt(first=PyIfCase(
                 #     test=PyInfixExpr(PyAttrExpr(target, 'last'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')),
