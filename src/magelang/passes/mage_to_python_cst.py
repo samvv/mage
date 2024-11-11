@@ -502,11 +502,7 @@ def mage_to_python_cst(
             body=body,
         )
 
-    variant_visitors = list(gen_visitor(spec.name) for spec in specs if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
-
-    stmts.extend(variant_visitors)
-
-    variant_visitors = list(gen_visitor(spec.name) for spec in specs if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
+    stmts.extend(gen_visitor(spec.name) for spec in specs if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
 
     return PyModule(stmts=stmts)
 
