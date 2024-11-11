@@ -6,7 +6,6 @@ _parser_ and _parse tree_ for you. Whether it is a piece of programming code or
 some tabular data in a fringe format, Mage has got you covered!
 
  - 🚀 Full support for Python typings. Avoid runtime errors while building your language!
- - ➕ Add your own languages through the use of a powerful template engine!
 
 👀 Mage is written in itself. Check out the [generated code][1] of part of our Python generator!
 
@@ -14,30 +13,41 @@ Here is the status of the various languages supported by Mage:
 
 **Python**
 
-| Name   | Description | Status |
-|--------|-------------|--------|
-| CST    | Create a parse tree from a grammar | ✅ |
-| AST    | Create an AST that is derived from a CST | ⏳ |
-| Lexer  | Create a fully functioning lexer from a grammar | 🚧 |
-| Parser | Create a fully functioning parser from a grammmar | ⏳ |
+| Name      | Description | Status |
+|-----------|-------------|--------|
+| CST       | Generate a parse tree from a grammar | ✅ |
+| AST       | Generate an AST that is derived from a CST | ⏳ |
+| Visitors  | Generate AST/CST visitors from a grammar | ✅ |
+| Rewriters | Generate term rewriters from a grammar | ✅ |
+| Lexer     | Generate a fully functioning lexer from a grammar | 🚧 |
+| Parser    | Generate a fully functioning parser from a grammmar | ⏳ |
 
 **Rust**
 
 | Name   | Description | Status |
 |--------|-------------|--------|
-| CST    | Create a parse tree from a grammar | ⏳ |
-| AST    | Create an AST that is derived from a CST | ⏳ |
-| Lexer  | Create a fully functioning lexer from a grammar | ⏳ |
-| Parser | Create a fully functioning parser from a grammmar | ⏳ |
+| CST    | Generate a parse tree from a grammar | ⏳ |
+| AST    | Generate an AST that is derived from a CST | ⏳ |
+| Lexer  | Generate a fully functioning lexer from a grammar | ⏳ |
+| Parser | Generate a fully functioning parser from a grammmar | ⏳ |
+
+**C**
+
+| Name   | Description | Status |
+|--------|-------------|--------|
+| CST    | Generate a parse tree from a grammar | ⏳ |
+| AST    | Generate an AST that is derived from a CST | ⏳ |
+| Lexer  | Generate a fully functioning lexer from a grammar | ⏳ |
+| Parser | Generate a fully functioning parser from a grammmar | ⏳ |
 
 **C++**
 
 | Name   | Description | Status |
 |--------|-------------|--------|
-| CST    | Create a parse tree from a grammar | ⏳ |
-| AST    | Create an AST that is derived from a CST | ⏳ |
-| Lexer  | Create a fully functioning lexer from a grammar | ⏳ |
-| Parser | Create a fully functioning parser from a grammmar | ⏳ |
+| CST    | Generate a parse tree from a grammar | ⏳ |
+| AST    | Generate an AST that is derived from a CST | ⏳ |
+| Lexer  | Generate a fully functioning lexer from a grammar | ⏳ |
+| Parser | Generate a fully functioning parser from a grammmar | ⏳ |
 
 [1]: https://github.com/samvv/mage/blob/main/src/magelang/lang/python/cst.py
 
