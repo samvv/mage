@@ -81,6 +81,7 @@ def mage_to_python_cst(
         PyImportFromStmt(PyAbsolutePath(PyQualName('typing')), aliases=[
             PyFromAlias('Any'),
             PyFromAlias('TypeGuard'),
+            PyFromAlias('TypeIs'),
             PyFromAlias('TypedDict'),
             PyFromAlias('Never'),
             PyFromAlias('Unpack'),
@@ -338,7 +339,7 @@ def mage_to_python_cst(
         stmts.append(PyFuncDef(
             name=f'is_{namespaced(spec.name, prefix)}',
             params=pred_params,
-            return_type=PySubscriptExpr(expr=PyNamedExpr('TypeGuard'), slices=[ PyNamedExpr(type_name) ]),
+            return_type=PySubscriptExpr(expr=PyNamedExpr('TypeIs'), slices=[ PyNamedExpr(type_name) ]),
             body=[ PyRetStmt(expr=pred_expr) ],
         ))
 
