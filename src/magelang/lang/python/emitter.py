@@ -369,6 +369,7 @@ def emit(node: PyNode) -> str:
 
         if isinstance(node, PyPrefixExpr):
             visit_token(node.prefix_op)
+            out.write(' ')
             visit_expr(node.expr, info)
             return
 
