@@ -556,6 +556,7 @@ def mage_to_python_cst(
 
             if is_type_assignable(ty, main_type, specs=specs):
                 yield PyAssignStmt(PyNamedPattern(output), value=PyCallExpr(PyNamedExpr(proc_param_name), args=[ input ]))
+                yield PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ gen_shallow_test(ty, PyNamedExpr(output), prefix=prefix) ] ))
                 yield PyIfStmt(first=PyIfCase(
                     PyInfixExpr(PyNamedExpr(output), (PyIsKeyword(), PyNotKeyword()), input),
                     [ PyAssignStmt(PyNamedPattern(changed_var_name), value=PyNamedExpr('True')) ]
