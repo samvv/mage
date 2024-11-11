@@ -5,49 +5,22 @@ Mage is a tool for performing text analysis. It does so by generating a _lexer_,
 _parser_ and _parse tree_ for you. Whether it is a piece of programming code or
 some tabular data in a fringe format, Mage has got you covered!
 
+**Features**
+
  - 🚀 Full support for Python typings. Avoid runtime errors while building your language!
+ - (planned) an intermediate language to very easily add support to any other programming language
 
 👀 Mage is written in itself. Check out the [generated code][1] of part of our Python generator!
 
-Here is the status of the various languages supported by Mage:
+**Implementation Status**
 
-**Python**
-
-| Name      | Description | Status |
-|-----------|-------------|--------|
-| CST       | Generate a parse tree from a grammar | ✅ |
-| AST       | Generate an AST that is derived from a CST | ⏳ |
-| Visitors  | Generate AST/CST visitors from a grammar | ✅ |
-| Rewriters | Generate term rewriters from a grammar | ✅ |
-| Lexer     | Generate a fully functioning lexer from a grammar | 🚧 |
-| Parser    | Generate a fully functioning parser from a grammmar | ⏳ |
-
-**Rust**
-
-| Name   | Description | Status |
-|--------|-------------|--------|
-| CST    | Generate a parse tree from a grammar | ⏳ |
-| AST    | Generate an AST that is derived from a CST | ⏳ |
-| Lexer  | Generate a fully functioning lexer from a grammar | ⏳ |
-| Parser | Generate a fully functioning parser from a grammmar | ⏳ |
-
-**C**
-
-| Name   | Description | Status |
-|--------|-------------|--------|
-| CST    | Generate a parse tree from a grammar | ⏳ |
-| AST    | Generate an AST that is derived from a CST | ⏳ |
-| Lexer  | Generate a fully functioning lexer from a grammar | ⏳ |
-| Parser | Generate a fully functioning parser from a grammmar | ⏳ |
-
-**C++**
-
-| Name   | Description | Status |
-|--------|-------------|--------|
-| CST    | Generate a parse tree from a grammar | ⏳ |
-| AST    | Generate an AST that is derived from a CST | ⏳ |
-| Lexer  | Generate a fully functioning lexer from a grammar | ⏳ |
-| Parser | Generate a fully functioning parser from a grammmar | ⏳ |
+| Feature | Python  | Rust | C  | C++ | JavaScript |
+|---------|---------|------|----|-----|------------|
+| CST     | ✅      | ⏳   | ⏳ | ⏳  | ⏳         |
+| AST     | 🚧      | ⏳   | ⏳ | ⏳  | ⏳         |
+| Lexer   | ⏳      | ⏳   | ⏳ | ⏳  | ⏳         |
+| Parser  | ⏳      | ⏳   | ⏳ | ⏳  | ⏳         |
+| Emitter | ⏳      | ⏳   | ⏳ | ⏳  | ⏳         |
 
 [1]: https://github.com/samvv/mage/blob/main/src/magelang/lang/python/cst.py
 
@@ -336,6 +309,27 @@ as the Mage expression `'.'+`
 It returns the amount of elements that are actually present in the CST node.
 
 ## FAQ
+
+### What is a CST, AST, visitor, and so on?
+
+A **CST** is a collection of structures and enumerations that completely
+represent the source code that needs to be parsed/emitted.
+
+An **AST** is an abstract representation of the CST. Mage can automatically
+derive a good AST from a CST.
+
+A **visitor** is (usually) a function that traverses the AST/CST in a
+particular way. It is useful for various things, such as code analysis and
+evaluation.
+
+A **rewriter** is similar to a visitor in that it traverses that AST/CST but
+also creates new nodes during this traversal.
+
+A **lexer** or scanner is at it core a program that splits the input stream
+into separate _tokens_ that are easy to digest by the parser.
+
+A **parser** converts a stream of tokens in AST/CST nodes. What parts of the
+input stream are converted to which nodes usually depends on how the parser is invoked.
 
 ### How do I assign a list of nodes to another node in Python without type errors?
 
