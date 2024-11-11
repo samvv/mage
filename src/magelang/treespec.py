@@ -618,7 +618,7 @@ def expand_variant_types(ty: Type, *, specs: Specs) -> Type:
             spec = specs.lookup(ty.name)
             assert(isinstance(spec, VariantSpec))
             for _, ty_2 in spec.members:
-                types.append(rewrite_each_child_type(ty_2, rewriter))
+                types.append(rewriter(ty_2))
             return UnionType(types, before=list(ty.before), after=list(ty.after))
         return rewrite_each_child_type(ty, rewriter)
     return rewriter(ty)
