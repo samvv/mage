@@ -484,7 +484,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
             return
 
         if isinstance(ty, NoneType):
-            yield NoneType(), [ PyRetStmt(expr=gen_default_constructor(ty, specs=specs, prefix=prefix)) ]
+            yield NoneType(), [ PyRetStmt(expr=PyNamedExpr('None')) ]
             return
 
         # Now that we've handled union types and empty types, we can
