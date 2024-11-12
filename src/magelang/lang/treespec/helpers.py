@@ -210,8 +210,16 @@ def simplify_type(ty: Type) -> Type:
     if isinstance(ty, ListType):
         return ty.derive(element_type=simplify_type(ty.element_type))
     if isinstance(ty, TupleType):
-        return ty.derive(element_types=list(simplify_type(ty) for ty in ty.element_types))
+        new_element_types = []
+        for ty_2 in ty.element_types:
+            new_ty_2 = simplify_type(ty_2)
+            if not is_unit_type(new_ty_2):
+                new_element_types.append(new_ty_2)
+        if len(new_element_types) == 1:
+            return new_element_types[0]
+        return ty.derive(element_types=new_element_types)
     if isinstance(ty, PunctType):
+        # TODO
         return ty.derive(
             element_type=simplify_type(ty.element_type),
             separator_type=simplify_type(ty.separator_type),
