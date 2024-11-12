@@ -318,7 +318,11 @@ class NodeSpec(SpecBase):
 class VariantSpec(SpecBase):
     members: list[tuple[str, Type]]
 
-Spec = TokenSpec | NodeSpec | VariantSpec
+@dataclass
+class ConstEnumSpec(SpecBase):
+    members: list[tuple[str, int]]
+
+Spec = TokenSpec | NodeSpec | VariantSpec | ConstEnumSpec
 
 class Specs:
 
