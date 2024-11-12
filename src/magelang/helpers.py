@@ -8,7 +8,7 @@ from magelang.lang.treespec import *
 from magelang.lang.mage.ast import *
 from magelang.lang.python.cst import *
 from magelang.lang.mage.constants import integer_rule_type, string_rule_type
-from magelang.lang.treespec.helpers import do_types_shallow_overlap, flatten_union, is_optional, is_static_type, make_optional, mangle_type, simplify_type
+from magelang.lang.treespec.helpers import do_types_shallow_overlap, flatten_union, is_optional, is_static_type, make_optional, mangle_type
 from magelang.logging import warn
 from magelang.util import to_camel_case, is_iterator, NameGenerator, plural
 
@@ -81,8 +81,7 @@ def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
 
         assert_never(expr)
 
-    return visit(expr)
-
+    return normalize_type(visit(expr))
 
 def get_field_name(expr: MageExpr) -> str | None:
     if expr.label is not None:
@@ -139,7 +138,7 @@ def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = Fals
             assert(False) # literals should already have been eliminated by previous passes
 
         field_name = rule_name or get_field_name(expr) or generate_field_name()
-        field_type = simplify_type(infer_type(expr, grammar))
+        field_type = infer_type(expr, grammar)
         yield Field(field_name, field_type)
 
     return visit(expr, None)
@@ -389,7 +388,7 @@ def gen_default_constructor(ty: Type, *, specs: Specs, prefix: str) -> PyExpr:
         return PyTupleExpr(elements=list(gen_default_constructor(element_type, specs=specs, prefix=prefix) for element_type in ty.element_types))
     if isinstance(ty, UnionType):
         # This assumes we already detected that there is exactly one
-        # default-constrcuctible member in the union type
+        # default-constructible member in the union type
         for ty in flatten_union(ty):
             if is_default_constructible(ty, specs=specs):
                 return gen_default_constructor(ty, specs=specs, prefix=prefix)
@@ -407,7 +406,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
             cases.append((gen_shallow_test(coerce_ty, PyNamedExpr(param_name), prefix), coerce_body))
             types.append(coerce_ty)
 
-        coerced_type = simplify_type(UnionType(types))
+        coerced_type = normalize_type(UnionType(types))
 
         id = f'{mangle_type(coerced_type)}_to_{mangle_type(ty)}'
         coerce_fn_name = f'_coerce_{id}'

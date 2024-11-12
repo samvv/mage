@@ -1,6 +1,6 @@
 
 from functools import lru_cache
-from typing import Generator
+from typing import Generator, assert_never
 from magelang.util import to_snake_case
 from .ast import *
 
@@ -198,60 +198,6 @@ def expand_variant_types(ty: Type, *, specs: Specs) -> Type:
         return rewrite_each_child_type(ty, rewriter)
     return rewriter(ty)
 
-def simplify_type(ty: Type) -> Type:
-    if isinstance(ty, NoneType) \
-        or isinstance(ty, NeverType) \
-        or isinstance(ty, NodeType) \
-        or isinstance(ty, ExternType) \
-        or isinstance(ty, AnyType) \
-        or isinstance(ty, VariantType) \
-        or isinstance(ty, TokenType):
-        return ty
-    if isinstance(ty, ListType):
-        return ty.derive(element_type=simplify_type(ty.element_type))
-    if isinstance(ty, TupleType):
-        new_element_types = []
-        for ty_2 in ty.element_types:
-            new_ty_2 = simplify_type(ty_2)
-            if not is_unit_type(new_ty_2):
-                new_element_types.append(new_ty_2)
-        if len(new_element_types) == 1:
-            return new_element_types[0]
-        return ty.derive(element_types=new_element_types)
-    if isinstance(ty, PunctType):
-        # TODO
-        return ty.derive(
-            element_type=simplify_type(ty.element_type),
-            separator_type=simplify_type(ty.separator_type),
-        )
-    if isinstance(ty, UnionType):
-        types = []
-        for ty_2 in flatten_union(ty):
-            if isinstance(ty_2, NeverType):
-                continue
-            if isinstance(ty_2, AnyType):
-                return AnyType()
-            types.append(simplify_type(ty_2))
-        if len(types) == 0:
-            return NeverType()
-        types.sort()
-        iterator = iter(types)
-        prev = next(iterator)
-        dedup_types: list[Type] = list([ prev ])
-        while True:
-            try:
-                curr = next(iterator)
-            except StopIteration:
-                break
-            if prev == curr:
-                continue
-            dedup_types.append(curr)
-            prev = curr
-        if len(dedup_types) == 1:
-            return dedup_types[0]
-        return ty.derive(types=dedup_types)
-    assert_never(ty)
-
 def is_type_assignable(left: Type, right: Type, *, specs: Specs) -> bool:
     if isinstance(left, NeverType) or isinstance(right, NeverType):
         return False
@@ -351,6 +297,35 @@ def is_cyclic(name: str, *, specs: Specs) -> bool:
         return False
 
     return check(spec_type, first=True)
+
+def normalize_type(ty: Type) -> Type:
+    if isinstance(ty, UnionType):
+        types = []
+        for ty_2 in flatten_union(ty):
+            if isinstance(ty_2, NeverType):
+                continue
+            if isinstance(ty_2, AnyType):
+                return AnyType()
+            types.append(normalize_type(ty_2))
+        if len(types) == 0:
+            return NeverType()
+        types.sort()
+        iterator = iter(types)
+        prev = next(iterator)
+        dedup_types: list[Type] = list([ prev ])
+        while True:
+            try:
+                curr = next(iterator)
+            except StopIteration:
+                break
+            if prev == curr:
+                continue
+            dedup_types.append(curr)
+            prev = curr
+        if len(dedup_types) == 1:
+            return dedup_types[0]
+        return ty.derive(types=dedup_types)
+    return rewrite_each_child_type(ty, normalize_type)
 
 def merge_similar_types(ty: Type) -> Type:
     """
