@@ -324,28 +324,4 @@ class Specs:
 
     def __init__(self, elements: Sequence[Spec]) -> None:
         self.elements = elements
-        self.mapping = dict[str, Spec]()
-
-    def is_static(self, name: str) -> bool:
-        spec = self.mapping.get(name)
-        assert(isinstance(spec, TokenSpec))
-        return spec.is_static
-
-    def add(self, spec: Spec) -> None:
-        assert(spec.name not in self.mapping)
-        self.mapping[spec.name] = spec
-
-    def lookup(self, name: str) -> Spec:
-        spec = self.mapping.get(name)
-        if spec is None:
-            raise RuntimeError(f"could not find a CST specification for '{name}'")
-        return spec
-
-    def get_nodes(self) -> Iterator[NodeSpec]:
-        for spec in self:
-            if isinstance(spec, NodeSpec):
-                yield spec
-
-    def __iter__(self) -> Iterator[Spec]:
-        return iter(self.mapping.values())
 

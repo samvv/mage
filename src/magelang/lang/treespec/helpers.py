@@ -1,7 +1,18 @@
 
+from functools import lru_cache
 from typing import Generator
 from magelang.util import to_snake_case
 from .ast import *
+
+@lru_cache
+def _get_spec_mapping(specs: Specs) -> dict[str, Spec]:
+    out = {}
+    for spec in specs.elements:
+        out[spec.name] = spec
+    return out
+
+def lookup_spec(specs: Specs, name: str) -> Spec | None:
+    return _get_spec_mapping(specs).get(name)
 
 def make_optional(ty: Type) -> Type:
     return UnionType([ ty, NoneType() ])
@@ -46,21 +57,21 @@ def is_static_type(ty: Type, specs: Specs) -> bool:
             if ty.name in visited:
                 return False
             visited.add(ty.name)
-            spec = specs.lookup(ty.name)
+            spec = lookup_spec(specs, ty.name)
             assert(isinstance(spec, VariantSpec))
             return all(visit(ty_2) for _, ty_2 in spec.members)
         if isinstance(ty, NodeType):
             if ty.name in visited:
                 return False
             visited.add(ty.name)
-            spec = specs.lookup(ty.name)
+            spec = lookup_spec(specs, ty.name)
             assert(isinstance(spec, NodeSpec))
             return all(visit(field.ty) for field in spec.fields)
         if isinstance(ty, TokenType):
             if ty.name in visited:
                 return False
             visited.add(ty.name)
-            spec = specs.lookup(ty.name)
+            spec = lookup_spec(specs, ty.name)
             assert(isinstance(spec, TokenSpec))
             return spec.is_static
         if isinstance(ty, TupleType):
@@ -179,7 +190,7 @@ def expand_variant_types(ty: Type, *, specs: Specs) -> Type:
     def rewriter(ty: Type) -> Type:
         if isinstance(ty, VariantType):
             types = list()
-            spec = specs.lookup(ty.name)
+            spec = lookup_spec(specs, ty.name)
             assert(isinstance(spec, VariantSpec))
             for _, ty_2 in spec.members:
                 types.append(rewriter(ty_2))
@@ -247,11 +258,11 @@ def is_type_assignable(left: Type, right: Type, *, specs: Specs) -> bool:
     if isinstance(left, TokenType) and isinstance(right, TokenType):
         return left.name == right.name
     if isinstance(left, VariantType):
-        spec = specs.lookup(left.name)
+        spec = lookup_spec(specs, left.name)
         assert(isinstance(spec, VariantSpec))
         return all(is_type_assignable(ty, right, specs=specs) for _, ty in spec.members)
     if isinstance(right, VariantType):
-        spec = specs.lookup(right.name)
+        spec = lookup_spec(specs, right.name)
         assert(isinstance(spec, VariantSpec))
         return any(is_type_assignable(left, ty, specs=specs) for _, ty in spec.members)
     if isinstance(left, ListType) and isinstance(right, ListType):
@@ -301,7 +312,7 @@ def is_cyclic(name: str, *, specs: Specs) -> bool:
 
     visited = set[str]()
 
-    spec = specs.lookup(name)
+    spec = lookup_spec(specs, name)
     spec_type = expand_variant_types(spec_to_type(spec), specs=specs)
 
     def check(ty: Type, first = False) -> bool:
@@ -320,7 +331,7 @@ def is_cyclic(name: str, *, specs: Specs) -> bool:
 
             visited.add(ty.name)
 
-            spec = specs.lookup(ty.name)
+            spec = lookup_spec(specs, ty.name)
             assert(isinstance(spec, NodeSpec))
 
             return any(check(expand_variant_types(field.ty, specs=specs)) for field in spec.fields)

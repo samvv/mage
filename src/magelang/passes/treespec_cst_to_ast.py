@@ -1,4 +1,5 @@
 
+from magelang.helpers import lookup_spec
 from magelang.lang.treespec.ast import *
 from magelang.lang.treespec.helpers import is_unit_type, make_unit, simplify_type
 
@@ -6,7 +7,7 @@ def treespec_cst_to_ast(specs: Specs) -> Specs:
 
     def rewriter(ty: Type) -> Type:
         if isinstance(ty, TokenType):
-            spec = specs.lookup(ty.name)
+            spec = lookup_spec(specs, ty.name)
             assert(isinstance(spec, TokenSpec))
             if spec.is_static:
                 return make_unit()
@@ -35,7 +36,7 @@ def treespec_cst_to_ast(specs: Specs) -> Specs:
 
     toplevel = []
 
-    for spec in specs:
+    for spec in specs.elements:
         new_spec = rewrite_spec(spec)
         if new_spec is None:
             continue

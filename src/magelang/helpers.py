@@ -354,14 +354,14 @@ def is_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences: b
             if ty.name in visited:
                 return False
             visited.add(ty.name)
-            spec = specs.lookup(ty.name)
+            spec = lookup_spec(specs, ty.name)
             assert(isinstance(spec, NodeSpec))
             return all(visit(field.ty, allow_empty_sequences) for field in spec.fields)
         if isinstance(ty, TokenType):
             if ty.name in visited:
                 return False
             visited.add(ty.name)
-            spec = specs.lookup(ty.name)
+            spec = lookup_spec(specs, ty.name)
             assert(isinstance(spec, TokenSpec))
             return spec.is_static
         if isinstance(ty, TupleType):
@@ -490,7 +490,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
 
         if isinstance(ty, NodeType):
 
-            spec = specs.lookup(ty.name)
+            spec = lookup_spec(specs, ty.name)
             assert(isinstance(spec, NodeSpec))
 
             this_class_name = to_py_class_name(ty.name, prefix)
@@ -530,7 +530,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
 
         if isinstance(ty, TokenType):
 
-            spec = specs.lookup(ty.name)
+            spec = lookup_spec(specs, ty.name)
             assert(isinstance(spec, TokenSpec))
 
             # If a token is not static, like an identifier or a string,

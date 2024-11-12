@@ -1,12 +1,14 @@
 
-from typing import assert_never
+from typing import Iterable, assert_never
 
-from magelang.helpers import build_cond, build_or, build_union, gen_deep_test, gen_coercions, gen_py_type, gen_shallow_test, namespaced, rule_type_to_py_type, to_py_class_name, quote_py_type, build_isinstance, PyCondCase
 from magelang.passes.mage_insert_magic_rules import any_node_rule_name, any_token_rule_name, any_syntax_rule_name
+from magelang.helpers import build_cond, build_or, build_union, gen_deep_test, gen_coercions, gen_py_type, gen_shallow_test, namespaced, rule_type_to_py_type, to_py_class_name, quote_py_type, build_isinstance, PyCondCase, lookup_spec
+from magelang.lang.treespec.helpers import contains_type, is_cyclic, is_optional, is_type_assignable, spec_to_type
 from magelang.lang.mage.ast import *
 from magelang.lang.treespec.ast import *
 from magelang.lang.python.cst import *
 from magelang.lang.python.emitter import emit
+from magelang.util import NameGenerator
 
 def make_py_optional(ty: PyExpr) -> PyExpr:
     return PyInfixExpr(ty, PyVerticalBar(), PyNamedExpr('None'))
@@ -31,7 +33,7 @@ def treespec_to_python(
     parent_nodes = dict[str, set[str]]()
 
     def name_to_type(name: str) -> Type:
-        spec = specs.lookup(name)
+        spec = lookup_spec(specs, name)
         if isinstance(spec, VariantSpec):
             return VariantType(name)
         if isinstance(spec, NodeSpec):
@@ -47,16 +49,15 @@ def treespec_to_python(
 
     def add_to_parent_nodes(name: str, ty: Type) -> None:
         if isinstance(ty, VariantType):
-            spec = specs.lookup(ty.name)
+            spec = lookup_spec(specs, ty.name)
             assert(isinstance(spec, VariantSpec))
             for _, member_type in spec.members:
                 add_to_parent_nodes(name, member_type)
             return
         if isinstance(ty, NodeType) or isinstance(ty, TokenType):
-            spec = specs.lookup(ty.name)
-            if spec.name not in parent_nodes:
-                parent_nodes[spec.name] = set()
-            parent_nodes[spec.name].add(name)
+            if ty.name not in parent_nodes:
+                parent_nodes[ty.name] = set()
+            parent_nodes[ty.name].add(name)
         elif isinstance(ty, TupleType):
             for element in ty.element_types:
                 add_to_parent_nodes(name, element)
@@ -71,7 +72,7 @@ def treespec_to_python(
             assert_never(ty)
 
     if gen_parent_pointers:
-        for spec in specs:
+        for spec in specs.elements:
             if not isinstance(spec, NodeSpec):
                 continue
             for field in spec.fields:
@@ -116,7 +117,7 @@ def treespec_to_python(
 
     # Generate token classes
 
-    for spec in specs:
+    for spec in specs.elements:
 
         if not isinstance(spec, TokenSpec):
             continue
@@ -153,7 +154,7 @@ def treespec_to_python(
 
     # Generate node classes
 
-    for spec in specs:
+    for spec in specs.elements:
 
         if not isinstance(spec, NodeSpec):
             continue
@@ -312,7 +313,7 @@ def treespec_to_python(
 
     # Generate variant classes and base classes
 
-    for spec in specs:
+    for spec in specs.elements:
 
         if not isinstance(spec, VariantSpec):
             continue
@@ -347,7 +348,7 @@ def treespec_to_python(
     # Generate type aliases for parent fields
 
     if gen_parent_pointers:
-        for spec in specs:
+        for spec in specs.elements:
             if not isinstance(spec, NodeSpec):
                 continue
             parent_type = get_parent_type(spec.name)
@@ -367,7 +368,8 @@ def treespec_to_python(
 
         generate_temporary = NameGenerator()
 
-        main_spec = specs.lookup(name)
+        main_spec = lookup_spec(specs, name)
+        assert(main_spec is not None)
         main_type = spec_to_type(main_spec)
 
         body: list[PyStmt] = []
@@ -386,7 +388,7 @@ def treespec_to_python(
             if isinstance(ty, ExternType):
                 return
             if isinstance(ty, VariantType):
-                spec = specs.lookup(ty.name)
+                spec = lookup_spec(specs, ty.name)
                 assert(isinstance(spec, VariantSpec))
                 cases = []
                 for _, ty_2 in spec.members:
@@ -399,7 +401,7 @@ def treespec_to_python(
                 yield from build_cond(cases)
                 return
             if isinstance(ty, NodeType):
-                spec = specs.lookup(ty.name)
+                spec = lookup_spec(specs, ty.name)
                 assert(isinstance(spec, NodeSpec))
                 yield from gen_each_field(spec, target)
                 return
@@ -451,7 +453,7 @@ def treespec_to_python(
                 return
             raise RuntimeError(f'unexpected {ty}')
 
-        for spec in specs:
+        for spec in specs.elements:
 
             if not is_type_assignable(spec_to_type(spec), main_type, specs=specs):
                 continue
@@ -508,7 +510,7 @@ def treespec_to_python(
             body=body,
         )
 
-    stmts.extend(gen_visitor(spec.name) for spec in specs if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
+    stmts.extend(gen_visitor(spec.name) for spec in specs.elements if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
 
     # Generate rewriters
 
@@ -519,7 +521,8 @@ def treespec_to_python(
 
         generate_temporary = NameGenerator()
 
-        main_spec = specs.lookup(name)
+        main_spec = lookup_spec(specs, name)
+        assert(main_spec is not None)
         main_type = spec_to_type(main_spec)
 
         changed_var_name = f'changed'
@@ -573,7 +576,7 @@ def treespec_to_python(
                 return
 
             if isinstance(ty, VariantType):
-                spec = specs.lookup(ty.name)
+                spec = lookup_spec(specs, ty.name)
                 assert(isinstance(spec, VariantSpec))
                 cases = []
                 for _, ty_2 in spec.members:
@@ -587,7 +590,7 @@ def treespec_to_python(
                 return
 
             if isinstance(ty, NodeType):
-                spec = specs.lookup(ty.name)
+                spec = lookup_spec(specs, ty.name)
                 assert(isinstance(spec, NodeSpec))
                 def assign(expr: PyExpr) -> PyStmt:
                     return PyAssignStmt(PyNamedPattern(output), value=expr)
@@ -685,7 +688,7 @@ def treespec_to_python(
 
             raise RuntimeError(f'unexpected {ty}')
 
-        for spec in specs:
+        for spec in specs.elements:
 
             if not is_type_assignable(spec_to_type(spec), main_type, specs=specs):
                 continue
@@ -738,7 +741,7 @@ def treespec_to_python(
             body=body,
         )
 
-    stmts.extend(gen_rewriter(spec.name) for spec in specs if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
+    stmts.extend(gen_rewriter(spec.name) for spec in specs.elements if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
 
     return PyModule(stmts=stmts)
 
