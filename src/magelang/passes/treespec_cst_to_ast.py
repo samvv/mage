@@ -1,7 +1,10 @@
 
 from magelang.helpers import lookup_spec
 from magelang.lang.treespec.ast import *
-from magelang.lang.treespec.helpers import is_unit_type, make_unit, simplify_type
+from magelang.lang.treespec.helpers import flatten_union, is_unit_type, make_unit, simplify_type
+
+def is_ignored(ty: Type) -> bool:
+    return all(isinstance(el_ty, NoneType) or is_unit_type(el_ty) for el_ty in flatten_union(ty))
 
 def treespec_cst_to_ast(specs: Specs) -> Specs:
 
@@ -28,7 +31,7 @@ def treespec_cst_to_ast(specs: Specs) -> Specs:
             new_fields = []
             for field in spec.fields:
                 new_ty = simplify_type(rewriter(field.ty))
-                if is_unit_type(new_ty):
+                if is_ignored(new_ty):
                     continue
                 new_fields.append(Field(field.name, new_ty))
             return NodeSpec(spec.name, new_fields)
