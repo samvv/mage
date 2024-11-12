@@ -447,6 +447,17 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
 
     def gen_coerce_body(ty: Type, forbid_none: bool) -> Generator[tuple[Type, list[PyStmt]]]:
 
+        if isinstance(ty, AnyType):
+            yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
+            return
+
+        if isinstance(ty, NeverType):
+            return
+
+        if isinstance(ty, ExternType):
+            yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
+            return
+
         if isinstance(ty, UnionType):
 
             types = list(flatten_union(ty))
@@ -826,6 +837,8 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
             ]
 
             return
+
+        assert_never(ty)
 
     return gen_coerce_fn(field_type, False)
 
