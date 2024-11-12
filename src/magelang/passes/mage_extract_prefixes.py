@@ -1,7 +1,7 @@
 
 from typing import assert_never, cast
 
-from ..ast import *
+from magelang.lang.mage.ast import *
 
 type Edge = str
 
@@ -24,7 +24,7 @@ class Prefix:
 Prefixes = dict[Edge, Prefix];
 
 # FIXME make this transform target all ChoiceExpr
-def extract_prefixes(grammar: MageGrammar) -> MageGrammar:
+def mage_extract_prefixes(grammar: MageGrammar) -> MageGrammar:
 
     global_prefixes = Prefixes()
 

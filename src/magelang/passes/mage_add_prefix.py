@@ -1,7 +1,7 @@
 
-from ..ast import *
+from magelang.lang.mage.ast import *
 
-def add_prefix(grammar: MageGrammar, prefix: str) -> MageGrammar:
+def mage_add_prefix(grammar: MageGrammar, prefix: str) -> MageGrammar:
 
     def rename(name: str) -> str:
         return prefix + name

@@ -1,6 +1,6 @@
 
 from magelang.util import unreachable
-from .ast import *
+from magelang.lang.mage.ast import *
 
 # FIXME needs to be extensively tested
 def is_empty(expr: MageExpr) -> bool:

@@ -1,7 +1,7 @@
 
 from io import StringIO
 
-from .util import IndentWriter
+from magelang.util import IndentWriter
 from .ast import *
 
 def escape(ch: str) -> str:

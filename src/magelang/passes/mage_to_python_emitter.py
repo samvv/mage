@@ -1,23 +1,21 @@
 
-# FIXME This emitter generator doesn't work (yet). It is disabled by default.
+# FIXME
 
 from collections.abc import Generator
 from typing import assert_never, cast
 
 from magelang.analysis import intersects, can_be_empty
-from magelang.ast import MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageListExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, static_expr_to_str
-from magelang.treespec import Field, get_fields, grammar_to_specs, infer_type, is_unit_type
+from magelang.lang.mage.ast import MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageListExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, static_expr_to_str
+from magelang.helpers import Field, get_fields, infer_type, is_unit_type
 from magelang.lang.python.cst import *
 from magelang.util import unreachable
-from magelang.generator.python.util import PyCondCase, build_cond, gen_shallow_test, namespaced, to_py_class_name, build_isinstance
+from magelang.helpers import PyCondCase, build_cond, gen_shallow_test, namespaced, to_py_class_name, build_isinstance
 
 def mage_to_python_emitter(
     grammar: MageGrammar,
     prefix: str = '',
     include_hidden: bool = False,
 ) -> PyModule:
-
-    specs = grammar_to_specs(grammar, include_hidden=True)
 
     skip_rule = MageRule('___', MageLitExpr(' ')) # grammar.skip_rule # FIXME
     emit_node_fn_name = namespaced('emit', prefix)

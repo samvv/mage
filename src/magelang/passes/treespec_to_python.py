@@ -1,10 +1,10 @@
 
 from typing import assert_never
 
-from magelang.generator.python.util import build_cond, build_or, build_union, gen_deep_test, gen_coercions, gen_py_type, gen_shallow_test, namespaced, rule_type_to_py_type, to_py_class_name, quote_py_type, build_isinstance, PyCondCase
-from magelang.logging import warn
-from magelang.treespec import *
-from magelang.passes.insert_magic_rules import any_node_rule_name, any_token_rule_name, any_syntax_rule_name
+from magelang.helpers import build_cond, build_or, build_union, gen_deep_test, gen_coercions, gen_py_type, gen_shallow_test, namespaced, rule_type_to_py_type, to_py_class_name, quote_py_type, build_isinstance, PyCondCase
+from magelang.passes.mage_insert_magic_rules import any_node_rule_name, any_token_rule_name, any_syntax_rule_name
+from magelang.lang.mage.ast import *
+from magelang.lang.treespec.ast import *
 from magelang.lang.python.cst import *
 from magelang.lang.python.emitter import emit
 
@@ -14,14 +14,12 @@ def make_py_optional(ty: PyExpr) -> PyExpr:
 def make_py_return(expr: PyExpr) -> PyStmt:
     return PyRetStmt(expr=expr)
 
-def mage_to_python_cst(
-    grammar: MageGrammar,
+def treespec_to_python(
+    specs: Specs,
     prefix: str = '',
     gen_parent_pointers: bool = True,
     enable_asserts: bool = False,
 ) -> PyModule:
-
-    specs = grammar_to_specs(grammar)
 
     def get_base_class_name(name: str) -> str:
         return '_' + to_py_class_name('base_' + name, prefix=prefix)

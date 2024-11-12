@@ -1,11 +1,148 @@
 
-from typing import Iterator, Iterable, Sequence
+from typing import Generator, Iterator, Iterable, Sequence
+
 import marko.inline
+
 from magelang.lang.python.emitter import emit
-from magelang.treespec import *
+from magelang.lang.treespec import *
+from magelang.lang.mage.ast import *
 from magelang.lang.python.cst import *
+from magelang.lang.mage.constants import integer_rule_type, string_rule_type
+from magelang.lang.treespec.helpers import do_types_shallow_overlap, flatten_union, is_optional, is_static_type, make_optional, mangle_type, simplify_type
 from magelang.logging import warn
-from magelang.util import to_camel_case, is_iterator
+from magelang.util import to_camel_case, is_iterator, NameGenerator, plural
+
+
+def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
+
+    buffer = list()
+
+    def visit(expr: MageExpr) -> Type:
+        nonlocal buffer
+
+        if isinstance(expr, MageHideExpr):
+            buffer.append(expr.expr)
+            # TODO return some internal constant rather than a public type
+            return make_unit()
+
+        if isinstance(expr, MageListExpr):
+            element_field = visit(expr.element)
+            separator_field = visit(expr.separator)
+            return PunctType(element_field, separator_field, expr.min_count > 0)
+
+        if isinstance(expr, MageRefExpr):
+            rule = grammar.lookup(expr.name)
+            if rule is None:
+                return AnyType()
+            if rule.is_extern:
+                return ExternType(rule.type_name) #TokenType(rule.name) if rule.is_token else NodeType(rule.name)
+            if rule.expr is None:
+                return AnyType()
+            if not rule.is_public:
+                return visit(rule.expr)
+            if grammar.is_token_rule(rule):
+                return TokenType(rule.name)
+            if grammar.is_variant_rule(rule):
+                return VariantType(rule.name)
+            return NodeType(rule.name)
+
+        if isinstance(expr, MageLitExpr) or isinstance(expr, MageCharSetExpr):
+            assert(False) # literals should already have been eliminated
+
+        if isinstance(expr, MageRepeatExpr):
+            element_type = visit(expr.expr)
+            if expr.max == 0:
+                return make_unit()
+            elif expr.min == 0 and expr.max == 1:
+                ty = make_optional(element_type)
+            elif expr.min == 1 and expr.max == 1:
+                ty = element_type
+            else:
+                ty = ListType(element_type, expr.min > 0)
+            return ty
+
+        if isinstance(expr, MageSeqExpr):
+            types = list()
+            for element in expr.elements:
+                ty = visit(element)
+                if is_unit_type(ty):
+                    continue
+                buffer = []
+                types.append(ty)
+            if len(types) == 1:
+                return types[0]
+            return TupleType(types)
+
+        if isinstance(expr, MageLookaheadExpr):
+            return make_unit()
+
+        if isinstance(expr, MageChoiceExpr):
+            return UnionType(list(visit(element) for element in expr.elements))
+
+        assert_never(expr)
+
+    return visit(expr)
+
+
+def get_field_name(expr: MageExpr) -> str | None:
+    if expr.label is not None:
+        return expr.label
+    if isinstance(expr, MageRefExpr):
+        return expr.name
+    if isinstance(expr, MageRepeatExpr):
+        element_label = get_field_name(expr.expr)
+        if element_label is not None:
+            if expr.max > 1:
+                return plural(element_label)
+            return element_label
+        return None
+    if isinstance(expr, MageListExpr):
+        element_label = get_field_name(expr.element)
+        if element_label is not None:
+            return plural(element_label)
+        return None
+    if isinstance(expr, MageCharSetExpr) or isinstance(expr, MageChoiceExpr):
+        return None
+    raise RuntimeError(f'unexpected {expr}')
+
+def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = False) -> Generator[Field | MageExpr, None, None]:
+
+    generator = NameGenerator()
+
+    def generate_field_name() -> str:
+        return generator(prefix='field_')
+
+    def visit(expr: MageExpr, rule_name: str | None) -> Generator[Field | MageExpr, None, None]:
+
+        if isinstance(expr, MageLookaheadExpr):
+            return
+
+        if isinstance(expr, MageRefExpr):
+            rule = grammar.lookup(expr.name)
+            if rule is not None and rule.expr is not None and not rule.is_public:
+                yield from visit(rule.expr, rule.name)
+                return
+
+        if isinstance(expr, MageHideExpr):
+            if include_hidden:
+                yield from visit(expr.expr, rule_name)
+            else:
+                yield expr.expr
+            return
+
+        if isinstance(expr, MageSeqExpr):
+            for element in expr.elements:
+                yield from visit(element, rule_name)
+            return
+
+        if isinstance(expr, MageLitExpr) or isinstance(expr, MageCharSetExpr):
+            assert(False) # literals should already have been eliminated by previous passes
+
+        field_name = rule_name or get_field_name(expr) or generate_field_name()
+        field_type = simplify_type(infer_type(expr, grammar))
+        yield Field(field_name, field_type)
+
+    return visit(expr, None)
 
 type PyCondCase = tuple[PyExpr | None, Sequence[PyStmt]]
 
@@ -90,9 +227,9 @@ def gen_py_type(ty: Type, prefix: str, immutable=False) -> PyExpr:
     assert_never(ty)
 
 def rule_type_to_py_type(type_name: str) -> PyExpr:
-    if type_name == 'String':
+    if type_name == string_rule_type:
         return PyNamedExpr('str')
-    if type_name == 'Integer':
+    if type_name == integer_rule_type:
         return PyNamedExpr('int')
     if type_name == 'Float32':
         warn('No exact representation for Float32 was found, so we are falling back to 64-bit Python float type')

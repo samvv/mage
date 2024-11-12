@@ -1,7 +1,7 @@
 
-from magelang.ast import *
+from magelang.lang.mage.ast import *
 
-def remove_hidden(grammar: MageGrammar) -> MageGrammar:
+def mage_remove_hidden(grammar: MageGrammar) -> MageGrammar:
     """
     Remove hide expressions from the grammar and replace them with the empty string.
 

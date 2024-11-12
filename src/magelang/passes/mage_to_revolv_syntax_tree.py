@@ -1,14 +1,14 @@
 
 from typing import Iterable, Iterator
 
-from magelang.ast import *
+from magelang.lang.mage.ast import *
 from magelang.analysis import can_be_empty
-from magelang.manager import Context, Pass, PassBase, pipeline
+from magelang.manager import Pass, PassBase, pipeline
 from magelang.lang.revolv.ast import *
 from magelang.ir.constants import *
 from magelang.util import NameGenerator, plural, to_snake_case, unreachable
-from magelang.passes.simplify import simplify
-from magelang.passes.remove_hidden import remove_hidden
+from magelang.passes.mage_simplify import mage_simplify
+from magelang.passes.mage_remove_hidden import mage_remove_hidden
 
 # TODO accept list[str] as ident
 # TODO decide on parameter order (curry style or imperative)
@@ -120,7 +120,7 @@ def mangle_type(ty: Type) -> str:
 class mage_to_revolv_syntax_tree(PassBase):
 
     def get_depends(self) -> Pass:
-        return pipeline(remove_hidden, simplify)
+        return pipeline(mage_remove_hidden, mage_simplify)
 
     def apply(self, grammar: MageGrammar, prefix: str) -> Program:
 

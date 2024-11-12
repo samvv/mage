@@ -7,13 +7,11 @@ make handling the AST a bit easier.
 
 import sys
 from functools import cache, lru_cache
-from typing import TYPE_CHECKING, Any, Callable, Generator, TypeGuard, assert_never
+from typing import Any, Callable, Generator, TypeGuard, TypeIs, assert_never
 from intervaltree import Interval, IntervalTree
 
 from magelang.logging import debug
-
-if TYPE_CHECKING:
-    from .treespec import Type
+from .constants import string_rule_type
 
 ASCII_MIN = 0x00
 ASCII_MAX = 0x7F
@@ -27,67 +25,96 @@ type MageExpr = MageLitExpr | MageRefExpr | MageCharSetExpr | MageLookaheadExpr 
 
 class MageExprBase(MageNode):
 
-    def __init__(self, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> None:
+    def __init__(
+        self,
+        label: str | None = None,
+        rules: list['MageRule'] | None = None,
+        action: 'MageRule | None' = None
+    ) -> None:
         if rules is None:
             rules = []
         self.label = label
         self.rules = rules
-        self.field_name = field_name
-        self.field_type = field_type
         self.action = action # FIXME merge with `self.rules`
 
 
 class MageLitExpr(MageExprBase):
 
-    def __init__(self, text: str, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> None:
-        super().__init__(label, rules, field_name, field_type, action)
+    def __init__(
+        self,
+        text: str,
+        label: str | None = None,
+        rules: list['MageRule'] | None = None,
+        action: 'MageRule | None' = None
+    ) -> None:
+        super().__init__(label, rules, action)
         self.text = text
 
-    def derive(self, text: str | None = None, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> 'MageLitExpr':
+    def derive(self, text: str | None = None, label: str | None = None, rules: list['MageRule'] | None = None, action: 'MageRule | None' = None) -> 'MageLitExpr':
         if text is None:
             text = self.text
         if label is None:
             label = self.label
         if rules is None:
             rules = self.rules
-        if field_name is None:
-            field_name = self.field_name
-        if field_type is None:
-            field_type = self.field_type
         if action is None:
             action = self.action
-        return MageLitExpr(text=text, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+        return MageLitExpr(text=text, label=label, rules=rules, action=action)
 
 class MageRefExpr(MageExprBase):
 
-    def __init__(self, name: str, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> None:
-        super().__init__(label, rules, field_name, field_type, action)
+    def __init__(
+        self,
+        name: str,
+        label: str | None = None,
+        rules: list['MageRule'] | None = None,
+        action: 'MageRule | None' = None
+    ) -> None:
+        super().__init__(label, rules, action)
         self.name = name
 
-    def derive(self, name: str | None = None, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> 'MageRefExpr':
+    def derive(
+        self,
+        *,
+        name: str | None = None,
+        label: str | None = None,
+        rules: list['MageRule'] | None = None,
+        action: 'MageRule | None' = None
+    ) -> 'MageRefExpr':
         if name is None:
             name = self.name
         if label is None:
             label = self.label
         if rules is None:
             rules = self.rules
-        if field_name is None:
-            field_name = self.field_name
-        if field_type is None:
-            field_type = self.field_type
         if action is None:
             action = self.action
-        return MageRefExpr(name=name, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+        return MageRefExpr(name=name, label=label, rules=rules, action=action)
 
 
 class MageLookaheadExpr(MageExprBase):
 
-    def __init__(self, expr: MageExpr, is_negated: bool, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> None:
-        super().__init__(label, rules, field_name, field_type, action)
+    def __init__(
+        self,
+        expr: MageExpr,
+        is_negated: bool,
+        label: str | None = None,
+        rules: list['MageRule'] | None = None,
+        action: 'MageRule | None' = None
+    ) -> None:
+        super().__init__(label, rules, action)
         self.expr = expr
         self.is_negated = is_negated
 
-    def derive(self, expr: MageExpr | None = None, is_negated: bool | None = None, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> 'MageLookaheadExpr':
+    def derive(
+        self,
+        *,
+        expr: MageExpr | None = None,
+        is_negated: bool | None = None,
+        label: str | None = None,
+        rules: list['MageRule'] | None = None,
+        action: 'MageRule | None' = None
+    ) -> 'MageLookaheadExpr':
         if expr is None:
             expr = self.expr
         if is_negated is None:
@@ -96,13 +123,9 @@ class MageLookaheadExpr(MageExprBase):
             label = self.label
         if rules is None:
             rules = self.rules
-        if field_name is None:
-            field_name = self.field_name
-        if field_type is None:
-            field_type = self.field_type
         if action is None:
             action = self.action
-        return MageLookaheadExpr(expr=expr, is_negated=is_negated, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+        return MageLookaheadExpr(expr=expr, is_negated=is_negated, label=label, rules=rules, action=action)
 
 
 type CharSetElement = str | tuple[str, str]
@@ -112,8 +135,16 @@ _UPPERCASE = Interval(65, 90+1)
 
 class MageCharSetExpr(MageExprBase):
 
-    def __init__(self, elements: list[CharSetElement], ci: bool = False, invert: bool = False, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> None:
-        super().__init__(label, rules, field_name, field_type, action)
+    def __init__(
+        self,
+        elements: list[CharSetElement],
+        ci: bool = False,
+        invert: bool = False,
+        label: str | None = None,
+        rules: list['MageRule'] | None = None,
+        action: 'MageRule | None' = None
+    ) -> None:
+        super().__init__(label, rules, action)
         self.ci = ci
         self.invert = invert
         self.elements = []
@@ -125,7 +156,16 @@ class MageCharSetExpr(MageExprBase):
                 low, high = element
                 self.add_char_range(low, high)
 
-    def derive(self, elements: list[CharSetElement] | None = None, ci: bool | None = None, invert: bool | None = None, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> 'MageCharSetExpr':
+    def derive(
+        self,
+        *,
+        elements: list[CharSetElement] | None = None,
+        ci: bool | None = None,
+        invert: bool | None = None,
+        label: str | None = None,
+        rules: list['MageRule'] | None = None,
+        action: 'MageRule | None' = None
+    ) -> 'MageCharSetExpr':
         if elements is None:
             elements = self.elements
         if ci is None:
@@ -136,13 +176,9 @@ class MageCharSetExpr(MageExprBase):
             label = self.label
         if rules is None:
             rules = self.rules
-        if field_name is None:
-            field_name = self.field_name
-        if field_type is None:
-            field_type = self.field_type
         if action is None:
             action = self.action
-        return MageCharSetExpr(elements=elements, ci=ci, invert=invert, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+        return MageCharSetExpr(elements=elements, ci=ci, invert=invert, label=label, rules=rules, action=action)
 
     def add_char(self, ch: str) -> None:
         self.elements.append(ch)
@@ -208,57 +244,55 @@ def intersect_interval(a: Interval, b: Interval) -> Interval | None:
 
 class MageChoiceExpr(MageExprBase):
 
-    def __init__(self, elements: list[MageExpr], label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> None:
-        super().__init__(label, rules, field_name, field_type, action)
+    def __init__(
+        self,
+        elements: list[MageExpr],
+        label: str | None = None,
+        rules: list['MageRule'] | None = None,
+        action: 'MageRule | None' = None
+    ) -> None:
+        super().__init__(label, rules, action)
         self.elements = elements
 
-    def derive(self, elements: list[MageExpr] | None = None, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> 'MageChoiceExpr':
+    def derive(self, elements: list[MageExpr] | None = None, label: str | None = None, rules: list['MageRule'] | None = None, action: 'MageRule | None' = None) -> 'MageChoiceExpr':
         if elements is None:
             elements = self.elements
         if label is None:
             label = self.label
         if rules is None:
             rules = self.rules
-        if field_name is None:
-            field_name = self.field_name
-        if field_type is None:
-            field_type = self.field_type
         if action is None:
             action = self.action
-        return MageChoiceExpr(elements=elements, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+        return MageChoiceExpr(elements=elements, label=label, rules=rules, action=action)
 
 
 class MageSeqExpr(MageExprBase):
 
-    def __init__(self, elements: list[MageExpr], label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> None:
-        super().__init__(label, rules, field_name, field_type, action)
+    def __init__(self, elements: list[MageExpr], label: str | None = None, rules: list['MageRule'] | None = None, action: 'MageRule | None' = None) -> None:
+        super().__init__(label, rules, action)
         self.elements = elements
 
-    def derive(self, elements: list[MageExpr] | None = None, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> 'MageSeqExpr':
+    def derive(self, elements: list[MageExpr] | None = None, label: str | None = None, rules: list['MageRule'] | None = None, action: 'MageRule | None' = None) -> 'MageSeqExpr':
         if elements is None:
             elements = self.elements
         if label is None:
             label = self.label
         if rules is None:
             rules = self.rules
-        if field_name is None:
-            field_name = self.field_name
-        if field_type is None:
-            field_type = self.field_type
         if action is None:
             action = self.action
-        return MageSeqExpr(elements=elements, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+        return MageSeqExpr(elements=elements, label=label, rules=rules, action=action)
 
 
 class MageListExpr(MageExprBase):
 
-    def __init__(self, element: MageExpr, separator: MageExpr, min_count: int, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> None:
-        super().__init__(label, rules, field_name, field_type, action)
+    def __init__(self, element: MageExpr, separator: MageExpr, min_count: int, label: str | None = None, rules: list['MageRule'] | None = None, action: 'MageRule | None' = None) -> None:
+        super().__init__(label, rules, action)
         self.element = element
         self.separator = separator
         self.min_count = min_count
 
-    def derive(self, element: MageExpr | None = None, separator: MageExpr | None = None, min_count: int | None = None, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> 'MageListExpr':
+    def derive(self, element: MageExpr | None = None, separator: MageExpr | None = None, min_count: int | None = None, label: str | None = None, rules: list['MageRule'] | None = None, action: 'MageRule | None' = None) -> 'MageListExpr':
         if element is None:
             element = self.element
         if separator is None:
@@ -269,47 +303,39 @@ class MageListExpr(MageExprBase):
             label = self.label
         if rules is None:
             rules = self.rules
-        if field_name is None:
-            field_name = self.field_name
-        if field_type is None:
-            field_type = self.field_type
         if action is None:
             action = self.action
-        return MageListExpr(element=element, separator=separator, min_count=min_count, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+        return MageListExpr(element=element, separator=separator, min_count=min_count, label=label, rules=rules, action=action)
 
 
 class MageHideExpr(MageExprBase):
 
-    def __init__(self, expr: MageExpr, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> None:
-        super().__init__(label, rules, field_name, field_type, action)
+    def __init__(self, expr: MageExpr, label: str | None = None, rules: list['MageRule'] | None = None, action: 'MageRule | None' = None) -> None:
+        super().__init__(label, rules, action)
         self.expr = expr
 
-    def derive(self, expr: MageExpr | None = None, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> 'MageHideExpr':
+    def derive(self, expr: MageExpr | None = None, label: str | None = None, rules: list['MageRule'] | None = None, action: 'MageRule | None' = None) -> 'MageHideExpr':
         if expr is None:
             expr = self.expr
         if label is None:
             label = self.label
         if rules is None:
             rules = self.rules
-        if field_name is None:
-            field_name = self.field_name
-        if field_type is None:
-            field_type = self.field_type
         if action is None:
             action = self.action
-        return MageHideExpr(expr=expr, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+        return MageHideExpr(expr=expr, label=label, rules=rules, action=action)
 
 POSINF = sys.maxsize
 
 class MageRepeatExpr(MageExprBase):
 
-    def __init__(self, expr: MageExpr, min: int, max: int, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> None:
-        super().__init__(label, rules, field_name, field_type, action)
+    def __init__(self, expr: MageExpr, min: int, max: int, label: str | None = None, rules: list['MageRule'] | None = None, action: 'MageRule | None' = None) -> None:
+        super().__init__(label, rules, action)
         self.expr = expr
         self.min = min 
         self.max = max
 
-    def derive(self, expr: MageExpr | None = None, min: int | None = None, max: int | None = None, label: str | None = None, rules: list['MageRule'] | None = None, field_name: str | None = None, field_type: 'Type | None' = None, action: 'MageRule | None' = None) -> 'MageRepeatExpr':
+    def derive(self, expr: MageExpr | None = None, min: int | None = None, max: int | None = None, label: str | None = None, rules: list['MageRule'] | None = None, action: 'MageRule | None' = None) -> 'MageRepeatExpr':
         if expr is None:
             expr = self.expr
         if min is None:
@@ -320,13 +346,9 @@ class MageRepeatExpr(MageExprBase):
             label = self.label
         if rules is None:
             rules = self.rules
-        if field_name is None:
-            field_name = self.field_name
-        if field_type is None:
-            field_type = self.field_type
         if action is None:
             action = self.action
-        return MageRepeatExpr(expr=expr, min=min, max=max, label=label, rules=rules, field_name=field_name, field_type=field_type, action=action)
+        return MageRepeatExpr(expr=expr, min=min, max=max, label=label, rules=rules, action=action)
 
 
 class Decorator(MageNode):
@@ -342,16 +364,6 @@ EXTERN        = 1
 PUBLIC        = 2
 FORCE_TOKEN   = 4
 FORCE_KEYWORD = 8
-
-unit_rule_name = 'void'
-string_rule_type = 'String'
-integer_rule_type = 'Integer'
-
-builtin_types = {
-    unit_rule_name,
-    string_rule_type,
-    integer_rule_type,
-}
 
 class MageRule(MageNode):
 
@@ -520,7 +532,7 @@ class MageGrammar(MageNode):
 
 type MageSyntax = MageExpr | MageRule | MageGrammar
 
-def is_mage_syntax(value: Any) -> TypeGuard[MageSyntax]:
+def is_mage_syntax(value: Any) -> TypeIs[MageSyntax]:
     return isinstance(value, MageNode)
 
 def rewrite_each_child_expr(expr: MageExpr, proc: Callable[[MageExpr], MageExpr]) -> MageExpr:

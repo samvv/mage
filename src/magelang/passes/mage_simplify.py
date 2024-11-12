@@ -1,7 +1,7 @@
 
-from magelang.ast import *
+from magelang.lang.mage.ast import *
 
-def simplify(grammar: MageGrammar) -> MageGrammar:
+def mage_simplify(grammar: MageGrammar) -> MageGrammar:
 
     def make_fail() -> MageExpr:
         return MageChoiceExpr([])

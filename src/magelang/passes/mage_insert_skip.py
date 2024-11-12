@@ -1,7 +1,7 @@
 
-from ..ast import MageExpr, MageGrammar, MageRefExpr, MageSeqExpr, rewrite_each_child_expr
+from magelang.lang.mage.ast import MageExpr, MageGrammar, MageRefExpr, MageSeqExpr, rewrite_each_child_expr
 
-def insert_skip(grammar: MageGrammar) -> MageGrammar:
+def mage_insert_skip(grammar: MageGrammar) -> MageGrammar:
 
     assert(grammar.skip_rule is not None)
     skip_name = grammar.skip_rule.name

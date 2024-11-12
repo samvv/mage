@@ -7,12 +7,12 @@ from pprint import pprint
 
 from .manager import Context, apply, compose, each_value, distribute, identity, pipeline
 from .logging import error
-from .ast import *
+from .lang.mage.ast import *
+from .lang.mage.emitter import emit as mage_emit
+from .lang.mage.parser import Parser
+from .lang.mage.scanner import Scanner
 from .lang.python.emitter import emit as py_emit
-from .scanner import Scanner
-from .parser import Parser
 from .passes import *
-from .emitter import emit
 
 project_dir = Path(__file__).parent.parent.parent
 modules_dir = Path(__file__).parent
@@ -26,8 +26,8 @@ def _load_grammar(filename: PathLike) -> MageGrammar:
     parser = Parser(scanner)
     return parser.parse_grammar()
 
-mage_check = pipeline(check_token_no_parse, check_undefined, check_overlapping_charset_intervals, check_neg_charset_intervals)
-mage_prepare_grammar = pipeline(inline, extract_literals, insert_magic_rules)
+mage_check = pipeline(mage_check_token_no_parse, mage_check_undefined, mage_check_overlapping_charset_intervals, mage_check_neg_charset_intervals)
+mage_prepare_grammar = pipeline(mage_inline, mage_extract_literals, mage_insert_magic_rules)
 
 def _do_generate(args) -> int:
 
@@ -65,7 +65,9 @@ def _do_generate(args) -> int:
     if engine == 'old':
         files = dict[str, Pass[MageGrammar, PyModule]]()
         if enable_cst:
-            files['cst.py'] = mage_to_python_cst
+            files['cst.py'] = pipeline(mage_to_treespec, treespec_to_python)
+        if enable_ast:
+            files['ast.py'] = pipeline(mage_to_treespec, treespec_cst_to_ast, treespec_to_python)
         if enable_emitter:
             files['emitter.py'] = mage_to_python_emitter
         mage_to_target = compose(
@@ -138,7 +140,7 @@ def _do_dump(args) -> int:
     pass_ = pipeline(*(get_pass_by_name(name) for name in args.name))
     result = apply(ctx, input, pass_)
     if is_mage_syntax(result):
-        print(emit(result))
+        print(mage_emit(result))
     elif isinstance(result, Program):
         pprint(result)
     elif isinstance(result, PyModule):

@@ -1,12 +1,12 @@
 
-from magelang.ast import PUBLIC, MageChoiceExpr, MageGrammar, MageRefExpr, MageRule
+from magelang.lang.mage.ast import PUBLIC, MageChoiceExpr, MageGrammar, MageRefExpr, MageRule
 
 any_syntax_rule_name = 'syntax'
 any_keyword_rule_name = 'keyword'
 any_node_rule_name = 'node'
 any_token_rule_name = 'token'
 
-def insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
+def mage_insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
 
     rules = list(grammar.rules)
 

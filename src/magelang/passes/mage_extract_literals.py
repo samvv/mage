@@ -2,10 +2,9 @@ from pathlib import Path
 import json
 
 from magelang.eval import accepts
+from magelang.lang.mage.ast import *
 
-from ..ast import *
-
-def extract_literals(grammar: MageGrammar) -> MageGrammar:
+def mage_extract_literals(grammar: MageGrammar) -> MageGrammar:
 
     new_rules = []
 

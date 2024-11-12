@@ -1,6 +1,6 @@
 
 from intervaltree import Interval
-from magelang.ast import MageCharSetExpr, MageChoiceExpr, MageGrammar, MageLitExpr, MageRefExpr, MageRule, MageSeqExpr, intersect_interval
+from magelang.lang.mage.ast import MageCharSetExpr, MageChoiceExpr, MageGrammar, MageLitExpr, MageRefExpr, MageRule, MageSeqExpr, intersect_interval
 from magelang.analysis import intersects
 
 def test_intersects_lit_lit():

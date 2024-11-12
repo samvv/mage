@@ -1,9 +1,9 @@
 
 from magelang.logging import error
-from magelang.ast import MageCharSetExpr, MageExpr, MageGrammar, for_each_expr
-from magelang.emitter import escape
+from magelang.lang.mage.ast import MageCharSetExpr, MageExpr, MageGrammar, for_each_expr
+from magelang.lang.mage.emitter import escape
 
-def check_neg_charset_intervals(grammar: MageGrammar) -> MageGrammar:
+def mage_check_neg_charset_intervals(grammar: MageGrammar) -> MageGrammar:
 
     def check(expr: MageExpr) -> None:
         if isinstance(expr, MageCharSetExpr):

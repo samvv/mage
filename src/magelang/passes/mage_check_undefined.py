@@ -1,8 +1,8 @@
 
-from ..logging import error
-from ..ast import MageGrammar, MageRefExpr, MageExpr, for_each_expr
+from magelang.logging import error
+from magelang.lang.mage.ast import MageGrammar, MageRefExpr, MageExpr, for_each_expr
 
-def check_undefined(grammar: MageGrammar) -> MageGrammar:
+def mage_check_undefined(grammar: MageGrammar) -> MageGrammar:
 
     def traverse(expr: MageExpr) -> None:
         if isinstance(expr, MageRefExpr):

@@ -1,7 +1,7 @@
 
 from typing import assert_never
 
-from .ast import *
+from magelang.lang.mage.ast import *
 
 EOF = '\uFFFF'
 

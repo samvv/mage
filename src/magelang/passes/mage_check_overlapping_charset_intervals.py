@@ -1,14 +1,14 @@
 
 from intervaltree import Interval, IntervalTree
 
-from ..ast import *
-from ..logging import warn
-from ..emitter import escape
+from magelang.lang.mage.ast import *
+from magelang.logging import warn
+from magelang.lang.mage.emitter import escape
 
 def _pretty(low, high) -> str:
     return escape(low) if low == high else f'{escape(low)}-{escape(high)}'
 
-def check_overlapping_charset_intervals(grammar: MageGrammar) -> MageGrammar:
+def mage_check_overlapping_charset_intervals(grammar: MageGrammar) -> MageGrammar:
 
     def visit(expr: MageExpr) -> None:
 

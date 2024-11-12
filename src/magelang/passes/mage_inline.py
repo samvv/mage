@@ -1,8 +1,8 @@
 
-from ..ast import *
-from ..emitter import *
+from magelang.lang.mage.ast import *
+from magelang.lang.mage.emitter import *
 
-def inline(grammar: MageGrammar) -> MageGrammar:
+def mage_inline(grammar: MageGrammar) -> MageGrammar:
 
     new_rules = []
 

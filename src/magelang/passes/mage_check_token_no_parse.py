@@ -1,8 +1,8 @@
 
 from magelang.logging import error
-from magelang.ast import *
+from magelang.lang.mage.ast import *
 
-def check_token_no_parse(grammar: MageGrammar) -> MageGrammar:
+def mage_check_token_no_parse(grammar: MageGrammar) -> MageGrammar:
 
     def references_pub_rule(expr: MageExpr) -> bool:
         if isinstance(expr, MageRefExpr):
