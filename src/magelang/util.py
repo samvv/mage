@@ -1,6 +1,6 @@
 
 import io
-from typing import Any, Callable, Generic, Iterator, Never, Protocol, Sequence, SupportsIndex, TextIO, TypeGuard, TypeVar, overload
+from typing import Any, Generic, Iterator, Never, Protocol, Sequence, SupportsIndex, TextIO, TypeGuard, TypeIs, TypeVar, overload
 import re
 
 
@@ -47,16 +47,32 @@ def unreachable() -> Never:
 
 _T = TypeVar('_T')
 
+class Nothing:
+    """
+    An alternative to `None` that can be used in cases where `None` is already
+    semantically taken.
+    """
+    pass
 
-type Option[_T] = Some[_T] | None
-
-
-class Some(Generic[_T]):
+class Something(Generic[_T]):
 
     def __init__(self, value: _T) -> None:
         super().__init__()
         self.value = value
 
+    def to_maybe_none(self) -> _T | None:
+        return self.value
+
+type Option[_T] = Something[_T] | Nothing
+
+def is_nothing(opt: Option[Any]) -> TypeIs[Nothing]:
+    return isinstance(opt, Nothing)
+
+def is_something(opt: Option[Any]) -> TypeIs[Something]:
+    return isinstance(opt, Something)
+
+def to_maybe_none(value: Option[_T]) -> _T | None:
+    return value.value if isinstance(value, Something) else None
 
 def nonnull(value: _T | None) -> _T:
     assert(value is not None)

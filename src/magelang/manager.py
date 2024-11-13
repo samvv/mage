@@ -4,7 +4,7 @@ from abc import abstractmethod
 from typing import Any, Callable, Generic, Protocol, TypeVar, overload
 from warnings import warn
 
-from magelang.util import Option, Some, panic
+from magelang.util import Nothing, Option, Something, is_nothing, panic, to_maybe_none
 
 _X = TypeVar('_X', contravariant=True)
 _Y = TypeVar('_Y', covariant=True)
@@ -29,6 +29,9 @@ class Context:
     def __init__(self, opts: dict[str, Any]) -> None:
         self.opts = opts
 
+    def has_option(self, name: str) -> bool:
+        return name in self.opts
+
     def get_option(self, name: str, default: Any = None) -> Any:
         return self.opts.get(name, default)
 
@@ -49,7 +52,9 @@ def apply(ctx: Context, input: _T, pass_: Pass[_T, _R]) -> _R:
         if ty is Context:
             return ctx
         if ty is None or ty is bool or ty is str or ty is float or ty is int:
-            return ctx.get_option(name, default)
+            if is_nothing(default) and not ctx.has_option(name):
+                panic(f"Option {name} has no default and is not provided.")
+            return ctx.get_option(name, to_maybe_none(default))
         panic(f"Trying to inject an unknown type {ty} in {pass_}")
 
     def apply_inject(fn: Returns[_Y], *in_args, **in_kwargs) -> _Y:
@@ -67,20 +72,20 @@ def apply(ctx: Context, input: _T, pass_: Pass[_T, _R]) -> _R:
         out_args = list(in_args)
         for i, name in enumerate(args[len(in_args):]):
             ty = annotations.get(name)
-            default = None
+            default = Nothing()
             if defaults is not None:
                 k = i+len(in_args)-(len(args)-len(defaults))
                 if k >= 0:
-                    default = Some(defaults[k])
+                    default = Something(defaults[k])
             out_args.append(get_dependency(name, ty, default))
 
         out_kwargs = dict(in_kwargs)
         for name in kwonlyargs:
             if name not in in_kwargs:
                 ty = annotations.get(name)
-                default = None
+                default = Nothing()
                 if kwonlydefaults is not None and name in kwonlydefaults:
-                    default = Some(kwonlydefaults[name])
+                    default = Something(kwonlydefaults[name])
                 out_kwargs[name] = get_dependency(name, ty, default)
 
         return fn(*out_args, **out_kwargs)
