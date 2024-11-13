@@ -2,7 +2,7 @@
 import inspect
 from abc import abstractmethod
 from typing import Any, Callable, Generic, Protocol, TypeVar, overload
-from warnings import warn
+from .logging import info
 
 from magelang.util import Nothing, Option, Something, is_nothing, panic, to_maybe_none
 
@@ -90,23 +90,27 @@ def apply(ctx: Context, input: _T, pass_: Pass[_T, _R]) -> _R:
 
         return fn(*out_args, **out_kwargs)
 
+    name = pass_.__name__ # type: ignore
+    if name != '_wrapper':
+        info(f'Running {name}')
+
     fn = apply_inject(pass_).apply if inspect.isclass(pass_) else pass_
 
     return apply_inject(fn, input)
 
 def distribute(map: dict[_K, Pass[_T, _R]]) -> Pass[_T, dict[_K, _R]]:
 
-    def wrapper(input: _T, ctx: Context) -> dict[_K, _R]:
+    def _wrapper(input: _T, ctx: Context) -> dict[_K, _R]:
         out = dict[_K, _R]()
         for key, value in map.items():
             out[key] = apply(ctx, input, value)
         return out
 
-    return wrapper
+    return _wrapper
 
 def merge(left: Pass[_T, dict[_K, _R]], right: Pass[_T, dict[_K, _R]]) -> Pass[_T, dict[_K, _R]]:
 
-    def wrapper(input: _T, ctx: Context) -> dict[_K, _R]:
+    def _wrapper(input: _T, ctx: Context) -> dict[_K, _R]:
         out = dict[_K, _R]()
         for key, value in apply(ctx, input, left).items():
             out[key] = value
@@ -114,33 +118,33 @@ def merge(left: Pass[_T, dict[_K, _R]], right: Pass[_T, dict[_K, _R]]) -> Pass[_
             out[key] = value
         return out
 
-    return wrapper
+    return _wrapper
 
 
 def each_value(pass_: Pass[_T, _R]) -> Pass[dict[_K, _T], dict[_K, _R]]:
 
-    def wrapper(input: dict[_K, _T], ctx: Context) -> dict[_K, _R]:
+    def _wrapper(input: dict[_K, _T], ctx: Context) -> dict[_K, _R]:
         out = dict[_K, _R]()
         for key, value in input.items():
             out[key] = apply(ctx, value, pass_)
         return out
 
-    return wrapper
+    return _wrapper
 
 def map_key(proc: Callable[[_K1], _K2]) -> Pass[dict[_K1, _T], dict[_K2, _T]]:
 
-    def wrapper(input: dict[_K1, _T]) -> dict[_K2, _T]:
+    def _wrapper(input: dict[_K1, _T]) -> dict[_K2, _T]:
         out = dict[_K2, _T]()
         for key, value in input.items():
             out[proc(key)] = value
         return out
 
-    return wrapper
+    return _wrapper
 
 def compose(a: Pass[_T, _R], b: Pass[_R, _S]) -> Pass[_T, _S]:
-    def wrapper(input: _T, ctx: Context) -> _S:
+    def _wrapper(input: _T, ctx: Context) -> _S:
         return apply(ctx, apply(ctx, input, a), b)
-    return wrapper
+    return _wrapper
 
 _T0 = TypeVar('_T0')
 _T1 = TypeVar('_T1')
