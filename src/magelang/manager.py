@@ -99,6 +99,19 @@ def distribute(map: dict[_K, Pass[_T, _R]]) -> Pass[_T, dict[_K, _R]]:
 
     return wrapper
 
+def merge(left: Pass[_T, dict[_K, _R]], right: Pass[_T, dict[_K, _R]]) -> Pass[_T, dict[_K, _R]]:
+
+    def wrapper(input: _T, ctx: Context) -> dict[_K, _R]:
+        out = dict[_K, _R]()
+        for key, value in apply(ctx, input, left).items():
+            out[key] = value
+        for key, value in apply(ctx, input, right).items():
+            out[key] = value
+        return out
+
+    return wrapper
+
+
 def each_value(pass_: Pass[_T, _R]) -> Pass[dict[_K, _T], dict[_K, _R]]:
 
     def wrapper(input: dict[_K, _T], ctx: Context) -> dict[_K, _R]:

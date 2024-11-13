@@ -5,7 +5,7 @@ from os import PathLike
 from pathlib import Path
 from pprint import pprint
 
-from .manager import Context, apply, compose, each_value, distribute, identity, pipeline
+from .manager import Context, apply, compose, each_value, distribute, identity, merge, pipeline
 from .logging import error
 from .lang.mage.ast import *
 from .lang.mage.emitter import emit as mage_emit
@@ -64,14 +64,15 @@ def _do_generate(args) -> int:
 
     if engine == 'old':
         files = dict[str, Pass[MageGrammar, PyModule]]()
+        trees = dict[str, Pass[Specs, PyModule]]()
         if enable_cst:
-            files['cst.py'] = pipeline(mage_to_treespec, treespec_to_python)
+            trees['cst.py'] = treespec_to_python
         if enable_ast:
-            files['ast.py'] = pipeline(mage_to_treespec, treespec_cst_to_ast, treespec_to_python)
+            trees['ast.py'] = pipeline(treespec_cst_to_ast, treespec_to_python)
         if enable_emitter:
             files['emitter.py'] = mage_to_python_emitter
         mage_to_target = compose(
-            distribute(files),
+            merge(distribute(files), pipeline(mage_to_treespec, distribute(trees))),
             each_value(python_to_text),
         )
     elif engine == 'next':
