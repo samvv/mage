@@ -3,11 +3,11 @@
 from collections.abc import Sequence
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Iterator, TypedDict, Unpack
+from typing import Any, Callable, TypedDict, Unpack
 
 from magelang.util import panic
 
-type Type = ExternType | NodeType | TokenType | VariantType | NeverType | TupleType | ListType | PunctType | UnionType | NoneType | AnyType
+type Type = ExternType | SpecType | NeverType | TupleType | ListType | PunctType | UnionType | NoneType | AnyType
 
 def _is_copy(value: Any) -> bool:
     """
@@ -57,11 +57,8 @@ class TypeBase(NodeBase):
         return hash(self.encode())
 
 class SpecType(TypeBase):
-    name: str
-
-class NodeType(SpecType):
     """
-    Matches a leaf node in the AST/CST.
+    Matches any declaration in the current program.
     """
 
     def __init__(self, name: str) -> None:
@@ -72,37 +69,7 @@ class NodeType(SpecType):
         return (1, self.name)
 
     def __repr__(self) -> str:
-        return f'NodeType({self.name})'
-
-class TokenType(SpecType):
-    """
-    Matches a token type in the CST.
-    """
-
-    def __init__(self, name: str) -> None:
-        super().__init__()
-        self.name = name
-
-    def encode(self) -> Any:
-        return (2, self.name)
-
-    def __repr__(self) -> str:
-        return f'TokenType({self.name})'
-
-class VariantType(SpecType):
-    """
-    Matches a union of different nodes in the AST/CST.
-    """
-
-    def __init__(self, name: str) -> None:
-        super().__init__()
-        self.name = name
-
-    def encode(self) -> Any:
-        return (3, self.name)
-
-    def __repr__(self) -> str:
-        return f'VariantType({self.name})'
+        return f'SpecType({self.name})'
 
 class NeverType(TypeBase):
     """
@@ -310,6 +277,10 @@ class TokenSpec(SpecBase):
     is_static: bool
 
 @dataclass
+class TypeSpec(SpecBase):
+    ty: Type
+
+@dataclass
 class NodeSpec(SpecBase):
     name: str
     fields: list[Field]
@@ -322,7 +293,7 @@ class VariantSpec(SpecBase):
 class ConstEnumSpec(SpecBase):
     members: list[tuple[str, int]]
 
-Spec = TokenSpec | NodeSpec | VariantSpec | ConstEnumSpec
+Spec = TokenSpec | NodeSpec | VariantSpec | ConstEnumSpec | TypeSpec
 
 class Specs:
 

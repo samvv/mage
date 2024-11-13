@@ -45,6 +45,7 @@ def is_unit_type(ty: Type) -> bool:
 def is_static_type(ty: Type, specs: Specs) -> bool:
     visited = set[str]()
     def visit(ty: Type) -> bool:
+        ty = resolve_type_references(ty, specs=specs)
         if isinstance(ty, ExternType):
             return False
         if isinstance(ty, NeverType):
@@ -53,27 +54,23 @@ def is_static_type(ty: Type, specs: Specs) -> bool:
             return True
         if isinstance(ty, UnionType):
             return all(visit(ty_2) for ty_2 in ty.types)
-        if isinstance(ty, VariantType):
+        if isinstance(ty, SpecType):
             if ty.name in visited:
                 return False
             visited.add(ty.name)
             spec = lookup_spec(specs, ty.name)
-            assert(isinstance(spec, VariantSpec))
-            return all(visit(ty_2) for _, ty_2 in spec.members)
-        if isinstance(ty, NodeType):
-            if ty.name in visited:
+            assert(not isinstance(spec, TypeSpec))
+            if spec is None:
                 return False
-            visited.add(ty.name)
-            spec = lookup_spec(specs, ty.name)
-            assert(isinstance(spec, NodeSpec))
-            return all(visit(field.ty) for field in spec.fields)
-        if isinstance(ty, TokenType):
-            if ty.name in visited:
+            if isinstance(spec, ConstEnumSpec):
                 return False
-            visited.add(ty.name)
-            spec = lookup_spec(specs, ty.name)
-            assert(isinstance(spec, TokenSpec))
-            return spec.is_static
+            if isinstance(spec, VariantSpec):
+                return all(visit(ty_2) for _, ty_2 in spec.members)
+            if isinstance(spec, NodeSpec):
+                return all(visit(field.ty) for field in spec.fields)
+            if isinstance(spec, TokenSpec):
+                return spec.is_static
+            assert_never(spec)
         if isinstance(ty, TupleType):
             return all(visit(ty_2) for ty_2 in ty.element_types)
         if isinstance(ty, ListType):
@@ -87,12 +84,8 @@ def is_static_type(ty: Type, specs: Specs) -> bool:
     return visit(ty)
 
 def mangle_type(ty: Type) -> str:
-    if isinstance(ty, NodeType):
-        return f'node_{ty.name}'
-    if isinstance(ty, VariantType):
-        return f'variant_{ty.name}'
-    if isinstance(ty, TokenType):
-        return f'token_{ty.name}'
+    if isinstance(ty, SpecType):
+        return f'decl_{ty.name}'
     if isinstance(ty, TupleType):
         out = f'tuple_{len(ty.element_types)}'
         for ty in ty.element_types:
@@ -132,13 +125,7 @@ def flatten_union(ty: Type) -> Generator[Type, None, None]:
         yield ty
 
 def spec_to_type(spec: Spec) -> Type:
-    if isinstance(spec, TokenSpec):
-        return TokenType(spec.name)
-    if isinstance(spec, NodeSpec):
-        return NodeType(spec.name)
-    if isinstance(spec, VariantSpec):
-        return VariantType(spec.name)
-    assert_never(spec)
+    return SpecType(spec.name)
 
 def do_types_shallow_overlap(a: Type, b: Type) -> bool:
     """
@@ -163,13 +150,7 @@ def do_types_shallow_overlap(a: Type, b: Type) -> bool:
     if isinstance(a, ExternType) and isinstance(b, ExternType):
         return a.name == b.name
 
-    if isinstance(a, NodeType) and isinstance(b, NodeType):
-        return a.name == b.name
-
-    if isinstance(a, VariantType) and isinstance(b, VariantType):
-        return a.name == b.name
-
-    if isinstance(a, TokenType) and isinstance(b, TokenType):
+    if isinstance(a, SpecType) and isinstance(b, SpecType):
         return a.name == b.name
 
     if isinstance(a, ListType) and isinstance(b, ListType):
@@ -188,17 +169,30 @@ def do_types_shallow_overlap(a: Type, b: Type) -> bool:
 
 def expand_variant_types(ty: Type, *, specs: Specs) -> Type:
     def rewriter(ty: Type) -> Type:
-        if isinstance(ty, VariantType):
-            types = list()
+        if isinstance(ty, SpecType):
             spec = lookup_spec(specs, ty.name)
-            assert(isinstance(spec, VariantSpec))
-            for _, ty_2 in spec.members:
-                types.append(rewriter(ty_2))
-            return UnionType(types)
+            if isinstance(spec, VariantSpec):
+                types = list()
+                assert(isinstance(spec, VariantSpec))
+                for _, ty_2 in spec.members:
+                    types.append(rewriter(ty_2))
+                return UnionType(types)
         return rewrite_each_child_type(ty, rewriter)
     return rewriter(ty)
 
+def resolve_type_references(ty: Type, *, specs: Specs) -> Type:
+    if isinstance(ty, SpecType):
+        spec = lookup_spec(specs, ty.name)
+        if isinstance(spec, TypeSpec):
+            return resolve_type_references(spec.ty, specs=specs)
+    return ty
+
 def is_type_assignable(left: Type, right: Type, *, specs: Specs) -> bool:
+    """
+    Check whether `right` is assignable to `left`, as in the Python expression `left = right`.
+    """
+    left = resolve_type_references(left, specs=specs)
+    right = resolve_type_references(right, specs=specs)
     if isinstance(left, NeverType) or isinstance(right, NeverType):
         return False
     if isinstance(left, AnyType) or isinstance(right, AnyType):
@@ -207,27 +201,17 @@ def is_type_assignable(left: Type, right: Type, *, specs: Specs) -> bool:
         return True
     if isinstance(left, ExternType) and isinstance(right, ExternType):
         return left.name == right.name
-    if isinstance(left, NodeType) and isinstance(right, NodeType):
+    if isinstance(left, SpecType) and isinstance(right, SpecType):
         return left.name == right.name
-    if isinstance(left, TokenType) and isinstance(right, TokenType):
-        return left.name == right.name
-    if isinstance(left, VariantType):
-        spec = lookup_spec(specs, left.name)
-        assert(isinstance(spec, VariantSpec))
-        return all(is_type_assignable(ty, right, specs=specs) for _, ty in spec.members)
-    if isinstance(right, VariantType):
-        spec = lookup_spec(specs, right.name)
-        assert(isinstance(spec, VariantSpec))
-        return any(is_type_assignable(left, ty, specs=specs) for _, ty in spec.members)
     if isinstance(left, ListType) and isinstance(right, ListType):
         return is_type_assignable(left.element_type, right.element_type, specs=specs)
     if isinstance(left, PunctType) and isinstance(right, ListType):
         return is_type_assignable(left.element_type, right.element_type, specs=specs) \
            and is_type_assignable(left.element_type, right.element_type, specs=specs)
-    if isinstance(left, UnionType):
-        return all(is_type_assignable(ty, right, specs=specs) for ty in left.types)
     if isinstance(right, UnionType):
-        return any(is_type_assignable(left, ty, specs=specs) for ty in right.types)
+        return all(is_type_assignable(left, ty, specs=specs) for ty in right.types)
+    if isinstance(left, UnionType):
+        return any(is_type_assignable(ty, right, specs=specs) for ty in left.types)
     if isinstance(left, TupleType) and isinstance(right, TupleType):
         if len(left.element_types) != len(right.element_types):
             return False
@@ -251,32 +235,40 @@ def expand_type(ty: Type):
         for ty_2 in ty.types:
             yield ty_2
 
-def contains_type(ty: Type, target_type: Type, *, specs: Specs) -> bool:
-    if is_type_assignable(ty, target_type, specs=specs):
+def contains_type(ty: Type, target: Type, *, specs: Specs) -> bool:
+    """
+    Check whether any part `ty` is assignable to `target`.
+    """
+    if is_type_assignable(target, ty, specs=specs):
         return True
     for ty_2 in expand_type(ty):
-        if contains_type(ty_2, target_type, specs=specs):
+        if contains_type(ty_2, target, specs=specs):
             return True
     return False
 
-def is_cyclic(name: str, *, specs: Specs) -> bool:
+def is_cyclic(name: str, *, specs: Specs, default: bool = False) -> bool:
     """
-    Determine whether a type references itself eventually.
+    Determine whether a declaration references itself eventually though one of its members.
     """
 
     visited = set[str]()
 
-    spec = lookup_spec(specs, name)
-    spec_type = expand_variant_types(spec_to_type(spec), specs=specs)
+    main_type = SpecType(name)
 
-    def check(ty: Type, first = False) -> bool:
+    def check(ty: Type) -> bool:
+
+        ty = resolve_type_references(ty, specs=specs)
 
         # If the type is assignable to our original type, that means we have
         # detected a cycle.
-        if not first and is_type_assignable(ty, spec_type, specs=specs):
+        if is_type_assignable(main_type, ty, specs=specs):
             return True
 
-        if isinstance(ty, NodeType):
+        return check_each_child(ty)
+
+    def check_each_child(ty: Type) -> bool:
+
+        if isinstance(ty, SpecType):
 
             # We encountered this type before. This means that there is a
             # cycle, but it's not the cycle we are interested in.
@@ -286,17 +278,24 @@ def is_cyclic(name: str, *, specs: Specs) -> bool:
             visited.add(ty.name)
 
             spec = lookup_spec(specs, ty.name)
-            assert(isinstance(spec, NodeSpec))
-
-            return any(check(expand_variant_types(field.ty, specs=specs)) for field in spec.fields)
+            assert(not isinstance(spec, TypeSpec))
+            if spec is None:
+                return default
+            if isinstance(spec, ConstEnumSpec) or isinstance(spec, TokenSpec):
+                return False
+            if isinstance(spec, NodeSpec):
+                return any(check(field.ty) for field in spec.fields)
+            if isinstance(spec, VariantSpec):
+                return any(check(mem_ty) for _, mem_ty in spec.members)
+            assert_never(spec)
 
         for ty_2 in expand_type(ty):
-            if check(ty_2, first):
+            if check(ty_2):
                 return True
 
         return False
 
-    return check(spec_type, first=True)
+    return check_each_child(main_type)
 
 def normalize_type(ty: Type) -> Type:
     if isinstance(ty, UnionType):
@@ -411,4 +410,4 @@ def merge_similar_types(ty: Type) -> Type:
 
     # Some elements might be duplicated by the previous procedure, therefore we
     # call `simplify_type`.
-    return simplify_type(UnionType(types))
+    return normalize_type(UnionType(types))

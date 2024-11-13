@@ -6,6 +6,7 @@ from magelang.lang.treespec import *
 
 def mage_to_treespec(
     grammar: MageGrammar,
+    strong_enums: bool = False,
     include_hidden: bool = False
 ) -> Specs:
 
@@ -67,6 +68,10 @@ def mage_to_treespec(
             toplevel.append(TokenSpec(rule.name, rule.type_name, grammar.is_static_token_rule(rule) if rule.expr is not None else False))
             continue
         if grammar.is_variant_rule(rule):
+            # if strong_enums:
+            #     toplevel.append(VariantSpec(rule.name, list(get_variants(rule.expr))))
+            # else:
+            #     toplevel.append(TypeSpec(rule.name, UnionType(list(ty for _, ty in get_variants(rule.expr)))))
             toplevel.append(VariantSpec(rule.name, list(get_variants(rule.expr))))
             continue
         field_counter = 0
