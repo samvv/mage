@@ -49,7 +49,7 @@ def treespec_cst_to_ast(specs: Specs) -> Specs:
                 if is_unit_type(new_element_type):
                     return ListType(new_separator_type, ty.required)
                 if is_unit_type(new_separator_type):
-                    return ListType(new_separator_type, False) # FIXME `required` is incorrectly set
+                    return ListType(new_element_type, False) # FIXME `required` is incorrectly set
                 return ty.derive(
                     element_type=new_element_type,
                     separator_type=new_separator_type,
