@@ -646,10 +646,11 @@ def treespec_to_python(
             body=body,
         )
 
-    tokens_spec = lookup_spec(specs, any_token_rule_name)
-    syntax_spec = lookup_spec(specs, any_syntax_rule_name)
-    if tokens_spec is not None and syntax_spec is not None:
-        stmts.append(gen_member_visitor(syntax_spec, tokens_spec))
+    # NOTE This is disabled right now because we don't actually need it
+    # tokens_spec = lookup_spec(specs, any_token_rule_name)
+    # syntax_spec = lookup_spec(specs, any_syntax_rule_name)
+    # if tokens_spec is not None and syntax_spec is not None:
+    #     stmts.append(gen_member_visitor(syntax_spec, tokens_spec))
 
     # Generate rewriters
 
