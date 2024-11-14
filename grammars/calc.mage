@@ -1,0 +1,21 @@
+
+pub token integer -> Integer
+  = [0-9]+
+
+pub add_expr
+  = expr '+' expr
+
+pub div_expr
+  = expr '/' expr
+
+pub mul_expr
+  = expr '*' expr
+
+pub lit_expr
+  = integer
+
+pub expr
+  = add_expr
+  | div_expr
+  | lit_expr
+  | mul_expr
