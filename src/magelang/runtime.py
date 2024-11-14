@@ -3,7 +3,8 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from collections.abc import Collection, Reversible, Sequence
 import sys
-from typing import Any, Iterable, Iterator, Protocol, SupportsIndex, TypeVar, assert_never, overload
+from typing import Any, Generic, Iterable, Iterator, Protocol, SupportsIndex, TypeVar, assert_never, overload
+from warnings import warn
 
 
 EOF = '\uFFFF'
@@ -147,13 +148,43 @@ class List(ImmutableList[_T]):
 class ImmutablePunct(SequenceLike[tuple[_Element_cov, _Separator_cov | None]]):
 
     @property
-    def elements(self) -> Iterable[_Element_cov]: ...
+    def elements(self) -> 'PunctElements[_Element_cov]': ...
 
     @property
-    def separators(self) -> Iterable[_Separator_cov | None]: ...
+    def separators(self) -> 'PunctSeparators[_Separator_cov]': ...
 
 _Element = TypeVar('_Element')
 _Separator = TypeVar('_Separator')
+
+class PunctSeparators(Generic[_Separator]):
+
+    def __init__(self, source: 'Punctuated[_Element, _Separator]') -> None:
+        super().__init__()
+        self.source = source
+
+    def __len__(self) -> int:
+        n = len(self.source)
+        if self.source[-1][1] is None:
+            n -= 1
+        return n
+
+    def __iter__(self) -> Iterable[_Separator]:
+        for _, separator in self.source:
+            if separator is not None:
+                yield separator
+
+class PunctElements(Generic[_Element]):
+
+    def __init__(self, source: 'Punctuated[_Element, Any]') -> None:
+        super().__init__()
+        self.source = source
+
+    def __len__(self) -> int:
+        return len(self.source)
+
+    def __iter__(self) -> Iterable[_Element]:
+        for element, _ in self.source:
+            yield element
 
 class Punctuated(ImmutablePunct[_Element, _Separator], List[tuple[_Element, _Separator | None]]):
 
@@ -168,14 +199,12 @@ class Punctuated(ImmutablePunct[_Element, _Separator], List[tuple[_Element, _Sep
         return self[-1][1] if self else None
 
     @property
-    def separators(self) -> Iterable[_Separator | None]:
-        for _, sep in self:
-            yield sep
+    def separators(self) -> PunctSeparators[_Separator]:
+        return PunctSeparators(self)
 
     @property
-    def elements(self) -> Iterable[_Element]:
-        for element, _ in self:
-            yield element
+    def elements(self) -> PunctElements[_Element]:
+        return PunctElements(self)
 
 
 ImmutablePunct.register(Punctuated) # type: ignore
