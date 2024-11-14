@@ -365,22 +365,31 @@ def treespec_to_python(
     proc_param_name = 'proc'
     node_param_name = 'node'
 
-    def gen_visitor(name: str) -> PyFuncDef:
+    def gen_visitor(main_spec: Spec) -> PyFuncDef:
 
         generate_temporary = NameGenerator()
 
-        main_spec = lookup_spec(specs, name)
-        assert(main_spec is not None)
         main_type = expand_variant_types(spec_to_type(main_spec), specs=specs)
 
         body: list[PyStmt] = []
 
-        def gen_visit_fields(spec: NodeSpec, input: PyExpr) -> Generator[PyStmt, None, None]:
+        def gen_visit_fields(spec: NodeSpec, input: PyExpr) -> Generator[PyStmt]:
             for field in spec.fields:
                 if contains_type(expand_variant_types(field.ty, specs=specs), main_type, specs=specs):
                     yield from gen_visit_field(field.ty, PyAttrExpr(expr=input, name=field.name))
 
-        def gen_visit_field(ty: Type, input: PyExpr) -> Generator[PyStmt, None, None]:
+        def gen_visit_union(input: PyExpr, types: Iterable[Type]) -> Generator[PyStmt]:
+            cases = []
+            for ty in types:
+                body = list(gen_visit_field(ty, input))
+                if body:
+                    cases.append((
+                        treespec_type_to_shallow_py_test(ty, input, prefix=prefix, specs=specs),
+                        body
+                    ))
+            yield from make_py_cond(cases)
+
+        def gen_visit_field(ty: Type, input: PyExpr) -> Generator[PyStmt]:
             ty = resolve_type_references(ty, specs=specs)
             if is_type_assignable(main_type, expand_variant_types(ty, specs=specs), specs=specs):
                 yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ input ]))
@@ -395,15 +404,7 @@ def treespec_to_python(
                 if spec is None or isinstance(spec, TokenSpec) or isinstance(spec, ConstEnumSpec):
                     return
                 if isinstance(spec, EnumSpec):
-                    cases = []
-                    for member in spec.members:
-                        body = list(gen_visit_field(member.ty, input))
-                        if body:
-                            cases.append((
-                                treespec_type_to_shallow_py_test(member.ty, input, prefix=prefix, specs=specs),
-                                body
-                            ))
-                    yield from make_py_cond(cases)
+                    yield from gen_visit_union(input, (member.ty for member in spec.members))
                     return
                 if isinstance(spec, NodeSpec):
                     yield from gen_visit_fields(spec, input)
@@ -443,15 +444,7 @@ def treespec_to_python(
                 # ))
                 return
             if isinstance(ty, UnionType):
-                cases: list[PyCondCase] = []
-                for element_type in ty.types:
-                    body = list(gen_visit_field(element_type, input))
-                    if body:
-                        cases.append((
-                            treespec_type_to_shallow_py_test(element_type, input, prefix=prefix, specs=specs),
-                            body
-                        ))
-                yield from make_py_cond(cases)
+                yield from gen_visit_union(input, ty.types)
                 return
             raise RuntimeError(f'unexpected {ty}')
 
@@ -477,15 +470,15 @@ def treespec_to_python(
 
             elif isinstance(spec, TokenSpec):
 
-                # body.append(PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ PyNamedExpr(node_param_name) ])))
+                if_body = []
+                if_body.append(PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ PyNamedExpr(node_param_name) ])))
+                if_body.append(PyRetStmt())
                 body.append(PyIfStmt(first=PyIfCase(
                     test=make_py_isinstance(
                         PyNamedExpr(node_param_name),
                         PyNamedExpr(to_py_class_name(spec.name, prefix))
                     ),
-                    body=[
-                        PyRetStmt(),
-                    ],
+                    body=if_body,
                 )))
 
         decorators = []
@@ -495,21 +488,168 @@ def treespec_to_python(
 
         return PyFuncDef(
             decorators=decorators,
-            name=f'for_each_{namespaced(name, prefix)}',
+            name=f'for_each_{namespaced(main_spec.name, prefix)}',
             params=[
                 PyNamedParam(
                     PyNamedPattern(node_param_name),
-                    annotation=PyNamedExpr(to_py_class_name(name, prefix))
+                    annotation=PyNamedExpr(to_py_class_name(main_spec.name, prefix))
                 ),
                 PyNamedParam(
                     PyNamedPattern(proc_param_name),
-                    annotation=PySubscriptExpr(expr=PyNamedExpr('Callable'), slices=[ PyListExpr(elements=[ PyNamedExpr(to_py_class_name(name, prefix)) ]), PyNamedExpr('None') ])
+                    annotation=PySubscriptExpr(expr=PyNamedExpr('Callable'), slices=[ PyListExpr(elements=[ PyNamedExpr(to_py_class_name(main_spec.name, prefix)) ]), PyNamedExpr('None') ])
                 ),
             ],
             body=body,
         )
 
-    stmts.extend(gen_visitor(spec.name) for spec in specs.elements if isinstance(spec, EnumSpec) and is_self_referential(spec.name, specs=specs))
+    stmts.extend(gen_visitor(spec) for spec in specs.elements if isinstance(spec, EnumSpec) and is_self_referential(spec.name, specs=specs))
+
+    def gen_member_visitor(main_spec: Spec, visit_spec: Spec) -> PyFuncDef:
+
+        generate_temporary = NameGenerator()
+
+        main_type = expand_variant_types(spec_to_type(main_spec), specs=specs)
+        visit_type = expand_variant_types(spec_to_type(visit_spec), specs=specs)
+
+        fn_name = f'for_each_{namespaced(visit_spec.name, prefix)}'
+
+        body: list[PyStmt] = []
+
+        def gen_visit_fields(spec: NodeSpec, input: PyExpr) -> Generator[PyStmt]:
+            for field in spec.fields:
+                if contains_type(expand_variant_types(field.ty, specs=specs), main_type, specs=specs):
+                    yield from gen_visit_field(field.ty, PyAttrExpr(expr=input, name=field.name))
+
+        def gen_visit_union(input: PyExpr, types: Iterable[Type]) -> Generator[PyStmt]:
+            cases = []
+            for ty in types:
+                body = list(gen_visit_field(ty, input))
+                if body:
+                    cases.append((
+                        treespec_type_to_shallow_py_test(ty, input, prefix=prefix, specs=specs),
+                        body
+                    ))
+            yield from make_py_cond(cases)
+
+        def gen_visit_field(ty: Type, input: PyExpr) -> Generator[PyStmt]:
+            ty = resolve_type_references(ty, specs=specs)
+            if is_type_assignable(visit_type, expand_variant_types(ty, specs=specs), specs=specs):
+                yield PyExprStmt(PyCallExpr(PyNamedExpr(proc_param_name), args=[ input ]))
+                return
+            if is_type_assignable(main_type, expand_variant_types(ty, specs=specs), specs=specs):
+                yield PyExprStmt(PyCallExpr(PyNamedExpr(fn_name), args=[ input, PyNamedExpr(proc_param_name) ]))
+                return
+            if isinstance(ty, NoneType):
+                return
+            if isinstance(ty, ExternType):
+                return
+            if isinstance(ty, SpecType):
+                spec = lookup_spec(specs, ty.name)
+                assert(not isinstance(spec, TypeSpec))
+                if spec is None or isinstance(spec, TokenSpec) or isinstance(spec, ConstEnumSpec):
+                    return
+                if isinstance(spec, EnumSpec):
+                    yield from gen_visit_union(input, (member.ty for member in spec.members))
+                    return
+                if isinstance(spec, NodeSpec):
+                    yield from gen_visit_fields(spec, input)
+                    return
+                assert_never(spec)
+            if isinstance(ty, TupleType):
+                for i, element_type in enumerate(ty.element_types):
+                    yield from gen_visit_field(element_type, PySubscriptExpr(expr=input, slices=[ PyConstExpr(literal=i) ]))
+                return
+            if isinstance(ty, ListType):
+                element_name = generate_temporary(prefix='element')
+                yield PyForStmt(pattern=PyNamedPattern(element_name), expr=input, body=list(gen_visit_field(ty.element_type, PyNamedExpr(element_name))))
+                return
+            if isinstance(ty, PunctType):
+                element_name = generate_temporary(prefix='element')
+                separator_name = generate_temporary(prefix='separator')
+                each_sep = list(gen_visit_field(ty.separator_type, PyNamedExpr(separator_name)))
+                for_body = list(gen_visit_field(ty.element_type, PyNamedExpr(element_name)))
+                if each_sep:
+                    for_body.append(PyIfStmt(first=PyIfCase(
+                        test=PyInfixExpr(PyNamedExpr(separator_name), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')),
+                        body=each_sep,
+                    )))
+                yield PyForStmt(
+                    pattern=PyTuplePattern(
+                        elements=[
+                            PyNamedPattern(element_name),
+                            PyNamedPattern(separator_name)
+                        ],
+                    ),
+                    expr=input,
+                    body=for_body
+                )
+                # yield PyIfStmt(first=PyIfCase(
+                #     test=PyInfixExpr(PyAttrExpr(target, 'last'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')),
+                #     body=list(gen_proc_calls(ty.element_type, PyAttrExpr(target, 'last')))
+                # ))
+                return
+            if isinstance(ty, UnionType):
+                yield from gen_visit_union(input, ty.types)
+                return
+            raise RuntimeError(f'unexpected {ty}')
+
+        for spec in specs.elements:
+
+            if isinstance(spec, NodeSpec):
+
+                if_body = []
+                for field in spec.fields:
+                    if_body.extend(gen_visit_field(field.ty, PyAttrExpr(expr=PyNamedExpr(node_param_name), name=field.name)))
+                if_body.append(PyRetStmt())
+                body.append(PyIfStmt(first=PyIfCase(
+                    test=PyCallExpr(
+                        operator=PyNamedExpr('isinstance'),
+                        args=[
+                            PyNamedExpr(node_param_name),
+                            PyNamedExpr(to_py_class_name(spec.name, prefix))
+                        ]
+                    ),
+                    body=if_body
+                )))
+
+            elif isinstance(spec, TokenSpec):
+
+                if_body = []
+                if_body.append(PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ PyNamedExpr(node_param_name) ])))
+                if_body.append(PyRetStmt())
+                body.append(PyIfStmt(first=PyIfCase(
+                    test=make_py_isinstance(
+                        PyNamedExpr(node_param_name),
+                        PyNamedExpr(to_py_class_name(spec.name, prefix))
+                    ),
+                    body=if_body,
+                )))
+
+        decorators = []
+        if not enable_asserts:
+            # We add `@typing.no_type_check` to drastically improve the performance of the type checker.
+            decorators.append(PyDecorator(PyNamedExpr('no_type_check')))
+
+        return PyFuncDef(
+            decorators=decorators,
+            name=fn_name,
+            params=[
+                PyNamedParam(
+                    PyNamedPattern(node_param_name),
+                    annotation=PyNamedExpr(to_py_class_name(main_spec.name, prefix))
+                ),
+                PyNamedParam(
+                    PyNamedPattern(proc_param_name),
+                    annotation=PySubscriptExpr(expr=PyNamedExpr('Callable'), slices=[ PyListExpr(elements=[ PyNamedExpr(to_py_class_name(visit_spec.name, prefix)) ]), PyNamedExpr('None') ])
+                ),
+            ],
+            body=body,
+        )
+
+    tokens_spec = lookup_spec(specs, any_token_rule_name)
+    syntax_spec = lookup_spec(specs, any_syntax_rule_name)
+    if tokens_spec is not None and syntax_spec is not None:
+        stmts.append(gen_member_visitor(syntax_spec, tokens_spec))
 
     # Generate rewriters
 
