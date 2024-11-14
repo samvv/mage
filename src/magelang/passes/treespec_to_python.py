@@ -694,7 +694,21 @@ def treespec_to_python(
 
             return if_body
 
-        def gen_for_type(ty: Type, input: PyExpr, output: str, total: bool) -> Generator[PyStmt, None, None]:
+        def gen_for_union(types: Iterable[Type], input: PyExpr, output: str, total: bool) -> Generator[PyStmt]:
+            cases: list[PyCondCase] = []
+            for element_type in types:
+                body = list(gen_for_type(element_type, input, output, total))
+                if not body:
+                    body.append(PyPassStmt())
+                cases.append((
+                    treespec_type_to_shallow_py_test(element_type, input, prefix=prefix, specs=specs),
+                    body
+                ))
+            if cases:
+                cases.append((None, [ PyExprStmt(PyCallExpr(PyNamedExpr('assert_never'), args=[ input ])) ]))
+            yield from make_py_cond(cases)
+
+        def gen_for_type(ty: Type, input: PyExpr, output: str, total: bool) -> Generator[PyStmt]:
 
             ty = resolve_type_references(ty, specs=specs)
 
@@ -724,17 +738,7 @@ def treespec_to_python(
                     return
 
                 if isinstance(spec, EnumSpec):
-                    cases = []
-                    for member in spec.members:
-                        body = list(gen_for_type(member.ty, input, output, total))
-                        if body:
-                            cases.append((
-                                treespec_type_to_shallow_py_test(member.ty, input, prefix=prefix, specs=specs),
-                                body
-                            ))
-                    if cases:
-                        cases.append((None, [ PyExprStmt(PyCallExpr(PyNamedExpr('assert_never'), args=[ input ])) ]))
-                    yield from make_py_cond(cases)
+                    yield from gen_for_union((member.ty for member in spec.members), input, output, total)
                     return
 
                 if isinstance(spec, NodeSpec):
@@ -820,18 +824,7 @@ def treespec_to_python(
                 return
 
             if isinstance(ty, UnionType):
-                cases: list[PyCondCase] = []
-                for element_type in ty.types:
-                    body = list(gen_for_type(element_type, input, output, total))
-                    if not body:
-                        body.append(PyPassStmt())
-                    cases.append((
-                        treespec_type_to_shallow_py_test(element_type, input, prefix=prefix, specs=specs),
-                        body
-                    ))
-                if cases:
-                    cases.append((None, [ PyExprStmt(PyCallExpr(PyNamedExpr('assert_never'), args=[ input ])) ]))
-                yield from make_py_cond(cases)
+                yield from gen_for_union(ty.types, input, output, total)
                 return
 
             raise RuntimeError(f'unexpected {ty}')
