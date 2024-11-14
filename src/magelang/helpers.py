@@ -587,26 +587,30 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
 
             new_elements_name = f'new_{param_name}'
 
-            if is_static_type(ty.element_type, specs=specs):
-                yield ExternType(integer_rule_type), [
-                    PyAssignStmt(PyNamedPattern(new_elements_name), value=PyCallExpr(PyNamedExpr('Punctuated'))),
-                    PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyInfixExpr(PyNamedExpr(param_name), PyHyphen(), PyConstExpr(1)) ]), body=[
-                        PyExprStmt(PyCallExpr(
-                            PyAttrExpr(PyNamedExpr(new_elements_name), 'push'),
-                            args=[
-                                make_py_default_constructor(ty.element_type, specs=specs, prefix=prefix),
-                                make_py_default_constructor(ty.separator_type, specs=specs, prefix=prefix),
-                            ])
-                       ),
-                    ]),
-                    PyExprStmt(PyCallExpr(
-                        PyAttrExpr(PyNamedExpr(new_elements_name), 'push_final'),
-                        args=[
-                            make_py_default_constructor(ty.element_type, specs=specs, prefix=prefix),
-                        ])
-                   ),
-                    PyRetStmt(expr=PyNamedExpr(new_elements_name)),
-                ]
+            # if is_static_type(ty.element_type, specs=specs):
+            #     yield ExternType(integer_rule_type), [
+            #         PyAssignStmt(PyNamedPattern(new_elements_name), value=PyCallExpr(PyNamedExpr('Punctuated'))),
+            #         PyIfStmt(PyIfCase(
+            #             test=PyInfixExpr(PyNamedExpr(param_name), PyGreaterThan(), PyConstExpr(0)),
+            #             body=[
+            #             PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyInfixExpr(PyNamedExpr(param_name), PyHyphen(), PyConstExpr(1)) ]), body=[
+            #                 PyExprStmt(PyCallExpr(
+            #                     PyAttrExpr(PyNamedExpr(new_elements_name), 'append'),
+            #                     args=[
+            #                         make_py_default_constructor(ty.element_type, specs=specs, prefix=prefix),
+            #                         make_py_default_constructor(ty.separator_type, specs=specs, prefix=prefix),
+            #                     ])
+            #                ),
+            #             ]),
+            #             PyExprStmt(PyCallExpr(
+            #                 PyAttrExpr(PyNamedExpr(new_elements_name), 'append_final'),
+            #                 args=[
+            #                     make_py_default_constructor(ty.element_type, specs=specs, prefix=prefix),
+            #                 ])
+            #            ),
+            #         ])),
+            #         PyRetStmt(expr=PyNamedExpr(new_elements_name)),
+            #     ]
 
             first_element_name = f'first_element'
             second_element_name = f'second_element'
