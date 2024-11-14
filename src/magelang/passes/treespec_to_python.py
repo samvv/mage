@@ -812,7 +812,7 @@ def treespec_to_python(
                     body=[
                         *gen_rewrite_type(ty.element_type, PyNamedExpr(element_name), new_element_var_name, total=True),
                         *gen_rewrite_type(ty.separator_type, PyNamedExpr(separator_name), new_separator_var_name, total=True),
-                        PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(output), 'push'), args=[
+                        PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(output), 'append'), args=[
                             PyNamedExpr(new_element_var_name),
                             PyNamedExpr(new_separator_var_name),
                         ]))
@@ -820,7 +820,7 @@ def treespec_to_python(
                 )
 
                 yield from gen_rewrite_type(ty.element_type, PyAttrExpr(input, 'last'), new_last_var_name, total=True)
-                yield PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(output), 'push_final'), args=[ PyNamedExpr(new_last_var_name) ]))
+                yield PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(output), 'append_final'), args=[ PyNamedExpr(new_last_var_name) ]))
 
                 return
 

@@ -713,7 +713,7 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
                                         PyAssignStmt(PyNamedPattern(new_separator_name), value=separator_expr),
                                         PyExprStmt(
                                             expr=PyCallExpr(
-                                                operator=PyAttrExpr(PyNamedExpr(new_elements_name), 'push'),
+                                                operator=PyAttrExpr(PyNamedExpr(new_elements_name), 'append'),
                                                 args=[
                                                     PyNamedExpr(new_value_name),
                                                     PyNamedExpr(new_separator_name)
@@ -733,7 +733,7 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
                                                 PyAssignStmt(PyNamedPattern(new_value_name), value=value_expr),
                                                 PyExprStmt(
                                                     expr=PyCallExpr(
-                                                        operator=PyAttrExpr(PyNamedExpr(new_elements_name), 'push_final'),
+                                                        operator=PyAttrExpr(PyNamedExpr(new_elements_name), 'append_final'),
                                                         args=[ PyNamedExpr(new_value_name) ]
                                                     )
                                                 ),
