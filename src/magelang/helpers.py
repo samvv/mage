@@ -353,8 +353,10 @@ def is_py_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences
         if isinstance(ty, SpecType):
             spec = lookup_spec(specs, ty.name)
             assert(not isinstance(spec, TypeSpec))
-            if spec is None or isinstance(spec, EnumSpec) or isinstance(spec, ConstEnumSpec):
+            if spec is None or isinstance(spec, EnumSpec):
                 return False
+            if isinstance(spec, ConstEnumSpec):
+                return True
             if isinstance(spec, NodeSpec):
                 if spec.name in visited:
                     return False
@@ -381,12 +383,15 @@ def make_py_default_constructor(ty: Type, *, specs: Specs, prefix: str) -> PyExp
     if isinstance(ty, NoneType):
         return PyNamedExpr('None')
     if isinstance(ty, SpecType):
-        return PyCallExpr(operator=PyNamedExpr(to_py_class_name(ty.name, prefix)))
+        spec = lookup_spec(specs, ty.name)
+        if isinstance(spec, ConstEnumSpec):
+            return PyCallExpr(PyNamedExpr(to_py_class_name(ty.name, prefix)), args=[ PyConstExpr(0) ])
+        return PyCallExpr(PyNamedExpr(to_py_class_name(ty.name, prefix)))
     if isinstance(ty, ListType):
-        return PyCallExpr(operator=PyNamedExpr('list'))
+        return PyCallExpr(PyNamedExpr('list'))
     if isinstance(ty, PunctType):
         # FIXME maybe add the generic arguments?
-        return PyCallExpr(operator=PyNamedExpr('Punctuated'))
+        return PyCallExpr(PyNamedExpr('Punctuated'))
     if isinstance(ty, TupleType):
         return PyTupleExpr(elements=list(make_py_default_constructor(element_type, specs=specs, prefix=prefix) for element_type in ty.element_types))
     if isinstance(ty, UnionType):
