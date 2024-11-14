@@ -462,9 +462,6 @@ def treespec_to_python(
 
             if isinstance(spec, NodeSpec):
 
-                # We're going to start a new scope, so all previous temporary names may be used once again
-                generate_temporary.reset()
-
                 if_body = list(gen_visit_fields(spec, PyNamedExpr(node_param_name)))
                 if_body.append(PyRetStmt())
                 body.append(PyIfStmt(first=PyIfCase(
