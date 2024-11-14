@@ -3,7 +3,7 @@ from .mage_insert_magic_rules import any_token_rule_name, any_syntax_rule_name
 from magelang.helpers import lookup_spec
 from magelang.lang.mage.constants import integer_rule_type
 from magelang.lang.treespec.ast import *
-from magelang.lang.treespec.helpers import flatten_union_types, is_static_type, is_unit_type, make_unit_type, normalize_type
+from magelang.lang.treespec.helpers import flatten_union_types, is_optional_type, is_static_type, is_unit_type, make_unit_type, normalize_type, unwrap_optional_type
 
 
 def is_ignored(ty: Type) -> bool:
@@ -63,6 +63,8 @@ def treespec_cst_to_ast(specs: Specs) -> Specs:
 
         return normalize_type(rewrite(ty))
 
+    toplevel = []
+
     def rewrite_spec(spec: Spec) -> Spec | None:
         if isinstance(spec, TokenSpec):
             return None
@@ -79,15 +81,23 @@ def treespec_cst_to_ast(specs: Specs) -> Specs:
             return EnumSpec(spec.name, new_members)
         if isinstance(spec, NodeSpec):
             new_fields = []
+            mask_elements = []
             for field in spec.fields:
+                if is_optional_type(field.ty):
+                    el_ty = unwrap_optional_type(field.ty)
+                    if is_static_type(el_ty, specs=specs):
+                        mask_elements.append(field.name)
+                        continue
                 new_ty = rewrite_type(field.ty)
                 if is_ignored(new_ty):
                     continue
                 new_fields.append(Field(field.name, new_ty))
+            if mask_elements:
+                mask_name = spec.name + '_flags'
+                toplevel.append(ConstEnumSpec(mask_name, list((name, (2 ** i)) for i, name in enumerate(mask_elements))))
+                new_fields.append(Field('flags', SpecType(mask_name)))
             return NodeSpec(spec.name, new_fields)
         assert_never(spec)
-
-    toplevel = []
 
     for spec in specs.elements:
         if spec.name in [ any_token_rule_name, any_syntax_rule_name ]:
