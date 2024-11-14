@@ -668,31 +668,31 @@ def treespec_to_python(
 
         def gen_for_fields(spec: NodeSpec, input: PyExpr, assign: Callable[[PyExpr], PyStmt], total: bool) -> Iterable[PyStmt]:
 
-            if_body = []
+            body = []
             new_args = []
 
             can_be_rewritten = False
 
-            if_body.append(PyAssignStmt(PyNamedPattern(changed_var_name), value=PyNamedExpr('False')))
+            body.append(PyAssignStmt(PyNamedPattern(changed_var_name), value=PyNamedExpr('False')))
 
             for field in spec.fields:
                 if contains_type(expand_variant_types(field.ty, specs=specs), main_type, specs=specs):
                     can_be_rewritten = True
                     new_field_name = generate_temporary(f'new_{field.name}')
                     new_args.append(PyKeywordArg(field.name, PyNamedExpr(new_field_name)))
-                    if_body.extend(gen_for_type(field.ty, PyAttrExpr(input, name=field.name), new_field_name, total)) # FIXME
+                    body.extend(gen_for_type(field.ty, PyAttrExpr(input, name=field.name), new_field_name, total)) # FIXME
                 else:
                     new_args.append(PyKeywordArg(field.name, PyAttrExpr(input, field.name)))
 
             if not can_be_rewritten:
                 return [ assign(input) ]
 
-            if_body.extend(make_py_cond([
+            body.extend(make_py_cond([
                 (PyNamedExpr(changed_var_name), [ assign(PyCallExpr(PyNamedExpr(to_py_class_name(spec.name, prefix=prefix)), args=new_args)) ]),
                 (None, [ assign(input) ])
             ]))
 
-            return if_body
+            return body
 
         def gen_for_union(types: Iterable[Type], input: PyExpr, output: str, total: bool) -> Generator[PyStmt]:
             cases: list[PyCondCase] = []
