@@ -688,8 +688,8 @@ def treespec_to_python(
                 return [ assign(input) ]
 
             if_body.extend(make_py_cond([
-                (PyNamedExpr(changed_var_name), [ assign(input) ]),
-                (None, [ assign(PyCallExpr(PyNamedExpr(to_py_class_name(spec.name, prefix=prefix)), args=new_args)) ])
+                (PyNamedExpr(changed_var_name), [ assign(PyCallExpr(PyNamedExpr(to_py_class_name(spec.name, prefix=prefix)), args=new_args)) ]),
+                (None, [ assign(input) ])
             ]))
 
             return if_body
