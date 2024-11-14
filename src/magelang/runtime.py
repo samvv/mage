@@ -1,10 +1,8 @@
 
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from collections.abc import Collection, Reversible, Sequence
-import sys
-from typing import Any, Generic, Iterable, Iterator, Protocol, SupportsIndex, TypeVar, assert_never, overload
-from warnings import warn
+from typing import Any, Generic, Iterable, Iterator, Protocol, SupportsIndex, TypeVar, assert_never, cast, overload
 
 
 EOF = '\uFFFF'
@@ -53,6 +51,7 @@ _Separator_cov = TypeVar('_Separator_cov', covariant=True)
 
 _T_co = TypeVar('_T_co', covariant=True)
 
+
 class SequenceLike(Reversible[_T_co], Collection[_T_co], Protocol[_T_co]):
     @overload
     @abstractmethod
@@ -70,22 +69,66 @@ class SequenceLike(Reversible[_T_co], Collection[_T_co], Protocol[_T_co]):
     def __iter__(self) -> Iterator[_T_co]: ...
     def __reversed__(self) -> Iterator[_T_co]: ...
 
-class ImmutableList(SequenceLike[_T_co]):
-    pass
 
-ImmutableList.register(list) # type: ignore
+class ImmutablePunct(Reversible[tuple[_Element_cov, _Separator_cov | None]], Iterable[tuple[_Element_cov, _Separator_cov | None]], metaclass=ABCMeta):
 
-_T = TypeVar('_T')
+    def __len__(self) -> int: ...
 
-class List(ImmutableList[_T]):
+    def __contains__(self, value: object, /) -> bool: ...
 
-    def __init__(self, value: 'Iterable[_T] | None' = None) -> None:
-        """
-        Create a new `List` from either another List or any iterable
-        producing values that will be stored in this list.
-        """
+    def __gt__(self, value: object, /) -> bool: ...
+
+    def __ge__(self, value: object, /) -> bool: ...
+
+    def __lt__(self, value: object, /) -> bool: ...
+
+    def __le__(self, value: object, /) -> bool: ...
+
+    def __reversed__(self) -> Iterator[tuple[_Element_cov, _Separator_cov | None]]: ...
+
+    def __iter__(self) -> Iterator[tuple[_Element_cov, _Separator_cov | None]]: ...
+
+    @property
+    def delimited(self) -> 'PunctDelimited[_Element_cov, _Separator_cov]': ...
+
+    @property
+    def last(self) -> '_Element_cov | None': ...
+
+
+_Element = TypeVar('_Element')
+_Separator = TypeVar('_Separator')
+
+
+class PunctDelimited(Reversible[tuple[_Element, _Separator]]):
+
+    def __init__(self, source: 'Punctuated[_Element, _Separator]') -> None:
+        self.source = source
+
+    def __len__(self) -> int:
+        return len(self.source._storage)
+
+    def __iter__(self) -> Iterator[tuple[_Element, _Separator]]:
+        n = len(self.source._storage)
+        for i in range(0, n-1):
+            yield cast(tuple[_Element, _Separator], self.source._storage[i])
+
+    def __reversed__(self) -> Iterator[tuple[_Element, _Separator]]:
+        n = len(self.source._storage)
+        for i in range(0, n-1):
+            yield cast(tuple[_Element, _Separator], self.source._storage[n-i-1])
+
+
+class Punctuated(ImmutablePunct[_Element, _Separator]):
+
+    def __init__(self, value: Iterable[tuple[_Element, _Separator | None]] | None = None) -> None:
         super().__init__()
         self._storage = list(value) if value is not None else []
+
+    def append(self, element: _Element, separator: _Separator) -> None:
+        self._storage.append((element, separator))
+
+    def append_final(self, element: _Element, separator: _Separator | None = None) -> None:
+        self._storage.append((element, separator))
 
     def __len__(self) -> int:
         return len(self._storage)
@@ -94,117 +137,38 @@ class List(ImmutableList[_T]):
         return value in self._storage
 
     def __gt__(self, value: object, /) -> bool:
-        if not isinstance(value, List):
+        if not isinstance(value, Punctuated):
             raise TypeError()
         return self._storage > value._storage
 
     def __ge__(self, value: object, /) -> bool:
-        if not isinstance(value, List):
+        if not isinstance(value, Punctuated):
             raise TypeError()
         return self._storage >= value._storage
 
     def __lt__(self, value: object, /) -> bool:
-        if not isinstance(value, List):
+        if not isinstance(value, Punctuated):
             raise TypeError()
         return self._storage < value._storage
 
     def __le__(self, value: object, /) -> bool:
-        if not isinstance(value, List):
+        if not isinstance(value, Punctuated):
             raise TypeError()
         return self._storage <= value._storage
 
-    def __reversed__(self) -> Iterator[_T]:
+    def __reversed__(self) -> Iterator[tuple[_Element, _Separator | None]]:
         return reversed(self._storage)
 
-    def prepend(self, value: _T, /) -> None:
-        self._storage.insert(0, value)
-
-    def append(self, value: _T, /) -> None:
-        self._storage.append(value)
-
-    def insert(self, index: SupportsIndex, value: _T, /) -> None:
-        self._storage.insert(index, value)
-
-    def index(self, value: _T, start: SupportsIndex = 0, stop: SupportsIndex = sys.maxsize, /) -> int:
-        return self._storage.index(value, start, stop)
-
-    def count(self, value: _T, /) -> int:
-        return self._storage.count(value)
-
-    def __iter__(self) -> Iterator[_T]:
+    def __iter__(self) -> Iterator[tuple[_Element, _Separator | None]]:
         return iter(self._storage)
 
-    @overload
-    def __getitem__(self, index: int) -> '_T': ...
-
-    @overload
-    def __getitem__(self, index: slice) -> 'List[_T]': ...
-
-    def __getitem__(self, index: int | slice) -> '_T | List[_T]':
-        return List(self._storage[index]) \
-            if isinstance(index, slice) \
-            else self._storage[index]
-
-class ImmutablePunct(SequenceLike[tuple[_Element_cov, _Separator_cov | None]]):
+    @property
+    def delimited(self) -> PunctDelimited[_Element, _Separator]:
+        return PunctDelimited(self)
 
     @property
-    def elements(self) -> 'PunctElements[_Element_cov]': ...
-
-    @property
-    def separators(self) -> 'PunctSeparators[_Separator_cov]': ...
-
-_Element = TypeVar('_Element')
-_Separator = TypeVar('_Separator')
-
-class PunctSeparators(Generic[_Separator]):
-
-    def __init__(self, source: 'Punctuated[_Element, _Separator]') -> None:
-        super().__init__()
-        self.source = source
-
-    def __len__(self) -> int:
-        n = len(self.source)
-        if self.source[-1][1] is None:
-            n -= 1
-        return n
-
-    def __iter__(self) -> Iterable[_Separator]:
-        for _, separator in self.source:
-            if separator is not None:
-                yield separator
-
-class PunctElements(Generic[_Element]):
-
-    def __init__(self, source: 'Punctuated[_Element, Any]') -> None:
-        super().__init__()
-        self.source = source
-
-    def __len__(self) -> int:
-        return len(self.source)
-
-    def __iter__(self) -> Iterable[_Element]:
-        for element, _ in self.source:
-            yield element
-
-class Punctuated(ImmutablePunct[_Element, _Separator], List[tuple[_Element, _Separator | None]]):
-
-    def push(self, element: _Element, separator: _Separator | None = None) -> None: # FIXME
-        super().append((element, separator))
-
-    def push_final(self, element: _Element, separator: _Separator | None = None) -> None:
-        super().append((element, separator))
-
-    @property
-    def last(self) -> _Separator | None:
-        return self[-1][1] if self else None
-
-    @property
-    def separators(self) -> PunctSeparators[_Separator]:
-        return PunctSeparators(self)
-
-    @property
-    def elements(self) -> PunctElements[_Element]:
-        return PunctElements(self)
+    def last(self) -> _Element | None:
+        return self._storage[-1][0] if self else None
 
 
 ImmutablePunct.register(Punctuated) # type: ignore

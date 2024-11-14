@@ -1,7 +1,7 @@
 from typing import Any, TypeGuard, TypeIs, TypedDict, Never, Unpack, Sequence, Callable, assert_never, no_type_check
 
 
-from magelang.runtime import BaseSyntax, Punctuated, ImmutablePunct, ImmutableList, Span
+from magelang.runtime import BaseSyntax, Punctuated, ImmutablePunct, Span
 
 
 class _PyBaseSyntax(BaseSyntax):
@@ -2522,7 +2522,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_toke
                     element_separator = PyComma()
                 new_element_value = _coerce_union_2_node_slice_variant_pattern_to_union_2_node_slice_variant_pattern(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.push(new_element_value, new_element_separator)
+                new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -2531,7 +2531,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_toke
                 else:
                     element_value = first_element
                 new_element_value = _coerce_union_2_node_slice_variant_pattern_to_union_2_node_slice_variant_pattern(element_value)
-                new_value.push_final(new_element_value)
+                new_value.append_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -2579,7 +2579,7 @@ def _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_to
                         element_separator = PyComma()
                     new_element_value = _coerce_variant_pattern_to_variant_pattern(element_value)
                     new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                    new_value.push(new_element_value, new_element_separator)
+                    new_value.append(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
                     if isinstance(first_element, tuple):
@@ -2588,7 +2588,7 @@ def _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_to
                     else:
                         element_value = first_element
                     new_element_value = _coerce_variant_pattern_to_variant_pattern(element_value)
-                    new_value.push_final(new_element_value)
+                    new_value.append_final(new_element_value)
                     break
         except StopIteration:
             pass
@@ -2759,7 +2759,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_c
                     element_separator = PyComma()
                 new_element_value = _coerce_union_2_node_slice_variant_expr_to_union_2_node_slice_variant_expr(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.push(new_element_value, new_element_separator)
+                new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -2768,7 +2768,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_c
                 else:
                     element_value = first_element
                 new_element_value = _coerce_union_2_node_slice_variant_expr_to_union_2_node_slice_variant_expr(element_value)
-                new_value.push_final(new_element_value)
+                new_value.append_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -2796,7 +2796,7 @@ def _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
                         element_separator = PyComma()
                     new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
                     new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                    new_value.push(new_element_value, new_element_separator)
+                    new_value.append(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
                     if isinstance(first_element, tuple):
@@ -2805,7 +2805,7 @@ def _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
                     else:
                         element_value = first_element
                     new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
-                    new_value.push_final(new_element_value)
+                    new_value.append_final(new_element_value)
                     break
         except StopIteration:
             pass
@@ -2850,7 +2850,7 @@ def _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comm
                         element_separator = PyComma()
                     new_element_value = _coerce_variant_arg_to_variant_arg(element_value)
                     new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                    new_value.push(new_element_value, new_element_separator)
+                    new_value.append(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
                     if isinstance(first_element, tuple):
@@ -2859,7 +2859,7 @@ def _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comm
                     else:
                         element_value = first_element
                     new_element_value = _coerce_variant_arg_to_variant_arg(element_value)
-                    new_value.push_final(new_element_value)
+                    new_value.append_final(new_element_value)
                     break
         except StopIteration:
             pass
@@ -3021,7 +3021,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_c
                     element_separator = PyComma()
                 new_element_value = _coerce_union_2_node_alias_variant_path_to_node_alias(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.push(new_element_value, new_element_separator)
+                new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -3030,7 +3030,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_c
                 else:
                     element_value = first_element
                 new_element_value = _coerce_union_2_node_alias_variant_path_to_node_alias(element_value)
-                new_value.push_final(new_element_value)
+                new_value.append_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -3075,7 +3075,7 @@ def _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_id
                     element_separator = PyComma()
                 new_element_value = _coerce_union_4_node_from_alias_token_asterisk_token_ident_extern_string_to_node_from_alias(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.push(new_element_value, new_element_separator)
+                new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -3084,7 +3084,7 @@ def _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_id
                 else:
                     element_value = first_element
                 new_element_value = _coerce_union_4_node_from_alias_token_asterisk_token_ident_extern_string_to_node_from_alias(element_value)
-                new_value.push_final(new_element_value)
+                new_value.append_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -3183,7 +3183,7 @@ def _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token
                     element_separator = PyComma()
                 new_element_value = _coerce_union_2_token_ident_extern_string_to_token_ident(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.push(new_element_value, new_element_separator)
+                new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -3192,7 +3192,7 @@ def _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token
                 else:
                     element_value = first_element
                 new_element_value = _coerce_union_2_token_ident_extern_string_to_token_ident(element_value)
-                new_value.push_final(new_element_value)
+                new_value.append_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -3374,7 +3374,7 @@ def _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
                     element_separator = PyComma()
                 new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.push(new_element_value, new_element_separator)
+                new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -3383,7 +3383,7 @@ def _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
                 else:
                     element_value = first_element
                 new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
-                new_value.push_final(new_element_value)
+                new_value.append_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -3518,7 +3518,7 @@ def _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
                     element_separator = PyComma()
                 new_element_value = _coerce_variant_base_arg_to_variant_base_arg(element_value)
                 new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                new_value.push(new_element_value, new_element_separator)
+                new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
                 if isinstance(first_element, tuple):
@@ -3527,7 +3527,7 @@ def _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
                 else:
                     element_value = first_element
                 new_element_value = _coerce_variant_base_arg_to_variant_base_arg(element_value)
-                new_value.push_final(new_element_value)
+                new_value.append_final(new_element_value)
                 break
     except StopIteration:
         pass
@@ -3555,7 +3555,7 @@ def _coerce_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
                         element_separator = PyComma()
                     new_element_value = _coerce_variant_base_arg_to_variant_base_arg(element_value)
                     new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                    new_value.push(new_element_value, new_element_separator)
+                    new_value.append(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
                     if isinstance(first_element, tuple):
@@ -3564,7 +3564,7 @@ def _coerce_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
                     else:
                         element_value = first_element
                     new_element_value = _coerce_variant_base_arg_to_variant_base_arg(element_value)
-                    new_value.push_final(new_element_value)
+                    new_value.append_final(new_element_value)
                     break
         except StopIteration:
             pass
@@ -3651,7 +3651,7 @@ def _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_
                         element_separator = PyComma()
                     new_element_value = _coerce_variant_param_to_variant_param(element_value)
                     new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
-                    new_value.push(new_element_value, new_element_separator)
+                    new_value.append(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
                     if isinstance(first_element, tuple):
@@ -3660,7 +3660,7 @@ def _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_
                     else:
                         element_value = first_element
                     new_element_value = _coerce_variant_param_to_variant_param(element_value)
-                    new_value.push_final(new_element_value)
+                    new_value.append_final(new_element_value)
                     break
         except StopIteration:
             pass
@@ -4922,7 +4922,7 @@ def rewrite_each_py_pattern(node: PyPattern, proc: Callable[[PyPattern], PyPatte
             else:
                 assert_never(element)
             new_separator = separator
-            new_slices.push(new_element, new_separator)
+            new_slices.append(new_element, new_separator)
         if changed:
             return node
         else:
@@ -4938,7 +4938,7 @@ def rewrite_each_py_pattern(node: PyPattern, proc: Callable[[PyPattern], PyPatte
             if new_element_1 is not element_1:
                 changed = True
             new_separator_1 = separator_1
-            new_elements.push(new_element_1, new_separator_1)
+            new_elements.append(new_element_1, new_separator_1)
         if changed:
             return node
         else:
@@ -4952,7 +4952,7 @@ def rewrite_each_py_pattern(node: PyPattern, proc: Callable[[PyPattern], PyPatte
             if new_element_2 is not element_2:
                 changed = True
             new_separator_2 = separator_2
-            new_elements_1.push(new_element_2, new_separator_2)
+            new_elements_1.append(new_element_2, new_separator_2)
         if changed:
             return node
         else:
@@ -5071,7 +5071,7 @@ def rewrite_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], PyExpr]) -> PyEx
             else:
                 assert_never(element)
             new_separator = separator
-            new_slices.push(new_element_1, new_separator)
+            new_slices.append(new_element_1, new_separator)
         if changed:
             return node
         else:
@@ -5095,7 +5095,7 @@ def rewrite_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], PyExpr]) -> PyEx
             if new_element_2 is not element_1:
                 changed = True
             new_separator_1 = separator_1
-            new_elements_1.push(new_element_2, new_separator_1)
+            new_elements_1.append(new_element_2, new_separator_1)
         if changed:
             return node
         else:
@@ -5109,7 +5109,7 @@ def rewrite_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], PyExpr]) -> PyEx
             if new_element_3 is not element_2:
                 changed = True
             new_separator_2 = separator_2
-            new_elements_2.push(new_element_3, new_separator_2)
+            new_elements_2.append(new_element_3, new_separator_2)
         if changed:
             return node
         else:
@@ -5262,7 +5262,7 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
             else:
                 assert_never(element)
             new_separator = separator
-            new_slices.push(new_element_1, new_separator)
+            new_slices.append(new_element_1, new_separator)
         if changed:
             return node
         else:
@@ -5286,7 +5286,7 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
             if new_element_2 is not element_1:
                 changed = True
             new_separator_1 = separator_1
-            new_elements_1.push(new_element_2, new_separator_1)
+            new_elements_1.append(new_element_2, new_separator_1)
         if changed:
             return node
         else:
@@ -5300,7 +5300,7 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
             if new_element_3 is not element_2:
                 changed = True
             new_separator_2 = separator_2
-            new_elements_2.push(new_element_3, new_separator_2)
+            new_elements_2.append(new_element_3, new_separator_2)
         if changed:
             return node
         else:
@@ -5328,7 +5328,7 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
             if new_element_4 is not element_3:
                 changed = True
             new_separator_3 = separator_3
-            new_args.push(new_element_4, new_separator_3)
+            new_args.append(new_element_4, new_separator_3)
         if changed:
             return node
         else:
@@ -5684,7 +5684,7 @@ def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNo
             else:
                 assert_never(element)
             new_separator = separator
-            new_slices.push(new_element, new_separator)
+            new_slices.append(new_element, new_separator)
         if changed:
             return node
         else:
@@ -5708,7 +5708,7 @@ def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNo
             if new_element_1 is not element_1:
                 changed = True
             new_separator_1 = separator_1
-            new_elements_1.push(new_element_1, new_separator_1)
+            new_elements_1.append(new_element_1, new_separator_1)
         if changed:
             return node
         else:
@@ -5722,7 +5722,7 @@ def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNo
             if new_element_2 is not element_2:
                 changed = True
             new_separator_2 = separator_2
-            new_elements_2.push(new_element_2, new_separator_2)
+            new_elements_2.append(new_element_2, new_separator_2)
         if changed:
             return node
         else:
@@ -5838,7 +5838,7 @@ def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNo
             else:
                 assert_never(element_5)
             new_separator_3 = separator_3
-            new_slices_1.push(new_element_6, new_separator_3)
+            new_slices_1.append(new_element_6, new_separator_3)
         if changed:
             return node
         else:
@@ -5862,7 +5862,7 @@ def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNo
             if new_element_7 is not element_6:
                 changed = True
             new_separator_4 = separator_4
-            new_elements_3.push(new_element_7, new_separator_4)
+            new_elements_3.append(new_element_7, new_separator_4)
         if changed:
             return node
         else:
@@ -5876,7 +5876,7 @@ def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNo
             if new_element_8 is not element_7:
                 changed = True
             new_separator_5 = separator_5
-            new_elements_4.push(new_element_8, new_separator_5)
+            new_elements_4.append(new_element_8, new_separator_5)
         if changed:
             return node
         else:
@@ -5904,7 +5904,7 @@ def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNo
             if new_element_9 is not element_8:
                 changed = True
             new_separator_6 = separator_6
-            new_args.push(new_element_9, new_separator_6)
+            new_args.append(new_element_9, new_separator_6)
         if changed:
             return node
         else:
@@ -5981,7 +5981,7 @@ def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNo
             if new_element_10 is not element_9:
                 changed = True
             new_separator_7 = separator_7
-            new_aliases.push(new_element_10, new_separator_7)
+            new_aliases.append(new_element_10, new_separator_7)
         if changed:
             return node
         else:
@@ -5999,7 +5999,7 @@ def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNo
             if new_element_11 is not element_10:
                 changed = True
             new_separator_8 = separator_8
-            new_aliases_1.push(new_element_11, new_separator_8)
+            new_aliases_1.append(new_element_11, new_separator_8)
         if changed:
             return node
         else:
@@ -6365,7 +6365,7 @@ def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNo
                 if new_element_20 is not element_19:
                     changed = True
                 new_separator_9 = separator_9
-                new_element_1_7.push(new_element_20, new_separator_9)
+                new_element_1_7.append(new_element_20, new_separator_9)
             new_elements_11.append(new_element_1_7)
             element_2_2 = node.type_params[2]
             new_element_2_2 = element_2_2
@@ -6524,7 +6524,7 @@ def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNo
                 if new_element_27 is not element_26:
                     changed = True
                 new_separator_10 = separator_10
-                new_element_1_10.push(new_element_27, new_separator_10)
+                new_element_1_10.append(new_element_27, new_separator_10)
             new_elements_14.append(new_element_1_10)
             element_2_5 = node.bases[2]
             new_element_2_5 = element_2_5
@@ -6667,7 +6667,7 @@ def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNo
             if new_element_30 is not element_29:
                 changed = True
             new_separator_11 = separator_11
-            new_params.push(new_element_30, new_separator_11)
+            new_params.append(new_element_30, new_separator_11)
         if isinstance(node.return_type, tuple):
             new_elements_19 = []
             element_0_15 = node.return_type[0]
@@ -6829,7 +6829,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
             assert(isinstance(new_separator, PyComma))
             if new_separator is not separator:
                 changed = True
-            new_slices.push(new_element, new_separator)
+            new_slices.append(new_element, new_separator)
         new_close_bracket = proc(node.close_bracket)
         assert(isinstance(new_close_bracket, PyCloseBracket))
         if new_close_bracket is not node.close_bracket:
@@ -6868,7 +6868,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
             assert(isinstance(new_separator_1, PyComma))
             if new_separator_1 is not separator_1:
                 changed = True
-            new_elements_1.push(new_element_1, new_separator_1)
+            new_elements_1.append(new_element_1, new_separator_1)
         new_close_bracket_1 = proc(node.close_bracket)
         assert(isinstance(new_close_bracket_1, PyCloseBracket))
         if new_close_bracket_1 is not node.close_bracket:
@@ -6893,7 +6893,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
             assert(isinstance(new_separator_2, PyComma))
             if new_separator_2 is not separator_2:
                 changed = True
-            new_elements_2.push(new_element_2, new_separator_2)
+            new_elements_2.append(new_element_2, new_separator_2)
         new_close_paren = proc(node.close_paren)
         assert(isinstance(new_close_paren, PyCloseParen))
         if new_close_paren is not node.close_paren:
@@ -7102,7 +7102,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
             assert(isinstance(new_separator_3, PyComma))
             if new_separator_3 is not separator_3:
                 changed = True
-            new_slices_1.push(new_element_6, new_separator_3)
+            new_slices_1.append(new_element_6, new_separator_3)
         new_close_bracket_2 = proc(node.close_bracket)
         assert(isinstance(new_close_bracket_2, PyCloseBracket))
         if new_close_bracket_2 is not node.close_bracket:
@@ -7141,7 +7141,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
             assert(isinstance(new_separator_4, PyComma))
             if new_separator_4 is not separator_4:
                 changed = True
-            new_elements_3.push(new_element_7, new_separator_4)
+            new_elements_3.append(new_element_7, new_separator_4)
         new_close_bracket_3 = proc(node.close_bracket)
         assert(isinstance(new_close_bracket_3, PyCloseBracket))
         if new_close_bracket_3 is not node.close_bracket:
@@ -7166,7 +7166,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
             assert(isinstance(new_separator_5, PyComma))
             if new_separator_5 is not separator_5:
                 changed = True
-            new_elements_4.push(new_element_8, new_separator_5)
+            new_elements_4.append(new_element_8, new_separator_5)
         new_close_paren_2 = proc(node.close_paren)
         assert(isinstance(new_close_paren_2, PyCloseParen))
         if new_close_paren_2 is not node.close_paren:
@@ -7213,7 +7213,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
             assert(isinstance(new_separator_6, PyComma))
             if new_separator_6 is not separator_6:
                 changed = True
-            new_args.push(new_element_9, new_separator_6)
+            new_args.append(new_element_9, new_separator_6)
         new_close_paren_3 = proc(node.close_paren)
         assert(isinstance(new_close_paren_3, PyCloseParen))
         if new_close_paren_3 is not node.close_paren:
@@ -7389,7 +7389,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
             assert(isinstance(new_separator_7, PyComma))
             if new_separator_7 is not separator_7:
                 changed = True
-            new_aliases.push(new_element_12, new_separator_7)
+            new_aliases.append(new_element_12, new_separator_7)
         if changed:
             return node
         else:
@@ -7418,7 +7418,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
             assert(isinstance(new_separator_8, PyComma))
             if new_separator_8 is not separator_8:
                 changed = True
-            new_aliases_1.push(new_element_13, new_separator_8)
+            new_aliases_1.append(new_element_13, new_separator_8)
         if changed:
             return node
         else:
@@ -7630,7 +7630,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
             assert(isinstance(new_separator_9, PyComma))
             if new_separator_9 is not separator_9:
                 changed = True
-            new_names.push(new_element_14, new_separator_9)
+            new_names.append(new_element_14, new_separator_9)
         if changed:
             return node
         else:
@@ -7651,7 +7651,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
             assert(isinstance(new_separator_10, PyComma))
             if new_separator_10 is not separator_10:
                 changed = True
-            new_names_1.push(new_element_15, new_separator_10)
+            new_names_1.append(new_element_15, new_separator_10)
         if changed:
             return node
         else:
@@ -8011,7 +8011,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
                 assert(isinstance(new_separator_11, PyComma))
                 if new_separator_11 is not separator_11:
                     changed = True
-                new_element_1_10.push(new_element_24, new_separator_11)
+                new_element_1_10.append(new_element_24, new_separator_11)
             new_elements_14.append(new_element_1_10)
             element_2_2 = node.type_params[2]
             new_element_2_2 = proc(element_2_2)
@@ -8254,7 +8254,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
                 assert(isinstance(new_separator_12, PyComma))
                 if new_separator_12 is not separator_12:
                     changed = True
-                new_element_1_14.push(new_element_31, new_separator_12)
+                new_element_1_14.append(new_element_31, new_separator_12)
             new_elements_18.append(new_element_1_14)
             element_2_5 = node.bases[2]
             new_element_2_5 = proc(element_2_5)
@@ -8476,7 +8476,7 @@ def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax])
             assert(isinstance(new_separator_13, PyComma))
             if new_separator_13 is not separator_13:
                 changed = True
-            new_params.push(new_element_34, new_separator_13)
+            new_params.append(new_element_34, new_separator_13)
         new_close_paren_4 = proc(node.close_paren)
         assert(isinstance(new_close_paren_4, PyCloseParen))
         if new_close_paren_4 is not node.close_paren:
