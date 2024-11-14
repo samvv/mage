@@ -8,9 +8,9 @@ from magelang.lang.treespec import *
 from magelang.lang.mage.ast import *
 from magelang.lang.python.cst import *
 from magelang.lang.mage.constants import integer_rule_type, string_rule_type
-from magelang.lang.treespec.helpers import do_types_shallow_overlap, flatten_union, is_optional, is_static_type, make_optional, mangle_type
+from magelang.lang.treespec.helpers import do_types_shallow_overlap, flatten_union_types, is_optional_type, is_static_type, make_optional_type, mangle_type
 from magelang.logging import warn
-from magelang.util import is_something, to_camel_case, is_iterator, NameGenerator, plural
+from magelang.util import to_camel_case, is_iterator, NameGenerator, plural
 
 
 def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
@@ -23,7 +23,7 @@ def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
         if isinstance(expr, MageHideExpr):
             buffer.append(expr.expr)
             # TODO return some internal constant rather than a public type
-            return make_unit()
+            return make_unit_type()
 
         if isinstance(expr, MageListExpr):
             element_field = visit(expr.element)
@@ -48,9 +48,9 @@ def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
         if isinstance(expr, MageRepeatExpr):
             element_type = visit(expr.expr)
             if expr.max == 0:
-                return make_unit()
+                return make_unit_type()
             elif expr.min == 0 and expr.max == 1:
-                ty = make_optional(element_type)
+                ty = make_optional_type(element_type)
             elif expr.min == 1 and expr.max == 1:
                 ty = element_type
             else:
@@ -70,7 +70,7 @@ def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
             return TupleType(types)
 
         if isinstance(expr, MageLookaheadExpr):
-            return make_unit()
+            return make_unit_type()
 
         if isinstance(expr, MageChoiceExpr):
             return UnionType(list(visit(element) for element in expr.elements))
@@ -147,7 +147,7 @@ def namespaced(name: str, prefix: str) -> str:
 def to_py_class_name(name: str, prefix: str) -> str:
     return to_camel_case(namespaced(name, prefix))
 
-def build_cond(cases: Sequence[PyCondCase]) -> list[PyStmt]:
+def make_py_cond(cases: Sequence[PyCondCase]) -> list[PyStmt]:
     if len(cases) == 0:
         return []
     test, body = cases[0]
@@ -164,14 +164,14 @@ def build_cond(cases: Sequence[PyCondCase]) -> list[PyStmt]:
         alternatives.append(PyElifCase(test=test, body=body))
     return [ PyIfStmt(first=first, alternatives=alternatives, last=last) ]
 
-def build_is_none(value: PyExpr) -> PyExpr:
+def make_py_is_none(value: PyExpr) -> PyExpr:
     return PyInfixExpr(
         left=value,
         op=PyIsKeyword(),
         right=PyNamedExpr('None')
     )
 
-def build_infix(it: Iterable[PyExpr] | Iterator[PyExpr], op: PyInfixOp, init: PyExpr) -> PyExpr:
+def make_py_infix(it: Iterable[PyExpr] | Iterator[PyExpr], op: PyInfixOp, init: PyExpr) -> PyExpr:
     if not is_iterator(it):
         it = iter(it)
     try:
@@ -182,37 +182,37 @@ def build_infix(it: Iterable[PyExpr] | Iterator[PyExpr], op: PyInfixOp, init: Py
         out = PyInfixExpr(left=out, op=op, right=expr)
     return out
 
-def build_or(iter: Iterable[PyExpr]) -> PyExpr:
-    return build_infix(iter, PyOrKeyword(), PyNamedExpr('False'))
+def make_py_or(iter: Iterable[PyExpr]) -> PyExpr:
+    return make_py_infix(iter, PyOrKeyword(), PyNamedExpr('False'))
 
-def build_and(iter: Iterable[PyExpr]) -> PyExpr:
-    return build_infix(iter, PyAndKeyword(), PyNamedExpr('True'))
+def make_py_and(iter: Iterable[PyExpr]) -> PyExpr:
+    return make_py_infix(iter, PyAndKeyword(), PyNamedExpr('True'))
 
-def build_union(it: list[PyExpr] | Iterator[PyExpr]) -> PyExpr:
-    return build_infix(it, PyVerticalBar(), PyNamedExpr('Never'))
+def make_py_union(it: list[PyExpr] | Iterator[PyExpr]) -> PyExpr:
+    return make_py_infix(it, PyVerticalBar(), PyNamedExpr('Never'))
 
-def build_isinstance(expr: PyExpr, ty: PyExpr) -> PyExpr:
+def make_py_isinstance(expr: PyExpr, ty: PyExpr) -> PyExpr:
     return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ expr, ty ])
 
 def quote_py_type(expr: PyExpr) -> PyExpr:
     return PyConstExpr(emit(expr))
 
-def gen_py_type(ty: Type, prefix: str, immutable=False) -> PyExpr:
+def treespec_type_to_py_type(ty: Type, prefix: str, immutable=False) -> PyExpr:
     if isinstance(ty, SpecType):
         return PyNamedExpr(to_py_class_name(ty.name, prefix))
     if isinstance(ty, ListType):
-        return PySubscriptExpr(expr=PyNamedExpr('Sequence' if immutable else 'list'), slices=[ gen_py_type(ty.element_type, prefix, immutable) ])
+        return PySubscriptExpr(expr=PyNamedExpr('Sequence' if immutable else 'list'), slices=[ treespec_type_to_py_type(ty.element_type, prefix, immutable) ])
     if isinstance(ty, PunctType):
-        return PySubscriptExpr(expr=PyNamedExpr('ImmutablePunct' if immutable else 'Punctuated'), slices=[ gen_py_type(ty.element_type, prefix, immutable), gen_py_type(ty.separator_type, prefix, immutable) ])
+        return PySubscriptExpr(expr=PyNamedExpr('ImmutablePunct' if immutable else 'Punctuated'), slices=[ treespec_type_to_py_type(ty.element_type, prefix, immutable), treespec_type_to_py_type(ty.separator_type, prefix, immutable) ])
     if isinstance(ty, TupleType):
-        return PySubscriptExpr(expr=PyNamedExpr('tuple'), slices=list(gen_py_type(element, prefix, immutable) for element in ty.element_types))
+        return PySubscriptExpr(expr=PyNamedExpr('tuple'), slices=list(treespec_type_to_py_type(element, prefix, immutable) for element in ty.element_types))
     if isinstance(ty, UnionType):
-        out = gen_py_type(ty.types[0], prefix, immutable)
+        out = treespec_type_to_py_type(ty.types[0], prefix, immutable)
         for element in ty.types[1:]:
-            out = PyInfixExpr(left=out, op=PyVerticalBar(), right=gen_py_type(element, prefix, immutable))
+            out = PyInfixExpr(left=out, op=PyVerticalBar(), right=treespec_type_to_py_type(element, prefix, immutable))
         return out
     if isinstance(ty, ExternType):
-        return rule_type_to_py_type(ty.name)
+        return extern_type_to_py_type(ty.name)
     if isinstance(ty, NoneType):
         return PyNamedExpr('None')
     if isinstance(ty, NeverType):
@@ -221,7 +221,7 @@ def gen_py_type(ty: Type, prefix: str, immutable=False) -> PyExpr:
         return PyNamedExpr('Any')
     assert_never(ty)
 
-def rule_type_to_py_type(type_name: str) -> PyExpr:
+def extern_type_to_py_type(type_name: str) -> PyExpr:
     if type_name == string_rule_type:
         return PyNamedExpr('str')
     if type_name == integer_rule_type:
@@ -233,7 +233,7 @@ def rule_type_to_py_type(type_name: str) -> PyExpr:
         return PyNamedExpr('float')
     raise AssertionError(f"unexpected rule type '{type_name}'")
 
-def gen_rule_type_test(type_name: str, target: PyExpr) -> PyExpr:
+def gen_rule_type_py_test(type_name: str, target: PyExpr) -> PyExpr:
     if type_name == 'String':
         return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('str') ])
     if type_name == 'Integer':
@@ -245,16 +245,16 @@ def gen_rule_type_test(type_name: str, target: PyExpr) -> PyExpr:
         return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('float') ])
     raise AssertionError(f"unexpected rule type '{type_name}'")
 
-def gen_shallow_test(ty: Type, expr: PyExpr, *, prefix: str, specs: Specs) -> PyExpr:
+def treespec_type_to_shallow_py_test(ty: Type, expr: PyExpr, *, prefix: str, specs: Specs) -> PyExpr:
     if isinstance(ty, SpecType):
         spec = lookup_spec(specs, ty.name)
         if isinstance(spec, NodeSpec) or isinstance(spec, TokenSpec) or isinstance(spec, ConstEnumSpec):
             return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ expr, PyNamedExpr(to_py_class_name(spec.name, prefix)) ])
-        if isinstance(spec, VariantSpec):
+        if isinstance(spec, EnumSpec):
             return PyCallExpr(operator=PyNamedExpr(f'is_{namespaced(ty.name, prefix)}'), args=[ expr ])
         panic(f"did not know how to create a dynamic check for a {spec}")
     if isinstance(ty, NoneType):
-        return build_is_none(expr)
+        return make_py_is_none(expr)
     if isinstance(ty, TupleType):
         return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ expr, PyNamedExpr('tuple') ])
     if isinstance(ty, ListType):
@@ -262,29 +262,29 @@ def gen_shallow_test(ty: Type, expr: PyExpr, *, prefix: str, specs: Specs) -> Py
     if isinstance(ty, PunctType):
         return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ expr, PyNamedExpr('Punctuated') ])
     if isinstance(ty, UnionType):
-        return build_or(gen_shallow_test(element, expr, prefix=prefix, specs=specs) for element in ty.types)
+        return make_py_or(treespec_type_to_shallow_py_test(element, expr, prefix=prefix, specs=specs) for element in ty.types)
     if isinstance(ty, ExternType):
-        return gen_rule_type_test(ty.name, expr)
+        return gen_rule_type_py_test(ty.name, expr)
     if isinstance(ty, NeverType):
         return PyNamedExpr('False')
     if isinstance(ty, AnyType):
         return PyNamedExpr('True')
     assert_never(ty)
 
-def gen_deep_test(ty: Type, target: PyExpr, *, prefix: str, specs: Specs) -> PyExpr:
+def treespec_type_to_deep_py_test(ty: Type, target: PyExpr, *, prefix: str, specs: Specs) -> PyExpr:
     if isinstance(ty, SpecType):
         spec = lookup_spec(specs, ty.name)
         if isinstance(spec, NodeSpec) or isinstance(spec, TokenSpec) or isinstance(spec, ConstEnumSpec):
             return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr(to_py_class_name(spec.name, prefix)) ])
-        if isinstance(spec, VariantSpec):
+        if isinstance(spec, EnumSpec):
             return PyCallExpr(operator=PyNamedExpr(f'is_{namespaced(spec.name, prefix)}'), args=[ target ])
         panic(f"did not know how to create a dynamic check for a {spec}")
     if isinstance(ty, NoneType):
-        return build_is_none(target)
+        return make_py_is_none(target)
     if isinstance(ty, TupleType):
-        return build_and([
+        return make_py_and([
             PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('tuple') ]),
-            *(gen_deep_test(element, PySubscriptExpr(target, slices=[ PyConstExpr(i) ]), prefix=prefix, specs=specs) for i, element in enumerate(ty.element_types))
+            *(treespec_type_to_deep_py_test(element, PySubscriptExpr(target, slices=[ PyConstExpr(i) ]), prefix=prefix, specs=specs) for i, element in enumerate(ty.element_types))
         ])
     if isinstance(ty, ListType):
         return PyInfixExpr(
@@ -294,7 +294,7 @@ def gen_deep_test(ty: Type, target: PyExpr, *, prefix: str, specs: Specs) -> PyE
                 PyNamedExpr('all'),
                 args=[
                     PyGeneratorExpr(
-                        gen_deep_test(ty.element_type, PyNamedExpr('element'), prefix=prefix, specs=specs),
+                        treespec_type_to_deep_py_test(ty.element_type, PyNamedExpr('element'), prefix=prefix, specs=specs),
                         generators=[ PyComprehension(PyNamedPattern('element'), target) ]
                     )
                 ]
@@ -308,16 +308,16 @@ def gen_deep_test(ty: Type, target: PyExpr, *, prefix: str, specs: Specs) -> PyE
                 PyNamedExpr('all'),
                 args=[
                     PyGeneratorExpr(
-                        gen_deep_test(ty.element_type, PyNamedExpr('element'), prefix=prefix, specs=specs),
+                        treespec_type_to_deep_py_test(ty.element_type, PyNamedExpr('element'), prefix=prefix, specs=specs),
                         generators=[ PyComprehension(PyNamedPattern('element'), target) ]
                     )
                 ]
             ),
         )
     if isinstance(ty, UnionType):
-        return build_or(gen_deep_test(element, target, prefix=prefix, specs=specs) for element in ty.types)
+        return make_py_or(treespec_type_to_deep_py_test(element, target, prefix=prefix, specs=specs) for element in ty.types)
     if isinstance(ty, ExternType):
-        return gen_rule_type_test(ty.name, target)
+        return gen_rule_type_py_test(ty.name, target)
     if isinstance(ty, NeverType):
         return PyNamedExpr('False')
     if isinstance(ty, AnyType):
@@ -334,7 +334,7 @@ def get_marko_element_text(el: Any) -> str:
     else:
         raise NotImplementedError()
 
-def is_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences: bool = True) -> bool:
+def is_py_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences: bool = True) -> bool:
     visited = set()
     def visit(ty: Type, allow_empty_sequences: bool) -> bool:
         ty = resolve_type_references(ty, specs=specs)
@@ -353,7 +353,7 @@ def is_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences: b
         if isinstance(ty, SpecType):
             spec = lookup_spec(specs, ty.name)
             assert(not isinstance(spec, TypeSpec))
-            if spec is None or isinstance(spec, VariantSpec) or isinstance(spec, ConstEnumSpec):
+            if spec is None or isinstance(spec, EnumSpec) or isinstance(spec, ConstEnumSpec):
                 return False
             if isinstance(spec, NodeSpec):
                 if spec.name in visited:
@@ -376,8 +376,8 @@ def is_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences: b
         assert_never(ty)
     return visit(ty, allow_empty_sequences)
 
-def gen_default_constructor(ty: Type, *, specs: Specs, prefix: str) -> PyExpr:
-    assert(is_default_constructible(ty, specs=specs))
+def make_py_default_constructor(ty: Type, *, specs: Specs, prefix: str) -> PyExpr:
+    assert(is_py_default_constructible(ty, specs=specs))
     if isinstance(ty, NoneType):
         return PyNamedExpr('None')
     if isinstance(ty, SpecType):
@@ -388,16 +388,16 @@ def gen_default_constructor(ty: Type, *, specs: Specs, prefix: str) -> PyExpr:
         # FIXME maybe add the generic arguments?
         return PyCallExpr(operator=PyNamedExpr('Punctuated'))
     if isinstance(ty, TupleType):
-        return PyTupleExpr(elements=list(gen_default_constructor(element_type, specs=specs, prefix=prefix) for element_type in ty.element_types))
+        return PyTupleExpr(elements=list(make_py_default_constructor(element_type, specs=specs, prefix=prefix) for element_type in ty.element_types))
     if isinstance(ty, UnionType):
         # This assumes we already detected that there is exactly one
         # default-constructible member in the union type
-        for ty in flatten_union(ty):
-            if is_default_constructible(ty, specs=specs):
-                return gen_default_constructor(ty, specs=specs, prefix=prefix)
+        for ty in flatten_union_types(ty):
+            if is_py_default_constructible(ty, specs=specs):
+                return make_py_default_constructor(ty, specs=specs, prefix=prefix)
     raise RuntimeError(f'unexpected {ty}')
 
-def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str, PyFuncDef]) -> tuple[Type, PyExpr]:
+def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str, PyFuncDef]) -> tuple[Type, PyExpr]:
 
     param_name = 'value'
 
@@ -406,7 +406,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
         cases: list[PyCondCase] = []
         types = list[Type]()
         for coerce_ty, coerce_body in gen_coerce_body(ty, forbid_default):
-            cases.append((gen_shallow_test(coerce_ty, PyNamedExpr(param_name), prefix=prefix, specs=specs), coerce_body))
+            cases.append((treespec_type_to_shallow_py_test(coerce_ty, PyNamedExpr(param_name), prefix=prefix, specs=specs), coerce_body))
             types.append(coerce_ty)
 
         coerced_type = normalize_type(UnionType(types))
@@ -415,8 +415,8 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
         coerce_fn_name = f'_coerce_{id}'
 
         if id not in defs:
-            py_param_type = gen_py_type(coerced_type, prefix=prefix, immutable=True)
-            py_return_type = gen_py_type(ty, prefix=prefix)
+            py_param_type = treespec_type_to_py_type(coerced_type, prefix=prefix, immutable=True)
+            py_return_type = treespec_type_to_py_type(ty, prefix=prefix)
             defs[id] = PyFuncDef(
                 decorators=[ PyNamedExpr('no_type_check') ],
                 name=coerce_fn_name,
@@ -424,7 +424,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
                 return_type=quote_py_type(py_return_type),
                 # For very simple fields, there's no need to do any checks. We
                 # assume the type checker catches whatever error the user makes.
-                body=cases[0][1] if len(cases) == 1 else build_cond([
+                body=cases[0][1] if len(cases) == 1 else make_py_cond([
                     *cases,
                     (
                         None,
@@ -462,7 +462,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
 
         if isinstance(ty, UnionType):
 
-            types = list(flatten_union(ty))
+            types = list(flatten_union_types(ty))
 
             for element_type in types:
                 if isinstance(element_type, NoneType):
@@ -494,8 +494,8 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
         # This can only happen if `None` is not already used by the type
         # itself. We continue processing the other types after this
         # operation.
-        if not forbid_default and is_default_constructible(ty, specs=specs):
-            yield NoneType(), [ PyRetStmt(expr=gen_default_constructor(ty, specs=specs, prefix=prefix)) ]
+        if not forbid_default and is_py_default_constructible(ty, specs=specs):
+            yield NoneType(), [ PyRetStmt(expr=make_py_default_constructor(ty, specs=specs, prefix=prefix)) ]
 
         if isinstance(ty, SpecType):
 
@@ -513,7 +513,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
                 yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
                 return
 
-            if isinstance(spec, TypeSpec) or isinstance(spec, VariantSpec):
+            if isinstance(spec, TypeSpec) or isinstance(spec, EnumSpec):
                 yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
                 return
 
@@ -525,7 +525,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
                 required_fields: list[Field] = []
 
                 for field in spec.fields:
-                    if is_optional(field.ty) or is_default_constructible(field.ty, specs=specs):
+                    if is_optional_type(field.ty) or is_py_default_constructible(field.ty, specs=specs):
                         optional_fields.append(field)
                     else:
                         required_fields.append(field)
@@ -578,7 +578,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
 
         if isinstance(ty, PunctType):
 
-            assert(is_default_constructible(ty.separator_type, specs=specs))
+            assert(is_py_default_constructible(ty.separator_type, specs=specs))
 
             new_elements_name = f'new_{param_name}'
 
@@ -589,15 +589,15 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
                         PyExprStmt(PyCallExpr(
                             PyAttrExpr(PyNamedExpr(new_elements_name), 'push'),
                             args=[
-                                gen_default_constructor(ty.element_type, specs=specs, prefix=prefix),
-                                gen_default_constructor(ty.separator_type, specs=specs, prefix=prefix),
+                                make_py_default_constructor(ty.element_type, specs=specs, prefix=prefix),
+                                make_py_default_constructor(ty.separator_type, specs=specs, prefix=prefix),
                             ])
                        ),
                     ]),
                     PyExprStmt(PyCallExpr(
                         PyAttrExpr(PyNamedExpr(new_elements_name), 'push_final'),
                         args=[
-                            gen_default_constructor(ty.element_type, specs=specs, prefix=prefix),
+                            make_py_default_constructor(ty.element_type, specs=specs, prefix=prefix),
                         ])
                    ),
                     PyRetStmt(expr=PyNamedExpr(new_elements_name)),
@@ -618,7 +618,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
 
             coerced_ty = UnionType([
                 ListType(value_type, ty.required),
-                ListType(TupleType(list([ value_type, make_optional(separator_type) ])), ty.required),
+                ListType(TupleType(list([ value_type, make_optional_type(separator_type) ])), ty.required),
                 PunctType(value_type, separator_type, ty.required),
             ])
 
@@ -640,7 +640,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
                         PyExprStmt(
                             PyCallExpr(
                                 operator=PyNamedExpr('assert'),
-                                args=[ build_is_none(PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(1) ])) ]
+                                args=[ make_py_is_none(PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(1) ])) ]
                             )
                         )
                     )
@@ -660,13 +660,13 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
                     plain_then.append(
                         PyAssignStmt(
                             pattern=PyNamedPattern(separator_name),
-                            value=gen_default_constructor(ty.separator_type, specs=specs, prefix=prefix),
+                            value=make_py_default_constructor(ty.separator_type, specs=specs, prefix=prefix),
                         )
                     )
-                return build_cond([
+                return make_py_cond([
                     (
                         # FIXME does not handle nested tuples
-                        build_isinstance(PyNamedExpr(first_element_name), PyNamedExpr('tuple')),
+                        make_py_isinstance(PyNamedExpr(first_element_name), PyNamedExpr('tuple')),
                         tuple_then
                     ),
                     (
@@ -763,7 +763,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
                 yield ExternType(integer_rule_type), [
                     PyAssignStmt(PyNamedPattern(new_elements_name), value=PyCallExpr(PyNamedExpr('list'))),
                     PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyNamedExpr(param_name) ]), body= [
-                        PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(new_elements_name), 'append'), args=[ gen_default_constructor(ty.element_type, specs=specs, prefix=prefix) ])),
+                        PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(new_elements_name), 'append'), args=[ make_py_default_constructor(ty.element_type, specs=specs, prefix=prefix) ])),
                     ]),
                     PyRetStmt(expr=PyNamedExpr(new_elements_name)),
                 ]
@@ -802,7 +802,7 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
             required: list[Type] = []
 
             for element_type in ty.element_types:
-                if not is_optional(element_type) and not is_default_constructible(element_type, specs=specs, allow_empty_sequences=False):
+                if not is_optional_type(element_type) and not is_py_default_constructible(element_type, specs=specs, allow_empty_sequences=False):
                     required.append(element_type)
 
             if len(required) == 1:
@@ -812,10 +812,10 @@ def gen_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str
                 for el_ty in ty.element_types:
                     if el_ty == main_type:
                         element = coerce_expr
-                    elif is_optional(el_ty):
+                    elif is_optional_type(el_ty):
                         element = PyNamedExpr('None')
                     else:
-                        element = gen_default_constructor(el_ty, specs=specs, prefix=prefix)
+                        element = make_py_default_constructor(el_ty, specs=specs, prefix=prefix)
                     elements.append(element)
                 yield coerced_type, [
                     PyRetStmt(expr=PyTupleExpr(

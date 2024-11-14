@@ -3,11 +3,11 @@ from .mage_insert_magic_rules import any_token_rule_name, any_syntax_rule_name
 from magelang.helpers import lookup_spec
 from magelang.lang.mage.constants import integer_rule_type
 from magelang.lang.treespec.ast import *
-from magelang.lang.treespec.helpers import flatten_union, is_static_type, is_unit_type, make_unit, normalize_type
+from magelang.lang.treespec.helpers import flatten_union_types, is_static_type, is_unit_type, make_unit_type, normalize_type
 
 
 def is_ignored(ty: Type) -> bool:
-    return all(isinstance(el_ty, NoneType) or is_unit_type(el_ty) for el_ty in flatten_union(ty))
+    return all(isinstance(el_ty, NoneType) or is_unit_type(el_ty) for el_ty in flatten_union_types(ty))
 
 
 def treespec_cst_to_ast(specs: Specs) -> Specs:
@@ -18,7 +18,7 @@ def treespec_cst_to_ast(specs: Specs) -> Specs:
             if isinstance(ty, SpecType):
                 spec = lookup_spec(specs, ty.name)
                 if isinstance(spec, TokenSpec):
-                    return make_unit() if spec.is_static else ExternType(spec.field_type)
+                    return make_unit_type() if spec.is_static else ExternType(spec.field_type)
                 return ty
             if isinstance(ty, NoneType) \
                 or isinstance(ty, NeverType) \
@@ -70,13 +70,13 @@ def treespec_cst_to_ast(specs: Specs) -> Specs:
             return spec
         if isinstance(spec, TypeSpec):
             return TypeSpec(spec.name, rewrite_type(spec.ty))
-        if isinstance(spec, VariantSpec):
-            if all(is_static_type(mem_ty, specs=specs) for _, mem_ty in spec.members):
-                return ConstEnumSpec(spec.name, list((name, i) for i, (name, _) in enumerate(spec.members)))
+        if isinstance(spec, EnumSpec):
+            if all(is_static_type(member.ty, specs=specs) for member in spec.members):
+                return ConstEnumSpec(spec.name, list((member.name, i) for i, member in enumerate(spec.members)))
             new_members = []
-            for name, ty in spec.members:
-                new_members.append((name, rewrite_type(ty)))
-            return VariantSpec(spec.name, new_members)
+            for member in spec.members:
+                new_members.append(Variant(member.name, rewrite_type(member.ty)))
+            return EnumSpec(spec.name, new_members)
         if isinstance(spec, NodeSpec):
             new_fields = []
             for field in spec.fields:

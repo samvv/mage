@@ -9,7 +9,7 @@ from magelang.lang.mage.ast import MageCharSetExpr, MageChoiceExpr, MageExpr, Ma
 from magelang.helpers import Field, get_fields, infer_type, is_unit_type
 from magelang.lang.python.cst import *
 from magelang.util import unreachable
-from magelang.helpers import PyCondCase, build_cond, gen_shallow_test, namespaced, to_py_class_name, build_isinstance
+from magelang.helpers import PyCondCase, make_py_cond, treespec_type_to_shallow_py_test, namespaced, to_py_class_name, make_py_isinstance
 
 def mage_to_python_emitter(
     grammar: MageGrammar,
@@ -147,10 +147,10 @@ def mage_to_python_emitter(
                     body = list(gen_emit_expr(element, target, skip))
                     if body:
                         cases.append((
-                            gen_shallow_test(infer_type(element, grammar), target, prefix),
+                            treespec_type_to_shallow_py_test(infer_type(element, grammar), target, prefix),
                             body
                         ))
-                yield from build_cond(cases)
+                yield from make_py_cond(cases)
         elif isinstance(expr, MageLookaheadExpr):
             # A LookaheadExpr never parses/emits anything.
             pass
@@ -215,7 +215,7 @@ def mage_to_python_emitter(
                 expr = PyCallExpr(PyNamedExpr('str'), args=[ PyAttrExpr(PyNamedExpr(token_param_name), 'value') ])
             emit_token_body.append(
                 PyIfStmt(PyIfCase(
-                    test=build_isinstance(PyNamedExpr(token_param_name), PyNamedExpr(to_py_class_name(rule.name, prefix))),
+                    test=make_py_isinstance(PyNamedExpr(token_param_name), PyNamedExpr(to_py_class_name(rule.name, prefix))),
                     body=[ PyRetStmt(expr=expr) ]
                 ))
             )
@@ -236,7 +236,7 @@ def mage_to_python_emitter(
                     if_body.extend(gen_emit_expr(expr, None, skip))
             if_body.append(PyRetStmt())
             visit_node_body.append(PyIfStmt(first=PyIfCase(
-                test=build_isinstance(PyNamedExpr(param_name), PyNamedExpr(to_py_class_name(rule.name, prefix))),
+                test=make_py_isinstance(PyNamedExpr(param_name), PyNamedExpr(to_py_class_name(rule.name, prefix))),
                 body=if_body
             )))
 

@@ -4,6 +4,7 @@ from typing import Generator, assert_never
 from magelang.util import to_snake_case
 from .ast import *
 
+
 @lru_cache
 def _get_spec_mapping(specs: Specs) -> dict[str, Spec]:
     out = {}
@@ -11,22 +12,26 @@ def _get_spec_mapping(specs: Specs) -> dict[str, Spec]:
         out[spec.name] = spec
     return out
 
+
 def lookup_spec(specs: Specs, name: str) -> Spec | None:
     return _get_spec_mapping(specs).get(name)
 
-def make_optional(ty: Type) -> Type:
+
+def make_optional_type(ty: Type) -> Type:
     return UnionType([ ty, NoneType() ])
 
-def is_optional(ty: Type) -> bool:
+
+def is_optional_type(ty: Type) -> bool:
     if isinstance(ty, NoneType):
         return True
     if isinstance(ty, UnionType):
-        for ty_2 in flatten_union(ty):
+        for ty_2 in flatten_union_types(ty):
             if isinstance(ty_2, NoneType):
                 return True
     return False
 
-def get_optional_element(ty: Type) -> Type:
+
+def unwrap_optional_type(ty: Type) -> Type:
     assert(isinstance(ty, UnionType))
     found = None
     for el_ty in ty.types:
@@ -36,11 +41,14 @@ def get_optional_element(ty: Type) -> Type:
     assert(found is not None)
     return found
 
-def make_unit() -> Type:
+
+def make_unit_type() -> Type:
     return TupleType(list())
+
 
 def is_unit_type(ty: Type) -> bool:
     return isinstance(ty, TupleType) and len(ty.element_types) == 0
+
 
 def is_static_type(ty: Type, specs: Specs) -> bool:
     visited = set[str]()
@@ -64,8 +72,8 @@ def is_static_type(ty: Type, specs: Specs) -> bool:
                 return False
             if isinstance(spec, ConstEnumSpec):
                 return False
-            if isinstance(spec, VariantSpec):
-                return all(visit(ty_2) for _, ty_2 in spec.members)
+            if isinstance(spec, EnumSpec):
+                return all(visit(member.ty) for member in spec.members)
             if isinstance(spec, NodeSpec):
                 return all(visit(field.ty) for field in spec.fields)
             if isinstance(spec, TokenSpec):
@@ -82,6 +90,7 @@ def is_static_type(ty: Type, specs: Specs) -> bool:
             return False
         assert_never(ty)
     return visit(ty)
+
 
 def mangle_type(ty: Type) -> str:
     if isinstance(ty, SpecType):
@@ -117,15 +126,17 @@ def mangle_type(ty: Type) -> str:
     assert_never(ty)
 
 
-def flatten_union(ty: Type) -> Generator[Type, None, None]:
+def flatten_union_types(ty: Type) -> Generator[Type, None, None]:
     if isinstance(ty, UnionType):
         for ty in ty.types:
-            yield from flatten_union(ty)
+            yield from flatten_union_types(ty)
     else:
         yield ty
 
+
 def spec_to_type(spec: Spec) -> Type:
     return SpecType(spec.name)
+
 
 def do_types_shallow_overlap(a: Type, b: Type) -> bool:
     """
@@ -167,15 +178,16 @@ def do_types_shallow_overlap(a: Type, b: Type) -> bool:
 
     return False
 
+
 def expand_variant_types(ty: Type, *, specs: Specs) -> Type:
     def rewriter(ty: Type) -> Type:
         if isinstance(ty, SpecType):
             spec = lookup_spec(specs, ty.name)
-            if isinstance(spec, VariantSpec):
+            if isinstance(spec, EnumSpec):
                 types = list()
-                assert(isinstance(spec, VariantSpec))
-                for _, ty_2 in spec.members:
-                    types.append(rewriter(ty_2))
+                assert(isinstance(spec, EnumSpec))
+                for member in spec.members:
+                    types.append(rewriter(member.ty))
                 return UnionType(types)
         return rewrite_each_child_type(ty, rewriter)
     return rewriter(ty)
@@ -235,6 +247,7 @@ def expand_type(ty: Type):
         for ty_2 in ty.types:
             yield ty_2
 
+
 def contains_type(ty: Type, target: Type, *, specs: Specs) -> bool:
     """
     Check whether any part `ty` is assignable to `target`.
@@ -246,7 +259,8 @@ def contains_type(ty: Type, target: Type, *, specs: Specs) -> bool:
             return True
     return False
 
-def is_cyclic(name: str, *, specs: Specs, default: bool = False) -> bool:
+
+def is_self_referential(name: str, *, specs: Specs, default: bool = False) -> bool:
     """
     Determine whether a declaration references itself eventually though one of its members.
     """
@@ -285,8 +299,8 @@ def is_cyclic(name: str, *, specs: Specs, default: bool = False) -> bool:
                 return False
             if isinstance(spec, NodeSpec):
                 return any(check(field.ty) for field in spec.fields)
-            if isinstance(spec, VariantSpec):
-                return any(check(mem_ty) for _, mem_ty in spec.members)
+            if isinstance(spec, EnumSpec):
+                return any(check(member.ty) for member in spec.members)
             assert_never(spec)
 
         for ty_2 in expand_type(ty):
@@ -297,10 +311,11 @@ def is_cyclic(name: str, *, specs: Specs, default: bool = False) -> bool:
 
     return check_each_child(main_type)
 
+
 def normalize_type(ty: Type) -> Type:
     if isinstance(ty, UnionType):
         types = []
-        for ty_2 in flatten_union(ty):
+        for ty_2 in flatten_union_types(ty):
             if isinstance(ty_2, NeverType):
                 continue
             if isinstance(ty_2, AnyType):
@@ -325,6 +340,7 @@ def normalize_type(ty: Type) -> Type:
             return dedup_types[0]
         return ty.derive(types=dedup_types)
     return rewrite_each_child_type(ty, normalize_type)
+
 
 def merge_similar_types(ty: Type) -> Type:
     """
@@ -361,7 +377,7 @@ def merge_similar_types(ty: Type) -> Type:
     # index.
     tuples_by_len = dict[int, list[list[Type]]]()\
 
-    for ty_2 in flatten_union(ty):
+    for ty_2 in flatten_union_types(ty):
 
         if isinstance(ty_2, TupleType):
             n = len(ty_2.element_types)

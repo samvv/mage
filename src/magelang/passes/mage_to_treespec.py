@@ -29,7 +29,7 @@ def mage_to_treespec(
             return rule.name
         raise NotImplementedError()
 
-    def get_variants(expr: MageExpr) -> Generator[tuple[str, Type], None, None]:
+    def get_variants(expr: MageExpr) -> Generator[Variant, None, None]:
         if isinstance(expr, MageChoiceExpr):
             for element in expr.elements:
                 yield from get_variants(element)
@@ -40,9 +40,9 @@ def mage_to_treespec(
             for element in expr.elements:
                 names.append(get_member_name(element))
                 types.append(infer_type(element, grammar))
-            yield '_'.join(names), TupleType(types)
+            yield Variant('_'.join(names), TupleType(types))
             return
-        yield get_member_name(expr), infer_type(expr, grammar)
+        yield Variant(get_member_name(expr), infer_type(expr, grammar))
 
     def get_field_members(expr: MageExpr) -> Iterable[Field]:
         return cast(Iterable[Field], filter(lambda element: isinstance(element, Field), get_fields(expr, grammar, include_hidden=include_hidden)))
@@ -72,7 +72,7 @@ def mage_to_treespec(
             #     toplevel.append(VariantSpec(rule.name, list(get_variants(rule.expr))))
             # else:
             #     toplevel.append(TypeSpec(rule.name, UnionType(list(ty for _, ty in get_variants(rule.expr)))))
-            toplevel.append(VariantSpec(rule.name, list(get_variants(rule.expr))))
+            toplevel.append(EnumSpec(rule.name, list(get_variants(rule.expr))))
             continue
         field_counter = 0
         assert(rule.expr is not None)

@@ -2,8 +2,8 @@
 from typing import Iterable, assert_never
 
 from magelang.passes.mage_insert_magic_rules import any_node_rule_name, any_token_rule_name, any_syntax_rule_name
-from magelang.helpers import build_cond, build_or, build_union, gen_deep_test, gen_coercions, gen_py_type, gen_shallow_test, namespaced, rule_type_to_py_type, to_py_class_name, quote_py_type, build_isinstance, PyCondCase, lookup_spec
-from magelang.lang.treespec.helpers import contains_type, expand_variant_types, is_cyclic, is_optional, is_type_assignable, resolve_type_references, spec_to_type
+from magelang.helpers import make_py_cond, make_py_or, make_py_union, treespec_type_to_deep_py_test, make_py_coercions, treespec_type_to_py_type, treespec_type_to_shallow_py_test, namespaced, extern_type_to_py_type, to_py_class_name, quote_py_type, make_py_isinstance, PyCondCase, lookup_spec
+from magelang.lang.treespec.helpers import contains_type, expand_variant_types, is_self_referential, is_optional_type, is_type_assignable, resolve_type_references, spec_to_type
 from magelang.lang.mage.ast import *
 from magelang.lang.treespec.ast import *
 from magelang.lang.python.cst import *
@@ -42,11 +42,11 @@ def treespec_to_python(
         if isinstance(ty, SpecType):
             spec = lookup_spec(specs, ty.name)
             assert(not isinstance(spec, TypeSpec))
-            if spec is None or isinstance(spec, VariantSpec) or isinstance(spec, ConstEnumSpec):
+            if spec is None or isinstance(spec, EnumSpec) or isinstance(spec, ConstEnumSpec):
                 return
-            if isinstance(spec, VariantSpec):
-                for _, member_type in spec.members:
-                    add_to_parent_nodes(name, member_type)
+            if isinstance(spec, EnumSpec):
+                for member in spec.members:
+                    add_to_parent_nodes(name, member.ty)
                 return
             if isinstance(spec, NodeSpec) or isinstance(spec, TokenSpec):
                 if spec.name not in parent_nodes:
@@ -139,10 +139,10 @@ def treespec_to_python(
             init_params.append(PyNamedParam(pattern=PyNamedPattern('self')))
 
             # value: Type
-            init_params.append(PyNamedParam(pattern=PyNamedPattern('value'), annotation=rule_type_to_py_type(spec.field_type)))
+            init_params.append(PyNamedParam(pattern=PyNamedPattern('value'), annotation=extern_type_to_py_type(spec.field_type)))
 
             # span: Span | None = None
-            init_params.append(PyNamedParam(pattern=PyNamedPattern('span'), annotation=build_union([ PyNamedExpr('Span'), PyNamedExpr('None') ]), default=PyNamedExpr('None')))
+            init_params.append(PyNamedParam(pattern=PyNamedPattern('span'), annotation=make_py_union([ PyNamedExpr('Span'), PyNamedExpr('None') ]), default=PyNamedExpr('None')))
 
             # self.value = value
             init_body.append(PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern('self'), name='value'), value=PyNamedExpr('value')))
@@ -180,21 +180,21 @@ def treespec_to_python(
 
         for field in spec.fields:
 
-            type_with_coercions, coerce_fn = gen_coercions(field.ty, defs=defs, specs=specs, prefix=prefix)
+            type_with_coercions, coerce_fn = make_py_coercions(field.ty, defs=defs, specs=specs, prefix=prefix)
             init_body.append(PyAssignStmt(
                 pattern=PyAttrPattern(
                     pattern=PyNamedPattern('self'),
                     name=field.name
                 ),
-                annotation=gen_py_type(field.ty, prefix),
+                annotation=treespec_type_to_py_type(field.ty, prefix),
                 value=PyCallExpr(coerce_fn, args=[ PyNamedExpr(field.name) ]),
             ))
 
             param_type = type_with_coercions
 
-            param_type_str = emit(gen_py_type(param_type, prefix=prefix, immutable=True))
+            param_type_str = emit(treespec_type_to_py_type(param_type, prefix=prefix, immutable=True))
 
-            if is_optional(param_type):
+            if is_optional_type(param_type):
                 optional_params.append(PyNamedParam(
                     pattern=PyNamedPattern(field.name),
                     annotation=PyConstExpr(literal=param_type_str),
@@ -218,7 +218,7 @@ def treespec_to_python(
 
             derive_kwargs_body.append(PyAssignStmt(
                 pattern=PyNamedPattern(field.name),
-                annotation=quote_py_type(gen_py_type(param_type, prefix=prefix, immutable=True)),
+                annotation=quote_py_type(treespec_type_to_py_type(param_type, prefix=prefix, immutable=True)),
             ))
             derive_args.append(PyKeywordArg(field.name, PyNamedExpr(field.name)))
             derive_body.append(PyAssignStmt(
@@ -252,32 +252,8 @@ def treespec_to_python(
             body=derive_kwargs_body
         ))
 
-        # for field in spec.fields:
-        #     derive_body.append(PyAssignStmt(
-        #         PyNamedPattern(field.name),
-        #         value=PyCallExpr(
-        #             PyAttrExpr(PyNamedExpr('kwargs'), 'get'),
-        #             args=[
-        #                 PyConstExpr(field.name),
-        #                 PyAttrExpr(PyNamedExpr('self'), field.name)
-        #             ]
-        #         )
-        #     ))
-        #     # derive_body.append(PyIfStmt(first=PyIfCase(
-        #     #     test=build_is_none(PyNamedExpr(field.name)),
-        #     #     body=[ PyAssignStmt(PyNamedPattern(field.name), value=PyAttrExpr(PyNamedExpr('self'), field.name)) ],
-        #     # )))
-        #     derive_args.append(PyKeywordArg(field.name, PyNamedExpr(field.name)))
-
         derive_body.append(PyRetStmt(expr=PyCallExpr(PyNamedExpr(this_class_name), args=derive_args)))
 
-        # body.append(PyFuncDef(
-        #     decorators=[ PyDecorator(PyNamedExpr('overload')) ],
-        #     name='derive',
-        #     params=derive_overload_params,
-        #     return_type=PyConstExpr(this_class_name),
-        #     body=PyExprStmt(PyEllipsisExpr()),
-        # ))
         derive_decorators = []
         if not enable_asserts:
             derive_decorators.append(PyDecorator(PyNamedExpr('no_type_check')))
@@ -333,19 +309,19 @@ def treespec_to_python(
 
         stmts.append(PyTypeAliasStmt(
             name=to_py_class_name(spec.name, prefix=prefix),
-            expr=gen_py_type(spec.ty, prefix=prefix),
+            expr=treespec_type_to_py_type(spec.ty, prefix=prefix),
         ))
 
     # Generate variant classes and base classes
 
     for spec in specs.elements:
 
-        if not isinstance(spec, VariantSpec):
+        if not isinstance(spec, EnumSpec):
             continue
 
         type_name = to_py_class_name(spec.name, prefix)
 
-        stmts.append(PyTypeAliasStmt(type_name, build_union(gen_py_type(ty, prefix) for _, ty in spec.members)))
+        stmts.append(PyTypeAliasStmt(type_name, make_py_union(treespec_type_to_py_type(member.ty, prefix) for member in spec.members)))
 
         pred_params: Sequence[PyParam] = [
             PyNamedParam(pattern=PyNamedPattern('value'), annotation=PyNamedExpr('Any'))
@@ -361,7 +337,7 @@ def treespec_to_python(
         #         ))
         #     pred_expr = build_isinstance(PyNamedExpr('value'), PyNamedExpr(base_class_name))
         # else:
-        pred_expr = build_or(gen_deep_test(ty, PyNamedExpr('value'), prefix=prefix, specs=specs) for _, ty in spec.members)
+        pred_expr = make_py_or(treespec_type_to_deep_py_test(member.ty, PyNamedExpr('value'), prefix=prefix, specs=specs) for member in spec.members)
 
         stmts.append(PyFuncDef(
             name=f'is_{namespaced(spec.name, prefix)}',
@@ -378,7 +354,7 @@ def treespec_to_python(
                 continue
             parent_type = get_parent_type(spec.name)
             parent_type_name = f'{to_py_class_name(spec.name, prefix)}Parent'
-            stmts.append(PyTypeAliasStmt(parent_type_name, gen_py_type(parent_type, prefix)))
+            stmts.append(PyTypeAliasStmt(parent_type_name, treespec_type_to_py_type(parent_type, prefix)))
 
     # Add coercers and other generated helpers
 
@@ -399,15 +375,15 @@ def treespec_to_python(
 
         body: list[PyStmt] = []
 
-        def gen_each_field(spec: NodeSpec, target: PyExpr) -> Generator[PyStmt, None, None]:
+        def gen_visit_fields(spec: NodeSpec, input: PyExpr) -> Generator[PyStmt, None, None]:
             for field in spec.fields:
                 if contains_type(expand_variant_types(field.ty, specs=specs), main_type, specs=specs):
-                    yield from gen_proc_calls(field.ty, PyAttrExpr(expr=target, name=field.name))
+                    yield from gen_visit_field(field.ty, PyAttrExpr(expr=input, name=field.name))
 
-        def gen_proc_calls(ty: Type, target: PyExpr) -> Generator[PyStmt, None, None]:
+        def gen_visit_field(ty: Type, input: PyExpr) -> Generator[PyStmt, None, None]:
             ty = resolve_type_references(ty, specs=specs)
             if is_type_assignable(main_type, expand_variant_types(ty, specs=specs), specs=specs):
-                yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ target ]))
+                yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ input ]))
                 return
             if isinstance(ty, NoneType):
                 return
@@ -418,35 +394,34 @@ def treespec_to_python(
                 assert(not isinstance(spec, TypeSpec))
                 if spec is None or isinstance(spec, TokenSpec) or isinstance(spec, ConstEnumSpec):
                     return
-                if isinstance(spec, VariantSpec):
+                if isinstance(spec, EnumSpec):
                     cases = []
-                    for _, ty_2 in spec.members:
-                        body = list(gen_proc_calls(ty_2, target))
+                    for member in spec.members:
+                        body = list(gen_visit_field(member.ty, input))
                         if body:
                             cases.append((
-                                gen_shallow_test(ty_2, target, prefix=prefix, specs=specs),
+                                treespec_type_to_shallow_py_test(member.ty, input, prefix=prefix, specs=specs),
                                 body
                             ))
-                    yield from build_cond(cases)
+                    yield from make_py_cond(cases)
                     return
                 if isinstance(spec, NodeSpec):
-                    assert(isinstance(spec, NodeSpec))
-                    yield from gen_each_field(spec, target)
+                    yield from gen_visit_fields(spec, input)
                     return
                 assert_never(spec)
             if isinstance(ty, TupleType):
                 for i, element_type in enumerate(ty.element_types):
-                    yield from gen_proc_calls(element_type, PySubscriptExpr(expr=target, slices=[ PyConstExpr(literal=i) ]))
+                    yield from gen_visit_field(element_type, PySubscriptExpr(expr=input, slices=[ PyConstExpr(literal=i) ]))
                 return
             if isinstance(ty, ListType):
                 element_name = generate_temporary(prefix='element')
-                yield PyForStmt(pattern=PyNamedPattern(element_name), expr=target, body=list(gen_proc_calls(ty.element_type, PyNamedExpr(element_name))))
+                yield PyForStmt(pattern=PyNamedPattern(element_name), expr=input, body=list(gen_visit_field(ty.element_type, PyNamedExpr(element_name))))
                 return
             if isinstance(ty, PunctType):
                 element_name = generate_temporary(prefix='element')
                 separator_name = generate_temporary(prefix='separator')
-                each_sep = list(gen_proc_calls(ty.separator_type, PyNamedExpr(separator_name)))
-                for_body = list(gen_proc_calls(ty.element_type, PyNamedExpr(element_name)))
+                each_sep = list(gen_visit_field(ty.separator_type, PyNamedExpr(separator_name)))
+                for_body = list(gen_visit_field(ty.element_type, PyNamedExpr(element_name)))
                 if each_sep:
                     for_body.append(PyIfStmt(first=PyIfCase(
                         test=PyInfixExpr(PyNamedExpr(separator_name), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')),
@@ -459,7 +434,7 @@ def treespec_to_python(
                             PyNamedPattern(separator_name)
                         ],
                     ),
-                    expr=target,
+                    expr=input,
                     body=for_body
                 )
                 # yield PyIfStmt(first=PyIfCase(
@@ -470,13 +445,13 @@ def treespec_to_python(
             if isinstance(ty, UnionType):
                 cases: list[PyCondCase] = []
                 for element_type in ty.types:
-                    body = list(gen_proc_calls(element_type, target))
+                    body = list(gen_visit_field(element_type, input))
                     if body:
                         cases.append((
-                            gen_shallow_test(element_type, target, prefix=prefix, specs=specs),
+                            treespec_type_to_shallow_py_test(element_type, input, prefix=prefix, specs=specs),
                             body
                         ))
-                yield from build_cond(cases)
+                yield from make_py_cond(cases)
                 return
             raise RuntimeError(f'unexpected {ty}')
 
@@ -490,7 +465,7 @@ def treespec_to_python(
                 # We're going to start a new scope, so all previous temporary names may be used once again
                 generate_temporary.reset()
 
-                if_body = list(gen_each_field(spec, PyNamedExpr(node_param_name)))
+                if_body = list(gen_visit_fields(spec, PyNamedExpr(node_param_name)))
                 if_body.append(PyRetStmt())
                 body.append(PyIfStmt(first=PyIfCase(
                     test=PyCallExpr(
@@ -507,7 +482,7 @@ def treespec_to_python(
 
                 # body.append(PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ PyNamedExpr(node_param_name) ])))
                 body.append(PyIfStmt(first=PyIfCase(
-                    test=build_isinstance(
+                    test=make_py_isinstance(
                         PyNamedExpr(node_param_name),
                         PyNamedExpr(to_py_class_name(spec.name, prefix))
                     ),
@@ -537,7 +512,7 @@ def treespec_to_python(
             body=body,
         )
 
-    stmts.extend(gen_visitor(spec.name) for spec in specs.elements if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
+    stmts.extend(gen_visitor(spec.name) for spec in specs.elements if isinstance(spec, EnumSpec) and is_self_referential(spec.name, specs=specs))
 
     # Generate rewriters
 
@@ -575,7 +550,7 @@ def treespec_to_python(
             if not can_be_rewritten:
                 return [ assign(input) ]
 
-            if_body.extend(build_cond([
+            if_body.extend(make_py_cond([
                 (PyNamedExpr(changed_var_name), [ assign(input) ]),
                 (None, [ assign(PyCallExpr(PyNamedExpr(to_py_class_name(spec.name, prefix=prefix)), args=new_args)) ])
             ]))
@@ -588,7 +563,7 @@ def treespec_to_python(
 
             if is_type_assignable(main_type, expand_variant_types(ty, specs=specs),  specs=specs):
                 yield PyAssignStmt(PyNamedPattern(output), value=PyCallExpr(PyNamedExpr(proc_param_name), args=[ input ]))
-                yield PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ gen_shallow_test(ty, PyNamedExpr(output), prefix=prefix, specs=specs) ] ))
+                yield PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ treespec_type_to_shallow_py_test(ty, PyNamedExpr(output), prefix=prefix, specs=specs) ] ))
                 yield PyIfStmt(first=PyIfCase(
                     PyInfixExpr(PyNamedExpr(output), (PyIsKeyword(), PyNotKeyword()), input),
                     [ PyAssignStmt(PyNamedPattern(changed_var_name), value=PyNamedExpr('True')) ]
@@ -611,18 +586,18 @@ def treespec_to_python(
                         yield PyAssignStmt(PyNamedPattern(output), value=input)
                     return
 
-                if isinstance(spec, VariantSpec):
+                if isinstance(spec, EnumSpec):
                     cases = []
-                    for _, ty_2 in spec.members:
-                        body = list(gen_for_type(ty_2, input, output, total))
+                    for member in spec.members:
+                        body = list(gen_for_type(member.ty, input, output, total))
                         if body:
                             cases.append((
-                                gen_shallow_test(ty_2, input, prefix=prefix, specs=specs),
+                                treespec_type_to_shallow_py_test(member.ty, input, prefix=prefix, specs=specs),
                                 body
                             ))
                     if cases:
                         cases.append((None, [ PyExprStmt(PyCallExpr(PyNamedExpr('assert_never'), args=[ input ])) ]))
-                    yield from build_cond(cases)
+                    yield from make_py_cond(cases)
                     return
 
                 if isinstance(spec, NodeSpec):
@@ -714,12 +689,12 @@ def treespec_to_python(
                     if not body:
                         body.append(PyPassStmt())
                     cases.append((
-                        gen_shallow_test(element_type, input, prefix=prefix, specs=specs),
+                        treespec_type_to_shallow_py_test(element_type, input, prefix=prefix, specs=specs),
                         body
                     ))
                 if cases:
                     cases.append((None, [ PyExprStmt(PyCallExpr(PyNamedExpr('assert_never'), args=[ input ])) ]))
-                yield from build_cond(cases)
+                yield from make_py_cond(cases)
                 return
 
             raise RuntimeError(f'unexpected {ty}')
@@ -746,7 +721,7 @@ def treespec_to_python(
 
                 # body.append(PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ PyNamedExpr(node_param_name) ])))
                 body.append(PyIfStmt(first=PyIfCase(
-                    test=build_isinstance(
+                    test=make_py_isinstance(
                         PyNamedExpr(node_param_name),
                         PyNamedExpr(to_py_class_name(spec.name, prefix))
                     ),
@@ -777,7 +752,7 @@ def treespec_to_python(
             body=body,
         )
 
-    stmts.extend(gen_rewriter(spec) for spec in specs.elements if isinstance(spec, VariantSpec) and is_cyclic(spec.name, specs=specs))
+    stmts.extend(gen_rewriter(spec) for spec in specs.elements if isinstance(spec, EnumSpec) and is_self_referential(spec.name, specs=specs))
 
     return PyModule(stmts=stmts)
 

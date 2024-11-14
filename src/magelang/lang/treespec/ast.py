@@ -261,9 +261,11 @@ def rewrite_each_child_type(ty: Type, proc: Callable[[Type], Type]) -> Type:
 
 @dataclass
 class Field:
-    """
-    Not a type, but represents exactly one field of a data structure/CST node. 
-    """
+    name: str
+    ty: Type
+
+@dataclass
+class Variant:
     name: str
     ty: Type
 
@@ -286,14 +288,14 @@ class NodeSpec(SpecBase):
     fields: list[Field]
 
 @dataclass
-class VariantSpec(SpecBase):
-    members: list[tuple[str, Type]]
+class EnumSpec(SpecBase):
+    members: list[Variant]
 
 @dataclass
 class ConstEnumSpec(SpecBase):
     members: list[tuple[str, int]]
 
-Spec = TokenSpec | NodeSpec | VariantSpec | ConstEnumSpec | TypeSpec
+Spec = TokenSpec | NodeSpec | EnumSpec | ConstEnumSpec | TypeSpec
 
 class Specs:
 
