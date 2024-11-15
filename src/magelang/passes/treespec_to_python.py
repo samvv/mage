@@ -42,7 +42,7 @@ def treespec_to_python(
         if isinstance(ty, SpecType):
             spec = lookup_spec(specs, ty.name)
             assert(not isinstance(spec, TypeSpec))
-            if spec is None or isinstance(spec, EnumSpec) or isinstance(spec, ConstEnumSpec):
+            if spec is None or isinstance(spec, ConstEnumSpec):
                 return
             if isinstance(spec, EnumSpec):
                 for member in spec.members:
