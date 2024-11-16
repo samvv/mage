@@ -738,7 +738,19 @@ def emit(node: PyNode) -> str:
             visit_token(node.asterisk)
             return
 
-        if isinstance(node, PySlice):
+        if isinstance(node, PyPatternSlice):
+            if node.lower is not None:
+                visit_pattern(node.lower)
+            visit_token(node.colon)
+            if node.upper is not None:
+                visit_pattern(node.upper)
+            if node.step is not None:
+                colon, expr = node.step
+                visit_token(colon)
+                visit_pattern(expr)
+            return
+
+        if isinstance(node, PyExprSlice):
             if node.lower is not None:
                 visit_expr(node.lower)
             visit_token(node.colon)

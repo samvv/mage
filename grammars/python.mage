@@ -69,12 +69,10 @@ pub token string
    = '"' char* '"'
    | '\'' char* '\''
 
-# General syntax
-
-pub slice
-   = lower:expr? ':' upper:expr? step:(':' expr)?
-
 # Patterns
+
+pub pattern_slice
+   = lower:pattern? ':' upper:pattern? step:(':' pattern)?
 
 pub pattern
   = named_pattern
@@ -91,7 +89,7 @@ pub attr_pattern
   = pattern '.' name:ident
 
 pub subscript_pattern
-  = pattern '[' slices:((pattern | slice) %% ',') ']'
+  = pattern '[' slices:((pattern | pattern_slice) %% ',') ']'
 
 pub starred_pattern
   = '*' pattern
@@ -103,6 +101,9 @@ pub tuple_pattern
   = '(' elements:(pattern % ',') ')'
 
 # Expressions
+
+pub expr_slice
+   = lower:expr? ':' upper:expr? step:(':' expr)?
 
 pub expr
   = attr_expr
@@ -149,7 +150,7 @@ pub attr_expr
   = expr '.' name:ident
 
 pub subscript_expr
-  = expr '[' slices:((expr | slice) %% ',') ']'
+  = expr '[' slices:((expr | expr_slice) %% ',') ']'
 
 pub starred_expr
   = '*' expr

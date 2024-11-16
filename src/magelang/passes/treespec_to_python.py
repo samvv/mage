@@ -364,6 +364,46 @@ def treespec_to_python(
     proc_param_name = 'proc'
     node_param_name = 'node'
 
+    def is_type_reachable(source: Type, dest: Type) -> bool:
+        visited = set()
+        def visit(source: Type) -> bool:
+            source = resolve_type_references(source, specs=specs)
+            if is_type_assignable(dest, source, specs=specs):
+                return True
+            if source in visited:
+                return False
+            visited.add(source)
+            if isinstance(source, SpecType):
+                spec = lookup_spec(specs, source.name)
+                assert(not isinstance(spec, TypeSpec))
+                if spec is None or isinstance(spec, ConstEnumSpec) or isinstance(spec, TokenSpec):
+                    return False
+                if isinstance(spec, NodeSpec):
+                    for field in spec.fields:
+                        if visit(field.ty):
+                            return True
+                    return False
+                if isinstance(spec, EnumSpec):
+                    for member in spec.members:
+                        if visit(member.ty):
+                            return True
+                    return False
+                assert_never(spec)
+            if isinstance(source, NeverType) or isinstance(source, ExternType) or isinstance(source, NoneType):
+                return False
+            if isinstance(source, AnyType):
+                return True
+            if isinstance(source, TupleType):
+                return any(visit(ty_2) for ty_2 in source.element_types)
+            if isinstance(source, PunctType):
+                return visit(source.element_type) or visit(source.element_type)
+            if isinstance(source, ListType):
+                return visit(source.element_type)
+            if isinstance(source, UnionType):
+                return any(visit(ty_2) for ty_2 in source.types)
+            assert_never(source)
+        return visit(source)
+
     def gen_visitor(main_spec: Spec) -> PyFuncDef:
 
         generate_temporary = NameGenerator()
@@ -374,7 +414,7 @@ def treespec_to_python(
 
         def gen_visit_fields(spec: NodeSpec, input: PyExpr) -> Generator[PyStmt]:
             for field in spec.fields:
-                if contains_type(expand_variant_types(field.ty, specs=specs), main_type, specs=specs):
+                if is_type_reachable(field.ty, main_type):
                     yield from gen_visit_type(field.ty, PyAttrExpr(expr=input, name=field.name))
 
         def gen_visit_union(input: PyExpr, types: Iterable[Type]) -> Generator[PyStmt]:
