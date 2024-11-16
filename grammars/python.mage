@@ -94,7 +94,7 @@ pub subscript_pattern
   = pattern '[' slices:((pattern | slice) %% ',') ']'
 
 pub starred_pattern
-  = '*' expr
+  = '*' pattern
 
 pub list_pattern
   = '[' elements:(pattern % ',') ']'
