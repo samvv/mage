@@ -1,3 +1,6 @@
+from enum import IntEnum
+
+
 from typing import Any, TypeGuard, TypeIs, TypedDict, Never, Unpack, Sequence, Callable, assert_never, no_type_check
 
 
@@ -372,17 +375,17 @@ class PySliceDeriveKwargs(TypedDict, total=False):
 class PySlice(_PyBaseNode):
 
     def __init__(self, *, lower: 'PyExpr | None' = None, colon: 'PyColon | None' = None, upper: 'PyExpr | None' = None, step: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None) -> None:
-        self.lower: PyExpr | None = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(lower)
-        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.upper: PyExpr | None = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(upper)
-        self.step: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(step)
+        self.lower: PyExpr | None = _coerce_union_2_decl_expr_none_to_union_2_decl_expr_none(lower)
+        self.colon: PyColon = _coerce_union_2_decl_colon_none_to_decl_colon(colon)
+        self.upper: PyExpr | None = _coerce_union_2_decl_expr_none_to_union_2_decl_expr_none(upper)
+        self.step: tuple[PyColon, PyExpr] | None = _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(step)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PySliceDeriveKwargs]) -> 'PySlice':
-        lower = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(kwargs['lower']) if 'lower' in kwargs else self.lower
-        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
-        upper = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(kwargs['upper']) if 'upper' in kwargs else self.upper
-        step = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(kwargs['step']) if 'step' in kwargs else self.step
+        lower = _coerce_union_2_decl_expr_none_to_union_2_decl_expr_none(kwargs['lower']) if 'lower' in kwargs else self.lower
+        colon = _coerce_union_2_decl_colon_none_to_decl_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        upper = _coerce_union_2_decl_expr_none_to_union_2_decl_expr_none(kwargs['upper']) if 'upper' in kwargs else self.upper
+        step = _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(kwargs['step']) if 'step' in kwargs else self.step
         return PySlice(lower=lower, colon=colon, upper=upper, step=step)
 
     def parent(self) -> 'PySliceParent':
@@ -398,11 +401,11 @@ class PyNamedPatternDeriveKwargs(TypedDict, total=False):
 class PyNamedPattern(_PyBaseNode):
 
     def __init__(self, name: 'PyIdent | str') -> None:
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyNamedPatternDeriveKwargs]) -> 'PyNamedPattern':
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
         return PyNamedPattern(name=name)
 
     def parent(self) -> 'PyNamedPatternParent':
@@ -422,15 +425,15 @@ class PyAttrPatternDeriveKwargs(TypedDict, total=False):
 class PyAttrPattern(_PyBaseNode):
 
     def __init__(self, pattern: 'PyPattern', name: 'PyIdent | str', *, dot: 'PyDot | None' = None) -> None:
-        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
-        self.dot: PyDot = _coerce_union_2_token_dot_none_to_token_dot(dot)
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+        self.pattern: PyPattern = _coerce_decl_pattern_to_decl_pattern(pattern)
+        self.dot: PyDot = _coerce_union_2_decl_dot_none_to_decl_dot(dot)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyAttrPatternDeriveKwargs]) -> 'PyAttrPattern':
-        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
-        dot = _coerce_union_2_token_dot_none_to_token_dot(kwargs['dot']) if 'dot' in kwargs else self.dot
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        pattern = _coerce_decl_pattern_to_decl_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        dot = _coerce_union_2_decl_dot_none_to_decl_dot(kwargs['dot']) if 'dot' in kwargs else self.dot
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
         return PyAttrPattern(pattern=pattern, dot=dot, name=name)
 
     def parent(self) -> 'PyAttrPatternParent':
@@ -444,7 +447,7 @@ class PySubscriptPatternDeriveKwargs(TypedDict, total=False):
 
     open_bracket: 'PyOpenBracket | None'
 
-    slices: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | ImmutablePunct[PySlice | PyPattern, PyComma]'
+    slices: 'Sequence[tuple[PyPattern | PySlice, PyComma | None]] | Sequence[PyPattern | PySlice] | ImmutablePunct[PyPattern | PySlice, PyComma]'
 
     close_bracket: 'PyCloseBracket | None'
 
@@ -454,18 +457,18 @@ class PySubscriptPattern(_PyBaseNode):
     def count_slices(self) -> int:
         return len(self.slices)
 
-    def __init__(self, pattern: 'PyPattern', slices: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | ImmutablePunct[PySlice | PyPattern, PyComma]', *, open_bracket: 'PyOpenBracket | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
-        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
-        self.open_bracket: PyOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
-        self.slices: Punctuated[PySlice | PyPattern, PyComma] = _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_token_comma_none_required_list_union_2_node_slice_variant_pattern_required_punct_union_2_node_slice_variant_pattern_token_comma_required_to_punct_union_2_node_slice_variant_pattern_token_comma_required(slices)
-        self.close_bracket: PyCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
+    def __init__(self, pattern: 'PyPattern', slices: 'Sequence[tuple[PyPattern | PySlice, PyComma | None]] | Sequence[PyPattern | PySlice] | ImmutablePunct[PyPattern | PySlice, PyComma]', *, open_bracket: 'PyOpenBracket | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+        self.pattern: PyPattern = _coerce_decl_pattern_to_decl_pattern(pattern)
+        self.open_bracket: PyOpenBracket = _coerce_union_2_decl_open_bracket_none_to_decl_open_bracket(open_bracket)
+        self.slices: Punctuated[PyPattern | PySlice, PyComma] = _coerce_union_3_list_tuple_2_union_2_decl_pattern_decl_slice_union_2_decl_comma_none_required_list_union_2_decl_pattern_decl_slice_required_punct_union_2_decl_pattern_decl_slice_decl_comma_required_to_punct_union_2_decl_pattern_decl_slice_decl_comma_required(slices)
+        self.close_bracket: PyCloseBracket = _coerce_union_2_decl_close_bracket_none_to_decl_close_bracket(close_bracket)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PySubscriptPatternDeriveKwargs]) -> 'PySubscriptPattern':
-        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
-        open_bracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(kwargs['open_bracket']) if 'open_bracket' in kwargs else self.open_bracket
-        slices = _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_token_comma_none_required_list_union_2_node_slice_variant_pattern_required_punct_union_2_node_slice_variant_pattern_token_comma_required_to_punct_union_2_node_slice_variant_pattern_token_comma_required(kwargs['slices']) if 'slices' in kwargs else self.slices
-        close_bracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(kwargs['close_bracket']) if 'close_bracket' in kwargs else self.close_bracket
+        pattern = _coerce_decl_pattern_to_decl_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        open_bracket = _coerce_union_2_decl_open_bracket_none_to_decl_open_bracket(kwargs['open_bracket']) if 'open_bracket' in kwargs else self.open_bracket
+        slices = _coerce_union_3_list_tuple_2_union_2_decl_pattern_decl_slice_union_2_decl_comma_none_required_list_union_2_decl_pattern_decl_slice_required_punct_union_2_decl_pattern_decl_slice_decl_comma_required_to_punct_union_2_decl_pattern_decl_slice_decl_comma_required(kwargs['slices']) if 'slices' in kwargs else self.slices
+        close_bracket = _coerce_union_2_decl_close_bracket_none_to_decl_close_bracket(kwargs['close_bracket']) if 'close_bracket' in kwargs else self.close_bracket
         return PySubscriptPattern(pattern=pattern, open_bracket=open_bracket, slices=slices, close_bracket=close_bracket)
 
     def parent(self) -> 'PySubscriptPatternParent':
@@ -483,13 +486,13 @@ class PyStarredPatternDeriveKwargs(TypedDict, total=False):
 class PyStarredPattern(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', *, asterisk: 'PyAsterisk | None' = None) -> None:
-        self.asterisk: PyAsterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(asterisk)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.asterisk: PyAsterisk = _coerce_union_2_decl_asterisk_none_to_decl_asterisk(asterisk)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyStarredPatternDeriveKwargs]) -> 'PyStarredPattern':
-        asterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(kwargs['asterisk']) if 'asterisk' in kwargs else self.asterisk
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        asterisk = _coerce_union_2_decl_asterisk_none_to_decl_asterisk(kwargs['asterisk']) if 'asterisk' in kwargs else self.asterisk
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyStarredPattern(asterisk=asterisk, expr=expr)
 
     def parent(self) -> 'PyStarredPatternParent':
@@ -512,15 +515,15 @@ class PyListPattern(_PyBaseNode):
         return len(self.elements)
 
     def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | ImmutablePunct[PyPattern, PyComma] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
-        self.open_bracket: PyOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
-        self.elements: Punctuated[PyPattern, PyComma] = _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(elements)
-        self.close_bracket: PyCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
+        self.open_bracket: PyOpenBracket = _coerce_union_2_decl_open_bracket_none_to_decl_open_bracket(open_bracket)
+        self.elements: Punctuated[PyPattern, PyComma] = _coerce_union_4_list_decl_pattern_list_tuple_2_decl_pattern_union_2_decl_comma_none_punct_decl_pattern_decl_comma_none_to_punct_decl_pattern_decl_comma(elements)
+        self.close_bracket: PyCloseBracket = _coerce_union_2_decl_close_bracket_none_to_decl_close_bracket(close_bracket)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyListPatternDeriveKwargs]) -> 'PyListPattern':
-        open_bracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(kwargs['open_bracket']) if 'open_bracket' in kwargs else self.open_bracket
-        elements = _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(kwargs['elements']) if 'elements' in kwargs else self.elements
-        close_bracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(kwargs['close_bracket']) if 'close_bracket' in kwargs else self.close_bracket
+        open_bracket = _coerce_union_2_decl_open_bracket_none_to_decl_open_bracket(kwargs['open_bracket']) if 'open_bracket' in kwargs else self.open_bracket
+        elements = _coerce_union_4_list_decl_pattern_list_tuple_2_decl_pattern_union_2_decl_comma_none_punct_decl_pattern_decl_comma_none_to_punct_decl_pattern_decl_comma(kwargs['elements']) if 'elements' in kwargs else self.elements
+        close_bracket = _coerce_union_2_decl_close_bracket_none_to_decl_close_bracket(kwargs['close_bracket']) if 'close_bracket' in kwargs else self.close_bracket
         return PyListPattern(open_bracket=open_bracket, elements=elements, close_bracket=close_bracket)
 
     def parent(self) -> 'PyListPatternParent':
@@ -543,15 +546,15 @@ class PyTuplePattern(_PyBaseNode):
         return len(self.elements)
 
     def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | ImmutablePunct[PyPattern, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
-        self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
-        self.elements: Punctuated[PyPattern, PyComma] = _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(elements)
-        self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
+        self.open_paren: PyOpenParen = _coerce_union_2_decl_open_paren_none_to_decl_open_paren(open_paren)
+        self.elements: Punctuated[PyPattern, PyComma] = _coerce_union_4_list_decl_pattern_list_tuple_2_decl_pattern_union_2_decl_comma_none_punct_decl_pattern_decl_comma_none_to_punct_decl_pattern_decl_comma(elements)
+        self.close_paren: PyCloseParen = _coerce_union_2_decl_close_paren_none_to_decl_close_paren(close_paren)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyTuplePatternDeriveKwargs]) -> 'PyTuplePattern':
-        open_paren = _coerce_union_2_token_open_paren_none_to_token_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
-        elements = _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(kwargs['elements']) if 'elements' in kwargs else self.elements
-        close_paren = _coerce_union_2_token_close_paren_none_to_token_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
+        open_paren = _coerce_union_2_decl_open_paren_none_to_decl_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
+        elements = _coerce_union_4_list_decl_pattern_list_tuple_2_decl_pattern_union_2_decl_comma_none_punct_decl_pattern_decl_comma_none_to_punct_decl_pattern_decl_comma(kwargs['elements']) if 'elements' in kwargs else self.elements
+        close_paren = _coerce_union_2_decl_close_paren_none_to_decl_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
         return PyTuplePattern(open_paren=open_paren, elements=elements, close_paren=close_paren)
 
     def parent(self) -> 'PyTuplePatternParent':
@@ -567,11 +570,11 @@ class PyEllipsisExprDeriveKwargs(TypedDict, total=False):
 class PyEllipsisExpr(_PyBaseNode):
 
     def __init__(self, *, dot_dot_dot: 'PyDotDotDot | None' = None) -> None:
-        self.dot_dot_dot: PyDotDotDot = _coerce_union_2_token_dot_dot_dot_none_to_token_dot_dot_dot(dot_dot_dot)
+        self.dot_dot_dot: PyDotDotDot = _coerce_union_2_decl_dot_dot_dot_none_to_decl_dot_dot_dot(dot_dot_dot)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyEllipsisExprDeriveKwargs]) -> 'PyEllipsisExpr':
-        dot_dot_dot = _coerce_union_2_token_dot_dot_dot_none_to_token_dot_dot_dot(kwargs['dot_dot_dot']) if 'dot_dot_dot' in kwargs else self.dot_dot_dot
+        dot_dot_dot = _coerce_union_2_decl_dot_dot_dot_none_to_decl_dot_dot_dot(kwargs['dot_dot_dot']) if 'dot_dot_dot' in kwargs else self.dot_dot_dot
         return PyEllipsisExpr(dot_dot_dot=dot_dot_dot)
 
     def parent(self) -> 'PyEllipsisExprParent':
@@ -589,13 +592,13 @@ class PyGuardDeriveKwargs(TypedDict, total=False):
 class PyGuard(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', *, if_keyword: 'PyIfKeyword | None' = None) -> None:
-        self.if_keyword: PyIfKeyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(if_keyword)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.if_keyword: PyIfKeyword = _coerce_union_2_decl_if_keyword_none_to_decl_if_keyword(if_keyword)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyGuardDeriveKwargs]) -> 'PyGuard':
-        if_keyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(kwargs['if_keyword']) if 'if_keyword' in kwargs else self.if_keyword
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        if_keyword = _coerce_union_2_decl_if_keyword_none_to_decl_if_keyword(kwargs['if_keyword']) if 'if_keyword' in kwargs else self.if_keyword
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyGuard(if_keyword=if_keyword, expr=expr)
 
     def parent(self) -> 'PyGuardParent':
@@ -615,7 +618,7 @@ class PyComprehensionDeriveKwargs(TypedDict, total=False):
 
     target: 'PyExpr'
 
-    guards: 'Sequence[PyGuard | PyExpr] | None'
+    guards: 'Sequence[PyExpr | PyGuard] | None'
 
 
 class PyComprehension(_PyBaseNode):
@@ -623,22 +626,22 @@ class PyComprehension(_PyBaseNode):
     def count_guards(self) -> int:
         return len(self.guards)
 
-    def __init__(self, pattern: 'PyPattern', target: 'PyExpr', *, async_keyword: 'PyAsyncKeyword | None' = None, for_keyword: 'PyForKeyword | None' = None, in_keyword: 'PyInKeyword | None' = None, guards: 'Sequence[PyGuard | PyExpr] | None' = None) -> None:
-        self.async_keyword: PyAsyncKeyword | None = _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none(async_keyword)
-        self.for_keyword: PyForKeyword = _coerce_union_2_token_for_keyword_none_to_token_for_keyword(for_keyword)
-        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
-        self.in_keyword: PyInKeyword = _coerce_union_2_token_in_keyword_none_to_token_in_keyword(in_keyword)
-        self.target: PyExpr = _coerce_variant_expr_to_variant_expr(target)
-        self.guards: list[PyGuard] = _coerce_union_2_list_union_2_node_guard_variant_expr_none_to_list_node_guard(guards)
+    def __init__(self, pattern: 'PyPattern', target: 'PyExpr', *, async_keyword: 'PyAsyncKeyword | None' = None, for_keyword: 'PyForKeyword | None' = None, in_keyword: 'PyInKeyword | None' = None, guards: 'Sequence[PyExpr | PyGuard] | None' = None) -> None:
+        self.async_keyword: PyAsyncKeyword | None = _coerce_union_2_decl_async_keyword_none_to_union_2_decl_async_keyword_none(async_keyword)
+        self.for_keyword: PyForKeyword = _coerce_union_2_decl_for_keyword_none_to_decl_for_keyword(for_keyword)
+        self.pattern: PyPattern = _coerce_decl_pattern_to_decl_pattern(pattern)
+        self.in_keyword: PyInKeyword = _coerce_union_2_decl_in_keyword_none_to_decl_in_keyword(in_keyword)
+        self.target: PyExpr = _coerce_decl_expr_to_decl_expr(target)
+        self.guards: list[PyGuard] = _coerce_union_2_list_union_2_decl_expr_decl_guard_none_to_list_decl_guard(guards)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyComprehensionDeriveKwargs]) -> 'PyComprehension':
-        async_keyword = _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none(kwargs['async_keyword']) if 'async_keyword' in kwargs else self.async_keyword
-        for_keyword = _coerce_union_2_token_for_keyword_none_to_token_for_keyword(kwargs['for_keyword']) if 'for_keyword' in kwargs else self.for_keyword
-        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
-        in_keyword = _coerce_union_2_token_in_keyword_none_to_token_in_keyword(kwargs['in_keyword']) if 'in_keyword' in kwargs else self.in_keyword
-        target = _coerce_variant_expr_to_variant_expr(kwargs['target']) if 'target' in kwargs else self.target
-        guards = _coerce_union_2_list_union_2_node_guard_variant_expr_none_to_list_node_guard(kwargs['guards']) if 'guards' in kwargs else self.guards
+        async_keyword = _coerce_union_2_decl_async_keyword_none_to_union_2_decl_async_keyword_none(kwargs['async_keyword']) if 'async_keyword' in kwargs else self.async_keyword
+        for_keyword = _coerce_union_2_decl_for_keyword_none_to_decl_for_keyword(kwargs['for_keyword']) if 'for_keyword' in kwargs else self.for_keyword
+        pattern = _coerce_decl_pattern_to_decl_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        in_keyword = _coerce_union_2_decl_in_keyword_none_to_decl_in_keyword(kwargs['in_keyword']) if 'in_keyword' in kwargs else self.in_keyword
+        target = _coerce_decl_expr_to_decl_expr(kwargs['target']) if 'target' in kwargs else self.target
+        guards = _coerce_union_2_list_union_2_decl_expr_decl_guard_none_to_list_decl_guard(kwargs['guards']) if 'guards' in kwargs else self.guards
         return PyComprehension(async_keyword=async_keyword, for_keyword=for_keyword, pattern=pattern, in_keyword=in_keyword, target=target, guards=guards)
 
     def parent(self) -> 'PyComprehensionParent':
@@ -659,13 +662,13 @@ class PyGeneratorExpr(_PyBaseNode):
         return len(self.generators)
 
     def __init__(self, element: 'PyExpr', generators: 'Sequence[PyComprehension]') -> None:
-        self.element: PyExpr = _coerce_variant_expr_to_variant_expr(element)
-        self.generators: list[PyComprehension] = _coerce_list_node_comprehension_required_to_list_node_comprehension_required(generators)
+        self.element: PyExpr = _coerce_decl_expr_to_decl_expr(element)
+        self.generators: list[PyComprehension] = _coerce_list_decl_comprehension_required_to_list_decl_comprehension_required(generators)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyGeneratorExprDeriveKwargs]) -> 'PyGeneratorExpr':
-        element = _coerce_variant_expr_to_variant_expr(kwargs['element']) if 'element' in kwargs else self.element
-        generators = _coerce_list_node_comprehension_required_to_list_node_comprehension_required(kwargs['generators']) if 'generators' in kwargs else self.generators
+        element = _coerce_decl_expr_to_decl_expr(kwargs['element']) if 'element' in kwargs else self.element
+        generators = _coerce_list_decl_comprehension_required_to_list_decl_comprehension_required(kwargs['generators']) if 'generators' in kwargs else self.generators
         return PyGeneratorExpr(element=element, generators=generators)
 
     def parent(self) -> 'PyGeneratorExprParent':
@@ -689,19 +692,19 @@ class PyIfExprDeriveKwargs(TypedDict, total=False):
 class PyIfExpr(_PyBaseNode):
 
     def __init__(self, then: 'PyExpr', test: 'PyExpr', alt: 'PyExpr', *, if_keyword: 'PyIfKeyword | None' = None, else_keyword: 'PyElseKeyword | None' = None) -> None:
-        self.then: PyExpr = _coerce_variant_expr_to_variant_expr(then)
-        self.if_keyword: PyIfKeyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(if_keyword)
-        self.test: PyExpr = _coerce_variant_expr_to_variant_expr(test)
-        self.else_keyword: PyElseKeyword = _coerce_union_2_token_else_keyword_none_to_token_else_keyword(else_keyword)
-        self.alt: PyExpr = _coerce_variant_expr_to_variant_expr(alt)
+        self.then: PyExpr = _coerce_decl_expr_to_decl_expr(then)
+        self.if_keyword: PyIfKeyword = _coerce_union_2_decl_if_keyword_none_to_decl_if_keyword(if_keyword)
+        self.test: PyExpr = _coerce_decl_expr_to_decl_expr(test)
+        self.else_keyword: PyElseKeyword = _coerce_union_2_decl_else_keyword_none_to_decl_else_keyword(else_keyword)
+        self.alt: PyExpr = _coerce_decl_expr_to_decl_expr(alt)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyIfExprDeriveKwargs]) -> 'PyIfExpr':
-        then = _coerce_variant_expr_to_variant_expr(kwargs['then']) if 'then' in kwargs else self.then
-        if_keyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(kwargs['if_keyword']) if 'if_keyword' in kwargs else self.if_keyword
-        test = _coerce_variant_expr_to_variant_expr(kwargs['test']) if 'test' in kwargs else self.test
-        else_keyword = _coerce_union_2_token_else_keyword_none_to_token_else_keyword(kwargs['else_keyword']) if 'else_keyword' in kwargs else self.else_keyword
-        alt = _coerce_variant_expr_to_variant_expr(kwargs['alt']) if 'alt' in kwargs else self.alt
+        then = _coerce_decl_expr_to_decl_expr(kwargs['then']) if 'then' in kwargs else self.then
+        if_keyword = _coerce_union_2_decl_if_keyword_none_to_decl_if_keyword(kwargs['if_keyword']) if 'if_keyword' in kwargs else self.if_keyword
+        test = _coerce_decl_expr_to_decl_expr(kwargs['test']) if 'test' in kwargs else self.test
+        else_keyword = _coerce_union_2_decl_else_keyword_none_to_decl_else_keyword(kwargs['else_keyword']) if 'else_keyword' in kwargs else self.else_keyword
+        alt = _coerce_decl_expr_to_decl_expr(kwargs['alt']) if 'alt' in kwargs else self.alt
         return PyIfExpr(then=then, if_keyword=if_keyword, test=test, else_keyword=else_keyword, alt=alt)
 
     def parent(self) -> 'PyIfExprParent':
@@ -717,11 +720,11 @@ class PyConstExprDeriveKwargs(TypedDict, total=False):
 class PyConstExpr(_PyBaseNode):
 
     def __init__(self, literal: 'PyFloat | PyInteger | PyString | float | int | str') -> None:
-        self.literal: PyFloat | PyInteger | PyString = _coerce_union_6_token_float_token_integer_token_string_extern_float_extern_integer_extern_string_to_union_3_token_float_token_integer_token_string(literal)
+        self.literal: PyFloat | PyInteger | PyString = _coerce_union_6_decl_float_decl_integer_decl_string_extern_float_extern_integer_extern_string_to_union_3_decl_float_decl_integer_decl_string(literal)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyConstExprDeriveKwargs]) -> 'PyConstExpr':
-        literal = _coerce_union_6_token_float_token_integer_token_string_extern_float_extern_integer_extern_string_to_union_3_token_float_token_integer_token_string(kwargs['literal']) if 'literal' in kwargs else self.literal
+        literal = _coerce_union_6_decl_float_decl_integer_decl_string_extern_float_extern_integer_extern_string_to_union_3_decl_float_decl_integer_decl_string(kwargs['literal']) if 'literal' in kwargs else self.literal
         return PyConstExpr(literal=literal)
 
     def parent(self) -> 'PyConstExprParent':
@@ -741,15 +744,15 @@ class PyNestExprDeriveKwargs(TypedDict, total=False):
 class PyNestExpr(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', *, open_paren: 'PyOpenParen | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
-        self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
-        self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
+        self.open_paren: PyOpenParen = _coerce_union_2_decl_open_paren_none_to_decl_open_paren(open_paren)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
+        self.close_paren: PyCloseParen = _coerce_union_2_decl_close_paren_none_to_decl_close_paren(close_paren)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyNestExprDeriveKwargs]) -> 'PyNestExpr':
-        open_paren = _coerce_union_2_token_open_paren_none_to_token_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
-        close_paren = _coerce_union_2_token_close_paren_none_to_token_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
+        open_paren = _coerce_union_2_decl_open_paren_none_to_decl_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        close_paren = _coerce_union_2_decl_close_paren_none_to_decl_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
         return PyNestExpr(open_paren=open_paren, expr=expr, close_paren=close_paren)
 
     def parent(self) -> 'PyNestExprParent':
@@ -765,11 +768,11 @@ class PyNamedExprDeriveKwargs(TypedDict, total=False):
 class PyNamedExpr(_PyBaseNode):
 
     def __init__(self, name: 'PyIdent | str') -> None:
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyNamedExprDeriveKwargs]) -> 'PyNamedExpr':
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
         return PyNamedExpr(name=name)
 
     def parent(self) -> 'PyNamedExprParent':
@@ -789,15 +792,15 @@ class PyAttrExprDeriveKwargs(TypedDict, total=False):
 class PyAttrExpr(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', name: 'PyIdent | str', *, dot: 'PyDot | None' = None) -> None:
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
-        self.dot: PyDot = _coerce_union_2_token_dot_none_to_token_dot(dot)
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
+        self.dot: PyDot = _coerce_union_2_decl_dot_none_to_decl_dot(dot)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyAttrExprDeriveKwargs]) -> 'PyAttrExpr':
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
-        dot = _coerce_union_2_token_dot_none_to_token_dot(kwargs['dot']) if 'dot' in kwargs else self.dot
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        dot = _coerce_union_2_decl_dot_none_to_decl_dot(kwargs['dot']) if 'dot' in kwargs else self.dot
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
         return PyAttrExpr(expr=expr, dot=dot, name=name)
 
     def parent(self) -> 'PyAttrExprParent':
@@ -811,7 +814,7 @@ class PySubscriptExprDeriveKwargs(TypedDict, total=False):
 
     open_bracket: 'PyOpenBracket | None'
 
-    slices: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | ImmutablePunct[PySlice | PyExpr, PyComma]'
+    slices: 'Sequence[tuple[PyExpr | PySlice, PyComma | None]] | Sequence[PyExpr | PySlice] | ImmutablePunct[PyExpr | PySlice, PyComma]'
 
     close_bracket: 'PyCloseBracket | None'
 
@@ -821,18 +824,18 @@ class PySubscriptExpr(_PyBaseNode):
     def count_slices(self) -> int:
         return len(self.slices)
 
-    def __init__(self, expr: 'PyExpr', slices: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | ImmutablePunct[PySlice | PyExpr, PyComma]', *, open_bracket: 'PyOpenBracket | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
-        self.open_bracket: PyOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
-        self.slices: Punctuated[PySlice | PyExpr, PyComma] = _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_comma_none_required_list_union_2_node_slice_variant_expr_required_punct_union_2_node_slice_variant_expr_token_comma_required_to_punct_union_2_node_slice_variant_expr_token_comma_required(slices)
-        self.close_bracket: PyCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
+    def __init__(self, expr: 'PyExpr', slices: 'Sequence[tuple[PyExpr | PySlice, PyComma | None]] | Sequence[PyExpr | PySlice] | ImmutablePunct[PyExpr | PySlice, PyComma]', *, open_bracket: 'PyOpenBracket | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
+        self.open_bracket: PyOpenBracket = _coerce_union_2_decl_open_bracket_none_to_decl_open_bracket(open_bracket)
+        self.slices: Punctuated[PyExpr | PySlice, PyComma] = _coerce_union_3_list_tuple_2_union_2_decl_expr_decl_slice_union_2_decl_comma_none_required_list_union_2_decl_expr_decl_slice_required_punct_union_2_decl_expr_decl_slice_decl_comma_required_to_punct_union_2_decl_expr_decl_slice_decl_comma_required(slices)
+        self.close_bracket: PyCloseBracket = _coerce_union_2_decl_close_bracket_none_to_decl_close_bracket(close_bracket)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PySubscriptExprDeriveKwargs]) -> 'PySubscriptExpr':
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
-        open_bracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(kwargs['open_bracket']) if 'open_bracket' in kwargs else self.open_bracket
-        slices = _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_comma_none_required_list_union_2_node_slice_variant_expr_required_punct_union_2_node_slice_variant_expr_token_comma_required_to_punct_union_2_node_slice_variant_expr_token_comma_required(kwargs['slices']) if 'slices' in kwargs else self.slices
-        close_bracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(kwargs['close_bracket']) if 'close_bracket' in kwargs else self.close_bracket
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        open_bracket = _coerce_union_2_decl_open_bracket_none_to_decl_open_bracket(kwargs['open_bracket']) if 'open_bracket' in kwargs else self.open_bracket
+        slices = _coerce_union_3_list_tuple_2_union_2_decl_expr_decl_slice_union_2_decl_comma_none_required_list_union_2_decl_expr_decl_slice_required_punct_union_2_decl_expr_decl_slice_decl_comma_required_to_punct_union_2_decl_expr_decl_slice_decl_comma_required(kwargs['slices']) if 'slices' in kwargs else self.slices
+        close_bracket = _coerce_union_2_decl_close_bracket_none_to_decl_close_bracket(kwargs['close_bracket']) if 'close_bracket' in kwargs else self.close_bracket
         return PySubscriptExpr(expr=expr, open_bracket=open_bracket, slices=slices, close_bracket=close_bracket)
 
     def parent(self) -> 'PySubscriptExprParent':
@@ -850,13 +853,13 @@ class PyStarredExprDeriveKwargs(TypedDict, total=False):
 class PyStarredExpr(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', *, asterisk: 'PyAsterisk | None' = None) -> None:
-        self.asterisk: PyAsterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(asterisk)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.asterisk: PyAsterisk = _coerce_union_2_decl_asterisk_none_to_decl_asterisk(asterisk)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyStarredExprDeriveKwargs]) -> 'PyStarredExpr':
-        asterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(kwargs['asterisk']) if 'asterisk' in kwargs else self.asterisk
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        asterisk = _coerce_union_2_decl_asterisk_none_to_decl_asterisk(kwargs['asterisk']) if 'asterisk' in kwargs else self.asterisk
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyStarredExpr(asterisk=asterisk, expr=expr)
 
     def parent(self) -> 'PyStarredExprParent':
@@ -879,15 +882,15 @@ class PyListExpr(_PyBaseNode):
         return len(self.elements)
 
     def __init__(self, *, open_bracket: 'PyOpenBracket | None' = None, elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None' = None, close_bracket: 'PyCloseBracket | None' = None) -> None:
-        self.open_bracket: PyOpenBracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(open_bracket)
-        self.elements: Punctuated[PyExpr, PyComma] = _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(elements)
-        self.close_bracket: PyCloseBracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(close_bracket)
+        self.open_bracket: PyOpenBracket = _coerce_union_2_decl_open_bracket_none_to_decl_open_bracket(open_bracket)
+        self.elements: Punctuated[PyExpr, PyComma] = _coerce_union_4_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_none_to_punct_decl_expr_decl_comma(elements)
+        self.close_bracket: PyCloseBracket = _coerce_union_2_decl_close_bracket_none_to_decl_close_bracket(close_bracket)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyListExprDeriveKwargs]) -> 'PyListExpr':
-        open_bracket = _coerce_union_2_token_open_bracket_none_to_token_open_bracket(kwargs['open_bracket']) if 'open_bracket' in kwargs else self.open_bracket
-        elements = _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(kwargs['elements']) if 'elements' in kwargs else self.elements
-        close_bracket = _coerce_union_2_token_close_bracket_none_to_token_close_bracket(kwargs['close_bracket']) if 'close_bracket' in kwargs else self.close_bracket
+        open_bracket = _coerce_union_2_decl_open_bracket_none_to_decl_open_bracket(kwargs['open_bracket']) if 'open_bracket' in kwargs else self.open_bracket
+        elements = _coerce_union_4_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_none_to_punct_decl_expr_decl_comma(kwargs['elements']) if 'elements' in kwargs else self.elements
+        close_bracket = _coerce_union_2_decl_close_bracket_none_to_decl_close_bracket(kwargs['close_bracket']) if 'close_bracket' in kwargs else self.close_bracket
         return PyListExpr(open_bracket=open_bracket, elements=elements, close_bracket=close_bracket)
 
     def parent(self) -> 'PyListExprParent':
@@ -910,15 +913,15 @@ class PyTupleExpr(_PyBaseNode):
         return len(self.elements)
 
     def __init__(self, *, open_paren: 'PyOpenParen | None' = None, elements: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
-        self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
-        self.elements: Punctuated[PyExpr, PyComma] = _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(elements)
-        self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
+        self.open_paren: PyOpenParen = _coerce_union_2_decl_open_paren_none_to_decl_open_paren(open_paren)
+        self.elements: Punctuated[PyExpr, PyComma] = _coerce_union_4_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_none_to_punct_decl_expr_decl_comma(elements)
+        self.close_paren: PyCloseParen = _coerce_union_2_decl_close_paren_none_to_decl_close_paren(close_paren)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyTupleExprDeriveKwargs]) -> 'PyTupleExpr':
-        open_paren = _coerce_union_2_token_open_paren_none_to_token_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
-        elements = _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(kwargs['elements']) if 'elements' in kwargs else self.elements
-        close_paren = _coerce_union_2_token_close_paren_none_to_token_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
+        open_paren = _coerce_union_2_decl_open_paren_none_to_decl_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
+        elements = _coerce_union_4_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_none_to_punct_decl_expr_decl_comma(kwargs['elements']) if 'elements' in kwargs else self.elements
+        close_paren = _coerce_union_2_decl_close_paren_none_to_decl_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
         return PyTupleExpr(open_paren=open_paren, elements=elements, close_paren=close_paren)
 
     def parent(self) -> 'PyTupleExprParent':
@@ -938,15 +941,15 @@ class PyKeywordArgDeriveKwargs(TypedDict, total=False):
 class PyKeywordArg(_PyBaseNode):
 
     def __init__(self, name: 'PyIdent | str', expr: 'PyExpr', *, equals: 'PyEquals | None' = None) -> None:
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
-        self.equals: PyEquals = _coerce_union_2_token_equals_none_to_token_equals(equals)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
+        self.equals: PyEquals = _coerce_union_2_decl_equals_none_to_decl_equals(equals)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyKeywordArgDeriveKwargs]) -> 'PyKeywordArg':
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
-        equals = _coerce_union_2_token_equals_none_to_token_equals(kwargs['equals']) if 'equals' in kwargs else self.equals
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
+        equals = _coerce_union_2_decl_equals_none_to_decl_equals(kwargs['equals']) if 'equals' in kwargs else self.equals
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyKeywordArg(name=name, equals=equals, expr=expr)
 
     def parent(self) -> 'PyKeywordArgParent':
@@ -971,17 +974,17 @@ class PyCallExpr(_PyBaseNode):
         return len(self.args)
 
     def __init__(self, operator: 'PyExpr', *, open_paren: 'PyOpenParen | None' = None, args: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | ImmutablePunct[PyArg, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None) -> None:
-        self.operator: PyExpr = _coerce_variant_expr_to_variant_expr(operator)
-        self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
-        self.args: Punctuated[PyArg, PyComma] = _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comma_none_punct_variant_arg_token_comma_none_to_punct_variant_arg_token_comma(args)
-        self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
+        self.operator: PyExpr = _coerce_decl_expr_to_decl_expr(operator)
+        self.open_paren: PyOpenParen = _coerce_union_2_decl_open_paren_none_to_decl_open_paren(open_paren)
+        self.args: Punctuated[PyArg, PyComma] = _coerce_union_4_list_decl_arg_list_tuple_2_decl_arg_union_2_decl_comma_none_punct_decl_arg_decl_comma_none_to_punct_decl_arg_decl_comma(args)
+        self.close_paren: PyCloseParen = _coerce_union_2_decl_close_paren_none_to_decl_close_paren(close_paren)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyCallExprDeriveKwargs]) -> 'PyCallExpr':
-        operator = _coerce_variant_expr_to_variant_expr(kwargs['operator']) if 'operator' in kwargs else self.operator
-        open_paren = _coerce_union_2_token_open_paren_none_to_token_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
-        args = _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comma_none_punct_variant_arg_token_comma_none_to_punct_variant_arg_token_comma(kwargs['args']) if 'args' in kwargs else self.args
-        close_paren = _coerce_union_2_token_close_paren_none_to_token_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
+        operator = _coerce_decl_expr_to_decl_expr(kwargs['operator']) if 'operator' in kwargs else self.operator
+        open_paren = _coerce_union_2_decl_open_paren_none_to_decl_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
+        args = _coerce_union_4_list_decl_arg_list_tuple_2_decl_arg_union_2_decl_comma_none_punct_decl_arg_decl_comma_none_to_punct_decl_arg_decl_comma(kwargs['args']) if 'args' in kwargs else self.args
+        close_paren = _coerce_union_2_decl_close_paren_none_to_decl_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
         return PyCallExpr(operator=operator, open_paren=open_paren, args=args, close_paren=close_paren)
 
     def parent(self) -> 'PyCallExprParent':
@@ -999,13 +1002,13 @@ class PyPrefixExprDeriveKwargs(TypedDict, total=False):
 class PyPrefixExpr(_PyBaseNode):
 
     def __init__(self, prefix_op: 'PyPrefixOp', expr: 'PyExpr') -> None:
-        self.prefix_op: PyPrefixOp = _coerce_variant_prefix_op_to_variant_prefix_op(prefix_op)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.prefix_op: PyPrefixOp = _coerce_decl_prefix_op_to_decl_prefix_op(prefix_op)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyPrefixExprDeriveKwargs]) -> 'PyPrefixExpr':
-        prefix_op = _coerce_variant_prefix_op_to_variant_prefix_op(kwargs['prefix_op']) if 'prefix_op' in kwargs else self.prefix_op
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        prefix_op = _coerce_decl_prefix_op_to_decl_prefix_op(kwargs['prefix_op']) if 'prefix_op' in kwargs else self.prefix_op
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyPrefixExpr(prefix_op=prefix_op, expr=expr)
 
     def parent(self) -> 'PyPrefixExprParent':
@@ -1025,15 +1028,15 @@ class PyInfixExprDeriveKwargs(TypedDict, total=False):
 class PyInfixExpr(_PyBaseNode):
 
     def __init__(self, left: 'PyExpr', op: 'PyInfixOp', right: 'PyExpr') -> None:
-        self.left: PyExpr = _coerce_variant_expr_to_variant_expr(left)
-        self.op: PyInfixOp = _coerce_variant_infix_op_to_variant_infix_op(op)
-        self.right: PyExpr = _coerce_variant_expr_to_variant_expr(right)
+        self.left: PyExpr = _coerce_decl_expr_to_decl_expr(left)
+        self.op: PyInfixOp = _coerce_decl_infix_op_to_decl_infix_op(op)
+        self.right: PyExpr = _coerce_decl_expr_to_decl_expr(right)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyInfixExprDeriveKwargs]) -> 'PyInfixExpr':
-        left = _coerce_variant_expr_to_variant_expr(kwargs['left']) if 'left' in kwargs else self.left
-        op = _coerce_variant_infix_op_to_variant_infix_op(kwargs['op']) if 'op' in kwargs else self.op
-        right = _coerce_variant_expr_to_variant_expr(kwargs['right']) if 'right' in kwargs else self.right
+        left = _coerce_decl_expr_to_decl_expr(kwargs['left']) if 'left' in kwargs else self.left
+        op = _coerce_decl_infix_op_to_decl_infix_op(kwargs['op']) if 'op' in kwargs else self.op
+        right = _coerce_decl_expr_to_decl_expr(kwargs['right']) if 'right' in kwargs else self.right
         return PyInfixExpr(left=left, op=op, right=right)
 
     def parent(self) -> 'PyInfixExprParent':
@@ -1054,13 +1057,13 @@ class PyQualName(_PyBaseNode):
         return len(self.modules)
 
     def __init__(self, name: 'PyIdent | str', *, modules: 'Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None' = None) -> None:
-        self.modules: list[tuple[PyIdent, PyDot]] = _coerce_union_2_list_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_none_to_list_tuple_2_token_ident_token_dot(modules)
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+        self.modules: list[tuple[PyIdent, PyDot]] = _coerce_union_2_list_union_3_decl_ident_tuple_2_union_2_decl_ident_extern_string_union_2_decl_dot_none_extern_string_none_to_list_tuple_2_decl_ident_decl_dot(modules)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyQualNameDeriveKwargs]) -> 'PyQualName':
-        modules = _coerce_union_2_list_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_none_to_list_tuple_2_token_ident_token_dot(kwargs['modules']) if 'modules' in kwargs else self.modules
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        modules = _coerce_union_2_list_union_3_decl_ident_tuple_2_union_2_decl_ident_extern_string_union_2_decl_dot_none_extern_string_none_to_list_tuple_2_decl_ident_decl_dot(kwargs['modules']) if 'modules' in kwargs else self.modules
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
         return PyQualName(modules=modules, name=name)
 
     def parent(self) -> 'PyQualNameParent':
@@ -1070,17 +1073,17 @@ class PyQualName(_PyBaseNode):
 
 class PyAbsolutePathDeriveKwargs(TypedDict, total=False):
 
-    name: 'PyQualName | PyIdent | str'
+    name: 'PyIdent | PyQualName | str'
 
 
 class PyAbsolutePath(_PyBaseNode):
 
-    def __init__(self, name: 'PyQualName | PyIdent | str') -> None:
-        self.name: PyQualName = _coerce_union_3_node_qual_name_token_ident_extern_string_to_node_qual_name(name)
+    def __init__(self, name: 'PyIdent | PyQualName | str') -> None:
+        self.name: PyQualName = _coerce_union_3_decl_ident_decl_qual_name_extern_string_to_decl_qual_name(name)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyAbsolutePathDeriveKwargs]) -> 'PyAbsolutePath':
-        name = _coerce_union_3_node_qual_name_token_ident_extern_string_to_node_qual_name(kwargs['name']) if 'name' in kwargs else self.name
+        name = _coerce_union_3_decl_ident_decl_qual_name_extern_string_to_decl_qual_name(kwargs['name']) if 'name' in kwargs else self.name
         return PyAbsolutePath(name=name)
 
     def parent(self) -> 'PyAbsolutePathParent':
@@ -1092,7 +1095,7 @@ class PyRelativePathDeriveKwargs(TypedDict, total=False):
 
     dots: 'Sequence[PyDot] | int'
 
-    name: 'PyQualName | PyIdent | None | str'
+    name: 'PyIdent | PyQualName | None | str'
 
 
 class PyRelativePath(_PyBaseNode):
@@ -1100,14 +1103,14 @@ class PyRelativePath(_PyBaseNode):
     def count_dots(self) -> int:
         return len(self.dots)
 
-    def __init__(self, dots: 'Sequence[PyDot] | int', *, name: 'PyQualName | PyIdent | None | str' = None) -> None:
-        self.dots: list[PyDot] = _coerce_union_2_list_token_dot_required_extern_integer_to_list_token_dot_required(dots)
-        self.name: PyQualName | None = _coerce_union_4_node_qual_name_token_ident_none_extern_string_to_union_2_node_qual_name_none(name)
+    def __init__(self, dots: 'Sequence[PyDot] | int', *, name: 'PyIdent | PyQualName | None | str' = None) -> None:
+        self.dots: list[PyDot] = _coerce_union_2_list_decl_dot_required_extern_integer_to_list_decl_dot_required(dots)
+        self.name: PyQualName | None = _coerce_union_4_decl_ident_decl_qual_name_none_extern_string_to_union_2_decl_qual_name_none(name)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyRelativePathDeriveKwargs]) -> 'PyRelativePath':
-        dots = _coerce_union_2_list_token_dot_required_extern_integer_to_list_token_dot_required(kwargs['dots']) if 'dots' in kwargs else self.dots
-        name = _coerce_union_4_node_qual_name_token_ident_none_extern_string_to_union_2_node_qual_name_none(kwargs['name']) if 'name' in kwargs else self.name
+        dots = _coerce_union_2_list_decl_dot_required_extern_integer_to_list_decl_dot_required(kwargs['dots']) if 'dots' in kwargs else self.dots
+        name = _coerce_union_4_decl_ident_decl_qual_name_none_extern_string_to_union_2_decl_qual_name_none(kwargs['name']) if 'name' in kwargs else self.name
         return PyRelativePath(dots=dots, name=name)
 
     def parent(self) -> 'PyRelativePathParent':
@@ -1125,13 +1128,13 @@ class PyAliasDeriveKwargs(TypedDict, total=False):
 class PyAlias(_PyBaseNode):
 
     def __init__(self, path: 'PyPath', *, asname: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str' = None) -> None:
-        self.path: PyPath = _coerce_variant_path_to_variant_path(path)
-        self.asname: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(asname)
+        self.path: PyPath = _coerce_decl_path_to_decl_path(path)
+        self.asname: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_decl_ident_tuple_2_union_2_decl_as_keyword_none_union_2_decl_ident_extern_string_none_extern_string_to_union_2_tuple_2_decl_as_keyword_decl_ident_none(asname)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyAliasDeriveKwargs]) -> 'PyAlias':
-        path = _coerce_variant_path_to_variant_path(kwargs['path']) if 'path' in kwargs else self.path
-        asname = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(kwargs['asname']) if 'asname' in kwargs else self.asname
+        path = _coerce_decl_path_to_decl_path(kwargs['path']) if 'path' in kwargs else self.path
+        asname = _coerce_union_4_decl_ident_tuple_2_union_2_decl_as_keyword_none_union_2_decl_ident_extern_string_none_extern_string_to_union_2_tuple_2_decl_as_keyword_decl_ident_none(kwargs['asname']) if 'asname' in kwargs else self.asname
         return PyAlias(path=path, asname=asname)
 
     def parent(self) -> 'PyAliasParent':
@@ -1149,13 +1152,13 @@ class PyFromAliasDeriveKwargs(TypedDict, total=False):
 class PyFromAlias(_PyBaseNode):
 
     def __init__(self, name: 'PyAsterisk | PyIdent | str', *, asname: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str' = None) -> None:
-        self.name: PyAsterisk | PyIdent = _coerce_union_3_token_asterisk_token_ident_extern_string_to_union_2_token_asterisk_token_ident(name)
-        self.asname: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(asname)
+        self.name: PyAsterisk | PyIdent = _coerce_union_3_decl_asterisk_decl_ident_extern_string_to_union_2_decl_asterisk_decl_ident(name)
+        self.asname: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_decl_ident_tuple_2_union_2_decl_as_keyword_none_union_2_decl_ident_extern_string_none_extern_string_to_union_2_tuple_2_decl_as_keyword_decl_ident_none(asname)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyFromAliasDeriveKwargs]) -> 'PyFromAlias':
-        name = _coerce_union_3_token_asterisk_token_ident_extern_string_to_union_2_token_asterisk_token_ident(kwargs['name']) if 'name' in kwargs else self.name
-        asname = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(kwargs['asname']) if 'asname' in kwargs else self.asname
+        name = _coerce_union_3_decl_asterisk_decl_ident_extern_string_to_union_2_decl_asterisk_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
+        asname = _coerce_union_4_decl_ident_tuple_2_union_2_decl_as_keyword_none_union_2_decl_ident_extern_string_none_extern_string_to_union_2_tuple_2_decl_as_keyword_decl_ident_none(kwargs['asname']) if 'asname' in kwargs else self.asname
         return PyFromAlias(name=name, asname=asname)
 
     def parent(self) -> 'PyFromAliasParent':
@@ -1176,13 +1179,13 @@ class PyImportStmt(_PyBaseNode):
         return len(self.aliases)
 
     def __init__(self, aliases: 'Sequence[tuple[PyAlias | PyPath, PyComma | None]] | Sequence[PyAlias | PyPath] | ImmutablePunct[PyAlias | PyPath, PyComma]', *, import_keyword: 'PyImportKeyword | None' = None) -> None:
-        self.import_keyword: PyImportKeyword = _coerce_union_2_token_import_keyword_none_to_token_import_keyword(import_keyword)
-        self.aliases: Punctuated[PyAlias, PyComma] = _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_comma_none_required_list_union_2_node_alias_variant_path_required_punct_union_2_node_alias_variant_path_token_comma_required_to_punct_node_alias_token_comma_required(aliases)
+        self.import_keyword: PyImportKeyword = _coerce_union_2_decl_import_keyword_none_to_decl_import_keyword(import_keyword)
+        self.aliases: Punctuated[PyAlias, PyComma] = _coerce_union_3_list_tuple_2_union_2_decl_alias_decl_path_union_2_decl_comma_none_required_list_union_2_decl_alias_decl_path_required_punct_union_2_decl_alias_decl_path_decl_comma_required_to_punct_decl_alias_decl_comma_required(aliases)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyImportStmtDeriveKwargs]) -> 'PyImportStmt':
-        import_keyword = _coerce_union_2_token_import_keyword_none_to_token_import_keyword(kwargs['import_keyword']) if 'import_keyword' in kwargs else self.import_keyword
-        aliases = _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_comma_none_required_list_union_2_node_alias_variant_path_required_punct_union_2_node_alias_variant_path_token_comma_required_to_punct_node_alias_token_comma_required(kwargs['aliases']) if 'aliases' in kwargs else self.aliases
+        import_keyword = _coerce_union_2_decl_import_keyword_none_to_decl_import_keyword(kwargs['import_keyword']) if 'import_keyword' in kwargs else self.import_keyword
+        aliases = _coerce_union_3_list_tuple_2_union_2_decl_alias_decl_path_union_2_decl_comma_none_required_list_union_2_decl_alias_decl_path_required_punct_union_2_decl_alias_decl_path_decl_comma_required_to_punct_decl_alias_decl_comma_required(kwargs['aliases']) if 'aliases' in kwargs else self.aliases
         return PyImportStmt(import_keyword=import_keyword, aliases=aliases)
 
     def parent(self) -> 'PyImportStmtParent':
@@ -1198,7 +1201,7 @@ class PyImportFromStmtDeriveKwargs(TypedDict, total=False):
 
     import_keyword: 'PyImportKeyword | None'
 
-    aliases: 'Sequence[tuple[PyFromAlias | PyAsterisk | PyIdent | str, PyComma | None]] | Sequence[PyFromAlias | PyAsterisk | PyIdent | str] | ImmutablePunct[PyFromAlias | PyAsterisk | PyIdent | str, PyComma]'
+    aliases: 'Sequence[tuple[PyAsterisk | PyFromAlias | PyIdent | str, PyComma | None]] | Sequence[PyAsterisk | PyFromAlias | PyIdent | str] | ImmutablePunct[PyAsterisk | PyFromAlias | PyIdent | str, PyComma]'
 
 
 class PyImportFromStmt(_PyBaseNode):
@@ -1206,18 +1209,18 @@ class PyImportFromStmt(_PyBaseNode):
     def count_aliases(self) -> int:
         return len(self.aliases)
 
-    def __init__(self, path: 'PyPath', aliases: 'Sequence[tuple[PyFromAlias | PyAsterisk | PyIdent | str, PyComma | None]] | Sequence[PyFromAlias | PyAsterisk | PyIdent | str] | ImmutablePunct[PyFromAlias | PyAsterisk | PyIdent | str, PyComma]', *, from_keyword: 'PyFromKeyword | None' = None, import_keyword: 'PyImportKeyword | None' = None) -> None:
-        self.from_keyword: PyFromKeyword = _coerce_union_2_token_from_keyword_none_to_token_from_keyword(from_keyword)
-        self.path: PyPath = _coerce_variant_path_to_variant_path(path)
-        self.import_keyword: PyImportKeyword = _coerce_union_2_token_import_keyword_none_to_token_import_keyword(import_keyword)
-        self.aliases: Punctuated[PyFromAlias, PyComma] = _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_ident_extern_string_union_2_token_comma_none_required_list_union_4_node_from_alias_token_asterisk_token_ident_extern_string_required_punct_union_4_node_from_alias_token_asterisk_token_ident_extern_string_token_comma_required_to_punct_node_from_alias_token_comma_required(aliases)
+    def __init__(self, path: 'PyPath', aliases: 'Sequence[tuple[PyAsterisk | PyFromAlias | PyIdent | str, PyComma | None]] | Sequence[PyAsterisk | PyFromAlias | PyIdent | str] | ImmutablePunct[PyAsterisk | PyFromAlias | PyIdent | str, PyComma]', *, from_keyword: 'PyFromKeyword | None' = None, import_keyword: 'PyImportKeyword | None' = None) -> None:
+        self.from_keyword: PyFromKeyword = _coerce_union_2_decl_from_keyword_none_to_decl_from_keyword(from_keyword)
+        self.path: PyPath = _coerce_decl_path_to_decl_path(path)
+        self.import_keyword: PyImportKeyword = _coerce_union_2_decl_import_keyword_none_to_decl_import_keyword(import_keyword)
+        self.aliases: Punctuated[PyFromAlias, PyComma] = _coerce_union_3_list_tuple_2_union_4_decl_asterisk_decl_from_alias_decl_ident_extern_string_union_2_decl_comma_none_required_list_union_4_decl_asterisk_decl_from_alias_decl_ident_extern_string_required_punct_union_4_decl_asterisk_decl_from_alias_decl_ident_extern_string_decl_comma_required_to_punct_decl_from_alias_decl_comma_required(aliases)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyImportFromStmtDeriveKwargs]) -> 'PyImportFromStmt':
-        from_keyword = _coerce_union_2_token_from_keyword_none_to_token_from_keyword(kwargs['from_keyword']) if 'from_keyword' in kwargs else self.from_keyword
-        path = _coerce_variant_path_to_variant_path(kwargs['path']) if 'path' in kwargs else self.path
-        import_keyword = _coerce_union_2_token_import_keyword_none_to_token_import_keyword(kwargs['import_keyword']) if 'import_keyword' in kwargs else self.import_keyword
-        aliases = _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_ident_extern_string_union_2_token_comma_none_required_list_union_4_node_from_alias_token_asterisk_token_ident_extern_string_required_punct_union_4_node_from_alias_token_asterisk_token_ident_extern_string_token_comma_required_to_punct_node_from_alias_token_comma_required(kwargs['aliases']) if 'aliases' in kwargs else self.aliases
+        from_keyword = _coerce_union_2_decl_from_keyword_none_to_decl_from_keyword(kwargs['from_keyword']) if 'from_keyword' in kwargs else self.from_keyword
+        path = _coerce_decl_path_to_decl_path(kwargs['path']) if 'path' in kwargs else self.path
+        import_keyword = _coerce_union_2_decl_import_keyword_none_to_decl_import_keyword(kwargs['import_keyword']) if 'import_keyword' in kwargs else self.import_keyword
+        aliases = _coerce_union_3_list_tuple_2_union_4_decl_asterisk_decl_from_alias_decl_ident_extern_string_union_2_decl_comma_none_required_list_union_4_decl_asterisk_decl_from_alias_decl_ident_extern_string_required_punct_union_4_decl_asterisk_decl_from_alias_decl_ident_extern_string_decl_comma_required_to_punct_decl_from_alias_decl_comma_required(kwargs['aliases']) if 'aliases' in kwargs else self.aliases
         return PyImportFromStmt(from_keyword=from_keyword, path=path, import_keyword=import_keyword, aliases=aliases)
 
     def parent(self) -> 'PyImportFromStmtParent':
@@ -1235,13 +1238,13 @@ class PyRetStmtDeriveKwargs(TypedDict, total=False):
 class PyRetStmt(_PyBaseNode):
 
     def __init__(self, *, return_keyword: 'PyReturnKeyword | None' = None, expr: 'PyExpr | None' = None) -> None:
-        self.return_keyword: PyReturnKeyword = _coerce_union_2_token_return_keyword_none_to_token_return_keyword(return_keyword)
-        self.expr: PyExpr | None = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(expr)
+        self.return_keyword: PyReturnKeyword = _coerce_union_2_decl_return_keyword_none_to_decl_return_keyword(return_keyword)
+        self.expr: PyExpr | None = _coerce_union_2_decl_expr_none_to_union_2_decl_expr_none(expr)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyRetStmtDeriveKwargs]) -> 'PyRetStmt':
-        return_keyword = _coerce_union_2_token_return_keyword_none_to_token_return_keyword(kwargs['return_keyword']) if 'return_keyword' in kwargs else self.return_keyword
-        expr = _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(kwargs['expr']) if 'expr' in kwargs else self.expr
+        return_keyword = _coerce_union_2_decl_return_keyword_none_to_decl_return_keyword(kwargs['return_keyword']) if 'return_keyword' in kwargs else self.return_keyword
+        expr = _coerce_union_2_decl_expr_none_to_union_2_decl_expr_none(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyRetStmt(return_keyword=return_keyword, expr=expr)
 
     def parent(self) -> 'PyRetStmtParent':
@@ -1257,11 +1260,11 @@ class PyExprStmtDeriveKwargs(TypedDict, total=False):
 class PyExprStmt(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr') -> None:
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyExprStmtDeriveKwargs]) -> 'PyExprStmt':
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyExprStmt(expr=expr)
 
     def parent(self) -> 'PyExprStmtParent':
@@ -1285,19 +1288,19 @@ class PyAugAssignStmtDeriveKwargs(TypedDict, total=False):
 class PyAugAssignStmt(_PyBaseNode):
 
     def __init__(self, pattern: 'PyPattern', op: 'PyAmpersand | PyAsterisk | PyAsteriskAsterisk | PyAtSign | PyCaret | PyGreaterThanGreaterThan | PyHyphen | PyLessThanLessThan | PyPercent | PyPlus | PySlash | PySlashSlash | PyVerticalBar', expr: 'PyExpr', *, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None, equals: 'PyEquals | None' = None) -> None:
-        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
-        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
-        self.op: PyAmpersand | PyAsterisk | PyAsteriskAsterisk | PyAtSign | PyCaret | PyGreaterThanGreaterThan | PyHyphen | PyLessThanLessThan | PyPercent | PyPlus | PySlash | PySlashSlash | PyVerticalBar = _coerce_union_13_token_ampersand_token_asterisk_token_asterisk_asterisk_token_at_sign_token_caret_token_greater_than_greater_than_token_hyphen_token_less_than_less_than_token_percent_token_plus_token_slash_token_slash_slash_token_vertical_bar_to_union_13_token_ampersand_token_asterisk_token_asterisk_asterisk_token_at_sign_token_caret_token_greater_than_greater_than_token_hyphen_token_less_than_less_than_token_percent_token_plus_token_slash_token_slash_slash_token_vertical_bar(op)
-        self.equals: PyEquals = _coerce_union_2_token_equals_none_to_token_equals(equals)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.pattern: PyPattern = _coerce_decl_pattern_to_decl_pattern(pattern)
+        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(annotation)
+        self.op: PyAmpersand | PyAsterisk | PyAsteriskAsterisk | PyAtSign | PyCaret | PyGreaterThanGreaterThan | PyHyphen | PyLessThanLessThan | PyPercent | PyPlus | PySlash | PySlashSlash | PyVerticalBar = _coerce_union_13_decl_ampersand_decl_asterisk_decl_asterisk_asterisk_decl_at_sign_decl_caret_decl_greater_than_greater_than_decl_hyphen_decl_less_than_less_than_decl_percent_decl_plus_decl_slash_decl_slash_slash_decl_vertical_bar_to_union_13_decl_ampersand_decl_asterisk_decl_asterisk_asterisk_decl_at_sign_decl_caret_decl_greater_than_greater_than_decl_hyphen_decl_less_than_less_than_decl_percent_decl_plus_decl_slash_decl_slash_slash_decl_vertical_bar(op)
+        self.equals: PyEquals = _coerce_union_2_decl_equals_none_to_decl_equals(equals)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyAugAssignStmtDeriveKwargs]) -> 'PyAugAssignStmt':
-        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
-        annotation = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
-        op = _coerce_union_13_token_ampersand_token_asterisk_token_asterisk_asterisk_token_at_sign_token_caret_token_greater_than_greater_than_token_hyphen_token_less_than_less_than_token_percent_token_plus_token_slash_token_slash_slash_token_vertical_bar_to_union_13_token_ampersand_token_asterisk_token_asterisk_asterisk_token_at_sign_token_caret_token_greater_than_greater_than_token_hyphen_token_less_than_less_than_token_percent_token_plus_token_slash_token_slash_slash_token_vertical_bar(kwargs['op']) if 'op' in kwargs else self.op
-        equals = _coerce_union_2_token_equals_none_to_token_equals(kwargs['equals']) if 'equals' in kwargs else self.equals
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        pattern = _coerce_decl_pattern_to_decl_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        annotation = _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
+        op = _coerce_union_13_decl_ampersand_decl_asterisk_decl_asterisk_asterisk_decl_at_sign_decl_caret_decl_greater_than_greater_than_decl_hyphen_decl_less_than_less_than_decl_percent_decl_plus_decl_slash_decl_slash_slash_decl_vertical_bar_to_union_13_decl_ampersand_decl_asterisk_decl_asterisk_asterisk_decl_at_sign_decl_caret_decl_greater_than_greater_than_decl_hyphen_decl_less_than_less_than_decl_percent_decl_plus_decl_slash_decl_slash_slash_decl_vertical_bar(kwargs['op']) if 'op' in kwargs else self.op
+        equals = _coerce_union_2_decl_equals_none_to_decl_equals(kwargs['equals']) if 'equals' in kwargs else self.equals
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyAugAssignStmt(pattern=pattern, annotation=annotation, op=op, equals=equals, expr=expr)
 
     def parent(self) -> 'PyAugAssignStmtParent':
@@ -1317,15 +1320,15 @@ class PyAssignStmtDeriveKwargs(TypedDict, total=False):
 class PyAssignStmt(_PyBaseNode):
 
     def __init__(self, pattern: 'PyPattern', *, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None, value: 'PyExpr | tuple[PyEquals | None, PyExpr] | None' = None) -> None:
-        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
-        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
-        self.value: tuple[PyEquals, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_none_to_union_2_tuple_2_token_equals_variant_expr_none(value)
+        self.pattern: PyPattern = _coerce_decl_pattern_to_decl_pattern(pattern)
+        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(annotation)
+        self.value: tuple[PyEquals, PyExpr] | None = _coerce_union_3_decl_expr_tuple_2_union_2_decl_equals_none_decl_expr_none_to_union_2_tuple_2_decl_equals_decl_expr_none(value)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyAssignStmtDeriveKwargs]) -> 'PyAssignStmt':
-        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
-        annotation = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
-        value = _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_none_to_union_2_tuple_2_token_equals_variant_expr_none(kwargs['value']) if 'value' in kwargs else self.value
+        pattern = _coerce_decl_pattern_to_decl_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        annotation = _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
+        value = _coerce_union_3_decl_expr_tuple_2_union_2_decl_equals_none_decl_expr_none_to_union_2_tuple_2_decl_equals_decl_expr_none(kwargs['value']) if 'value' in kwargs else self.value
         return PyAssignStmt(pattern=pattern, annotation=annotation, value=value)
 
     def parent(self) -> 'PyAssignStmtParent':
@@ -1341,11 +1344,11 @@ class PyPassStmtDeriveKwargs(TypedDict, total=False):
 class PyPassStmt(_PyBaseNode):
 
     def __init__(self, *, pass_keyword: 'PyPassKeyword | None' = None) -> None:
-        self.pass_keyword: PyPassKeyword = _coerce_union_2_token_pass_keyword_none_to_token_pass_keyword(pass_keyword)
+        self.pass_keyword: PyPassKeyword = _coerce_union_2_decl_pass_keyword_none_to_decl_pass_keyword(pass_keyword)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyPassStmtDeriveKwargs]) -> 'PyPassStmt':
-        pass_keyword = _coerce_union_2_token_pass_keyword_none_to_token_pass_keyword(kwargs['pass_keyword']) if 'pass_keyword' in kwargs else self.pass_keyword
+        pass_keyword = _coerce_union_2_decl_pass_keyword_none_to_decl_pass_keyword(kwargs['pass_keyword']) if 'pass_keyword' in kwargs else self.pass_keyword
         return PyPassStmt(pass_keyword=pass_keyword)
 
     def parent(self) -> 'PyPassStmtParent':
@@ -1366,13 +1369,13 @@ class PyGlobalStmt(_PyBaseNode):
         return len(self.names)
 
     def __init__(self, names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | ImmutablePunct[PyIdent | str, PyComma]', *, global_keyword: 'PyGlobalKeyword | None' = None) -> None:
-        self.global_keyword: PyGlobalKeyword = _coerce_union_2_token_global_keyword_none_to_token_global_keyword(global_keyword)
-        self.names: Punctuated[PyIdent, PyComma] = _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(names)
+        self.global_keyword: PyGlobalKeyword = _coerce_union_2_decl_global_keyword_none_to_decl_global_keyword(global_keyword)
+        self.names: Punctuated[PyIdent, PyComma] = _coerce_union_3_list_tuple_2_union_2_decl_ident_extern_string_union_2_decl_comma_none_required_list_union_2_decl_ident_extern_string_required_punct_union_2_decl_ident_extern_string_decl_comma_required_to_punct_decl_ident_decl_comma_required(names)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyGlobalStmtDeriveKwargs]) -> 'PyGlobalStmt':
-        global_keyword = _coerce_union_2_token_global_keyword_none_to_token_global_keyword(kwargs['global_keyword']) if 'global_keyword' in kwargs else self.global_keyword
-        names = _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(kwargs['names']) if 'names' in kwargs else self.names
+        global_keyword = _coerce_union_2_decl_global_keyword_none_to_decl_global_keyword(kwargs['global_keyword']) if 'global_keyword' in kwargs else self.global_keyword
+        names = _coerce_union_3_list_tuple_2_union_2_decl_ident_extern_string_union_2_decl_comma_none_required_list_union_2_decl_ident_extern_string_required_punct_union_2_decl_ident_extern_string_decl_comma_required_to_punct_decl_ident_decl_comma_required(kwargs['names']) if 'names' in kwargs else self.names
         return PyGlobalStmt(global_keyword=global_keyword, names=names)
 
     def parent(self) -> 'PyGlobalStmtParent':
@@ -1393,13 +1396,13 @@ class PyNonlocalStmt(_PyBaseNode):
         return len(self.names)
 
     def __init__(self, names: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | ImmutablePunct[PyIdent | str, PyComma]', *, nonlocal_keyword: 'PyNonlocalKeyword | None' = None) -> None:
-        self.nonlocal_keyword: PyNonlocalKeyword = _coerce_union_2_token_nonlocal_keyword_none_to_token_nonlocal_keyword(nonlocal_keyword)
-        self.names: Punctuated[PyIdent, PyComma] = _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(names)
+        self.nonlocal_keyword: PyNonlocalKeyword = _coerce_union_2_decl_nonlocal_keyword_none_to_decl_nonlocal_keyword(nonlocal_keyword)
+        self.names: Punctuated[PyIdent, PyComma] = _coerce_union_3_list_tuple_2_union_2_decl_ident_extern_string_union_2_decl_comma_none_required_list_union_2_decl_ident_extern_string_required_punct_union_2_decl_ident_extern_string_decl_comma_required_to_punct_decl_ident_decl_comma_required(names)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyNonlocalStmtDeriveKwargs]) -> 'PyNonlocalStmt':
-        nonlocal_keyword = _coerce_union_2_token_nonlocal_keyword_none_to_token_nonlocal_keyword(kwargs['nonlocal_keyword']) if 'nonlocal_keyword' in kwargs else self.nonlocal_keyword
-        names = _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(kwargs['names']) if 'names' in kwargs else self.names
+        nonlocal_keyword = _coerce_union_2_decl_nonlocal_keyword_none_to_decl_nonlocal_keyword(kwargs['nonlocal_keyword']) if 'nonlocal_keyword' in kwargs else self.nonlocal_keyword
+        names = _coerce_union_3_list_tuple_2_union_2_decl_ident_extern_string_union_2_decl_comma_none_required_list_union_2_decl_ident_extern_string_required_punct_union_2_decl_ident_extern_string_decl_comma_required_to_punct_decl_ident_decl_comma_required(kwargs['names']) if 'names' in kwargs else self.names
         return PyNonlocalStmt(nonlocal_keyword=nonlocal_keyword, names=names)
 
     def parent(self) -> 'PyNonlocalStmtParent':
@@ -1421,17 +1424,17 @@ class PyIfCaseDeriveKwargs(TypedDict, total=False):
 class PyIfCase(_PyBaseNode):
 
     def __init__(self, test: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, if_keyword: 'PyIfKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
-        self.if_keyword: PyIfKeyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(if_keyword)
-        self.test: PyExpr = _coerce_variant_expr_to_variant_expr(test)
-        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.if_keyword: PyIfKeyword = _coerce_union_2_decl_if_keyword_none_to_decl_if_keyword(if_keyword)
+        self.test: PyExpr = _coerce_decl_expr_to_decl_expr(test)
+        self.colon: PyColon = _coerce_union_2_decl_colon_none_to_decl_colon(colon)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(body)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyIfCaseDeriveKwargs]) -> 'PyIfCase':
-        if_keyword = _coerce_union_2_token_if_keyword_none_to_token_if_keyword(kwargs['if_keyword']) if 'if_keyword' in kwargs else self.if_keyword
-        test = _coerce_variant_expr_to_variant_expr(kwargs['test']) if 'test' in kwargs else self.test
-        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
-        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
+        if_keyword = _coerce_union_2_decl_if_keyword_none_to_decl_if_keyword(kwargs['if_keyword']) if 'if_keyword' in kwargs else self.if_keyword
+        test = _coerce_decl_expr_to_decl_expr(kwargs['test']) if 'test' in kwargs else self.test
+        colon = _coerce_union_2_decl_colon_none_to_decl_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
         return PyIfCase(if_keyword=if_keyword, test=test, colon=colon, body=body)
 
     def parent(self) -> 'PyIfCaseParent':
@@ -1453,17 +1456,17 @@ class PyElifCaseDeriveKwargs(TypedDict, total=False):
 class PyElifCase(_PyBaseNode):
 
     def __init__(self, test: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, elif_keyword: 'PyElifKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
-        self.elif_keyword: PyElifKeyword = _coerce_union_2_token_elif_keyword_none_to_token_elif_keyword(elif_keyword)
-        self.test: PyExpr = _coerce_variant_expr_to_variant_expr(test)
-        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.elif_keyword: PyElifKeyword = _coerce_union_2_decl_elif_keyword_none_to_decl_elif_keyword(elif_keyword)
+        self.test: PyExpr = _coerce_decl_expr_to_decl_expr(test)
+        self.colon: PyColon = _coerce_union_2_decl_colon_none_to_decl_colon(colon)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(body)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyElifCaseDeriveKwargs]) -> 'PyElifCase':
-        elif_keyword = _coerce_union_2_token_elif_keyword_none_to_token_elif_keyword(kwargs['elif_keyword']) if 'elif_keyword' in kwargs else self.elif_keyword
-        test = _coerce_variant_expr_to_variant_expr(kwargs['test']) if 'test' in kwargs else self.test
-        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
-        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
+        elif_keyword = _coerce_union_2_decl_elif_keyword_none_to_decl_elif_keyword(kwargs['elif_keyword']) if 'elif_keyword' in kwargs else self.elif_keyword
+        test = _coerce_decl_expr_to_decl_expr(kwargs['test']) if 'test' in kwargs else self.test
+        colon = _coerce_union_2_decl_colon_none_to_decl_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
         return PyElifCase(elif_keyword=elif_keyword, test=test, colon=colon, body=body)
 
     def parent(self) -> 'PyElifCaseParent':
@@ -1483,15 +1486,15 @@ class PyElseCaseDeriveKwargs(TypedDict, total=False):
 class PyElseCase(_PyBaseNode):
 
     def __init__(self, body: 'PyStmt | Sequence[PyStmt]', *, else_keyword: 'PyElseKeyword | None' = None, colon: 'PyColon | None' = None) -> None:
-        self.else_keyword: PyElseKeyword = _coerce_union_2_token_else_keyword_none_to_token_else_keyword(else_keyword)
-        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.else_keyword: PyElseKeyword = _coerce_union_2_decl_else_keyword_none_to_decl_else_keyword(else_keyword)
+        self.colon: PyColon = _coerce_union_2_decl_colon_none_to_decl_colon(colon)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(body)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyElseCaseDeriveKwargs]) -> 'PyElseCase':
-        else_keyword = _coerce_union_2_token_else_keyword_none_to_token_else_keyword(kwargs['else_keyword']) if 'else_keyword' in kwargs else self.else_keyword
-        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
-        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
+        else_keyword = _coerce_union_2_decl_else_keyword_none_to_decl_else_keyword(kwargs['else_keyword']) if 'else_keyword' in kwargs else self.else_keyword
+        colon = _coerce_union_2_decl_colon_none_to_decl_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
         return PyElseCase(else_keyword=else_keyword, colon=colon, body=body)
 
     def parent(self) -> 'PyElseCaseParent':
@@ -1514,15 +1517,15 @@ class PyIfStmt(_PyBaseNode):
         return len(self.alternatives)
 
     def __init__(self, first: 'PyIfCase', *, alternatives: 'Sequence[PyElifCase] | None' = None, last: 'PyElseCase | PyStmt | Sequence[PyStmt] | None' = None) -> None:
-        self.first: PyIfCase = _coerce_node_if_case_to_node_if_case(first)
-        self.alternatives: list[PyElifCase] = _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(alternatives)
-        self.last: PyElseCase | None = _coerce_union_4_node_else_case_variant_stmt_list_variant_stmt_required_none_to_union_2_node_else_case_none(last)
+        self.first: PyIfCase = _coerce_decl_if_case_to_decl_if_case(first)
+        self.alternatives: list[PyElifCase] = _coerce_union_2_list_decl_elif_case_none_to_list_decl_elif_case(alternatives)
+        self.last: PyElseCase | None = _coerce_union_4_decl_else_case_decl_stmt_list_decl_stmt_required_none_to_union_2_decl_else_case_none(last)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyIfStmtDeriveKwargs]) -> 'PyIfStmt':
-        first = _coerce_node_if_case_to_node_if_case(kwargs['first']) if 'first' in kwargs else self.first
-        alternatives = _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(kwargs['alternatives']) if 'alternatives' in kwargs else self.alternatives
-        last = _coerce_union_4_node_else_case_variant_stmt_list_variant_stmt_required_none_to_union_2_node_else_case_none(kwargs['last']) if 'last' in kwargs else self.last
+        first = _coerce_decl_if_case_to_decl_if_case(kwargs['first']) if 'first' in kwargs else self.first
+        alternatives = _coerce_union_2_list_decl_elif_case_none_to_list_decl_elif_case(kwargs['alternatives']) if 'alternatives' in kwargs else self.alternatives
+        last = _coerce_union_4_decl_else_case_decl_stmt_list_decl_stmt_required_none_to_union_2_decl_else_case_none(kwargs['last']) if 'last' in kwargs else self.last
         return PyIfStmt(first=first, alternatives=alternatives, last=last)
 
     def parent(self) -> 'PyIfStmtParent':
@@ -1540,13 +1543,13 @@ class PyDeleteStmtDeriveKwargs(TypedDict, total=False):
 class PyDeleteStmt(_PyBaseNode):
 
     def __init__(self, pattern: 'PyPattern', *, del_keyword: 'PyDelKeyword | None' = None) -> None:
-        self.del_keyword: PyDelKeyword = _coerce_union_2_token_del_keyword_none_to_token_del_keyword(del_keyword)
-        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
+        self.del_keyword: PyDelKeyword = _coerce_union_2_decl_del_keyword_none_to_decl_del_keyword(del_keyword)
+        self.pattern: PyPattern = _coerce_decl_pattern_to_decl_pattern(pattern)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyDeleteStmtDeriveKwargs]) -> 'PyDeleteStmt':
-        del_keyword = _coerce_union_2_token_del_keyword_none_to_token_del_keyword(kwargs['del_keyword']) if 'del_keyword' in kwargs else self.del_keyword
-        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        del_keyword = _coerce_union_2_decl_del_keyword_none_to_decl_del_keyword(kwargs['del_keyword']) if 'del_keyword' in kwargs else self.del_keyword
+        pattern = _coerce_decl_pattern_to_decl_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
         return PyDeleteStmt(del_keyword=del_keyword, pattern=pattern)
 
     def parent(self) -> 'PyDeleteStmtParent':
@@ -1566,15 +1569,15 @@ class PyRaiseStmtDeriveKwargs(TypedDict, total=False):
 class PyRaiseStmt(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', *, raise_keyword: 'PyRaiseKeyword | None' = None, cause: 'PyExpr | tuple[PyFromKeyword | None, PyExpr] | None' = None) -> None:
-        self.raise_keyword: PyRaiseKeyword = _coerce_union_2_token_raise_keyword_none_to_token_raise_keyword(raise_keyword)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
-        self.cause: tuple[PyFromKeyword, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_from_keyword_none_variant_expr_none_to_union_2_tuple_2_token_from_keyword_variant_expr_none(cause)
+        self.raise_keyword: PyRaiseKeyword = _coerce_union_2_decl_raise_keyword_none_to_decl_raise_keyword(raise_keyword)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
+        self.cause: tuple[PyFromKeyword, PyExpr] | None = _coerce_union_3_decl_expr_tuple_2_union_2_decl_from_keyword_none_decl_expr_none_to_union_2_tuple_2_decl_from_keyword_decl_expr_none(cause)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyRaiseStmtDeriveKwargs]) -> 'PyRaiseStmt':
-        raise_keyword = _coerce_union_2_token_raise_keyword_none_to_token_raise_keyword(kwargs['raise_keyword']) if 'raise_keyword' in kwargs else self.raise_keyword
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
-        cause = _coerce_union_3_variant_expr_tuple_2_union_2_token_from_keyword_none_variant_expr_none_to_union_2_tuple_2_token_from_keyword_variant_expr_none(kwargs['cause']) if 'cause' in kwargs else self.cause
+        raise_keyword = _coerce_union_2_decl_raise_keyword_none_to_decl_raise_keyword(kwargs['raise_keyword']) if 'raise_keyword' in kwargs else self.raise_keyword
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        cause = _coerce_union_3_decl_expr_tuple_2_union_2_decl_from_keyword_none_decl_expr_none_to_union_2_tuple_2_decl_from_keyword_decl_expr_none(kwargs['cause']) if 'cause' in kwargs else self.cause
         return PyRaiseStmt(raise_keyword=raise_keyword, expr=expr, cause=cause)
 
     def parent(self) -> 'PyRaiseStmtParent':
@@ -1602,23 +1605,23 @@ class PyForStmtDeriveKwargs(TypedDict, total=False):
 class PyForStmt(_PyBaseNode):
 
     def __init__(self, pattern: 'PyPattern', expr: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, for_keyword: 'PyForKeyword | None' = None, in_keyword: 'PyInKeyword | None' = None, colon: 'PyColon | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> None:
-        self.for_keyword: PyForKeyword = _coerce_union_2_token_for_keyword_none_to_token_for_keyword(for_keyword)
-        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
-        self.in_keyword: PyInKeyword = _coerce_union_2_token_in_keyword_none_to_token_in_keyword(in_keyword)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
-        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
-        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(else_clause)
+        self.for_keyword: PyForKeyword = _coerce_union_2_decl_for_keyword_none_to_decl_for_keyword(for_keyword)
+        self.pattern: PyPattern = _coerce_decl_pattern_to_decl_pattern(pattern)
+        self.in_keyword: PyInKeyword = _coerce_union_2_decl_in_keyword_none_to_decl_in_keyword(in_keyword)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
+        self.colon: PyColon = _coerce_union_2_decl_colon_none_to_decl_colon(colon)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(body)
+        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None = _coerce_union_4_decl_stmt_tuple_3_union_2_decl_else_keyword_none_union_2_decl_colon_none_union_2_decl_stmt_list_decl_stmt_required_list_decl_stmt_required_none_to_union_2_tuple_3_decl_else_keyword_decl_colon_union_2_decl_stmt_list_decl_stmt_required_none(else_clause)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyForStmtDeriveKwargs]) -> 'PyForStmt':
-        for_keyword = _coerce_union_2_token_for_keyword_none_to_token_for_keyword(kwargs['for_keyword']) if 'for_keyword' in kwargs else self.for_keyword
-        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
-        in_keyword = _coerce_union_2_token_in_keyword_none_to_token_in_keyword(kwargs['in_keyword']) if 'in_keyword' in kwargs else self.in_keyword
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
-        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
-        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
-        else_clause = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(kwargs['else_clause']) if 'else_clause' in kwargs else self.else_clause
+        for_keyword = _coerce_union_2_decl_for_keyword_none_to_decl_for_keyword(kwargs['for_keyword']) if 'for_keyword' in kwargs else self.for_keyword
+        pattern = _coerce_decl_pattern_to_decl_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        in_keyword = _coerce_union_2_decl_in_keyword_none_to_decl_in_keyword(kwargs['in_keyword']) if 'in_keyword' in kwargs else self.in_keyword
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        colon = _coerce_union_2_decl_colon_none_to_decl_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
+        else_clause = _coerce_union_4_decl_stmt_tuple_3_union_2_decl_else_keyword_none_union_2_decl_colon_none_union_2_decl_stmt_list_decl_stmt_required_list_decl_stmt_required_none_to_union_2_tuple_3_decl_else_keyword_decl_colon_union_2_decl_stmt_list_decl_stmt_required_none(kwargs['else_clause']) if 'else_clause' in kwargs else self.else_clause
         return PyForStmt(for_keyword=for_keyword, pattern=pattern, in_keyword=in_keyword, expr=expr, colon=colon, body=body, else_clause=else_clause)
 
     def parent(self) -> 'PyForStmtParent':
@@ -1642,19 +1645,19 @@ class PyWhileStmtDeriveKwargs(TypedDict, total=False):
 class PyWhileStmt(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, while_keyword: 'PyWhileKeyword | None' = None, colon: 'PyColon | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> None:
-        self.while_keyword: PyWhileKeyword = _coerce_union_2_token_while_keyword_none_to_token_while_keyword(while_keyword)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
-        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
-        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(else_clause)
+        self.while_keyword: PyWhileKeyword = _coerce_union_2_decl_while_keyword_none_to_decl_while_keyword(while_keyword)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
+        self.colon: PyColon = _coerce_union_2_decl_colon_none_to_decl_colon(colon)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(body)
+        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None = _coerce_union_4_decl_stmt_tuple_3_union_2_decl_else_keyword_none_union_2_decl_colon_none_union_2_decl_stmt_list_decl_stmt_required_list_decl_stmt_required_none_to_union_2_tuple_3_decl_else_keyword_decl_colon_union_2_decl_stmt_list_decl_stmt_required_none(else_clause)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyWhileStmtDeriveKwargs]) -> 'PyWhileStmt':
-        while_keyword = _coerce_union_2_token_while_keyword_none_to_token_while_keyword(kwargs['while_keyword']) if 'while_keyword' in kwargs else self.while_keyword
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
-        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
-        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
-        else_clause = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(kwargs['else_clause']) if 'else_clause' in kwargs else self.else_clause
+        while_keyword = _coerce_union_2_decl_while_keyword_none_to_decl_while_keyword(kwargs['while_keyword']) if 'while_keyword' in kwargs else self.while_keyword
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        colon = _coerce_union_2_decl_colon_none_to_decl_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
+        else_clause = _coerce_union_4_decl_stmt_tuple_3_union_2_decl_else_keyword_none_union_2_decl_colon_none_union_2_decl_stmt_list_decl_stmt_required_list_decl_stmt_required_none_to_union_2_tuple_3_decl_else_keyword_decl_colon_union_2_decl_stmt_list_decl_stmt_required_none(kwargs['else_clause']) if 'else_clause' in kwargs else self.else_clause
         return PyWhileStmt(while_keyword=while_keyword, expr=expr, colon=colon, body=body, else_clause=else_clause)
 
     def parent(self) -> 'PyWhileStmtParent':
@@ -1670,11 +1673,11 @@ class PyBreakStmtDeriveKwargs(TypedDict, total=False):
 class PyBreakStmt(_PyBaseNode):
 
     def __init__(self, *, break_keyword: 'PyBreakKeyword | None' = None) -> None:
-        self.break_keyword: PyBreakKeyword = _coerce_union_2_token_break_keyword_none_to_token_break_keyword(break_keyword)
+        self.break_keyword: PyBreakKeyword = _coerce_union_2_decl_break_keyword_none_to_decl_break_keyword(break_keyword)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyBreakStmtDeriveKwargs]) -> 'PyBreakStmt':
-        break_keyword = _coerce_union_2_token_break_keyword_none_to_token_break_keyword(kwargs['break_keyword']) if 'break_keyword' in kwargs else self.break_keyword
+        break_keyword = _coerce_union_2_decl_break_keyword_none_to_decl_break_keyword(kwargs['break_keyword']) if 'break_keyword' in kwargs else self.break_keyword
         return PyBreakStmt(break_keyword=break_keyword)
 
     def parent(self) -> 'PyBreakStmtParent':
@@ -1690,11 +1693,11 @@ class PyContinueStmtDeriveKwargs(TypedDict, total=False):
 class PyContinueStmt(_PyBaseNode):
 
     def __init__(self, *, continue_keyword: 'PyContinueKeyword | None' = None) -> None:
-        self.continue_keyword: PyContinueKeyword = _coerce_union_2_token_continue_keyword_none_to_token_continue_keyword(continue_keyword)
+        self.continue_keyword: PyContinueKeyword = _coerce_union_2_decl_continue_keyword_none_to_decl_continue_keyword(continue_keyword)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyContinueStmtDeriveKwargs]) -> 'PyContinueStmt':
-        continue_keyword = _coerce_union_2_token_continue_keyword_none_to_token_continue_keyword(kwargs['continue_keyword']) if 'continue_keyword' in kwargs else self.continue_keyword
+        continue_keyword = _coerce_union_2_decl_continue_keyword_none_to_decl_continue_keyword(kwargs['continue_keyword']) if 'continue_keyword' in kwargs else self.continue_keyword
         return PyContinueStmt(continue_keyword=continue_keyword)
 
     def parent(self) -> 'PyContinueStmtParent':
@@ -1718,19 +1721,19 @@ class PyTypeAliasStmtDeriveKwargs(TypedDict, total=False):
 class PyTypeAliasStmt(_PyBaseNode):
 
     def __init__(self, name: 'PyIdent | str', expr: 'PyExpr', *, type_keyword: 'PyTypeKeyword | None' = None, type_params: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None' = None, equals: 'PyEquals | None' = None) -> None:
-        self.type_keyword: PyTypeKeyword = _coerce_union_2_token_type_keyword_none_to_token_type_keyword(type_keyword)
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
-        self.type_params: tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None = _coerce_union_5_tuple_3_union_2_token_open_bracket_none_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_union_2_token_close_bracket_none_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_union_2_tuple_3_token_open_bracket_punct_variant_expr_token_comma_token_close_bracket_none(type_params)
-        self.equals: PyEquals = _coerce_union_2_token_equals_none_to_token_equals(equals)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.type_keyword: PyTypeKeyword = _coerce_union_2_decl_type_keyword_none_to_decl_type_keyword(type_keyword)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
+        self.type_params: tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None = _coerce_union_5_tuple_3_union_2_decl_open_bracket_none_union_4_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_none_union_2_decl_close_bracket_none_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_none_to_union_2_tuple_3_decl_open_bracket_punct_decl_expr_decl_comma_decl_close_bracket_none(type_params)
+        self.equals: PyEquals = _coerce_union_2_decl_equals_none_to_decl_equals(equals)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyTypeAliasStmtDeriveKwargs]) -> 'PyTypeAliasStmt':
-        type_keyword = _coerce_union_2_token_type_keyword_none_to_token_type_keyword(kwargs['type_keyword']) if 'type_keyword' in kwargs else self.type_keyword
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
-        type_params = _coerce_union_5_tuple_3_union_2_token_open_bracket_none_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_union_2_token_close_bracket_none_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_union_2_tuple_3_token_open_bracket_punct_variant_expr_token_comma_token_close_bracket_none(kwargs['type_params']) if 'type_params' in kwargs else self.type_params
-        equals = _coerce_union_2_token_equals_none_to_token_equals(kwargs['equals']) if 'equals' in kwargs else self.equals
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        type_keyword = _coerce_union_2_decl_type_keyword_none_to_decl_type_keyword(kwargs['type_keyword']) if 'type_keyword' in kwargs else self.type_keyword
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
+        type_params = _coerce_union_5_tuple_3_union_2_decl_open_bracket_none_union_4_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_none_union_2_decl_close_bracket_none_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_none_to_union_2_tuple_3_decl_open_bracket_punct_decl_expr_decl_comma_decl_close_bracket_none(kwargs['type_params']) if 'type_params' in kwargs else self.type_params
+        equals = _coerce_union_2_decl_equals_none_to_decl_equals(kwargs['equals']) if 'equals' in kwargs else self.equals
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyTypeAliasStmt(type_keyword=type_keyword, name=name, type_params=type_params, equals=equals, expr=expr)
 
     def parent(self) -> 'PyTypeAliasStmtParent':
@@ -1754,19 +1757,19 @@ class PyExceptHandlerDeriveKwargs(TypedDict, total=False):
 class PyExceptHandler(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', body: 'PyStmt | Sequence[PyStmt]', *, except_keyword: 'PyExceptKeyword | None' = None, binder: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str' = None, colon: 'PyColon | None' = None) -> None:
-        self.except_keyword: PyExceptKeyword = _coerce_union_2_token_except_keyword_none_to_token_except_keyword(except_keyword)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
-        self.binder: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(binder)
-        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.except_keyword: PyExceptKeyword = _coerce_union_2_decl_except_keyword_none_to_decl_except_keyword(except_keyword)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
+        self.binder: tuple[PyAsKeyword, PyIdent] | None = _coerce_union_4_decl_ident_tuple_2_union_2_decl_as_keyword_none_union_2_decl_ident_extern_string_none_extern_string_to_union_2_tuple_2_decl_as_keyword_decl_ident_none(binder)
+        self.colon: PyColon = _coerce_union_2_decl_colon_none_to_decl_colon(colon)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(body)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyExceptHandlerDeriveKwargs]) -> 'PyExceptHandler':
-        except_keyword = _coerce_union_2_token_except_keyword_none_to_token_except_keyword(kwargs['except_keyword']) if 'except_keyword' in kwargs else self.except_keyword
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
-        binder = _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(kwargs['binder']) if 'binder' in kwargs else self.binder
-        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
-        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
+        except_keyword = _coerce_union_2_decl_except_keyword_none_to_decl_except_keyword(kwargs['except_keyword']) if 'except_keyword' in kwargs else self.except_keyword
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        binder = _coerce_union_4_decl_ident_tuple_2_union_2_decl_as_keyword_none_union_2_decl_ident_extern_string_none_extern_string_to_union_2_tuple_2_decl_as_keyword_decl_ident_none(kwargs['binder']) if 'binder' in kwargs else self.binder
+        colon = _coerce_union_2_decl_colon_none_to_decl_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
         return PyExceptHandler(except_keyword=except_keyword, expr=expr, binder=binder, colon=colon, body=body)
 
     def parent(self) -> 'PyExceptHandlerParent':
@@ -1795,21 +1798,21 @@ class PyTryStmt(_PyBaseNode):
         return len(self.handlers)
 
     def __init__(self, body: 'PyStmt | Sequence[PyStmt]', *, try_keyword: 'PyTryKeyword | None' = None, colon: 'PyColon | None' = None, handlers: 'Sequence[PyExceptHandler] | None' = None, else_clause: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None, finally_clause: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None' = None) -> None:
-        self.try_keyword: PyTryKeyword = _coerce_union_2_token_try_keyword_none_to_token_try_keyword(try_keyword)
-        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
-        self.handlers: list[PyExceptHandler] = _coerce_union_2_list_node_except_handler_none_to_list_node_except_handler(handlers)
-        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(else_clause)
-        self.finally_clause: tuple[PyFinallyKeyword, PyColon, PyStmt | list[PyStmt]] | None = _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(finally_clause)
+        self.try_keyword: PyTryKeyword = _coerce_union_2_decl_try_keyword_none_to_decl_try_keyword(try_keyword)
+        self.colon: PyColon = _coerce_union_2_decl_colon_none_to_decl_colon(colon)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(body)
+        self.handlers: list[PyExceptHandler] = _coerce_union_2_list_decl_except_handler_none_to_list_decl_except_handler(handlers)
+        self.else_clause: tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None = _coerce_union_4_decl_stmt_tuple_3_union_2_decl_else_keyword_none_union_2_decl_colon_none_union_2_decl_stmt_list_decl_stmt_required_list_decl_stmt_required_none_to_union_2_tuple_3_decl_else_keyword_decl_colon_union_2_decl_stmt_list_decl_stmt_required_none(else_clause)
+        self.finally_clause: tuple[PyFinallyKeyword, PyColon, PyStmt | list[PyStmt]] | None = _coerce_union_4_decl_stmt_tuple_3_union_2_decl_finally_keyword_none_union_2_decl_colon_none_union_2_decl_stmt_list_decl_stmt_required_list_decl_stmt_required_none_to_union_2_tuple_3_decl_finally_keyword_decl_colon_union_2_decl_stmt_list_decl_stmt_required_none(finally_clause)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyTryStmtDeriveKwargs]) -> 'PyTryStmt':
-        try_keyword = _coerce_union_2_token_try_keyword_none_to_token_try_keyword(kwargs['try_keyword']) if 'try_keyword' in kwargs else self.try_keyword
-        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
-        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
-        handlers = _coerce_union_2_list_node_except_handler_none_to_list_node_except_handler(kwargs['handlers']) if 'handlers' in kwargs else self.handlers
-        else_clause = _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(kwargs['else_clause']) if 'else_clause' in kwargs else self.else_clause
-        finally_clause = _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(kwargs['finally_clause']) if 'finally_clause' in kwargs else self.finally_clause
+        try_keyword = _coerce_union_2_decl_try_keyword_none_to_decl_try_keyword(kwargs['try_keyword']) if 'try_keyword' in kwargs else self.try_keyword
+        colon = _coerce_union_2_decl_colon_none_to_decl_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
+        handlers = _coerce_union_2_list_decl_except_handler_none_to_list_decl_except_handler(kwargs['handlers']) if 'handlers' in kwargs else self.handlers
+        else_clause = _coerce_union_4_decl_stmt_tuple_3_union_2_decl_else_keyword_none_union_2_decl_colon_none_union_2_decl_stmt_list_decl_stmt_required_list_decl_stmt_required_none_to_union_2_tuple_3_decl_else_keyword_decl_colon_union_2_decl_stmt_list_decl_stmt_required_none(kwargs['else_clause']) if 'else_clause' in kwargs else self.else_clause
+        finally_clause = _coerce_union_4_decl_stmt_tuple_3_union_2_decl_finally_keyword_none_union_2_decl_colon_none_union_2_decl_stmt_list_decl_stmt_required_list_decl_stmt_required_none_to_union_2_tuple_3_decl_finally_keyword_decl_colon_union_2_decl_stmt_list_decl_stmt_required_none(kwargs['finally_clause']) if 'finally_clause' in kwargs else self.finally_clause
         return PyTryStmt(try_keyword=try_keyword, colon=colon, body=body, handlers=handlers, else_clause=else_clause, finally_clause=finally_clause)
 
     def parent(self) -> 'PyTryStmtParent':
@@ -1825,11 +1828,11 @@ class PyClassBaseArgDeriveKwargs(TypedDict, total=False):
 class PyClassBaseArg(_PyBaseNode):
 
     def __init__(self, name: 'PyIdent | str') -> None:
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyClassBaseArgDeriveKwargs]) -> 'PyClassBaseArg':
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
         return PyClassBaseArg(name=name)
 
     def parent(self) -> 'PyClassBaseArgParent':
@@ -1849,15 +1852,15 @@ class PyKeywordBaseArgDeriveKwargs(TypedDict, total=False):
 class PyKeywordBaseArg(_PyBaseNode):
 
     def __init__(self, name: 'PyIdent | str', expr: 'PyExpr', *, equals: 'PyEquals | None' = None) -> None:
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
-        self.equals: PyEquals = _coerce_union_2_token_equals_none_to_token_equals(equals)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
+        self.equals: PyEquals = _coerce_union_2_decl_equals_none_to_decl_equals(equals)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyKeywordBaseArgDeriveKwargs]) -> 'PyKeywordBaseArg':
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
-        equals = _coerce_union_2_token_equals_none_to_token_equals(kwargs['equals']) if 'equals' in kwargs else self.equals
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
+        equals = _coerce_union_2_decl_equals_none_to_decl_equals(kwargs['equals']) if 'equals' in kwargs else self.equals
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyKeywordBaseArg(name=name, equals=equals, expr=expr)
 
     def parent(self) -> 'PyKeywordBaseArgParent':
@@ -1886,21 +1889,21 @@ class PyClassDef(_PyBaseNode):
         return len(self.decorators)
 
     def __init__(self, name: 'PyIdent | str', body: 'PyStmt | Sequence[PyStmt]', *, decorators: 'Sequence[PyDecorator | PyExpr] | None' = None, class_keyword: 'PyClassKeyword | None' = None, bases: 'tuple[PyOpenParen | None, Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None, PyCloseParen | None] | Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None' = None, colon: 'PyColon | None' = None) -> None:
-        self.decorators: list[PyDecorator] = _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(decorators)
-        self.class_keyword: PyClassKeyword = _coerce_union_2_token_class_keyword_none_to_token_class_keyword(class_keyword)
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
-        self.bases: tuple[PyOpenParen, Punctuated[PyBaseArg, PyComma], PyCloseParen] | None = _coerce_union_5_tuple_3_union_2_token_open_paren_none_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_union_2_token_close_paren_none_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_to_union_2_tuple_3_token_open_paren_punct_variant_base_arg_token_comma_token_close_paren_none(bases)
-        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.decorators: list[PyDecorator] = _coerce_union_2_list_union_2_decl_decorator_decl_expr_none_to_list_decl_decorator(decorators)
+        self.class_keyword: PyClassKeyword = _coerce_union_2_decl_class_keyword_none_to_decl_class_keyword(class_keyword)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
+        self.bases: tuple[PyOpenParen, Punctuated[PyBaseArg, PyComma], PyCloseParen] | None = _coerce_union_5_tuple_3_union_2_decl_open_paren_none_union_4_list_decl_base_arg_list_tuple_2_decl_base_arg_union_2_decl_comma_none_punct_decl_base_arg_decl_comma_none_union_2_decl_close_paren_none_list_decl_base_arg_list_tuple_2_decl_base_arg_union_2_decl_comma_none_punct_decl_base_arg_decl_comma_none_to_union_2_tuple_3_decl_open_paren_punct_decl_base_arg_decl_comma_decl_close_paren_none(bases)
+        self.colon: PyColon = _coerce_union_2_decl_colon_none_to_decl_colon(colon)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(body)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyClassDefDeriveKwargs]) -> 'PyClassDef':
-        decorators = _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(kwargs['decorators']) if 'decorators' in kwargs else self.decorators
-        class_keyword = _coerce_union_2_token_class_keyword_none_to_token_class_keyword(kwargs['class_keyword']) if 'class_keyword' in kwargs else self.class_keyword
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
-        bases = _coerce_union_5_tuple_3_union_2_token_open_paren_none_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_union_2_token_close_paren_none_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_to_union_2_tuple_3_token_open_paren_punct_variant_base_arg_token_comma_token_close_paren_none(kwargs['bases']) if 'bases' in kwargs else self.bases
-        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
-        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
+        decorators = _coerce_union_2_list_union_2_decl_decorator_decl_expr_none_to_list_decl_decorator(kwargs['decorators']) if 'decorators' in kwargs else self.decorators
+        class_keyword = _coerce_union_2_decl_class_keyword_none_to_decl_class_keyword(kwargs['class_keyword']) if 'class_keyword' in kwargs else self.class_keyword
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
+        bases = _coerce_union_5_tuple_3_union_2_decl_open_paren_none_union_4_list_decl_base_arg_list_tuple_2_decl_base_arg_union_2_decl_comma_none_punct_decl_base_arg_decl_comma_none_union_2_decl_close_paren_none_list_decl_base_arg_list_tuple_2_decl_base_arg_union_2_decl_comma_none_punct_decl_base_arg_decl_comma_none_to_union_2_tuple_3_decl_open_paren_punct_decl_base_arg_decl_comma_decl_close_paren_none(kwargs['bases']) if 'bases' in kwargs else self.bases
+        colon = _coerce_union_2_decl_colon_none_to_decl_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
         return PyClassDef(decorators=decorators, class_keyword=class_keyword, name=name, bases=bases, colon=colon, body=body)
 
     def parent(self) -> 'PyClassDefParent':
@@ -1920,15 +1923,15 @@ class PyNamedParamDeriveKwargs(TypedDict, total=False):
 class PyNamedParam(_PyBaseNode):
 
     def __init__(self, pattern: 'PyPattern', *, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None, default: 'PyExpr | tuple[PyEquals | None, PyExpr] | None' = None) -> None:
-        self.pattern: PyPattern = _coerce_variant_pattern_to_variant_pattern(pattern)
-        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
-        self.default: tuple[PyEquals, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_none_to_union_2_tuple_2_token_equals_variant_expr_none(default)
+        self.pattern: PyPattern = _coerce_decl_pattern_to_decl_pattern(pattern)
+        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(annotation)
+        self.default: tuple[PyEquals, PyExpr] | None = _coerce_union_3_decl_expr_tuple_2_union_2_decl_equals_none_decl_expr_none_to_union_2_tuple_2_decl_equals_decl_expr_none(default)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyNamedParamDeriveKwargs]) -> 'PyNamedParam':
-        pattern = _coerce_variant_pattern_to_variant_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
-        annotation = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
-        default = _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_none_to_union_2_tuple_2_token_equals_variant_expr_none(kwargs['default']) if 'default' in kwargs else self.default
+        pattern = _coerce_decl_pattern_to_decl_pattern(kwargs['pattern']) if 'pattern' in kwargs else self.pattern
+        annotation = _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
+        default = _coerce_union_3_decl_expr_tuple_2_union_2_decl_equals_none_decl_expr_none_to_union_2_tuple_2_decl_equals_decl_expr_none(kwargs['default']) if 'default' in kwargs else self.default
         return PyNamedParam(pattern=pattern, annotation=annotation, default=default)
 
     def parent(self) -> 'PyNamedParamParent':
@@ -1948,15 +1951,15 @@ class PyRestPosParamDeriveKwargs(TypedDict, total=False):
 class PyRestPosParam(_PyBaseNode):
 
     def __init__(self, name: 'PyIdent | str', *, asterisk: 'PyAsterisk | None' = None, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None) -> None:
-        self.asterisk: PyAsterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(asterisk)
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
-        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
+        self.asterisk: PyAsterisk = _coerce_union_2_decl_asterisk_none_to_decl_asterisk(asterisk)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
+        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(annotation)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyRestPosParamDeriveKwargs]) -> 'PyRestPosParam':
-        asterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(kwargs['asterisk']) if 'asterisk' in kwargs else self.asterisk
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
-        annotation = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
+        asterisk = _coerce_union_2_decl_asterisk_none_to_decl_asterisk(kwargs['asterisk']) if 'asterisk' in kwargs else self.asterisk
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
+        annotation = _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
         return PyRestPosParam(asterisk=asterisk, name=name, annotation=annotation)
 
     def parent(self) -> 'PyRestPosParamParent':
@@ -1976,15 +1979,15 @@ class PyRestKeywordParamDeriveKwargs(TypedDict, total=False):
 class PyRestKeywordParam(_PyBaseNode):
 
     def __init__(self, name: 'PyIdent | str', *, asterisk_asterisk: 'PyAsteriskAsterisk | None' = None, annotation: 'PyExpr | tuple[PyColon | None, PyExpr] | None' = None) -> None:
-        self.asterisk_asterisk: PyAsteriskAsterisk = _coerce_union_2_token_asterisk_asterisk_none_to_token_asterisk_asterisk(asterisk_asterisk)
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
-        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(annotation)
+        self.asterisk_asterisk: PyAsteriskAsterisk = _coerce_union_2_decl_asterisk_asterisk_none_to_decl_asterisk_asterisk(asterisk_asterisk)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
+        self.annotation: tuple[PyColon, PyExpr] | None = _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(annotation)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyRestKeywordParamDeriveKwargs]) -> 'PyRestKeywordParam':
-        asterisk_asterisk = _coerce_union_2_token_asterisk_asterisk_none_to_token_asterisk_asterisk(kwargs['asterisk_asterisk']) if 'asterisk_asterisk' in kwargs else self.asterisk_asterisk
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
-        annotation = _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
+        asterisk_asterisk = _coerce_union_2_decl_asterisk_asterisk_none_to_decl_asterisk_asterisk(kwargs['asterisk_asterisk']) if 'asterisk_asterisk' in kwargs else self.asterisk_asterisk
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
+        annotation = _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(kwargs['annotation']) if 'annotation' in kwargs else self.annotation
         return PyRestKeywordParam(asterisk_asterisk=asterisk_asterisk, name=name, annotation=annotation)
 
     def parent(self) -> 'PyRestKeywordParamParent':
@@ -2000,11 +2003,11 @@ class PyPosSepParamDeriveKwargs(TypedDict, total=False):
 class PyPosSepParam(_PyBaseNode):
 
     def __init__(self, *, slash: 'PySlash | None' = None) -> None:
-        self.slash: PySlash = _coerce_union_2_token_slash_none_to_token_slash(slash)
+        self.slash: PySlash = _coerce_union_2_decl_slash_none_to_decl_slash(slash)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyPosSepParamDeriveKwargs]) -> 'PyPosSepParam':
-        slash = _coerce_union_2_token_slash_none_to_token_slash(kwargs['slash']) if 'slash' in kwargs else self.slash
+        slash = _coerce_union_2_decl_slash_none_to_decl_slash(kwargs['slash']) if 'slash' in kwargs else self.slash
         return PyPosSepParam(slash=slash)
 
     def parent(self) -> 'PyPosSepParamParent':
@@ -2020,11 +2023,11 @@ class PyKwSepParamDeriveKwargs(TypedDict, total=False):
 class PyKwSepParam(_PyBaseNode):
 
     def __init__(self, *, asterisk: 'PyAsterisk | None' = None) -> None:
-        self.asterisk: PyAsterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(asterisk)
+        self.asterisk: PyAsterisk = _coerce_union_2_decl_asterisk_none_to_decl_asterisk(asterisk)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyKwSepParamDeriveKwargs]) -> 'PyKwSepParam':
-        asterisk = _coerce_union_2_token_asterisk_none_to_token_asterisk(kwargs['asterisk']) if 'asterisk' in kwargs else self.asterisk
+        asterisk = _coerce_union_2_decl_asterisk_none_to_decl_asterisk(kwargs['asterisk']) if 'asterisk' in kwargs else self.asterisk
         return PyKwSepParam(asterisk=asterisk)
 
     def parent(self) -> 'PyKwSepParamParent':
@@ -2042,13 +2045,13 @@ class PyDecoratorDeriveKwargs(TypedDict, total=False):
 class PyDecorator(_PyBaseNode):
 
     def __init__(self, expr: 'PyExpr', *, at_sign: 'PyAtSign | None' = None) -> None:
-        self.at_sign: PyAtSign = _coerce_union_2_token_at_sign_none_to_token_at_sign(at_sign)
-        self.expr: PyExpr = _coerce_variant_expr_to_variant_expr(expr)
+        self.at_sign: PyAtSign = _coerce_union_2_decl_at_sign_none_to_decl_at_sign(at_sign)
+        self.expr: PyExpr = _coerce_decl_expr_to_decl_expr(expr)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyDecoratorDeriveKwargs]) -> 'PyDecorator':
-        at_sign = _coerce_union_2_token_at_sign_none_to_token_at_sign(kwargs['at_sign']) if 'at_sign' in kwargs else self.at_sign
-        expr = _coerce_variant_expr_to_variant_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
+        at_sign = _coerce_union_2_decl_at_sign_none_to_decl_at_sign(kwargs['at_sign']) if 'at_sign' in kwargs else self.at_sign
+        expr = _coerce_decl_expr_to_decl_expr(kwargs['expr']) if 'expr' in kwargs else self.expr
         return PyDecorator(at_sign=at_sign, expr=expr)
 
     def parent(self) -> 'PyDecoratorParent':
@@ -2088,29 +2091,29 @@ class PyFuncDef(_PyBaseNode):
         return len(self.params)
 
     def __init__(self, name: 'PyIdent | str', body: 'PyStmt | Sequence[PyStmt]', *, decorators: 'Sequence[PyDecorator | PyExpr] | None' = None, async_keyword: 'PyAsyncKeyword | None' = None, def_keyword: 'PyDefKeyword | None' = None, open_paren: 'PyOpenParen | None' = None, params: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | ImmutablePunct[PyParam, PyComma] | None' = None, close_paren: 'PyCloseParen | None' = None, return_type: 'PyExpr | tuple[PyRArrow | None, PyExpr] | None' = None, colon: 'PyColon | None' = None) -> None:
-        self.decorators: list[PyDecorator] = _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(decorators)
-        self.async_keyword: PyAsyncKeyword | None = _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none(async_keyword)
-        self.def_keyword: PyDefKeyword = _coerce_union_2_token_def_keyword_none_to_token_def_keyword(def_keyword)
-        self.name: PyIdent = _coerce_union_2_token_ident_extern_string_to_token_ident(name)
-        self.open_paren: PyOpenParen = _coerce_union_2_token_open_paren_none_to_token_open_paren(open_paren)
-        self.params: Punctuated[PyParam, PyComma] = _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_comma_none_punct_variant_param_token_comma_none_to_punct_variant_param_token_comma(params)
-        self.close_paren: PyCloseParen = _coerce_union_2_token_close_paren_none_to_token_close_paren(close_paren)
-        self.return_type: tuple[PyRArrow, PyExpr] | None = _coerce_union_3_variant_expr_tuple_2_union_2_token_r_arrow_none_variant_expr_none_to_union_2_tuple_2_token_r_arrow_variant_expr_none(return_type)
-        self.colon: PyColon = _coerce_union_2_token_colon_none_to_token_colon(colon)
-        self.body: PyStmt | list[PyStmt] = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(body)
+        self.decorators: list[PyDecorator] = _coerce_union_2_list_union_2_decl_decorator_decl_expr_none_to_list_decl_decorator(decorators)
+        self.async_keyword: PyAsyncKeyword | None = _coerce_union_2_decl_async_keyword_none_to_union_2_decl_async_keyword_none(async_keyword)
+        self.def_keyword: PyDefKeyword = _coerce_union_2_decl_def_keyword_none_to_decl_def_keyword(def_keyword)
+        self.name: PyIdent = _coerce_union_2_decl_ident_extern_string_to_decl_ident(name)
+        self.open_paren: PyOpenParen = _coerce_union_2_decl_open_paren_none_to_decl_open_paren(open_paren)
+        self.params: Punctuated[PyParam, PyComma] = _coerce_union_4_list_decl_param_list_tuple_2_decl_param_union_2_decl_comma_none_punct_decl_param_decl_comma_none_to_punct_decl_param_decl_comma(params)
+        self.close_paren: PyCloseParen = _coerce_union_2_decl_close_paren_none_to_decl_close_paren(close_paren)
+        self.return_type: tuple[PyRArrow, PyExpr] | None = _coerce_union_3_decl_expr_tuple_2_union_2_decl_r_arrow_none_decl_expr_none_to_union_2_tuple_2_decl_r_arrow_decl_expr_none(return_type)
+        self.colon: PyColon = _coerce_union_2_decl_colon_none_to_decl_colon(colon)
+        self.body: PyStmt | list[PyStmt] = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(body)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyFuncDefDeriveKwargs]) -> 'PyFuncDef':
-        decorators = _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(kwargs['decorators']) if 'decorators' in kwargs else self.decorators
-        async_keyword = _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none(kwargs['async_keyword']) if 'async_keyword' in kwargs else self.async_keyword
-        def_keyword = _coerce_union_2_token_def_keyword_none_to_token_def_keyword(kwargs['def_keyword']) if 'def_keyword' in kwargs else self.def_keyword
-        name = _coerce_union_2_token_ident_extern_string_to_token_ident(kwargs['name']) if 'name' in kwargs else self.name
-        open_paren = _coerce_union_2_token_open_paren_none_to_token_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
-        params = _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_comma_none_punct_variant_param_token_comma_none_to_punct_variant_param_token_comma(kwargs['params']) if 'params' in kwargs else self.params
-        close_paren = _coerce_union_2_token_close_paren_none_to_token_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
-        return_type = _coerce_union_3_variant_expr_tuple_2_union_2_token_r_arrow_none_variant_expr_none_to_union_2_tuple_2_token_r_arrow_variant_expr_none(kwargs['return_type']) if 'return_type' in kwargs else self.return_type
-        colon = _coerce_union_2_token_colon_none_to_token_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
-        body = _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
+        decorators = _coerce_union_2_list_union_2_decl_decorator_decl_expr_none_to_list_decl_decorator(kwargs['decorators']) if 'decorators' in kwargs else self.decorators
+        async_keyword = _coerce_union_2_decl_async_keyword_none_to_union_2_decl_async_keyword_none(kwargs['async_keyword']) if 'async_keyword' in kwargs else self.async_keyword
+        def_keyword = _coerce_union_2_decl_def_keyword_none_to_decl_def_keyword(kwargs['def_keyword']) if 'def_keyword' in kwargs else self.def_keyword
+        name = _coerce_union_2_decl_ident_extern_string_to_decl_ident(kwargs['name']) if 'name' in kwargs else self.name
+        open_paren = _coerce_union_2_decl_open_paren_none_to_decl_open_paren(kwargs['open_paren']) if 'open_paren' in kwargs else self.open_paren
+        params = _coerce_union_4_list_decl_param_list_tuple_2_decl_param_union_2_decl_comma_none_punct_decl_param_decl_comma_none_to_punct_decl_param_decl_comma(kwargs['params']) if 'params' in kwargs else self.params
+        close_paren = _coerce_union_2_decl_close_paren_none_to_decl_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
+        return_type = _coerce_union_3_decl_expr_tuple_2_union_2_decl_r_arrow_none_decl_expr_none_to_union_2_tuple_2_decl_r_arrow_decl_expr_none(kwargs['return_type']) if 'return_type' in kwargs else self.return_type
+        colon = _coerce_union_2_decl_colon_none_to_decl_colon(kwargs['colon']) if 'colon' in kwargs else self.colon
+        body = _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(kwargs['body']) if 'body' in kwargs else self.body
         return PyFuncDef(decorators=decorators, async_keyword=async_keyword, def_keyword=def_keyword, name=name, open_paren=open_paren, params=params, close_paren=close_paren, return_type=return_type, colon=colon, body=body)
 
     def parent(self) -> 'PyFuncDefParent':
@@ -2129,11 +2132,11 @@ class PyModule(_PyBaseNode):
         return len(self.stmts)
 
     def __init__(self, *, stmts: 'Sequence[PyStmt] | None' = None) -> None:
-        self.stmts: list[PyStmt] = _coerce_union_2_list_variant_stmt_none_to_list_variant_stmt(stmts)
+        self.stmts: list[PyStmt] = _coerce_union_2_list_decl_stmt_none_to_list_decl_stmt(stmts)
 
     @no_type_check
     def derive(self, **kwargs: Unpack[PyModuleDeriveKwargs]) -> 'PyModule':
-        stmts = _coerce_union_2_list_variant_stmt_none_to_list_variant_stmt(kwargs['stmts']) if 'stmts' in kwargs else self.stmts
+        stmts = _coerce_union_2_list_decl_stmt_none_to_list_decl_stmt(kwargs['stmts']) if 'stmts' in kwargs else self.stmts
         return PyModule(stmts=stmts)
 
     def parent(self) -> 'PyModuleParent':
@@ -2418,7 +2421,7 @@ type PyModuleParent = Never
 
 
 @no_type_check
-def _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(value: 'PyExpr | None') -> 'PyExpr | None':
+def _coerce_union_2_decl_expr_none_to_union_2_decl_expr_none(value: 'PyExpr | None') -> 'PyExpr | None':
     if is_py_expr(value):
         return value
     elif value is None:
@@ -2428,7 +2431,7 @@ def _coerce_union_2_variant_expr_none_to_union_2_variant_expr_none(value: 'PyExp
 
 
 @no_type_check
-def _coerce_union_2_token_colon_none_to_token_colon(value: 'PyColon | None') -> 'PyColon':
+def _coerce_union_2_decl_colon_none_to_decl_colon(value: 'PyColon | None') -> 'PyColon':
     if value is None:
         return PyColon()
     elif isinstance(value, PyColon):
@@ -2438,16 +2441,16 @@ def _coerce_union_2_token_colon_none_to_token_colon(value: 'PyColon | None') -> 
 
 
 @no_type_check
-def _coerce_variant_expr_to_variant_expr(value: 'PyExpr') -> 'PyExpr':
+def _coerce_decl_expr_to_decl_expr(value: 'PyExpr') -> 'PyExpr':
     return value
 
 
 @no_type_check
-def _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_none_to_union_2_tuple_2_token_colon_variant_expr_none(value: 'PyExpr | tuple[PyColon | None, PyExpr] | None') -> 'tuple[PyColon, PyExpr] | None':
+def _coerce_union_3_decl_expr_tuple_2_union_2_decl_colon_none_decl_expr_none_to_union_2_tuple_2_decl_colon_decl_expr_none(value: 'PyExpr | tuple[PyColon | None, PyExpr] | None') -> 'tuple[PyColon, PyExpr] | None':
     if is_py_expr(value):
-        return (PyColon(), _coerce_variant_expr_to_variant_expr(value))
+        return (PyColon(), _coerce_decl_expr_to_decl_expr(value))
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_colon_none_to_token_colon(value[0]), _coerce_variant_expr_to_variant_expr(value[1]))
+        return (_coerce_union_2_decl_colon_none_to_decl_colon(value[0]), _coerce_decl_expr_to_decl_expr(value[1]))
     elif value is None:
         return None
     else:
@@ -2455,7 +2458,7 @@ def _coerce_union_3_variant_expr_tuple_2_union_2_token_colon_none_variant_expr_n
 
 
 @no_type_check
-def _coerce_union_2_token_ident_extern_string_to_token_ident(value: 'PyIdent | str') -> 'PyIdent':
+def _coerce_union_2_decl_ident_extern_string_to_decl_ident(value: 'PyIdent | str') -> 'PyIdent':
     if isinstance(value, str):
         return PyIdent(value)
     elif isinstance(value, PyIdent):
@@ -2465,12 +2468,12 @@ def _coerce_union_2_token_ident_extern_string_to_token_ident(value: 'PyIdent | s
 
 
 @no_type_check
-def _coerce_variant_pattern_to_variant_pattern(value: 'PyPattern') -> 'PyPattern':
+def _coerce_decl_pattern_to_decl_pattern(value: 'PyPattern') -> 'PyPattern':
     return value
 
 
 @no_type_check
-def _coerce_union_2_token_dot_none_to_token_dot(value: 'PyDot | None') -> 'PyDot':
+def _coerce_union_2_decl_dot_none_to_decl_dot(value: 'PyDot | None') -> 'PyDot':
     if value is None:
         return PyDot()
     elif isinstance(value, PyDot):
@@ -2480,7 +2483,7 @@ def _coerce_union_2_token_dot_none_to_token_dot(value: 'PyDot | None') -> 'PyDot
 
 
 @no_type_check
-def _coerce_union_2_token_open_bracket_none_to_token_open_bracket(value: 'PyOpenBracket | None') -> 'PyOpenBracket':
+def _coerce_union_2_decl_open_bracket_none_to_decl_open_bracket(value: 'PyOpenBracket | None') -> 'PyOpenBracket':
     if value is None:
         return PyOpenBracket()
     elif isinstance(value, PyOpenBracket):
@@ -2490,22 +2493,22 @@ def _coerce_union_2_token_open_bracket_none_to_token_open_bracket(value: 'PyOpen
 
 
 @no_type_check
-def _coerce_union_2_node_slice_variant_pattern_to_union_2_node_slice_variant_pattern(value: 'PySlice | PyPattern') -> 'PySlice | PyPattern':
-    if isinstance(value, PySlice):
+def _coerce_union_2_decl_pattern_decl_slice_to_union_2_decl_pattern_decl_slice(value: 'PyPattern | PySlice') -> 'PyPattern | PySlice':
+    if is_py_pattern(value):
         return value
-    elif is_py_pattern(value):
+    elif isinstance(value, PySlice):
         return value
     else:
-        raise ValueError('the coercion from PySlice | PyPattern to PySlice | PyPattern failed')
+        raise ValueError('the coercion from PyPattern | PySlice to PyPattern | PySlice failed')
 
 
 @no_type_check
-def _coerce_token_comma_to_token_comma(value: 'PyComma') -> 'PyComma':
+def _coerce_decl_comma_to_decl_comma(value: 'PyComma') -> 'PyComma':
     return value
 
 
 @no_type_check
-def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_token_comma_none_required_list_union_2_node_slice_variant_pattern_required_punct_union_2_node_slice_variant_pattern_token_comma_required_to_punct_union_2_node_slice_variant_pattern_token_comma_required(value: 'Sequence[tuple[PySlice | PyPattern, PyComma | None]] | Sequence[PySlice | PyPattern] | ImmutablePunct[PySlice | PyPattern, PyComma]') -> 'Punctuated[PySlice | PyPattern, PyComma]':
+def _coerce_union_3_list_tuple_2_union_2_decl_pattern_decl_slice_union_2_decl_comma_none_required_list_union_2_decl_pattern_decl_slice_required_punct_union_2_decl_pattern_decl_slice_decl_comma_required_to_punct_union_2_decl_pattern_decl_slice_decl_comma_required(value: 'Sequence[tuple[PyPattern | PySlice, PyComma | None]] | Sequence[PyPattern | PySlice] | ImmutablePunct[PyPattern | PySlice, PyComma]') -> 'Punctuated[PyPattern | PySlice, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -2520,8 +2523,8 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_toke
                 else:
                     element_value = first_element
                     element_separator = PyComma()
-                new_element_value = _coerce_union_2_node_slice_variant_pattern_to_union_2_node_slice_variant_pattern(element_value)
-                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_element_value = _coerce_union_2_decl_pattern_decl_slice_to_union_2_decl_pattern_decl_slice(element_value)
+                new_element_separator = _coerce_decl_comma_to_decl_comma(element_separator)
                 new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
@@ -2530,7 +2533,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_toke
                     assert(first_element[1] is None)
                 else:
                     element_value = first_element
-                new_element_value = _coerce_union_2_node_slice_variant_pattern_to_union_2_node_slice_variant_pattern(element_value)
+                new_element_value = _coerce_union_2_decl_pattern_decl_slice_to_union_2_decl_pattern_decl_slice(element_value)
                 new_value.append_final(new_element_value)
                 break
     except StopIteration:
@@ -2539,7 +2542,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_pattern_union_2_toke
 
 
 @no_type_check
-def _coerce_union_2_token_close_bracket_none_to_token_close_bracket(value: 'PyCloseBracket | None') -> 'PyCloseBracket':
+def _coerce_union_2_decl_close_bracket_none_to_decl_close_bracket(value: 'PyCloseBracket | None') -> 'PyCloseBracket':
     if value is None:
         return PyCloseBracket()
     elif isinstance(value, PyCloseBracket):
@@ -2549,7 +2552,7 @@ def _coerce_union_2_token_close_bracket_none_to_token_close_bracket(value: 'PyCl
 
 
 @no_type_check
-def _coerce_union_2_token_asterisk_none_to_token_asterisk(value: 'PyAsterisk | None') -> 'PyAsterisk':
+def _coerce_union_2_decl_asterisk_none_to_decl_asterisk(value: 'PyAsterisk | None') -> 'PyAsterisk':
     if value is None:
         return PyAsterisk()
     elif isinstance(value, PyAsterisk):
@@ -2559,7 +2562,7 @@ def _coerce_union_2_token_asterisk_none_to_token_asterisk(value: 'PyAsterisk | N
 
 
 @no_type_check
-def _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_token_comma_none_punct_variant_pattern_token_comma_none_to_punct_variant_pattern_token_comma(value: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | ImmutablePunct[PyPattern, PyComma] | None') -> 'Punctuated[PyPattern, PyComma]':
+def _coerce_union_4_list_decl_pattern_list_tuple_2_decl_pattern_union_2_decl_comma_none_punct_decl_pattern_decl_comma_none_to_punct_decl_pattern_decl_comma(value: 'Sequence[PyPattern] | Sequence[tuple[PyPattern, PyComma | None]] | ImmutablePunct[PyPattern, PyComma] | None') -> 'Punctuated[PyPattern, PyComma]':
     if value is None:
         return Punctuated()
     elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
@@ -2577,8 +2580,8 @@ def _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_to
                     else:
                         element_value = first_element
                         element_separator = PyComma()
-                    new_element_value = _coerce_variant_pattern_to_variant_pattern(element_value)
-                    new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                    new_element_value = _coerce_decl_pattern_to_decl_pattern(element_value)
+                    new_element_separator = _coerce_decl_comma_to_decl_comma(element_separator)
                     new_value.append(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
@@ -2587,7 +2590,7 @@ def _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_to
                         assert(first_element[1] is None)
                     else:
                         element_value = first_element
-                    new_element_value = _coerce_variant_pattern_to_variant_pattern(element_value)
+                    new_element_value = _coerce_decl_pattern_to_decl_pattern(element_value)
                     new_value.append_final(new_element_value)
                     break
         except StopIteration:
@@ -2598,7 +2601,7 @@ def _coerce_union_4_list_variant_pattern_list_tuple_2_variant_pattern_union_2_to
 
 
 @no_type_check
-def _coerce_union_2_token_open_paren_none_to_token_open_paren(value: 'PyOpenParen | None') -> 'PyOpenParen':
+def _coerce_union_2_decl_open_paren_none_to_decl_open_paren(value: 'PyOpenParen | None') -> 'PyOpenParen':
     if value is None:
         return PyOpenParen()
     elif isinstance(value, PyOpenParen):
@@ -2608,7 +2611,7 @@ def _coerce_union_2_token_open_paren_none_to_token_open_paren(value: 'PyOpenPare
 
 
 @no_type_check
-def _coerce_union_2_token_close_paren_none_to_token_close_paren(value: 'PyCloseParen | None') -> 'PyCloseParen':
+def _coerce_union_2_decl_close_paren_none_to_decl_close_paren(value: 'PyCloseParen | None') -> 'PyCloseParen':
     if value is None:
         return PyCloseParen()
     elif isinstance(value, PyCloseParen):
@@ -2618,7 +2621,7 @@ def _coerce_union_2_token_close_paren_none_to_token_close_paren(value: 'PyCloseP
 
 
 @no_type_check
-def _coerce_union_2_token_dot_dot_dot_none_to_token_dot_dot_dot(value: 'PyDotDotDot | None') -> 'PyDotDotDot':
+def _coerce_union_2_decl_dot_dot_dot_none_to_decl_dot_dot_dot(value: 'PyDotDotDot | None') -> 'PyDotDotDot':
     if value is None:
         return PyDotDotDot()
     elif isinstance(value, PyDotDotDot):
@@ -2628,7 +2631,7 @@ def _coerce_union_2_token_dot_dot_dot_none_to_token_dot_dot_dot(value: 'PyDotDot
 
 
 @no_type_check
-def _coerce_union_2_token_if_keyword_none_to_token_if_keyword(value: 'PyIfKeyword | None') -> 'PyIfKeyword':
+def _coerce_union_2_decl_if_keyword_none_to_decl_if_keyword(value: 'PyIfKeyword | None') -> 'PyIfKeyword':
     if value is None:
         return PyIfKeyword()
     elif isinstance(value, PyIfKeyword):
@@ -2638,7 +2641,7 @@ def _coerce_union_2_token_if_keyword_none_to_token_if_keyword(value: 'PyIfKeywor
 
 
 @no_type_check
-def _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none(value: 'PyAsyncKeyword | None') -> 'PyAsyncKeyword | None':
+def _coerce_union_2_decl_async_keyword_none_to_union_2_decl_async_keyword_none(value: 'PyAsyncKeyword | None') -> 'PyAsyncKeyword | None':
     if isinstance(value, PyAsyncKeyword):
         return value
     elif value is None:
@@ -2648,7 +2651,7 @@ def _coerce_union_2_token_async_keyword_none_to_union_2_token_async_keyword_none
 
 
 @no_type_check
-def _coerce_union_2_token_for_keyword_none_to_token_for_keyword(value: 'PyForKeyword | None') -> 'PyForKeyword':
+def _coerce_union_2_decl_for_keyword_none_to_decl_for_keyword(value: 'PyForKeyword | None') -> 'PyForKeyword':
     if value is None:
         return PyForKeyword()
     elif isinstance(value, PyForKeyword):
@@ -2658,7 +2661,7 @@ def _coerce_union_2_token_for_keyword_none_to_token_for_keyword(value: 'PyForKey
 
 
 @no_type_check
-def _coerce_union_2_token_in_keyword_none_to_token_in_keyword(value: 'PyInKeyword | None') -> 'PyInKeyword':
+def _coerce_union_2_decl_in_keyword_none_to_decl_in_keyword(value: 'PyInKeyword | None') -> 'PyInKeyword':
     if value is None:
         return PyInKeyword()
     elif isinstance(value, PyInKeyword):
@@ -2668,43 +2671,43 @@ def _coerce_union_2_token_in_keyword_none_to_token_in_keyword(value: 'PyInKeywor
 
 
 @no_type_check
-def _coerce_union_2_node_guard_variant_expr_to_node_guard(value: 'PyGuard | PyExpr') -> 'PyGuard':
+def _coerce_union_2_decl_expr_decl_guard_to_decl_guard(value: 'PyExpr | PyGuard') -> 'PyGuard':
     if is_py_expr(value):
-        return PyGuard(_coerce_variant_expr_to_variant_expr(value))
+        return PyGuard(_coerce_decl_expr_to_decl_expr(value))
     elif isinstance(value, PyGuard):
         return value
     else:
-        raise ValueError('the coercion from PyGuard | PyExpr to PyGuard failed')
+        raise ValueError('the coercion from PyExpr | PyGuard to PyGuard failed')
 
 
 @no_type_check
-def _coerce_union_2_list_union_2_node_guard_variant_expr_none_to_list_node_guard(value: 'Sequence[PyGuard | PyExpr] | None') -> 'list[PyGuard]':
+def _coerce_union_2_list_union_2_decl_expr_decl_guard_none_to_list_decl_guard(value: 'Sequence[PyExpr | PyGuard] | None') -> 'list[PyGuard]':
     if value is None:
         return list()
     elif isinstance(value, list):
         new_elements = list()
         for value_element in value:
-            new_elements.append(_coerce_union_2_node_guard_variant_expr_to_node_guard(value_element))
+            new_elements.append(_coerce_union_2_decl_expr_decl_guard_to_decl_guard(value_element))
         return new_elements
     else:
-        raise ValueError('the coercion from Sequence[PyGuard | PyExpr] | None to list[PyGuard] failed')
+        raise ValueError('the coercion from Sequence[PyExpr | PyGuard] | None to list[PyGuard] failed')
 
 
 @no_type_check
-def _coerce_node_comprehension_to_node_comprehension(value: 'PyComprehension') -> 'PyComprehension':
+def _coerce_decl_comprehension_to_decl_comprehension(value: 'PyComprehension') -> 'PyComprehension':
     return value
 
 
 @no_type_check
-def _coerce_list_node_comprehension_required_to_list_node_comprehension_required(value: 'Sequence[PyComprehension]') -> 'list[PyComprehension]':
+def _coerce_list_decl_comprehension_required_to_list_decl_comprehension_required(value: 'Sequence[PyComprehension]') -> 'list[PyComprehension]':
     new_elements = list()
     for value_element in value:
-        new_elements.append(_coerce_node_comprehension_to_node_comprehension(value_element))
+        new_elements.append(_coerce_decl_comprehension_to_decl_comprehension(value_element))
     return new_elements
 
 
 @no_type_check
-def _coerce_union_2_token_else_keyword_none_to_token_else_keyword(value: 'PyElseKeyword | None') -> 'PyElseKeyword':
+def _coerce_union_2_decl_else_keyword_none_to_decl_else_keyword(value: 'PyElseKeyword | None') -> 'PyElseKeyword':
     if value is None:
         return PyElseKeyword()
     elif isinstance(value, PyElseKeyword):
@@ -2714,7 +2717,7 @@ def _coerce_union_2_token_else_keyword_none_to_token_else_keyword(value: 'PyElse
 
 
 @no_type_check
-def _coerce_union_6_token_float_token_integer_token_string_extern_float_extern_integer_extern_string_to_union_3_token_float_token_integer_token_string(value: 'PyFloat | PyInteger | PyString | float | int | str') -> 'PyFloat | PyInteger | PyString':
+def _coerce_union_6_decl_float_decl_integer_decl_string_extern_float_extern_integer_extern_string_to_union_3_decl_float_decl_integer_decl_string(value: 'PyFloat | PyInteger | PyString | float | int | str') -> 'PyFloat | PyInteger | PyString':
     if isinstance(value, float):
         return PyFloat(value)
     elif isinstance(value, PyFloat):
@@ -2732,17 +2735,17 @@ def _coerce_union_6_token_float_token_integer_token_string_extern_float_extern_i
 
 
 @no_type_check
-def _coerce_union_2_node_slice_variant_expr_to_union_2_node_slice_variant_expr(value: 'PySlice | PyExpr') -> 'PySlice | PyExpr':
-    if isinstance(value, PySlice):
+def _coerce_union_2_decl_expr_decl_slice_to_union_2_decl_expr_decl_slice(value: 'PyExpr | PySlice') -> 'PyExpr | PySlice':
+    if is_py_expr(value):
         return value
-    elif is_py_expr(value):
+    elif isinstance(value, PySlice):
         return value
     else:
-        raise ValueError('the coercion from PySlice | PyExpr to PySlice | PyExpr failed')
+        raise ValueError('the coercion from PyExpr | PySlice to PyExpr | PySlice failed')
 
 
 @no_type_check
-def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_comma_none_required_list_union_2_node_slice_variant_expr_required_punct_union_2_node_slice_variant_expr_token_comma_required_to_punct_union_2_node_slice_variant_expr_token_comma_required(value: 'Sequence[tuple[PySlice | PyExpr, PyComma | None]] | Sequence[PySlice | PyExpr] | ImmutablePunct[PySlice | PyExpr, PyComma]') -> 'Punctuated[PySlice | PyExpr, PyComma]':
+def _coerce_union_3_list_tuple_2_union_2_decl_expr_decl_slice_union_2_decl_comma_none_required_list_union_2_decl_expr_decl_slice_required_punct_union_2_decl_expr_decl_slice_decl_comma_required_to_punct_union_2_decl_expr_decl_slice_decl_comma_required(value: 'Sequence[tuple[PyExpr | PySlice, PyComma | None]] | Sequence[PyExpr | PySlice] | ImmutablePunct[PyExpr | PySlice, PyComma]') -> 'Punctuated[PyExpr | PySlice, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -2757,8 +2760,8 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_c
                 else:
                     element_value = first_element
                     element_separator = PyComma()
-                new_element_value = _coerce_union_2_node_slice_variant_expr_to_union_2_node_slice_variant_expr(element_value)
-                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_element_value = _coerce_union_2_decl_expr_decl_slice_to_union_2_decl_expr_decl_slice(element_value)
+                new_element_separator = _coerce_decl_comma_to_decl_comma(element_separator)
                 new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
@@ -2767,7 +2770,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_c
                     assert(first_element[1] is None)
                 else:
                     element_value = first_element
-                new_element_value = _coerce_union_2_node_slice_variant_expr_to_union_2_node_slice_variant_expr(element_value)
+                new_element_value = _coerce_union_2_decl_expr_decl_slice_to_union_2_decl_expr_decl_slice(element_value)
                 new_value.append_final(new_element_value)
                 break
     except StopIteration:
@@ -2776,7 +2779,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_slice_variant_expr_union_2_token_c
 
 
 @no_type_check
-def _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(value: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None') -> 'Punctuated[PyExpr, PyComma]':
+def _coerce_union_4_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_none_to_punct_decl_expr_decl_comma(value: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None') -> 'Punctuated[PyExpr, PyComma]':
     if value is None:
         return Punctuated()
     elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
@@ -2794,8 +2797,8 @@ def _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
                     else:
                         element_value = first_element
                         element_separator = PyComma()
-                    new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
-                    new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                    new_element_value = _coerce_decl_expr_to_decl_expr(element_value)
+                    new_element_separator = _coerce_decl_comma_to_decl_comma(element_separator)
                     new_value.append(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
@@ -2804,7 +2807,7 @@ def _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
                         assert(first_element[1] is None)
                     else:
                         element_value = first_element
-                    new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
+                    new_element_value = _coerce_decl_expr_to_decl_expr(element_value)
                     new_value.append_final(new_element_value)
                     break
         except StopIteration:
@@ -2815,7 +2818,7 @@ def _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
 
 
 @no_type_check
-def _coerce_union_2_token_equals_none_to_token_equals(value: 'PyEquals | None') -> 'PyEquals':
+def _coerce_union_2_decl_equals_none_to_decl_equals(value: 'PyEquals | None') -> 'PyEquals':
     if value is None:
         return PyEquals()
     elif isinstance(value, PyEquals):
@@ -2825,12 +2828,12 @@ def _coerce_union_2_token_equals_none_to_token_equals(value: 'PyEquals | None') 
 
 
 @no_type_check
-def _coerce_variant_arg_to_variant_arg(value: 'PyArg') -> 'PyArg':
+def _coerce_decl_arg_to_decl_arg(value: 'PyArg') -> 'PyArg':
     return value
 
 
 @no_type_check
-def _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comma_none_punct_variant_arg_token_comma_none_to_punct_variant_arg_token_comma(value: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | ImmutablePunct[PyArg, PyComma] | None') -> 'Punctuated[PyArg, PyComma]':
+def _coerce_union_4_list_decl_arg_list_tuple_2_decl_arg_union_2_decl_comma_none_punct_decl_arg_decl_comma_none_to_punct_decl_arg_decl_comma(value: 'Sequence[PyArg] | Sequence[tuple[PyArg, PyComma | None]] | ImmutablePunct[PyArg, PyComma] | None') -> 'Punctuated[PyArg, PyComma]':
     if value is None:
         return Punctuated()
     elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
@@ -2848,8 +2851,8 @@ def _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comm
                     else:
                         element_value = first_element
                         element_separator = PyComma()
-                    new_element_value = _coerce_variant_arg_to_variant_arg(element_value)
-                    new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                    new_element_value = _coerce_decl_arg_to_decl_arg(element_value)
+                    new_element_separator = _coerce_decl_comma_to_decl_comma(element_separator)
                     new_value.append(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
@@ -2858,7 +2861,7 @@ def _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comm
                         assert(first_element[1] is None)
                     else:
                         element_value = first_element
-                    new_element_value = _coerce_variant_arg_to_variant_arg(element_value)
+                    new_element_value = _coerce_decl_arg_to_decl_arg(element_value)
                     new_value.append_final(new_element_value)
                     break
         except StopIteration:
@@ -2869,55 +2872,55 @@ def _coerce_union_4_list_variant_arg_list_tuple_2_variant_arg_union_2_token_comm
 
 
 @no_type_check
-def _coerce_variant_prefix_op_to_variant_prefix_op(value: 'PyPrefixOp') -> 'PyPrefixOp':
+def _coerce_decl_prefix_op_to_decl_prefix_op(value: 'PyPrefixOp') -> 'PyPrefixOp':
     return value
 
 
 @no_type_check
-def _coerce_variant_infix_op_to_variant_infix_op(value: 'PyInfixOp') -> 'PyInfixOp':
+def _coerce_decl_infix_op_to_decl_infix_op(value: 'PyInfixOp') -> 'PyInfixOp':
     return value
 
 
 @no_type_check
-def _coerce_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_to_tuple_2_token_ident_token_dot(value: 'PyIdent | tuple[PyIdent | str, PyDot | None] | str') -> 'tuple[PyIdent, PyDot]':
+def _coerce_union_3_decl_ident_tuple_2_union_2_decl_ident_extern_string_union_2_decl_dot_none_extern_string_to_tuple_2_decl_ident_decl_dot(value: 'PyIdent | tuple[PyIdent | str, PyDot | None] | str') -> 'tuple[PyIdent, PyDot]':
     if isinstance(value, PyIdent) or isinstance(value, str):
-        return (_coerce_union_2_token_ident_extern_string_to_token_ident(value), PyDot())
+        return (_coerce_union_2_decl_ident_extern_string_to_decl_ident(value), PyDot())
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_ident_extern_string_to_token_ident(value[0]), _coerce_union_2_token_dot_none_to_token_dot(value[1]))
+        return (_coerce_union_2_decl_ident_extern_string_to_decl_ident(value[0]), _coerce_union_2_decl_dot_none_to_decl_dot(value[1]))
     else:
         raise ValueError('the coercion from PyIdent | tuple[PyIdent | str, PyDot | None] | str to tuple[PyIdent, PyDot] failed')
 
 
 @no_type_check
-def _coerce_union_2_list_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_none_to_list_tuple_2_token_ident_token_dot(value: 'Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None') -> 'list[tuple[PyIdent, PyDot]]':
+def _coerce_union_2_list_union_3_decl_ident_tuple_2_union_2_decl_ident_extern_string_union_2_decl_dot_none_extern_string_none_to_list_tuple_2_decl_ident_decl_dot(value: 'Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None') -> 'list[tuple[PyIdent, PyDot]]':
     if value is None:
         return list()
     elif isinstance(value, list):
         new_elements = list()
         for value_element in value:
-            new_elements.append(_coerce_union_3_token_ident_tuple_2_union_2_token_ident_extern_string_union_2_token_dot_none_extern_string_to_tuple_2_token_ident_token_dot(value_element))
+            new_elements.append(_coerce_union_3_decl_ident_tuple_2_union_2_decl_ident_extern_string_union_2_decl_dot_none_extern_string_to_tuple_2_decl_ident_decl_dot(value_element))
         return new_elements
     else:
         raise ValueError('the coercion from Sequence[PyIdent | tuple[PyIdent | str, PyDot | None] | str] | None to list[tuple[PyIdent, PyDot]] failed')
 
 
 @no_type_check
-def _coerce_union_3_node_qual_name_token_ident_extern_string_to_node_qual_name(value: 'PyQualName | PyIdent | str') -> 'PyQualName':
+def _coerce_union_3_decl_ident_decl_qual_name_extern_string_to_decl_qual_name(value: 'PyIdent | PyQualName | str') -> 'PyQualName':
     if isinstance(value, PyIdent) or isinstance(value, str):
-        return PyQualName(_coerce_union_2_token_ident_extern_string_to_token_ident(value))
+        return PyQualName(_coerce_union_2_decl_ident_extern_string_to_decl_ident(value))
     elif isinstance(value, PyQualName):
         return value
     else:
-        raise ValueError('the coercion from PyQualName | PyIdent | str to PyQualName failed')
+        raise ValueError('the coercion from PyIdent | PyQualName | str to PyQualName failed')
 
 
 @no_type_check
-def _coerce_token_dot_to_token_dot(value: 'PyDot') -> 'PyDot':
+def _coerce_decl_dot_to_decl_dot(value: 'PyDot') -> 'PyDot':
     return value
 
 
 @no_type_check
-def _coerce_union_2_list_token_dot_required_extern_integer_to_list_token_dot_required(value: 'Sequence[PyDot] | int') -> 'list[PyDot]':
+def _coerce_union_2_list_decl_dot_required_extern_integer_to_list_decl_dot_required(value: 'Sequence[PyDot] | int') -> 'list[PyDot]':
     if isinstance(value, int):
         new_elements = list()
         for _ in range(0, value):
@@ -2926,31 +2929,31 @@ def _coerce_union_2_list_token_dot_required_extern_integer_to_list_token_dot_req
     elif isinstance(value, list):
         new_elements = list()
         for value_element in value:
-            new_elements.append(_coerce_token_dot_to_token_dot(value_element))
+            new_elements.append(_coerce_decl_dot_to_decl_dot(value_element))
         return new_elements
     else:
         raise ValueError('the coercion from Sequence[PyDot] | int to list[PyDot] failed')
 
 
 @no_type_check
-def _coerce_union_4_node_qual_name_token_ident_none_extern_string_to_union_2_node_qual_name_none(value: 'PyQualName | PyIdent | None | str') -> 'PyQualName | None':
+def _coerce_union_4_decl_ident_decl_qual_name_none_extern_string_to_union_2_decl_qual_name_none(value: 'PyIdent | PyQualName | None | str') -> 'PyQualName | None':
     if isinstance(value, PyIdent) or isinstance(value, str):
-        return PyQualName(_coerce_union_2_token_ident_extern_string_to_token_ident(value))
+        return PyQualName(_coerce_union_2_decl_ident_extern_string_to_decl_ident(value))
     elif isinstance(value, PyQualName):
         return value
     elif value is None:
         return None
     else:
-        raise ValueError('the coercion from PyQualName | PyIdent | None | str to PyQualName | None failed')
+        raise ValueError('the coercion from PyIdent | PyQualName | None | str to PyQualName | None failed')
 
 
 @no_type_check
-def _coerce_variant_path_to_variant_path(value: 'PyPath') -> 'PyPath':
+def _coerce_decl_path_to_decl_path(value: 'PyPath') -> 'PyPath':
     return value
 
 
 @no_type_check
-def _coerce_union_2_token_as_keyword_none_to_token_as_keyword(value: 'PyAsKeyword | None') -> 'PyAsKeyword':
+def _coerce_union_2_decl_as_keyword_none_to_decl_as_keyword(value: 'PyAsKeyword | None') -> 'PyAsKeyword':
     if value is None:
         return PyAsKeyword()
     elif isinstance(value, PyAsKeyword):
@@ -2960,11 +2963,11 @@ def _coerce_union_2_token_as_keyword_none_to_token_as_keyword(value: 'PyAsKeywor
 
 
 @no_type_check
-def _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_token_ident_extern_string_none_extern_string_to_union_2_tuple_2_token_as_keyword_token_ident_none(value: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str') -> 'tuple[PyAsKeyword, PyIdent] | None':
+def _coerce_union_4_decl_ident_tuple_2_union_2_decl_as_keyword_none_union_2_decl_ident_extern_string_none_extern_string_to_union_2_tuple_2_decl_as_keyword_decl_ident_none(value: 'PyIdent | tuple[PyAsKeyword | None, PyIdent | str] | None | str') -> 'tuple[PyAsKeyword, PyIdent] | None':
     if isinstance(value, PyIdent) or isinstance(value, str):
-        return (PyAsKeyword(), _coerce_union_2_token_ident_extern_string_to_token_ident(value))
+        return (PyAsKeyword(), _coerce_union_2_decl_ident_extern_string_to_decl_ident(value))
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_as_keyword_none_to_token_as_keyword(value[0]), _coerce_union_2_token_ident_extern_string_to_token_ident(value[1]))
+        return (_coerce_union_2_decl_as_keyword_none_to_decl_as_keyword(value[0]), _coerce_union_2_decl_ident_extern_string_to_decl_ident(value[1]))
     elif value is None:
         return None
     else:
@@ -2972,7 +2975,7 @@ def _coerce_union_4_token_ident_tuple_2_union_2_token_as_keyword_none_union_2_to
 
 
 @no_type_check
-def _coerce_union_3_token_asterisk_token_ident_extern_string_to_union_2_token_asterisk_token_ident(value: 'PyAsterisk | PyIdent | str') -> 'PyAsterisk | PyIdent':
+def _coerce_union_3_decl_asterisk_decl_ident_extern_string_to_union_2_decl_asterisk_decl_ident(value: 'PyAsterisk | PyIdent | str') -> 'PyAsterisk | PyIdent':
     if isinstance(value, PyAsterisk):
         return value
     elif isinstance(value, str):
@@ -2984,7 +2987,7 @@ def _coerce_union_3_token_asterisk_token_ident_extern_string_to_union_2_token_as
 
 
 @no_type_check
-def _coerce_union_2_token_import_keyword_none_to_token_import_keyword(value: 'PyImportKeyword | None') -> 'PyImportKeyword':
+def _coerce_union_2_decl_import_keyword_none_to_decl_import_keyword(value: 'PyImportKeyword | None') -> 'PyImportKeyword':
     if value is None:
         return PyImportKeyword()
     elif isinstance(value, PyImportKeyword):
@@ -2994,9 +2997,9 @@ def _coerce_union_2_token_import_keyword_none_to_token_import_keyword(value: 'Py
 
 
 @no_type_check
-def _coerce_union_2_node_alias_variant_path_to_node_alias(value: 'PyAlias | PyPath') -> 'PyAlias':
+def _coerce_union_2_decl_alias_decl_path_to_decl_alias(value: 'PyAlias | PyPath') -> 'PyAlias':
     if is_py_path(value):
-        return PyAlias(_coerce_variant_path_to_variant_path(value))
+        return PyAlias(_coerce_decl_path_to_decl_path(value))
     elif isinstance(value, PyAlias):
         return value
     else:
@@ -3004,7 +3007,7 @@ def _coerce_union_2_node_alias_variant_path_to_node_alias(value: 'PyAlias | PyPa
 
 
 @no_type_check
-def _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_comma_none_required_list_union_2_node_alias_variant_path_required_punct_union_2_node_alias_variant_path_token_comma_required_to_punct_node_alias_token_comma_required(value: 'Sequence[tuple[PyAlias | PyPath, PyComma | None]] | Sequence[PyAlias | PyPath] | ImmutablePunct[PyAlias | PyPath, PyComma]') -> 'Punctuated[PyAlias, PyComma]':
+def _coerce_union_3_list_tuple_2_union_2_decl_alias_decl_path_union_2_decl_comma_none_required_list_union_2_decl_alias_decl_path_required_punct_union_2_decl_alias_decl_path_decl_comma_required_to_punct_decl_alias_decl_comma_required(value: 'Sequence[tuple[PyAlias | PyPath, PyComma | None]] | Sequence[PyAlias | PyPath] | ImmutablePunct[PyAlias | PyPath, PyComma]') -> 'Punctuated[PyAlias, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -3019,8 +3022,8 @@ def _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_c
                 else:
                     element_value = first_element
                     element_separator = PyComma()
-                new_element_value = _coerce_union_2_node_alias_variant_path_to_node_alias(element_value)
-                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_element_value = _coerce_union_2_decl_alias_decl_path_to_decl_alias(element_value)
+                new_element_separator = _coerce_decl_comma_to_decl_comma(element_separator)
                 new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
@@ -3029,7 +3032,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_c
                     assert(first_element[1] is None)
                 else:
                     element_value = first_element
-                new_element_value = _coerce_union_2_node_alias_variant_path_to_node_alias(element_value)
+                new_element_value = _coerce_union_2_decl_alias_decl_path_to_decl_alias(element_value)
                 new_value.append_final(new_element_value)
                 break
     except StopIteration:
@@ -3038,7 +3041,7 @@ def _coerce_union_3_list_tuple_2_union_2_node_alias_variant_path_union_2_token_c
 
 
 @no_type_check
-def _coerce_union_2_token_from_keyword_none_to_token_from_keyword(value: 'PyFromKeyword | None') -> 'PyFromKeyword':
+def _coerce_union_2_decl_from_keyword_none_to_decl_from_keyword(value: 'PyFromKeyword | None') -> 'PyFromKeyword':
     if value is None:
         return PyFromKeyword()
     elif isinstance(value, PyFromKeyword):
@@ -3048,17 +3051,17 @@ def _coerce_union_2_token_from_keyword_none_to_token_from_keyword(value: 'PyFrom
 
 
 @no_type_check
-def _coerce_union_4_node_from_alias_token_asterisk_token_ident_extern_string_to_node_from_alias(value: 'PyFromAlias | PyAsterisk | PyIdent | str') -> 'PyFromAlias':
+def _coerce_union_4_decl_asterisk_decl_from_alias_decl_ident_extern_string_to_decl_from_alias(value: 'PyAsterisk | PyFromAlias | PyIdent | str') -> 'PyFromAlias':
     if isinstance(value, PyAsterisk) or isinstance(value, PyIdent) or isinstance(value, str):
-        return PyFromAlias(_coerce_union_3_token_asterisk_token_ident_extern_string_to_union_2_token_asterisk_token_ident(value))
+        return PyFromAlias(_coerce_union_3_decl_asterisk_decl_ident_extern_string_to_union_2_decl_asterisk_decl_ident(value))
     elif isinstance(value, PyFromAlias):
         return value
     else:
-        raise ValueError('the coercion from PyFromAlias | PyAsterisk | PyIdent | str to PyFromAlias failed')
+        raise ValueError('the coercion from PyAsterisk | PyFromAlias | PyIdent | str to PyFromAlias failed')
 
 
 @no_type_check
-def _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_ident_extern_string_union_2_token_comma_none_required_list_union_4_node_from_alias_token_asterisk_token_ident_extern_string_required_punct_union_4_node_from_alias_token_asterisk_token_ident_extern_string_token_comma_required_to_punct_node_from_alias_token_comma_required(value: 'Sequence[tuple[PyFromAlias | PyAsterisk | PyIdent | str, PyComma | None]] | Sequence[PyFromAlias | PyAsterisk | PyIdent | str] | ImmutablePunct[PyFromAlias | PyAsterisk | PyIdent | str, PyComma]') -> 'Punctuated[PyFromAlias, PyComma]':
+def _coerce_union_3_list_tuple_2_union_4_decl_asterisk_decl_from_alias_decl_ident_extern_string_union_2_decl_comma_none_required_list_union_4_decl_asterisk_decl_from_alias_decl_ident_extern_string_required_punct_union_4_decl_asterisk_decl_from_alias_decl_ident_extern_string_decl_comma_required_to_punct_decl_from_alias_decl_comma_required(value: 'Sequence[tuple[PyAsterisk | PyFromAlias | PyIdent | str, PyComma | None]] | Sequence[PyAsterisk | PyFromAlias | PyIdent | str] | ImmutablePunct[PyAsterisk | PyFromAlias | PyIdent | str, PyComma]') -> 'Punctuated[PyFromAlias, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -3073,8 +3076,8 @@ def _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_id
                 else:
                     element_value = first_element
                     element_separator = PyComma()
-                new_element_value = _coerce_union_4_node_from_alias_token_asterisk_token_ident_extern_string_to_node_from_alias(element_value)
-                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_element_value = _coerce_union_4_decl_asterisk_decl_from_alias_decl_ident_extern_string_to_decl_from_alias(element_value)
+                new_element_separator = _coerce_decl_comma_to_decl_comma(element_separator)
                 new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
@@ -3083,7 +3086,7 @@ def _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_id
                     assert(first_element[1] is None)
                 else:
                     element_value = first_element
-                new_element_value = _coerce_union_4_node_from_alias_token_asterisk_token_ident_extern_string_to_node_from_alias(element_value)
+                new_element_value = _coerce_union_4_decl_asterisk_decl_from_alias_decl_ident_extern_string_to_decl_from_alias(element_value)
                 new_value.append_final(new_element_value)
                 break
     except StopIteration:
@@ -3092,7 +3095,7 @@ def _coerce_union_3_list_tuple_2_union_4_node_from_alias_token_asterisk_token_id
 
 
 @no_type_check
-def _coerce_union_2_token_return_keyword_none_to_token_return_keyword(value: 'PyReturnKeyword | None') -> 'PyReturnKeyword':
+def _coerce_union_2_decl_return_keyword_none_to_decl_return_keyword(value: 'PyReturnKeyword | None') -> 'PyReturnKeyword':
     if value is None:
         return PyReturnKeyword()
     elif isinstance(value, PyReturnKeyword):
@@ -3102,7 +3105,7 @@ def _coerce_union_2_token_return_keyword_none_to_token_return_keyword(value: 'Py
 
 
 @no_type_check
-def _coerce_union_13_token_ampersand_token_asterisk_token_asterisk_asterisk_token_at_sign_token_caret_token_greater_than_greater_than_token_hyphen_token_less_than_less_than_token_percent_token_plus_token_slash_token_slash_slash_token_vertical_bar_to_union_13_token_ampersand_token_asterisk_token_asterisk_asterisk_token_at_sign_token_caret_token_greater_than_greater_than_token_hyphen_token_less_than_less_than_token_percent_token_plus_token_slash_token_slash_slash_token_vertical_bar(value: 'PyAmpersand | PyAsterisk | PyAsteriskAsterisk | PyAtSign | PyCaret | PyGreaterThanGreaterThan | PyHyphen | PyLessThanLessThan | PyPercent | PyPlus | PySlash | PySlashSlash | PyVerticalBar') -> 'PyAmpersand | PyAsterisk | PyAsteriskAsterisk | PyAtSign | PyCaret | PyGreaterThanGreaterThan | PyHyphen | PyLessThanLessThan | PyPercent | PyPlus | PySlash | PySlashSlash | PyVerticalBar':
+def _coerce_union_13_decl_ampersand_decl_asterisk_decl_asterisk_asterisk_decl_at_sign_decl_caret_decl_greater_than_greater_than_decl_hyphen_decl_less_than_less_than_decl_percent_decl_plus_decl_slash_decl_slash_slash_decl_vertical_bar_to_union_13_decl_ampersand_decl_asterisk_decl_asterisk_asterisk_decl_at_sign_decl_caret_decl_greater_than_greater_than_decl_hyphen_decl_less_than_less_than_decl_percent_decl_plus_decl_slash_decl_slash_slash_decl_vertical_bar(value: 'PyAmpersand | PyAsterisk | PyAsteriskAsterisk | PyAtSign | PyCaret | PyGreaterThanGreaterThan | PyHyphen | PyLessThanLessThan | PyPercent | PyPlus | PySlash | PySlashSlash | PyVerticalBar') -> 'PyAmpersand | PyAsterisk | PyAsteriskAsterisk | PyAtSign | PyCaret | PyGreaterThanGreaterThan | PyHyphen | PyLessThanLessThan | PyPercent | PyPlus | PySlash | PySlashSlash | PyVerticalBar':
     if isinstance(value, PyAmpersand):
         return value
     elif isinstance(value, PyAsterisk):
@@ -3134,11 +3137,11 @@ def _coerce_union_13_token_ampersand_token_asterisk_token_asterisk_asterisk_toke
 
 
 @no_type_check
-def _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_none_to_union_2_tuple_2_token_equals_variant_expr_none(value: 'PyExpr | tuple[PyEquals | None, PyExpr] | None') -> 'tuple[PyEquals, PyExpr] | None':
+def _coerce_union_3_decl_expr_tuple_2_union_2_decl_equals_none_decl_expr_none_to_union_2_tuple_2_decl_equals_decl_expr_none(value: 'PyExpr | tuple[PyEquals | None, PyExpr] | None') -> 'tuple[PyEquals, PyExpr] | None':
     if is_py_expr(value):
-        return (PyEquals(), _coerce_variant_expr_to_variant_expr(value))
+        return (PyEquals(), _coerce_decl_expr_to_decl_expr(value))
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_equals_none_to_token_equals(value[0]), _coerce_variant_expr_to_variant_expr(value[1]))
+        return (_coerce_union_2_decl_equals_none_to_decl_equals(value[0]), _coerce_decl_expr_to_decl_expr(value[1]))
     elif value is None:
         return None
     else:
@@ -3146,7 +3149,7 @@ def _coerce_union_3_variant_expr_tuple_2_union_2_token_equals_none_variant_expr_
 
 
 @no_type_check
-def _coerce_union_2_token_pass_keyword_none_to_token_pass_keyword(value: 'PyPassKeyword | None') -> 'PyPassKeyword':
+def _coerce_union_2_decl_pass_keyword_none_to_decl_pass_keyword(value: 'PyPassKeyword | None') -> 'PyPassKeyword':
     if value is None:
         return PyPassKeyword()
     elif isinstance(value, PyPassKeyword):
@@ -3156,7 +3159,7 @@ def _coerce_union_2_token_pass_keyword_none_to_token_pass_keyword(value: 'PyPass
 
 
 @no_type_check
-def _coerce_union_2_token_global_keyword_none_to_token_global_keyword(value: 'PyGlobalKeyword | None') -> 'PyGlobalKeyword':
+def _coerce_union_2_decl_global_keyword_none_to_decl_global_keyword(value: 'PyGlobalKeyword | None') -> 'PyGlobalKeyword':
     if value is None:
         return PyGlobalKeyword()
     elif isinstance(value, PyGlobalKeyword):
@@ -3166,7 +3169,7 @@ def _coerce_union_2_token_global_keyword_none_to_token_global_keyword(value: 'Py
 
 
 @no_type_check
-def _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token_comma_none_required_list_union_2_token_ident_extern_string_required_punct_union_2_token_ident_extern_string_token_comma_required_to_punct_token_ident_token_comma_required(value: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | ImmutablePunct[PyIdent | str, PyComma]') -> 'Punctuated[PyIdent, PyComma]':
+def _coerce_union_3_list_tuple_2_union_2_decl_ident_extern_string_union_2_decl_comma_none_required_list_union_2_decl_ident_extern_string_required_punct_union_2_decl_ident_extern_string_decl_comma_required_to_punct_decl_ident_decl_comma_required(value: 'Sequence[tuple[PyIdent | str, PyComma | None]] | Sequence[PyIdent | str] | ImmutablePunct[PyIdent | str, PyComma]') -> 'Punctuated[PyIdent, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -3181,8 +3184,8 @@ def _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token
                 else:
                     element_value = first_element
                     element_separator = PyComma()
-                new_element_value = _coerce_union_2_token_ident_extern_string_to_token_ident(element_value)
-                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_element_value = _coerce_union_2_decl_ident_extern_string_to_decl_ident(element_value)
+                new_element_separator = _coerce_decl_comma_to_decl_comma(element_separator)
                 new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
@@ -3191,7 +3194,7 @@ def _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token
                     assert(first_element[1] is None)
                 else:
                     element_value = first_element
-                new_element_value = _coerce_union_2_token_ident_extern_string_to_token_ident(element_value)
+                new_element_value = _coerce_union_2_decl_ident_extern_string_to_decl_ident(element_value)
                 new_value.append_final(new_element_value)
                 break
     except StopIteration:
@@ -3200,7 +3203,7 @@ def _coerce_union_3_list_tuple_2_union_2_token_ident_extern_string_union_2_token
 
 
 @no_type_check
-def _coerce_union_2_token_nonlocal_keyword_none_to_token_nonlocal_keyword(value: 'PyNonlocalKeyword | None') -> 'PyNonlocalKeyword':
+def _coerce_union_2_decl_nonlocal_keyword_none_to_decl_nonlocal_keyword(value: 'PyNonlocalKeyword | None') -> 'PyNonlocalKeyword':
     if value is None:
         return PyNonlocalKeyword()
     elif isinstance(value, PyNonlocalKeyword):
@@ -3210,25 +3213,25 @@ def _coerce_union_2_token_nonlocal_keyword_none_to_token_nonlocal_keyword(value:
 
 
 @no_type_check
-def _coerce_variant_stmt_to_variant_stmt(value: 'PyStmt') -> 'PyStmt':
+def _coerce_decl_stmt_to_decl_stmt(value: 'PyStmt') -> 'PyStmt':
     return value
 
 
 @no_type_check
-def _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value: 'PyStmt | Sequence[PyStmt]') -> 'PyStmt | list[PyStmt]':
+def _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(value: 'PyStmt | Sequence[PyStmt]') -> 'PyStmt | list[PyStmt]':
     if is_py_stmt(value):
         return value
     elif isinstance(value, list):
         new_elements = list()
         for value_element in value:
-            new_elements.append(_coerce_variant_stmt_to_variant_stmt(value_element))
+            new_elements.append(_coerce_decl_stmt_to_decl_stmt(value_element))
         return new_elements
     else:
         raise ValueError('the coercion from PyStmt | Sequence[PyStmt] to PyStmt | list[PyStmt] failed')
 
 
 @no_type_check
-def _coerce_union_2_token_elif_keyword_none_to_token_elif_keyword(value: 'PyElifKeyword | None') -> 'PyElifKeyword':
+def _coerce_union_2_decl_elif_keyword_none_to_decl_elif_keyword(value: 'PyElifKeyword | None') -> 'PyElifKeyword':
     if value is None:
         return PyElifKeyword()
     elif isinstance(value, PyElifKeyword):
@@ -3238,32 +3241,32 @@ def _coerce_union_2_token_elif_keyword_none_to_token_elif_keyword(value: 'PyElif
 
 
 @no_type_check
-def _coerce_node_if_case_to_node_if_case(value: 'PyIfCase') -> 'PyIfCase':
+def _coerce_decl_if_case_to_decl_if_case(value: 'PyIfCase') -> 'PyIfCase':
     return value
 
 
 @no_type_check
-def _coerce_node_elif_case_to_node_elif_case(value: 'PyElifCase') -> 'PyElifCase':
+def _coerce_decl_elif_case_to_decl_elif_case(value: 'PyElifCase') -> 'PyElifCase':
     return value
 
 
 @no_type_check
-def _coerce_union_2_list_node_elif_case_none_to_list_node_elif_case(value: 'Sequence[PyElifCase] | None') -> 'list[PyElifCase]':
+def _coerce_union_2_list_decl_elif_case_none_to_list_decl_elif_case(value: 'Sequence[PyElifCase] | None') -> 'list[PyElifCase]':
     if value is None:
         return list()
     elif isinstance(value, list):
         new_elements = list()
         for value_element in value:
-            new_elements.append(_coerce_node_elif_case_to_node_elif_case(value_element))
+            new_elements.append(_coerce_decl_elif_case_to_decl_elif_case(value_element))
         return new_elements
     else:
         raise ValueError('the coercion from Sequence[PyElifCase] | None to list[PyElifCase] failed')
 
 
 @no_type_check
-def _coerce_union_4_node_else_case_variant_stmt_list_variant_stmt_required_none_to_union_2_node_else_case_none(value: 'PyElseCase | PyStmt | Sequence[PyStmt] | None') -> 'PyElseCase | None':
+def _coerce_union_4_decl_else_case_decl_stmt_list_decl_stmt_required_none_to_union_2_decl_else_case_none(value: 'PyElseCase | PyStmt | Sequence[PyStmt] | None') -> 'PyElseCase | None':
     if is_py_stmt(value) or isinstance(value, list):
-        return PyElseCase(_coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value))
+        return PyElseCase(_coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(value))
     elif isinstance(value, PyElseCase):
         return value
     elif value is None:
@@ -3273,7 +3276,7 @@ def _coerce_union_4_node_else_case_variant_stmt_list_variant_stmt_required_none_
 
 
 @no_type_check
-def _coerce_union_2_token_del_keyword_none_to_token_del_keyword(value: 'PyDelKeyword | None') -> 'PyDelKeyword':
+def _coerce_union_2_decl_del_keyword_none_to_decl_del_keyword(value: 'PyDelKeyword | None') -> 'PyDelKeyword':
     if value is None:
         return PyDelKeyword()
     elif isinstance(value, PyDelKeyword):
@@ -3283,7 +3286,7 @@ def _coerce_union_2_token_del_keyword_none_to_token_del_keyword(value: 'PyDelKey
 
 
 @no_type_check
-def _coerce_union_2_token_raise_keyword_none_to_token_raise_keyword(value: 'PyRaiseKeyword | None') -> 'PyRaiseKeyword':
+def _coerce_union_2_decl_raise_keyword_none_to_decl_raise_keyword(value: 'PyRaiseKeyword | None') -> 'PyRaiseKeyword':
     if value is None:
         return PyRaiseKeyword()
     elif isinstance(value, PyRaiseKeyword):
@@ -3293,11 +3296,11 @@ def _coerce_union_2_token_raise_keyword_none_to_token_raise_keyword(value: 'PyRa
 
 
 @no_type_check
-def _coerce_union_3_variant_expr_tuple_2_union_2_token_from_keyword_none_variant_expr_none_to_union_2_tuple_2_token_from_keyword_variant_expr_none(value: 'PyExpr | tuple[PyFromKeyword | None, PyExpr] | None') -> 'tuple[PyFromKeyword, PyExpr] | None':
+def _coerce_union_3_decl_expr_tuple_2_union_2_decl_from_keyword_none_decl_expr_none_to_union_2_tuple_2_decl_from_keyword_decl_expr_none(value: 'PyExpr | tuple[PyFromKeyword | None, PyExpr] | None') -> 'tuple[PyFromKeyword, PyExpr] | None':
     if is_py_expr(value):
-        return (PyFromKeyword(), _coerce_variant_expr_to_variant_expr(value))
+        return (PyFromKeyword(), _coerce_decl_expr_to_decl_expr(value))
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_from_keyword_none_to_token_from_keyword(value[0]), _coerce_variant_expr_to_variant_expr(value[1]))
+        return (_coerce_union_2_decl_from_keyword_none_to_decl_from_keyword(value[0]), _coerce_decl_expr_to_decl_expr(value[1]))
     elif value is None:
         return None
     else:
@@ -3305,11 +3308,11 @@ def _coerce_union_3_variant_expr_tuple_2_union_2_token_from_keyword_none_variant
 
 
 @no_type_check
-def _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_else_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(value: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None':
+def _coerce_union_4_decl_stmt_tuple_3_union_2_decl_else_keyword_none_union_2_decl_colon_none_union_2_decl_stmt_list_decl_stmt_required_list_decl_stmt_required_none_to_union_2_tuple_3_decl_else_keyword_decl_colon_union_2_decl_stmt_list_decl_stmt_required_none(value: 'PyStmt | tuple[PyElseKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyElseKeyword, PyColon, PyStmt | list[PyStmt]] | None':
     if is_py_stmt(value) or isinstance(value, list):
-        return (PyElseKeyword(), PyColon(), _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value))
+        return (PyElseKeyword(), PyColon(), _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(value))
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_else_keyword_none_to_token_else_keyword(value[0]), _coerce_union_2_token_colon_none_to_token_colon(value[1]), _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value[2]))
+        return (_coerce_union_2_decl_else_keyword_none_to_decl_else_keyword(value[0]), _coerce_union_2_decl_colon_none_to_decl_colon(value[1]), _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(value[2]))
     elif value is None:
         return None
     else:
@@ -3317,7 +3320,7 @@ def _coerce_union_4_variant_stmt_tuple_3_union_2_token_else_keyword_none_union_2
 
 
 @no_type_check
-def _coerce_union_2_token_while_keyword_none_to_token_while_keyword(value: 'PyWhileKeyword | None') -> 'PyWhileKeyword':
+def _coerce_union_2_decl_while_keyword_none_to_decl_while_keyword(value: 'PyWhileKeyword | None') -> 'PyWhileKeyword':
     if value is None:
         return PyWhileKeyword()
     elif isinstance(value, PyWhileKeyword):
@@ -3327,7 +3330,7 @@ def _coerce_union_2_token_while_keyword_none_to_token_while_keyword(value: 'PyWh
 
 
 @no_type_check
-def _coerce_union_2_token_break_keyword_none_to_token_break_keyword(value: 'PyBreakKeyword | None') -> 'PyBreakKeyword':
+def _coerce_union_2_decl_break_keyword_none_to_decl_break_keyword(value: 'PyBreakKeyword | None') -> 'PyBreakKeyword':
     if value is None:
         return PyBreakKeyword()
     elif isinstance(value, PyBreakKeyword):
@@ -3337,7 +3340,7 @@ def _coerce_union_2_token_break_keyword_none_to_token_break_keyword(value: 'PyBr
 
 
 @no_type_check
-def _coerce_union_2_token_continue_keyword_none_to_token_continue_keyword(value: 'PyContinueKeyword | None') -> 'PyContinueKeyword':
+def _coerce_union_2_decl_continue_keyword_none_to_decl_continue_keyword(value: 'PyContinueKeyword | None') -> 'PyContinueKeyword':
     if value is None:
         return PyContinueKeyword()
     elif isinstance(value, PyContinueKeyword):
@@ -3347,7 +3350,7 @@ def _coerce_union_2_token_continue_keyword_none_to_token_continue_keyword(value:
 
 
 @no_type_check
-def _coerce_union_2_token_type_keyword_none_to_token_type_keyword(value: 'PyTypeKeyword | None') -> 'PyTypeKeyword':
+def _coerce_union_2_decl_type_keyword_none_to_decl_type_keyword(value: 'PyTypeKeyword | None') -> 'PyTypeKeyword':
     if value is None:
         return PyTypeKeyword()
     elif isinstance(value, PyTypeKeyword):
@@ -3357,7 +3360,7 @@ def _coerce_union_2_token_type_keyword_none_to_token_type_keyword(value: 'PyType
 
 
 @no_type_check
-def _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_to_punct_variant_expr_token_comma(value: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma]') -> 'Punctuated[PyExpr, PyComma]':
+def _coerce_union_3_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_to_punct_decl_expr_decl_comma(value: 'Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma]') -> 'Punctuated[PyExpr, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -3372,8 +3375,8 @@ def _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
                 else:
                     element_value = first_element
                     element_separator = PyComma()
-                new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
-                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_element_value = _coerce_decl_expr_to_decl_expr(element_value)
+                new_element_separator = _coerce_decl_comma_to_decl_comma(element_separator)
                 new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
@@ -3382,7 +3385,7 @@ def _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
                     assert(first_element[1] is None)
                 else:
                     element_value = first_element
-                new_element_value = _coerce_variant_expr_to_variant_expr(element_value)
+                new_element_value = _coerce_decl_expr_to_decl_expr(element_value)
                 new_value.append_final(new_element_value)
                 break
     except StopIteration:
@@ -3391,11 +3394,11 @@ def _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_co
 
 
 @no_type_check
-def _coerce_union_5_tuple_3_union_2_token_open_bracket_none_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_union_2_token_close_bracket_none_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_union_2_tuple_3_token_open_bracket_punct_variant_expr_token_comma_token_close_bracket_none(value: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None') -> 'tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None':
+def _coerce_union_5_tuple_3_union_2_decl_open_bracket_none_union_4_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_none_union_2_decl_close_bracket_none_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_none_to_union_2_tuple_3_decl_open_bracket_punct_decl_expr_decl_comma_decl_close_bracket_none(value: 'tuple[PyOpenBracket | None, Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None, PyCloseBracket | None] | Sequence[PyExpr] | Sequence[tuple[PyExpr, PyComma | None]] | ImmutablePunct[PyExpr, PyComma] | None') -> 'tuple[PyOpenBracket, Punctuated[PyExpr, PyComma], PyCloseBracket] | None':
     if isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
-        return (PyOpenBracket(), _coerce_union_3_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_to_punct_variant_expr_token_comma(value), PyCloseBracket())
+        return (PyOpenBracket(), _coerce_union_3_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_to_punct_decl_expr_decl_comma(value), PyCloseBracket())
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_open_bracket_none_to_token_open_bracket(value[0]), _coerce_union_4_list_variant_expr_list_tuple_2_variant_expr_union_2_token_comma_none_punct_variant_expr_token_comma_none_to_punct_variant_expr_token_comma(value[1]), _coerce_union_2_token_close_bracket_none_to_token_close_bracket(value[2]))
+        return (_coerce_union_2_decl_open_bracket_none_to_decl_open_bracket(value[0]), _coerce_union_4_list_decl_expr_list_tuple_2_decl_expr_union_2_decl_comma_none_punct_decl_expr_decl_comma_none_to_punct_decl_expr_decl_comma(value[1]), _coerce_union_2_decl_close_bracket_none_to_decl_close_bracket(value[2]))
     elif value is None:
         return None
     else:
@@ -3403,7 +3406,7 @@ def _coerce_union_5_tuple_3_union_2_token_open_bracket_none_union_4_list_variant
 
 
 @no_type_check
-def _coerce_union_2_token_except_keyword_none_to_token_except_keyword(value: 'PyExceptKeyword | None') -> 'PyExceptKeyword':
+def _coerce_union_2_decl_except_keyword_none_to_decl_except_keyword(value: 'PyExceptKeyword | None') -> 'PyExceptKeyword':
     if value is None:
         return PyExceptKeyword()
     elif isinstance(value, PyExceptKeyword):
@@ -3413,7 +3416,7 @@ def _coerce_union_2_token_except_keyword_none_to_token_except_keyword(value: 'Py
 
 
 @no_type_check
-def _coerce_union_2_token_try_keyword_none_to_token_try_keyword(value: 'PyTryKeyword | None') -> 'PyTryKeyword':
+def _coerce_union_2_decl_try_keyword_none_to_decl_try_keyword(value: 'PyTryKeyword | None') -> 'PyTryKeyword':
     if value is None:
         return PyTryKeyword()
     elif isinstance(value, PyTryKeyword):
@@ -3423,25 +3426,25 @@ def _coerce_union_2_token_try_keyword_none_to_token_try_keyword(value: 'PyTryKey
 
 
 @no_type_check
-def _coerce_node_except_handler_to_node_except_handler(value: 'PyExceptHandler') -> 'PyExceptHandler':
+def _coerce_decl_except_handler_to_decl_except_handler(value: 'PyExceptHandler') -> 'PyExceptHandler':
     return value
 
 
 @no_type_check
-def _coerce_union_2_list_node_except_handler_none_to_list_node_except_handler(value: 'Sequence[PyExceptHandler] | None') -> 'list[PyExceptHandler]':
+def _coerce_union_2_list_decl_except_handler_none_to_list_decl_except_handler(value: 'Sequence[PyExceptHandler] | None') -> 'list[PyExceptHandler]':
     if value is None:
         return list()
     elif isinstance(value, list):
         new_elements = list()
         for value_element in value:
-            new_elements.append(_coerce_node_except_handler_to_node_except_handler(value_element))
+            new_elements.append(_coerce_decl_except_handler_to_decl_except_handler(value_element))
         return new_elements
     else:
         raise ValueError('the coercion from Sequence[PyExceptHandler] | None to list[PyExceptHandler] failed')
 
 
 @no_type_check
-def _coerce_union_2_token_finally_keyword_none_to_token_finally_keyword(value: 'PyFinallyKeyword | None') -> 'PyFinallyKeyword':
+def _coerce_union_2_decl_finally_keyword_none_to_decl_finally_keyword(value: 'PyFinallyKeyword | None') -> 'PyFinallyKeyword':
     if value is None:
         return PyFinallyKeyword()
     elif isinstance(value, PyFinallyKeyword):
@@ -3451,11 +3454,11 @@ def _coerce_union_2_token_finally_keyword_none_to_token_finally_keyword(value: '
 
 
 @no_type_check
-def _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_union_2_token_colon_none_union_2_variant_stmt_list_variant_stmt_required_list_variant_stmt_required_none_to_union_2_tuple_3_token_finally_keyword_token_colon_union_2_variant_stmt_list_variant_stmt_required_none(value: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyFinallyKeyword, PyColon, PyStmt | list[PyStmt]] | None':
+def _coerce_union_4_decl_stmt_tuple_3_union_2_decl_finally_keyword_none_union_2_decl_colon_none_union_2_decl_stmt_list_decl_stmt_required_list_decl_stmt_required_none_to_union_2_tuple_3_decl_finally_keyword_decl_colon_union_2_decl_stmt_list_decl_stmt_required_none(value: 'PyStmt | tuple[PyFinallyKeyword | None, PyColon | None, PyStmt | Sequence[PyStmt]] | Sequence[PyStmt] | None') -> 'tuple[PyFinallyKeyword, PyColon, PyStmt | list[PyStmt]] | None':
     if is_py_stmt(value) or isinstance(value, list):
-        return (PyFinallyKeyword(), PyColon(), _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value))
+        return (PyFinallyKeyword(), PyColon(), _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(value))
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_finally_keyword_none_to_token_finally_keyword(value[0]), _coerce_union_2_token_colon_none_to_token_colon(value[1]), _coerce_union_2_variant_stmt_list_variant_stmt_required_to_union_2_variant_stmt_list_variant_stmt_required(value[2]))
+        return (_coerce_union_2_decl_finally_keyword_none_to_decl_finally_keyword(value[0]), _coerce_union_2_decl_colon_none_to_decl_colon(value[1]), _coerce_union_2_decl_stmt_list_decl_stmt_required_to_union_2_decl_stmt_list_decl_stmt_required(value[2]))
     elif value is None:
         return None
     else:
@@ -3463,9 +3466,9 @@ def _coerce_union_4_variant_stmt_tuple_3_union_2_token_finally_keyword_none_unio
 
 
 @no_type_check
-def _coerce_union_2_node_decorator_variant_expr_to_node_decorator(value: 'PyDecorator | PyExpr') -> 'PyDecorator':
+def _coerce_union_2_decl_decorator_decl_expr_to_decl_decorator(value: 'PyDecorator | PyExpr') -> 'PyDecorator':
     if is_py_expr(value):
-        return PyDecorator(_coerce_variant_expr_to_variant_expr(value))
+        return PyDecorator(_coerce_decl_expr_to_decl_expr(value))
     elif isinstance(value, PyDecorator):
         return value
     else:
@@ -3473,20 +3476,20 @@ def _coerce_union_2_node_decorator_variant_expr_to_node_decorator(value: 'PyDeco
 
 
 @no_type_check
-def _coerce_union_2_list_union_2_node_decorator_variant_expr_none_to_list_node_decorator(value: 'Sequence[PyDecorator | PyExpr] | None') -> 'list[PyDecorator]':
+def _coerce_union_2_list_union_2_decl_decorator_decl_expr_none_to_list_decl_decorator(value: 'Sequence[PyDecorator | PyExpr] | None') -> 'list[PyDecorator]':
     if value is None:
         return list()
     elif isinstance(value, list):
         new_elements = list()
         for value_element in value:
-            new_elements.append(_coerce_union_2_node_decorator_variant_expr_to_node_decorator(value_element))
+            new_elements.append(_coerce_union_2_decl_decorator_decl_expr_to_decl_decorator(value_element))
         return new_elements
     else:
         raise ValueError('the coercion from Sequence[PyDecorator | PyExpr] | None to list[PyDecorator] failed')
 
 
 @no_type_check
-def _coerce_union_2_token_class_keyword_none_to_token_class_keyword(value: 'PyClassKeyword | None') -> 'PyClassKeyword':
+def _coerce_union_2_decl_class_keyword_none_to_decl_class_keyword(value: 'PyClassKeyword | None') -> 'PyClassKeyword':
     if value is None:
         return PyClassKeyword()
     elif isinstance(value, PyClassKeyword):
@@ -3496,12 +3499,12 @@ def _coerce_union_2_token_class_keyword_none_to_token_class_keyword(value: 'PyCl
 
 
 @no_type_check
-def _coerce_variant_base_arg_to_variant_base_arg(value: 'PyBaseArg') -> 'PyBaseArg':
+def _coerce_decl_base_arg_to_decl_base_arg(value: 'PyBaseArg') -> 'PyBaseArg':
     return value
 
 
 @no_type_check
-def _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_to_punct_variant_base_arg_token_comma(value: 'Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma]') -> 'Punctuated[PyBaseArg, PyComma]':
+def _coerce_union_3_list_decl_base_arg_list_tuple_2_decl_base_arg_union_2_decl_comma_none_punct_decl_base_arg_decl_comma_to_punct_decl_base_arg_decl_comma(value: 'Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma]') -> 'Punctuated[PyBaseArg, PyComma]':
     new_value = Punctuated()
     iterator = iter(value)
     try:
@@ -3516,8 +3519,8 @@ def _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
                 else:
                     element_value = first_element
                     element_separator = PyComma()
-                new_element_value = _coerce_variant_base_arg_to_variant_base_arg(element_value)
-                new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                new_element_value = _coerce_decl_base_arg_to_decl_base_arg(element_value)
+                new_element_separator = _coerce_decl_comma_to_decl_comma(element_separator)
                 new_value.append(new_element_value, new_element_separator)
                 first_element = second_element
             except StopIteration:
@@ -3526,7 +3529,7 @@ def _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
                     assert(first_element[1] is None)
                 else:
                     element_value = first_element
-                new_element_value = _coerce_variant_base_arg_to_variant_base_arg(element_value)
+                new_element_value = _coerce_decl_base_arg_to_decl_base_arg(element_value)
                 new_value.append_final(new_element_value)
                 break
     except StopIteration:
@@ -3535,7 +3538,7 @@ def _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
 
 
 @no_type_check
-def _coerce_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_to_punct_variant_base_arg_token_comma(value: 'Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None') -> 'Punctuated[PyBaseArg, PyComma]':
+def _coerce_union_4_list_decl_base_arg_list_tuple_2_decl_base_arg_union_2_decl_comma_none_punct_decl_base_arg_decl_comma_none_to_punct_decl_base_arg_decl_comma(value: 'Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None') -> 'Punctuated[PyBaseArg, PyComma]':
     if value is None:
         return Punctuated()
     elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
@@ -3553,8 +3556,8 @@ def _coerce_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
                     else:
                         element_value = first_element
                         element_separator = PyComma()
-                    new_element_value = _coerce_variant_base_arg_to_variant_base_arg(element_value)
-                    new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                    new_element_value = _coerce_decl_base_arg_to_decl_base_arg(element_value)
+                    new_element_separator = _coerce_decl_comma_to_decl_comma(element_separator)
                     new_value.append(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
@@ -3563,7 +3566,7 @@ def _coerce_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
                         assert(first_element[1] is None)
                     else:
                         element_value = first_element
-                    new_element_value = _coerce_variant_base_arg_to_variant_base_arg(element_value)
+                    new_element_value = _coerce_decl_base_arg_to_decl_base_arg(element_value)
                     new_value.append_final(new_element_value)
                     break
         except StopIteration:
@@ -3574,11 +3577,11 @@ def _coerce_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_
 
 
 @no_type_check
-def _coerce_union_5_tuple_3_union_2_token_open_paren_none_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_union_2_token_close_paren_none_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_to_union_2_tuple_3_token_open_paren_punct_variant_base_arg_token_comma_token_close_paren_none(value: 'tuple[PyOpenParen | None, Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None, PyCloseParen | None] | Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None') -> 'tuple[PyOpenParen, Punctuated[PyBaseArg, PyComma], PyCloseParen] | None':
+def _coerce_union_5_tuple_3_union_2_decl_open_paren_none_union_4_list_decl_base_arg_list_tuple_2_decl_base_arg_union_2_decl_comma_none_punct_decl_base_arg_decl_comma_none_union_2_decl_close_paren_none_list_decl_base_arg_list_tuple_2_decl_base_arg_union_2_decl_comma_none_punct_decl_base_arg_decl_comma_none_to_union_2_tuple_3_decl_open_paren_punct_decl_base_arg_decl_comma_decl_close_paren_none(value: 'tuple[PyOpenParen | None, Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None, PyCloseParen | None] | Sequence[PyBaseArg] | Sequence[tuple[PyBaseArg, PyComma | None]] | ImmutablePunct[PyBaseArg, PyComma] | None') -> 'tuple[PyOpenParen, Punctuated[PyBaseArg, PyComma], PyCloseParen] | None':
     if isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
-        return (PyOpenParen(), _coerce_union_3_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_to_punct_variant_base_arg_token_comma(value), PyCloseParen())
+        return (PyOpenParen(), _coerce_union_3_list_decl_base_arg_list_tuple_2_decl_base_arg_union_2_decl_comma_none_punct_decl_base_arg_decl_comma_to_punct_decl_base_arg_decl_comma(value), PyCloseParen())
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_open_paren_none_to_token_open_paren(value[0]), _coerce_union_4_list_variant_base_arg_list_tuple_2_variant_base_arg_union_2_token_comma_none_punct_variant_base_arg_token_comma_none_to_punct_variant_base_arg_token_comma(value[1]), _coerce_union_2_token_close_paren_none_to_token_close_paren(value[2]))
+        return (_coerce_union_2_decl_open_paren_none_to_decl_open_paren(value[0]), _coerce_union_4_list_decl_base_arg_list_tuple_2_decl_base_arg_union_2_decl_comma_none_punct_decl_base_arg_decl_comma_none_to_punct_decl_base_arg_decl_comma(value[1]), _coerce_union_2_decl_close_paren_none_to_decl_close_paren(value[2]))
     elif value is None:
         return None
     else:
@@ -3586,7 +3589,7 @@ def _coerce_union_5_tuple_3_union_2_token_open_paren_none_union_4_list_variant_b
 
 
 @no_type_check
-def _coerce_union_2_token_asterisk_asterisk_none_to_token_asterisk_asterisk(value: 'PyAsteriskAsterisk | None') -> 'PyAsteriskAsterisk':
+def _coerce_union_2_decl_asterisk_asterisk_none_to_decl_asterisk_asterisk(value: 'PyAsteriskAsterisk | None') -> 'PyAsteriskAsterisk':
     if value is None:
         return PyAsteriskAsterisk()
     elif isinstance(value, PyAsteriskAsterisk):
@@ -3596,7 +3599,7 @@ def _coerce_union_2_token_asterisk_asterisk_none_to_token_asterisk_asterisk(valu
 
 
 @no_type_check
-def _coerce_union_2_token_slash_none_to_token_slash(value: 'PySlash | None') -> 'PySlash':
+def _coerce_union_2_decl_slash_none_to_decl_slash(value: 'PySlash | None') -> 'PySlash':
     if value is None:
         return PySlash()
     elif isinstance(value, PySlash):
@@ -3606,7 +3609,7 @@ def _coerce_union_2_token_slash_none_to_token_slash(value: 'PySlash | None') -> 
 
 
 @no_type_check
-def _coerce_union_2_token_at_sign_none_to_token_at_sign(value: 'PyAtSign | None') -> 'PyAtSign':
+def _coerce_union_2_decl_at_sign_none_to_decl_at_sign(value: 'PyAtSign | None') -> 'PyAtSign':
     if value is None:
         return PyAtSign()
     elif isinstance(value, PyAtSign):
@@ -3616,7 +3619,7 @@ def _coerce_union_2_token_at_sign_none_to_token_at_sign(value: 'PyAtSign | None'
 
 
 @no_type_check
-def _coerce_union_2_token_def_keyword_none_to_token_def_keyword(value: 'PyDefKeyword | None') -> 'PyDefKeyword':
+def _coerce_union_2_decl_def_keyword_none_to_decl_def_keyword(value: 'PyDefKeyword | None') -> 'PyDefKeyword':
     if value is None:
         return PyDefKeyword()
     elif isinstance(value, PyDefKeyword):
@@ -3626,12 +3629,12 @@ def _coerce_union_2_token_def_keyword_none_to_token_def_keyword(value: 'PyDefKey
 
 
 @no_type_check
-def _coerce_variant_param_to_variant_param(value: 'PyParam') -> 'PyParam':
+def _coerce_decl_param_to_decl_param(value: 'PyParam') -> 'PyParam':
     return value
 
 
 @no_type_check
-def _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_comma_none_punct_variant_param_token_comma_none_to_punct_variant_param_token_comma(value: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | ImmutablePunct[PyParam, PyComma] | None') -> 'Punctuated[PyParam, PyComma]':
+def _coerce_union_4_list_decl_param_list_tuple_2_decl_param_union_2_decl_comma_none_punct_decl_param_decl_comma_none_to_punct_decl_param_decl_comma(value: 'Sequence[PyParam] | Sequence[tuple[PyParam, PyComma | None]] | ImmutablePunct[PyParam, PyComma] | None') -> 'Punctuated[PyParam, PyComma]':
     if value is None:
         return Punctuated()
     elif isinstance(value, list) or isinstance(value, list) or isinstance(value, Punctuated):
@@ -3649,8 +3652,8 @@ def _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_
                     else:
                         element_value = first_element
                         element_separator = PyComma()
-                    new_element_value = _coerce_variant_param_to_variant_param(element_value)
-                    new_element_separator = _coerce_token_comma_to_token_comma(element_separator)
+                    new_element_value = _coerce_decl_param_to_decl_param(element_value)
+                    new_element_separator = _coerce_decl_comma_to_decl_comma(element_separator)
                     new_value.append(new_element_value, new_element_separator)
                     first_element = second_element
                 except StopIteration:
@@ -3659,7 +3662,7 @@ def _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_
                         assert(first_element[1] is None)
                     else:
                         element_value = first_element
-                    new_element_value = _coerce_variant_param_to_variant_param(element_value)
+                    new_element_value = _coerce_decl_param_to_decl_param(element_value)
                     new_value.append_final(new_element_value)
                     break
         except StopIteration:
@@ -3670,7 +3673,7 @@ def _coerce_union_4_list_variant_param_list_tuple_2_variant_param_union_2_token_
 
 
 @no_type_check
-def _coerce_union_2_token_r_arrow_none_to_token_r_arrow(value: 'PyRArrow | None') -> 'PyRArrow':
+def _coerce_union_2_decl_r_arrow_none_to_decl_r_arrow(value: 'PyRArrow | None') -> 'PyRArrow':
     if value is None:
         return PyRArrow()
     elif isinstance(value, PyRArrow):
@@ -3680,11 +3683,11 @@ def _coerce_union_2_token_r_arrow_none_to_token_r_arrow(value: 'PyRArrow | None'
 
 
 @no_type_check
-def _coerce_union_3_variant_expr_tuple_2_union_2_token_r_arrow_none_variant_expr_none_to_union_2_tuple_2_token_r_arrow_variant_expr_none(value: 'PyExpr | tuple[PyRArrow | None, PyExpr] | None') -> 'tuple[PyRArrow, PyExpr] | None':
+def _coerce_union_3_decl_expr_tuple_2_union_2_decl_r_arrow_none_decl_expr_none_to_union_2_tuple_2_decl_r_arrow_decl_expr_none(value: 'PyExpr | tuple[PyRArrow | None, PyExpr] | None') -> 'tuple[PyRArrow, PyExpr] | None':
     if is_py_expr(value):
-        return (PyRArrow(), _coerce_variant_expr_to_variant_expr(value))
+        return (PyRArrow(), _coerce_decl_expr_to_decl_expr(value))
     elif isinstance(value, tuple):
-        return (_coerce_union_2_token_r_arrow_none_to_token_r_arrow(value[0]), _coerce_variant_expr_to_variant_expr(value[1]))
+        return (_coerce_union_2_decl_r_arrow_none_to_decl_r_arrow(value[0]), _coerce_decl_expr_to_decl_expr(value[1]))
     elif value is None:
         return None
     else:
@@ -3692,13 +3695,13 @@ def _coerce_union_3_variant_expr_tuple_2_union_2_token_r_arrow_none_variant_expr
 
 
 @no_type_check
-def _coerce_union_2_list_variant_stmt_none_to_list_variant_stmt(value: 'Sequence[PyStmt] | None') -> 'list[PyStmt]':
+def _coerce_union_2_list_decl_stmt_none_to_list_decl_stmt(value: 'Sequence[PyStmt] | None') -> 'list[PyStmt]':
     if value is None:
         return list()
     elif isinstance(value, list):
         new_elements = list()
         for value_element in value:
-            new_elements.append(_coerce_variant_stmt_to_variant_stmt(value_element))
+            new_elements.append(_coerce_decl_stmt_to_decl_stmt(value_element))
         return new_elements
     else:
         raise ValueError('the coercion from Sequence[PyStmt] | None to list[PyStmt] failed')
@@ -3720,12 +3723,12 @@ def for_each_py_pattern(node: PyPattern, proc: Callable[[PyPattern], None]):
     if isinstance(node, PyStarredPattern):
         return
     if isinstance(node, PyListPattern):
-        for (element, separator) in node.elements:
-            proc(element)
+        for (element_1, separator_1) in node.elements:
+            proc(element_1)
         return
     if isinstance(node, PyTuplePattern):
-        for (element, separator) in node.elements:
-            proc(element)
+        for (element_2, separator_2) in node.elements:
+            proc(element_2)
         return
 
 
@@ -3754,29 +3757,34 @@ def for_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], None]):
     if isinstance(node, PySubscriptExpr):
         proc(node.expr)
         for (element, separator) in node.slices:
-            if isinstance(element, PySlice):
+            if is_py_expr(element):
+                proc(element)
+            elif isinstance(element, PySlice):
                 if is_py_expr(element.lower):
                     proc(element.lower)
                 if is_py_expr(element.upper):
                     proc(element.upper)
                 if isinstance(element.step, tuple):
                     proc(element.step[1])
-            elif is_py_expr(element):
-                proc(element)
         return
     if isinstance(node, PyStarredExpr):
         proc(node.expr)
         return
     if isinstance(node, PyListExpr):
-        for (element, separator) in node.elements:
-            proc(element)
+        for (element_1, separator_1) in node.elements:
+            proc(element_1)
         return
     if isinstance(node, PyTupleExpr):
-        for (element, separator) in node.elements:
-            proc(element)
+        for (element_2, separator_2) in node.elements:
+            proc(element_2)
         return
     if isinstance(node, PyCallExpr):
         proc(node.operator)
+        for (element_3, separator_3) in node.args:
+            if isinstance(element_3, PyKeywordArg):
+                proc(element_3.expr)
+            elif is_py_expr(element_3):
+                proc(element_3)
         return
     if isinstance(node, PyPrefixExpr):
         proc(node.expr)
@@ -3812,34 +3820,34 @@ def for_each_py_arg(node: PyArg, proc: Callable[[PyArg], None]):
     if isinstance(node, PySubscriptExpr):
         proc(node.expr)
         for (element, separator) in node.slices:
-            if isinstance(element, PySlice):
+            if is_py_expr(element):
+                proc(element)
+            elif isinstance(element, PySlice):
                 if is_py_expr(element.lower):
                     proc(element.lower)
                 if is_py_expr(element.upper):
                     proc(element.upper)
                 if isinstance(element.step, tuple):
                     proc(element.step[1])
-            elif is_py_expr(element):
-                proc(element)
         return
     if isinstance(node, PyStarredExpr):
         proc(node.expr)
         return
     if isinstance(node, PyListExpr):
-        for (element, separator) in node.elements:
-            proc(element)
+        for (element_1, separator_1) in node.elements:
+            proc(element_1)
         return
     if isinstance(node, PyTupleExpr):
-        for (element, separator) in node.elements:
-            proc(element)
+        for (element_2, separator_2) in node.elements:
+            proc(element_2)
         return
     if isinstance(node, PyKeywordArg):
         proc(node.expr)
         return
     if isinstance(node, PyCallExpr):
         proc(node.operator)
-        for (element, separator) in node.args:
-            proc(element)
+        for (element_3, separator_3) in node.args:
+            proc(element_3)
         return
     if isinstance(node, PyPrefixExpr):
         proc(node.expr)
@@ -3893,1000 +3901,53 @@ def for_each_py_stmt(node: PyStmt, proc: Callable[[PyStmt], None]):
         if is_py_stmt(node.body):
             proc(node.body)
         elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
+            for element_2 in node.body:
+                proc(element_2)
         if isinstance(node.else_clause, tuple):
             if is_py_stmt(node.else_clause[2]):
                 proc(node.else_clause[2])
             elif isinstance(node.else_clause[2], list):
-                for element_1 in node.else_clause[2]:
-                    proc(element_1)
-        return
-    if isinstance(node, PyBreakStmt):
-        return
-    if isinstance(node, PyContinueStmt):
-        return
-    if isinstance(node, PyTypeAliasStmt):
-        return
-    if isinstance(node, PyTryStmt):
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        if isinstance(node.else_clause, tuple):
-            if is_py_stmt(node.else_clause[2]):
-                proc(node.else_clause[2])
-            elif isinstance(node.else_clause[2], list):
-                for element_1 in node.else_clause[2]:
-                    proc(element_1)
-        if isinstance(node.finally_clause, tuple):
-            if is_py_stmt(node.finally_clause[2]):
-                proc(node.finally_clause[2])
-            elif isinstance(node.finally_clause[2], list):
-                for element_2 in node.finally_clause[2]:
-                    proc(element_2)
-        return
-    if isinstance(node, PyClassDef):
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        return
-    if isinstance(node, PyFuncDef):
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        return
-
-
-@no_type_check
-def for_each_py_node(node: PyNode, proc: Callable[[PyNode], None]):
-    if isinstance(node, PySlice):
-        if is_py_expr(node.lower):
-            proc(node.lower)
-        if is_py_expr(node.upper):
-            proc(node.upper)
-        if isinstance(node.step, tuple):
-            proc(node.step[1])
-        return
-    if isinstance(node, PyNamedPattern):
-        return
-    if isinstance(node, PyAttrPattern):
-        proc(node.pattern)
-        return
-    if isinstance(node, PySubscriptPattern):
-        proc(node.pattern)
-        for (element, separator) in node.slices:
-            if isinstance(element, PySlice):
-                proc(element)
-            elif is_py_pattern(element):
-                proc(element)
-        return
-    if isinstance(node, PyStarredPattern):
-        proc(node.expr)
-        return
-    if isinstance(node, PyListPattern):
-        for (element, separator) in node.elements:
-            proc(element)
-        return
-    if isinstance(node, PyTuplePattern):
-        for (element, separator) in node.elements:
-            proc(element)
-        return
-    if isinstance(node, PyEllipsisExpr):
-        return
-    if isinstance(node, PyGuard):
-        proc(node.expr)
-        return
-    if isinstance(node, PyComprehension):
-        proc(node.pattern)
-        proc(node.target)
-        for element in node.guards:
-            proc(element)
-        return
-    if isinstance(node, PyGeneratorExpr):
-        proc(node.element)
-        for element in node.generators:
-            proc(element)
-        return
-    if isinstance(node, PyIfExpr):
-        proc(node.then)
-        proc(node.test)
-        proc(node.alt)
-        return
-    if isinstance(node, PyConstExpr):
-        return
-    if isinstance(node, PyNestExpr):
-        proc(node.expr)
-        return
-    if isinstance(node, PyNamedExpr):
-        return
-    if isinstance(node, PyAttrExpr):
-        proc(node.expr)
-        return
-    if isinstance(node, PySubscriptExpr):
-        proc(node.expr)
-        for (element, separator) in node.slices:
-            if isinstance(element, PySlice):
-                proc(element)
-            elif is_py_expr(element):
-                proc(element)
-        return
-    if isinstance(node, PyStarredExpr):
-        proc(node.expr)
-        return
-    if isinstance(node, PyListExpr):
-        for (element, separator) in node.elements:
-            proc(element)
-        return
-    if isinstance(node, PyTupleExpr):
-        for (element, separator) in node.elements:
-            proc(element)
-        return
-    if isinstance(node, PyKeywordArg):
-        proc(node.expr)
-        return
-    if isinstance(node, PyCallExpr):
-        proc(node.operator)
-        for (element, separator) in node.args:
-            proc(element)
-        return
-    if isinstance(node, PyPrefixExpr):
-        proc(node.expr)
-        return
-    if isinstance(node, PyInfixExpr):
-        proc(node.left)
-        proc(node.right)
-        return
-    if isinstance(node, PyQualName):
-        return
-    if isinstance(node, PyAbsolutePath):
-        proc(node.name)
-        return
-    if isinstance(node, PyRelativePath):
-        if isinstance(node.name, PyQualName):
-            proc(node.name)
-        return
-    if isinstance(node, PyAlias):
-        proc(node.path)
-        return
-    if isinstance(node, PyFromAlias):
-        return
-    if isinstance(node, PyImportStmt):
-        for (element, separator) in node.aliases:
-            proc(element)
-        return
-    if isinstance(node, PyImportFromStmt):
-        proc(node.path)
-        for (element, separator) in node.aliases:
-            proc(element)
-        return
-    if isinstance(node, PyRetStmt):
-        if is_py_expr(node.expr):
-            proc(node.expr)
-        return
-    if isinstance(node, PyExprStmt):
-        proc(node.expr)
-        return
-    if isinstance(node, PyAugAssignStmt):
-        proc(node.pattern)
-        if isinstance(node.annotation, tuple):
-            proc(node.annotation[1])
-        proc(node.expr)
-        return
-    if isinstance(node, PyAssignStmt):
-        proc(node.pattern)
-        if isinstance(node.annotation, tuple):
-            proc(node.annotation[1])
-        if isinstance(node.value, tuple):
-            proc(node.value[1])
-        return
-    if isinstance(node, PyPassStmt):
-        return
-    if isinstance(node, PyGlobalStmt):
-        return
-    if isinstance(node, PyNonlocalStmt):
-        return
-    if isinstance(node, PyIfCase):
-        proc(node.test)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        return
-    if isinstance(node, PyElifCase):
-        proc(node.test)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        return
-    if isinstance(node, PyElseCase):
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        return
-    if isinstance(node, PyIfStmt):
-        proc(node.first)
-        for element in node.alternatives:
-            proc(element)
-        if isinstance(node.last, PyElseCase):
-            proc(node.last)
-        return
-    if isinstance(node, PyDeleteStmt):
-        proc(node.pattern)
-        return
-    if isinstance(node, PyRaiseStmt):
-        proc(node.expr)
-        if isinstance(node.cause, tuple):
-            proc(node.cause[1])
-        return
-    if isinstance(node, PyForStmt):
-        proc(node.pattern)
-        proc(node.expr)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        if isinstance(node.else_clause, tuple):
-            if is_py_stmt(node.else_clause[2]):
-                proc(node.else_clause[2])
-            elif isinstance(node.else_clause[2], list):
-                for element_1 in node.else_clause[2]:
-                    proc(element_1)
-        return
-    if isinstance(node, PyWhileStmt):
-        proc(node.expr)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        if isinstance(node.else_clause, tuple):
-            if is_py_stmt(node.else_clause[2]):
-                proc(node.else_clause[2])
-            elif isinstance(node.else_clause[2], list):
-                for element_1 in node.else_clause[2]:
-                    proc(element_1)
-        return
-    if isinstance(node, PyBreakStmt):
-        return
-    if isinstance(node, PyContinueStmt):
-        return
-    if isinstance(node, PyTypeAliasStmt):
-        if isinstance(node.type_params, tuple):
-            for (element, separator) in node.type_params[1]:
-                proc(element)
-        proc(node.expr)
-        return
-    if isinstance(node, PyExceptHandler):
-        proc(node.expr)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        return
-    if isinstance(node, PyTryStmt):
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        for element_1 in node.handlers:
-            proc(element_1)
-        if isinstance(node.else_clause, tuple):
-            if is_py_stmt(node.else_clause[2]):
-                proc(node.else_clause[2])
-            elif isinstance(node.else_clause[2], list):
-                for element_2 in node.else_clause[2]:
-                    proc(element_2)
-        if isinstance(node.finally_clause, tuple):
-            if is_py_stmt(node.finally_clause[2]):
-                proc(node.finally_clause[2])
-            elif isinstance(node.finally_clause[2], list):
-                for element_3 in node.finally_clause[2]:
+                for element_3 in node.else_clause[2]:
                     proc(element_3)
         return
-    if isinstance(node, PyClassBaseArg):
-        return
-    if isinstance(node, PyKeywordBaseArg):
-        proc(node.expr)
-        return
-    if isinstance(node, PyClassDef):
-        for element in node.decorators:
-            proc(element)
-        if isinstance(node.bases, tuple):
-            for (element_1, separator) in node.bases[1]:
-                proc(element_1)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element_2 in node.body:
-                proc(element_2)
-        return
-    if isinstance(node, PyNamedParam):
-        proc(node.pattern)
-        if isinstance(node.annotation, tuple):
-            proc(node.annotation[1])
-        if isinstance(node.default, tuple):
-            proc(node.default[1])
-        return
-    if isinstance(node, PyRestPosParam):
-        if isinstance(node.annotation, tuple):
-            proc(node.annotation[1])
-        return
-    if isinstance(node, PyRestKeywordParam):
-        if isinstance(node.annotation, tuple):
-            proc(node.annotation[1])
-        return
-    if isinstance(node, PyPosSepParam):
-        return
-    if isinstance(node, PyKwSepParam):
-        return
-    if isinstance(node, PyDecorator):
-        proc(node.expr)
-        return
-    if isinstance(node, PyFuncDef):
-        for element in node.decorators:
-            proc(element)
-        for (element_1, separator) in node.params:
-            proc(element_1)
-        if isinstance(node.return_type, tuple):
-            proc(node.return_type[1])
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element_2 in node.body:
-                proc(element_2)
-        return
-    if isinstance(node, PyModule):
-        for element in node.stmts:
-            proc(element)
-        return
-
-
-@no_type_check
-def for_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], None]):
-    if isinstance(node, PyIdent):
-        return
-    if isinstance(node, PyFloat):
-        return
-    if isinstance(node, PyInteger):
-        return
-    if isinstance(node, PyString):
-        return
-    if isinstance(node, PySlice):
-        if is_py_expr(node.lower):
-            proc(node.lower)
-        proc(node.colon)
-        if is_py_expr(node.upper):
-            proc(node.upper)
-        if isinstance(node.step, tuple):
-            proc(node.step[0])
-            proc(node.step[1])
-        return
-    if isinstance(node, PyNamedPattern):
-        proc(node.name)
-        return
-    if isinstance(node, PyAttrPattern):
-        proc(node.pattern)
-        proc(node.dot)
-        proc(node.name)
-        return
-    if isinstance(node, PySubscriptPattern):
-        proc(node.pattern)
-        proc(node.open_bracket)
-        for (element, separator) in node.slices:
-            if isinstance(element, PySlice):
-                proc(element)
-            elif is_py_pattern(element):
-                proc(element)
-            if separator is not None:
-                proc(separator)
-        proc(node.close_bracket)
-        return
-    if isinstance(node, PyStarredPattern):
-        proc(node.asterisk)
-        proc(node.expr)
-        return
-    if isinstance(node, PyListPattern):
-        proc(node.open_bracket)
-        for (element, separator) in node.elements:
-            proc(element)
-            if separator is not None:
-                proc(separator)
-        proc(node.close_bracket)
-        return
-    if isinstance(node, PyTuplePattern):
-        proc(node.open_paren)
-        for (element, separator) in node.elements:
-            proc(element)
-            if separator is not None:
-                proc(separator)
-        proc(node.close_paren)
-        return
-    if isinstance(node, PyEllipsisExpr):
-        proc(node.dot_dot_dot)
-        return
-    if isinstance(node, PyGuard):
-        proc(node.if_keyword)
-        proc(node.expr)
-        return
-    if isinstance(node, PyComprehension):
-        if isinstance(node.async_keyword, PyAsyncKeyword):
-            proc(node.async_keyword)
-        proc(node.for_keyword)
-        proc(node.pattern)
-        proc(node.in_keyword)
-        proc(node.target)
-        for element in node.guards:
-            proc(element)
-        return
-    if isinstance(node, PyGeneratorExpr):
-        proc(node.element)
-        for element in node.generators:
-            proc(element)
-        return
-    if isinstance(node, PyIfExpr):
-        proc(node.then)
-        proc(node.if_keyword)
-        proc(node.test)
-        proc(node.else_keyword)
-        proc(node.alt)
-        return
-    if isinstance(node, PyConstExpr):
-        if isinstance(node.literal, PyFloat):
-            proc(node.literal)
-        elif isinstance(node.literal, PyInteger):
-            proc(node.literal)
-        elif isinstance(node.literal, PyString):
-            proc(node.literal)
-        return
-    if isinstance(node, PyNestExpr):
-        proc(node.open_paren)
-        proc(node.expr)
-        proc(node.close_paren)
-        return
-    if isinstance(node, PyNamedExpr):
-        proc(node.name)
-        return
-    if isinstance(node, PyAttrExpr):
-        proc(node.expr)
-        proc(node.dot)
-        proc(node.name)
-        return
-    if isinstance(node, PySubscriptExpr):
-        proc(node.expr)
-        proc(node.open_bracket)
-        for (element, separator) in node.slices:
-            if isinstance(element, PySlice):
-                proc(element)
-            elif is_py_expr(element):
-                proc(element)
-            if separator is not None:
-                proc(separator)
-        proc(node.close_bracket)
-        return
-    if isinstance(node, PyStarredExpr):
-        proc(node.asterisk)
-        proc(node.expr)
-        return
-    if isinstance(node, PyListExpr):
-        proc(node.open_bracket)
-        for (element, separator) in node.elements:
-            proc(element)
-            if separator is not None:
-                proc(separator)
-        proc(node.close_bracket)
-        return
-    if isinstance(node, PyTupleExpr):
-        proc(node.open_paren)
-        for (element, separator) in node.elements:
-            proc(element)
-            if separator is not None:
-                proc(separator)
-        proc(node.close_paren)
-        return
-    if isinstance(node, PyKeywordArg):
-        proc(node.name)
-        proc(node.equals)
-        proc(node.expr)
-        return
-    if isinstance(node, PyCallExpr):
-        proc(node.operator)
-        proc(node.open_paren)
-        for (element, separator) in node.args:
-            proc(element)
-            if separator is not None:
-                proc(separator)
-        proc(node.close_paren)
-        return
-    if isinstance(node, PyPrefixExpr):
-        proc(node.prefix_op)
-        proc(node.expr)
-        return
-    if isinstance(node, PyInfixExpr):
-        proc(node.left)
-        proc(node.right)
-        return
-    if isinstance(node, PyQualName):
-        for element in node.modules:
-            proc(element[0])
-            proc(element[1])
-        proc(node.name)
-        return
-    if isinstance(node, PyAbsolutePath):
-        proc(node.name)
-        return
-    if isinstance(node, PyRelativePath):
-        for element in node.dots:
-            proc(element)
-        if isinstance(node.name, PyQualName):
-            proc(node.name)
-        return
-    if isinstance(node, PyAlias):
-        proc(node.path)
-        if isinstance(node.asname, tuple):
-            proc(node.asname[0])
-            proc(node.asname[1])
-        return
-    if isinstance(node, PyFromAlias):
-        if isinstance(node.name, PyAsterisk):
-            proc(node.name)
-        elif isinstance(node.name, PyIdent):
-            proc(node.name)
-        if isinstance(node.asname, tuple):
-            proc(node.asname[0])
-            proc(node.asname[1])
-        return
-    if isinstance(node, PyImportStmt):
-        proc(node.import_keyword)
-        for (element, separator) in node.aliases:
-            proc(element)
-            if separator is not None:
-                proc(separator)
-        return
-    if isinstance(node, PyImportFromStmt):
-        proc(node.from_keyword)
-        proc(node.path)
-        proc(node.import_keyword)
-        for (element, separator) in node.aliases:
-            proc(element)
-            if separator is not None:
-                proc(separator)
-        return
-    if isinstance(node, PyRetStmt):
-        proc(node.return_keyword)
-        if is_py_expr(node.expr):
-            proc(node.expr)
-        return
-    if isinstance(node, PyExprStmt):
-        proc(node.expr)
-        return
-    if isinstance(node, PyAugAssignStmt):
-        proc(node.pattern)
-        if isinstance(node.annotation, tuple):
-            proc(node.annotation[0])
-            proc(node.annotation[1])
-        if isinstance(node.op, PyAmpersand):
-            proc(node.op)
-        elif isinstance(node.op, PyAsterisk):
-            proc(node.op)
-        elif isinstance(node.op, PyAsteriskAsterisk):
-            proc(node.op)
-        elif isinstance(node.op, PyAtSign):
-            proc(node.op)
-        elif isinstance(node.op, PyCaret):
-            proc(node.op)
-        elif isinstance(node.op, PyGreaterThanGreaterThan):
-            proc(node.op)
-        elif isinstance(node.op, PyHyphen):
-            proc(node.op)
-        elif isinstance(node.op, PyLessThanLessThan):
-            proc(node.op)
-        elif isinstance(node.op, PyPercent):
-            proc(node.op)
-        elif isinstance(node.op, PyPlus):
-            proc(node.op)
-        elif isinstance(node.op, PySlash):
-            proc(node.op)
-        elif isinstance(node.op, PySlashSlash):
-            proc(node.op)
-        elif isinstance(node.op, PyVerticalBar):
-            proc(node.op)
-        proc(node.equals)
-        proc(node.expr)
-        return
-    if isinstance(node, PyAssignStmt):
-        proc(node.pattern)
-        if isinstance(node.annotation, tuple):
-            proc(node.annotation[0])
-            proc(node.annotation[1])
-        if isinstance(node.value, tuple):
-            proc(node.value[0])
-            proc(node.value[1])
-        return
-    if isinstance(node, PyPassStmt):
-        proc(node.pass_keyword)
-        return
-    if isinstance(node, PyGlobalStmt):
-        proc(node.global_keyword)
-        for (element, separator) in node.names:
-            proc(element)
-            if separator is not None:
-                proc(separator)
-        return
-    if isinstance(node, PyNonlocalStmt):
-        proc(node.nonlocal_keyword)
-        for (element, separator) in node.names:
-            proc(element)
-            if separator is not None:
-                proc(separator)
-        return
-    if isinstance(node, PyIfCase):
-        proc(node.if_keyword)
-        proc(node.test)
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        return
-    if isinstance(node, PyElifCase):
-        proc(node.elif_keyword)
-        proc(node.test)
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        return
-    if isinstance(node, PyElseCase):
-        proc(node.else_keyword)
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        return
-    if isinstance(node, PyIfStmt):
-        proc(node.first)
-        for element in node.alternatives:
-            proc(element)
-        if isinstance(node.last, PyElseCase):
-            proc(node.last)
-        return
-    if isinstance(node, PyDeleteStmt):
-        proc(node.del_keyword)
-        proc(node.pattern)
-        return
-    if isinstance(node, PyRaiseStmt):
-        proc(node.raise_keyword)
-        proc(node.expr)
-        if isinstance(node.cause, tuple):
-            proc(node.cause[0])
-            proc(node.cause[1])
-        return
-    if isinstance(node, PyForStmt):
-        proc(node.for_keyword)
-        proc(node.pattern)
-        proc(node.in_keyword)
-        proc(node.expr)
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        if isinstance(node.else_clause, tuple):
-            proc(node.else_clause[0])
-            proc(node.else_clause[1])
-            if is_py_stmt(node.else_clause[2]):
-                proc(node.else_clause[2])
-            elif isinstance(node.else_clause[2], list):
-                for element_1 in node.else_clause[2]:
-                    proc(element_1)
-        return
-    if isinstance(node, PyWhileStmt):
-        proc(node.while_keyword)
-        proc(node.expr)
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        if isinstance(node.else_clause, tuple):
-            proc(node.else_clause[0])
-            proc(node.else_clause[1])
-            if is_py_stmt(node.else_clause[2]):
-                proc(node.else_clause[2])
-            elif isinstance(node.else_clause[2], list):
-                for element_1 in node.else_clause[2]:
-                    proc(element_1)
-        return
     if isinstance(node, PyBreakStmt):
-        proc(node.break_keyword)
         return
     if isinstance(node, PyContinueStmt):
-        proc(node.continue_keyword)
         return
     if isinstance(node, PyTypeAliasStmt):
-        proc(node.type_keyword)
-        proc(node.name)
-        if isinstance(node.type_params, tuple):
-            proc(node.type_params[0])
-            for (element, separator) in node.type_params[1]:
-                proc(element)
-                if separator is not None:
-                    proc(separator)
-            proc(node.type_params[2])
-        proc(node.equals)
-        proc(node.expr)
-        return
-    if isinstance(node, PyExceptHandler):
-        proc(node.except_keyword)
-        proc(node.expr)
-        if isinstance(node.binder, tuple):
-            proc(node.binder[0])
-            proc(node.binder[1])
-        proc(node.colon)
-        if is_py_stmt(node.body):
-            proc(node.body)
-        elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
         return
     if isinstance(node, PyTryStmt):
-        proc(node.try_keyword)
-        proc(node.colon)
         if is_py_stmt(node.body):
             proc(node.body)
         elif isinstance(node.body, list):
-            for element in node.body:
-                proc(element)
-        for element_1 in node.handlers:
-            proc(element_1)
+            for element_4 in node.body:
+                proc(element_4)
         if isinstance(node.else_clause, tuple):
-            proc(node.else_clause[0])
-            proc(node.else_clause[1])
             if is_py_stmt(node.else_clause[2]):
                 proc(node.else_clause[2])
             elif isinstance(node.else_clause[2], list):
-                for element_2 in node.else_clause[2]:
-                    proc(element_2)
+                for element_5 in node.else_clause[2]:
+                    proc(element_5)
         if isinstance(node.finally_clause, tuple):
-            proc(node.finally_clause[0])
-            proc(node.finally_clause[1])
             if is_py_stmt(node.finally_clause[2]):
                 proc(node.finally_clause[2])
             elif isinstance(node.finally_clause[2], list):
-                for element_3 in node.finally_clause[2]:
-                    proc(element_3)
-        return
-    if isinstance(node, PyClassBaseArg):
-        proc(node.name)
-        return
-    if isinstance(node, PyKeywordBaseArg):
-        proc(node.name)
-        proc(node.equals)
-        proc(node.expr)
+                for element_6 in node.finally_clause[2]:
+                    proc(element_6)
         return
     if isinstance(node, PyClassDef):
-        for element in node.decorators:
-            proc(element)
-        proc(node.class_keyword)
-        proc(node.name)
-        if isinstance(node.bases, tuple):
-            proc(node.bases[0])
-            for (element_1, separator) in node.bases[1]:
-                proc(element_1)
-                if separator is not None:
-                    proc(separator)
-            proc(node.bases[2])
-        proc(node.colon)
         if is_py_stmt(node.body):
             proc(node.body)
         elif isinstance(node.body, list):
-            for element_2 in node.body:
-                proc(element_2)
-        return
-    if isinstance(node, PyNamedParam):
-        proc(node.pattern)
-        if isinstance(node.annotation, tuple):
-            proc(node.annotation[0])
-            proc(node.annotation[1])
-        if isinstance(node.default, tuple):
-            proc(node.default[0])
-            proc(node.default[1])
-        return
-    if isinstance(node, PyRestPosParam):
-        proc(node.asterisk)
-        proc(node.name)
-        if isinstance(node.annotation, tuple):
-            proc(node.annotation[0])
-            proc(node.annotation[1])
-        return
-    if isinstance(node, PyRestKeywordParam):
-        proc(node.asterisk_asterisk)
-        proc(node.name)
-        if isinstance(node.annotation, tuple):
-            proc(node.annotation[0])
-            proc(node.annotation[1])
-        return
-    if isinstance(node, PyPosSepParam):
-        proc(node.slash)
-        return
-    if isinstance(node, PyKwSepParam):
-        proc(node.asterisk)
-        return
-    if isinstance(node, PyDecorator):
-        proc(node.at_sign)
-        proc(node.expr)
+            for element_7 in node.body:
+                proc(element_7)
         return
     if isinstance(node, PyFuncDef):
-        for element in node.decorators:
-            proc(element)
-        if isinstance(node.async_keyword, PyAsyncKeyword):
-            proc(node.async_keyword)
-        proc(node.def_keyword)
-        proc(node.name)
-        proc(node.open_paren)
-        for (element_1, separator) in node.params:
-            proc(element_1)
-            if separator is not None:
-                proc(separator)
-        proc(node.close_paren)
-        if isinstance(node.return_type, tuple):
-            proc(node.return_type[0])
-            proc(node.return_type[1])
-        proc(node.colon)
         if is_py_stmt(node.body):
             proc(node.body)
         elif isinstance(node.body, list):
-            for element_2 in node.body:
-                proc(element_2)
-        return
-    if isinstance(node, PyModule):
-        for element in node.stmts:
-            proc(element)
-        return
-    if isinstance(node, PyTilde):
-        return
-    if isinstance(node, PyVerticalBar):
-        return
-    if isinstance(node, PyWhileKeyword):
-        return
-    if isinstance(node, PyTypeKeyword):
-        return
-    if isinstance(node, PyTryKeyword):
-        return
-    if isinstance(node, PyReturnKeyword):
-        return
-    if isinstance(node, PyRaiseKeyword):
-        return
-    if isinstance(node, PyPassKeyword):
-        return
-    if isinstance(node, PyOrKeyword):
-        return
-    if isinstance(node, PyNotKeyword):
-        return
-    if isinstance(node, PyNonlocalKeyword):
-        return
-    if isinstance(node, PyIsKeyword):
-        return
-    if isinstance(node, PyInKeyword):
-        return
-    if isinstance(node, PyImportKeyword):
-        return
-    if isinstance(node, PyIfKeyword):
-        return
-    if isinstance(node, PyGlobalKeyword):
-        return
-    if isinstance(node, PyFromKeyword):
-        return
-    if isinstance(node, PyForKeyword):
-        return
-    if isinstance(node, PyFinallyKeyword):
-        return
-    if isinstance(node, PyExceptKeyword):
-        return
-    if isinstance(node, PyElseKeyword):
-        return
-    if isinstance(node, PyElifKeyword):
-        return
-    if isinstance(node, PyDelKeyword):
-        return
-    if isinstance(node, PyDefKeyword):
-        return
-    if isinstance(node, PyContinueKeyword):
-        return
-    if isinstance(node, PyClassKeyword):
-        return
-    if isinstance(node, PyBreakKeyword):
-        return
-    if isinstance(node, PyAsyncKeyword):
-        return
-    if isinstance(node, PyAsKeyword):
-        return
-    if isinstance(node, PyAndKeyword):
-        return
-    if isinstance(node, PyCaret):
-        return
-    if isinstance(node, PyCloseBracket):
-        return
-    if isinstance(node, PyOpenBracket):
-        return
-    if isinstance(node, PyAtSign):
-        return
-    if isinstance(node, PyGreaterThanGreaterThan):
-        return
-    if isinstance(node, PyGreaterThanEquals):
-        return
-    if isinstance(node, PyGreaterThan):
-        return
-    if isinstance(node, PyEqualsEquals):
-        return
-    if isinstance(node, PyEquals):
-        return
-    if isinstance(node, PyLessThanEquals):
-        return
-    if isinstance(node, PyLessThanLessThan):
-        return
-    if isinstance(node, PyLessThan):
-        return
-    if isinstance(node, PySemicolon):
-        return
-    if isinstance(node, PyColon):
-        return
-    if isinstance(node, PySlashSlash):
-        return
-    if isinstance(node, PySlash):
-        return
-    if isinstance(node, PyDotDotDot):
-        return
-    if isinstance(node, PyDot):
-        return
-    if isinstance(node, PyRArrow):
-        return
-    if isinstance(node, PyHyphen):
-        return
-    if isinstance(node, PyComma):
-        return
-    if isinstance(node, PyPlus):
-        return
-    if isinstance(node, PyAsteriskAsterisk):
-        return
-    if isinstance(node, PyAsterisk):
-        return
-    if isinstance(node, PyCloseParen):
-        return
-    if isinstance(node, PyOpenParen):
-        return
-    if isinstance(node, PyAmpersand):
-        return
-    if isinstance(node, PyPercent):
-        return
-    if isinstance(node, PyHashtag):
-        return
-    if isinstance(node, PyExclamationMarkEquals):
-        return
-    if isinstance(node, PyCarriageReturnLineFeed):
-        return
-    if isinstance(node, PyLineFeed):
+            for element_8 in node.body:
+                proc(element_8)
         return
 
 
@@ -4901,9 +3962,9 @@ def rewrite_each_py_pattern(node: PyPattern, proc: Callable[[PyPattern], PyPatte
         if new_pattern is not node.pattern:
             changed = True
         if changed:
-            return node
-        else:
             return PyAttrPattern(pattern=new_pattern, dot=node.dot, name=node.name)
+        else:
+            return node
     if isinstance(node, PySubscriptPattern):
         changed = False
         new_pattern_1 = proc(node.pattern)
@@ -4911,52 +3972,72 @@ def rewrite_each_py_pattern(node: PyPattern, proc: Callable[[PyPattern], PyPatte
         if new_pattern_1 is not node.pattern:
             changed = True
         new_slices = Punctuated()
-        for (element, separator) in node.slices:
-            if isinstance(element, PySlice):
-                new_element = element
-            elif is_py_pattern(element):
+        for (element, separator) in node.slices.delimited:
+            if is_py_pattern(element):
                 new_element = proc(element)
                 assert(is_py_pattern(new_element))
                 if new_element is not element:
                     changed = True
+            elif isinstance(element, PySlice):
+                new_element = element
             else:
                 assert_never(element)
             new_separator = separator
             new_slices.append(new_element, new_separator)
-        if changed:
-            return node
+        if is_py_pattern(node.slices.last):
+            new_last = proc(node.slices.last)
+            assert(is_py_pattern(new_last))
+            if new_last is not node.slices.last:
+                changed = True
+        elif isinstance(node.slices.last, PySlice):
+            new_last = node.slices.last
         else:
+            assert_never(node.slices.last)
+        new_slices.append_final(new_last)
+        if changed:
             return PySubscriptPattern(pattern=new_pattern_1, open_bracket=node.open_bracket, slices=new_slices, close_bracket=node.close_bracket)
+        else:
+            return node
     if isinstance(node, PyStarredPattern):
         return node
     if isinstance(node, PyListPattern):
         changed = False
         new_elements = Punctuated()
-        for (element_1, separator_1) in node.elements:
+        for (element_1, separator_1) in node.elements.delimited:
             new_element_1 = proc(element_1)
             assert(is_py_pattern(new_element_1))
             if new_element_1 is not element_1:
                 changed = True
             new_separator_1 = separator_1
             new_elements.append(new_element_1, new_separator_1)
+        new_last_1 = proc(node.elements.last)
+        assert(is_py_pattern(new_last_1))
+        if new_last_1 is not node.elements.last:
+            changed = True
+        new_elements.append_final(new_last_1)
         if changed:
-            return node
-        else:
             return PyListPattern(open_bracket=node.open_bracket, elements=new_elements, close_bracket=node.close_bracket)
+        else:
+            return node
     if isinstance(node, PyTuplePattern):
         changed = False
         new_elements_1 = Punctuated()
-        for (element_2, separator_2) in node.elements:
+        for (element_2, separator_2) in node.elements.delimited:
             new_element_2 = proc(element_2)
             assert(is_py_pattern(new_element_2))
             if new_element_2 is not element_2:
                 changed = True
             new_separator_2 = separator_2
             new_elements_1.append(new_element_2, new_separator_2)
+        new_last_2 = proc(node.elements.last)
+        assert(is_py_pattern(new_last_2))
+        if new_last_2 is not node.elements.last:
+            changed = True
+        new_elements_1.append_final(new_last_2)
         if changed:
-            return node
-        else:
             return PyTuplePattern(open_paren=node.open_paren, elements=new_elements_1, close_paren=node.close_paren)
+        else:
+            return node
 
 
 @no_type_check
@@ -4970,9 +4051,9 @@ def rewrite_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], PyExpr]) -> PyEx
         if new_element is not node.element:
             changed = True
         if changed:
-            return node
-        else:
             return PyGeneratorExpr(element=new_element, generators=node.generators)
+        else:
+            return node
     if isinstance(node, PyIfExpr):
         changed = False
         new_then = proc(node.then)
@@ -4988,9 +4069,9 @@ def rewrite_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], PyExpr]) -> PyEx
         if new_alt is not node.alt:
             changed = True
         if changed:
-            return node
-        else:
             return PyIfExpr(then=new_then, if_keyword=node.if_keyword, test=new_test, else_keyword=node.else_keyword, alt=new_alt)
+        else:
+            return node
     if isinstance(node, PyConstExpr):
         return node
     if isinstance(node, PyNestExpr):
@@ -5000,9 +4081,9 @@ def rewrite_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], PyExpr]) -> PyEx
         if new_expr is not node.expr:
             changed = True
         if changed:
-            return node
-        else:
             return PyNestExpr(open_paren=node.open_paren, expr=new_expr, close_paren=node.close_paren)
+        else:
+            return node
     if isinstance(node, PyNamedExpr):
         return node
     if isinstance(node, PyAttrExpr):
@@ -5012,9 +4093,9 @@ def rewrite_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], PyExpr]) -> PyEx
         if new_expr_1 is not node.expr:
             changed = True
         if changed:
-            return node
-        else:
             return PyAttrExpr(expr=new_expr_1, dot=node.dot, name=node.name)
+        else:
+            return node
     if isinstance(node, PySubscriptExpr):
         changed = False
         new_expr_2 = proc(node.expr)
@@ -5022,8 +4103,13 @@ def rewrite_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], PyExpr]) -> PyEx
         if new_expr_2 is not node.expr:
             changed = True
         new_slices = Punctuated()
-        for (element, separator) in node.slices:
-            if isinstance(element, PySlice):
+        for (element, separator) in node.slices.delimited:
+            if is_py_expr(element):
+                new_element_1 = proc(element)
+                assert(is_py_expr(new_element_1))
+                if new_element_1 is not element:
+                    changed = True
+            elif isinstance(element, PySlice):
                 changed = False
                 if is_py_expr(element.lower):
                     new_lower = proc(element.lower)
@@ -5060,22 +4146,65 @@ def rewrite_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], PyExpr]) -> PyEx
                 else:
                     assert_never(element.step)
                 if changed:
-                    new_element_1 = element
-                else:
                     new_element_1 = PySlice(lower=new_lower, colon=element.colon, upper=new_upper, step=new_step)
-            elif is_py_expr(element):
-                new_element_1 = proc(element)
-                assert(is_py_expr(new_element_1))
-                if new_element_1 is not element:
-                    changed = True
+                else:
+                    new_element_1 = element
             else:
                 assert_never(element)
             new_separator = separator
             new_slices.append(new_element_1, new_separator)
-        if changed:
-            return node
+        if is_py_expr(node.slices.last):
+            new_last = proc(node.slices.last)
+            assert(is_py_expr(new_last))
+            if new_last is not node.slices.last:
+                changed = True
+        elif isinstance(node.slices.last, PySlice):
+            changed = False
+            if is_py_expr(node.slices.last.lower):
+                new_lower_1 = proc(node.slices.last.lower)
+                assert(is_py_expr(new_lower_1))
+                if new_lower_1 is not node.slices.last.lower:
+                    changed = True
+            elif node.slices.last.lower is None:
+                new_lower_1 = node.slices.last.lower
+            else:
+                assert_never(node.slices.last.lower)
+            if is_py_expr(node.slices.last.upper):
+                new_upper_1 = proc(node.slices.last.upper)
+                assert(is_py_expr(new_upper_1))
+                if new_upper_1 is not node.slices.last.upper:
+                    changed = True
+            elif node.slices.last.upper is None:
+                new_upper_1 = node.slices.last.upper
+            else:
+                assert_never(node.slices.last.upper)
+            if isinstance(node.slices.last.step, tuple):
+                new_elements_1 = []
+                element_0_1 = node.slices.last.step[0]
+                new_element_0_1 = element_0_1
+                new_elements_1.append(new_element_0_1)
+                element_1_1 = node.slices.last.step[1]
+                new_element_1_1 = proc(element_1_1)
+                assert(is_py_expr(new_element_1_1))
+                if new_element_1_1 is not element_1_1:
+                    changed = True
+                new_elements_1.append(new_element_1_1)
+                new_step_1 = tuple(new_elements_1) if changed else node.slices.last.step
+            elif node.slices.last.step is None:
+                new_step_1 = node.slices.last.step
+            else:
+                assert_never(node.slices.last.step)
+            if changed:
+                new_last = PySlice(lower=new_lower_1, colon=node.slices.last.colon, upper=new_upper_1, step=new_step_1)
+            else:
+                new_last = node.slices.last
         else:
+            assert_never(node.slices.last)
+        new_slices.append_final(new_last)
+        if changed:
             return PySubscriptExpr(expr=new_expr_2, open_bracket=node.open_bracket, slices=new_slices, close_bracket=node.close_bracket)
+        else:
+            return node
     if isinstance(node, PyStarredExpr):
         changed = False
         new_expr_3 = proc(node.expr)
@@ -5083,57 +4212,106 @@ def rewrite_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], PyExpr]) -> PyEx
         if new_expr_3 is not node.expr:
             changed = True
         if changed:
-            return node
-        else:
             return PyStarredExpr(asterisk=node.asterisk, expr=new_expr_3)
+        else:
+            return node
     if isinstance(node, PyListExpr):
         changed = False
-        new_elements_1 = Punctuated()
-        for (element_1, separator_1) in node.elements:
+        new_elements_2 = Punctuated()
+        for (element_1, separator_1) in node.elements.delimited:
             new_element_2 = proc(element_1)
             assert(is_py_expr(new_element_2))
             if new_element_2 is not element_1:
                 changed = True
             new_separator_1 = separator_1
-            new_elements_1.append(new_element_2, new_separator_1)
+            new_elements_2.append(new_element_2, new_separator_1)
+        new_last_1 = proc(node.elements.last)
+        assert(is_py_expr(new_last_1))
+        if new_last_1 is not node.elements.last:
+            changed = True
+        new_elements_2.append_final(new_last_1)
         if changed:
-            return node
+            return PyListExpr(open_bracket=node.open_bracket, elements=new_elements_2, close_bracket=node.close_bracket)
         else:
-            return PyListExpr(open_bracket=node.open_bracket, elements=new_elements_1, close_bracket=node.close_bracket)
+            return node
     if isinstance(node, PyTupleExpr):
         changed = False
-        new_elements_2 = Punctuated()
-        for (element_2, separator_2) in node.elements:
+        new_elements_3 = Punctuated()
+        for (element_2, separator_2) in node.elements.delimited:
             new_element_3 = proc(element_2)
             assert(is_py_expr(new_element_3))
             if new_element_3 is not element_2:
                 changed = True
             new_separator_2 = separator_2
-            new_elements_2.append(new_element_3, new_separator_2)
+            new_elements_3.append(new_element_3, new_separator_2)
+        new_last_2 = proc(node.elements.last)
+        assert(is_py_expr(new_last_2))
+        if new_last_2 is not node.elements.last:
+            changed = True
+        new_elements_3.append_final(new_last_2)
         if changed:
-            return node
+            return PyTupleExpr(open_paren=node.open_paren, elements=new_elements_3, close_paren=node.close_paren)
         else:
-            return PyTupleExpr(open_paren=node.open_paren, elements=new_elements_2, close_paren=node.close_paren)
+            return node
     if isinstance(node, PyCallExpr):
         changed = False
         new_operator = proc(node.operator)
         assert(is_py_expr(new_operator))
         if new_operator is not node.operator:
             changed = True
-        if changed:
-            return node
+        new_args = Punctuated()
+        for (element_3, separator_3) in node.args.delimited:
+            if isinstance(element_3, PyKeywordArg):
+                changed = False
+                new_expr_4 = proc(element_3.expr)
+                assert(is_py_expr(new_expr_4))
+                if new_expr_4 is not element_3.expr:
+                    changed = True
+                if changed:
+                    new_element_4 = PyKeywordArg(name=element_3.name, equals=element_3.equals, expr=new_expr_4)
+                else:
+                    new_element_4 = element_3
+            elif is_py_expr(element_3):
+                new_element_4 = proc(element_3)
+                assert(is_py_expr(new_element_4))
+                if new_element_4 is not element_3:
+                    changed = True
+            else:
+                assert_never(element_3)
+            new_separator_3 = separator_3
+            new_args.append(new_element_4, new_separator_3)
+        if isinstance(node.args.last, PyKeywordArg):
+            changed = False
+            new_expr_5 = proc(node.args.last.expr)
+            assert(is_py_expr(new_expr_5))
+            if new_expr_5 is not node.args.last.expr:
+                changed = True
+            if changed:
+                new_last_3 = PyKeywordArg(name=node.args.last.name, equals=node.args.last.equals, expr=new_expr_5)
+            else:
+                new_last_3 = node.args.last
+        elif is_py_expr(node.args.last):
+            new_last_3 = proc(node.args.last)
+            assert(is_py_expr(new_last_3))
+            if new_last_3 is not node.args.last:
+                changed = True
         else:
-            return PyCallExpr(operator=new_operator, open_paren=node.open_paren, args=node.args, close_paren=node.close_paren)
+            assert_never(node.args.last)
+        new_args.append_final(new_last_3)
+        if changed:
+            return PyCallExpr(operator=new_operator, open_paren=node.open_paren, args=new_args, close_paren=node.close_paren)
+        else:
+            return node
     if isinstance(node, PyPrefixExpr):
         changed = False
-        new_expr_4 = proc(node.expr)
-        assert(is_py_expr(new_expr_4))
-        if new_expr_4 is not node.expr:
+        new_expr_6 = proc(node.expr)
+        assert(is_py_expr(new_expr_6))
+        if new_expr_6 is not node.expr:
             changed = True
         if changed:
-            return node
+            return PyPrefixExpr(prefix_op=node.prefix_op, expr=new_expr_6)
         else:
-            return PyPrefixExpr(prefix_op=node.prefix_op, expr=new_expr_4)
+            return node
     if isinstance(node, PyInfixExpr):
         changed = False
         new_left = proc(node.left)
@@ -5145,9 +4323,9 @@ def rewrite_each_py_expr(node: PyExpr, proc: Callable[[PyExpr], PyExpr]) -> PyEx
         if new_right is not node.right:
             changed = True
         if changed:
-            return node
-        else:
             return PyInfixExpr(left=new_left, op=node.op, right=new_right)
+        else:
+            return node
 
 
 @no_type_check
@@ -5161,9 +4339,9 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
         if new_element is not node.element:
             changed = True
         if changed:
-            return node
-        else:
             return PyGeneratorExpr(element=new_element, generators=node.generators)
+        else:
+            return node
     if isinstance(node, PyIfExpr):
         changed = False
         new_then = proc(node.then)
@@ -5179,9 +4357,9 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
         if new_alt is not node.alt:
             changed = True
         if changed:
-            return node
-        else:
             return PyIfExpr(then=new_then, if_keyword=node.if_keyword, test=new_test, else_keyword=node.else_keyword, alt=new_alt)
+        else:
+            return node
     if isinstance(node, PyConstExpr):
         return node
     if isinstance(node, PyNestExpr):
@@ -5191,9 +4369,9 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
         if new_expr is not node.expr:
             changed = True
         if changed:
-            return node
-        else:
             return PyNestExpr(open_paren=node.open_paren, expr=new_expr, close_paren=node.close_paren)
+        else:
+            return node
     if isinstance(node, PyNamedExpr):
         return node
     if isinstance(node, PyAttrExpr):
@@ -5203,9 +4381,9 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
         if new_expr_1 is not node.expr:
             changed = True
         if changed:
-            return node
-        else:
             return PyAttrExpr(expr=new_expr_1, dot=node.dot, name=node.name)
+        else:
+            return node
     if isinstance(node, PySubscriptExpr):
         changed = False
         new_expr_2 = proc(node.expr)
@@ -5213,8 +4391,13 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
         if new_expr_2 is not node.expr:
             changed = True
         new_slices = Punctuated()
-        for (element, separator) in node.slices:
-            if isinstance(element, PySlice):
+        for (element, separator) in node.slices.delimited:
+            if is_py_expr(element):
+                new_element_1 = proc(element)
+                assert(is_py_expr(new_element_1))
+                if new_element_1 is not element:
+                    changed = True
+            elif isinstance(element, PySlice):
                 changed = False
                 if is_py_expr(element.lower):
                     new_lower = proc(element.lower)
@@ -5251,22 +4434,65 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
                 else:
                     assert_never(element.step)
                 if changed:
-                    new_element_1 = element
-                else:
                     new_element_1 = PySlice(lower=new_lower, colon=element.colon, upper=new_upper, step=new_step)
-            elif is_py_expr(element):
-                new_element_1 = proc(element)
-                assert(is_py_expr(new_element_1))
-                if new_element_1 is not element:
-                    changed = True
+                else:
+                    new_element_1 = element
             else:
                 assert_never(element)
             new_separator = separator
             new_slices.append(new_element_1, new_separator)
-        if changed:
-            return node
+        if is_py_expr(node.slices.last):
+            new_last = proc(node.slices.last)
+            assert(is_py_expr(new_last))
+            if new_last is not node.slices.last:
+                changed = True
+        elif isinstance(node.slices.last, PySlice):
+            changed = False
+            if is_py_expr(node.slices.last.lower):
+                new_lower_1 = proc(node.slices.last.lower)
+                assert(is_py_expr(new_lower_1))
+                if new_lower_1 is not node.slices.last.lower:
+                    changed = True
+            elif node.slices.last.lower is None:
+                new_lower_1 = node.slices.last.lower
+            else:
+                assert_never(node.slices.last.lower)
+            if is_py_expr(node.slices.last.upper):
+                new_upper_1 = proc(node.slices.last.upper)
+                assert(is_py_expr(new_upper_1))
+                if new_upper_1 is not node.slices.last.upper:
+                    changed = True
+            elif node.slices.last.upper is None:
+                new_upper_1 = node.slices.last.upper
+            else:
+                assert_never(node.slices.last.upper)
+            if isinstance(node.slices.last.step, tuple):
+                new_elements_1 = []
+                element_0_1 = node.slices.last.step[0]
+                new_element_0_1 = element_0_1
+                new_elements_1.append(new_element_0_1)
+                element_1_1 = node.slices.last.step[1]
+                new_element_1_1 = proc(element_1_1)
+                assert(is_py_expr(new_element_1_1))
+                if new_element_1_1 is not element_1_1:
+                    changed = True
+                new_elements_1.append(new_element_1_1)
+                new_step_1 = tuple(new_elements_1) if changed else node.slices.last.step
+            elif node.slices.last.step is None:
+                new_step_1 = node.slices.last.step
+            else:
+                assert_never(node.slices.last.step)
+            if changed:
+                new_last = PySlice(lower=new_lower_1, colon=node.slices.last.colon, upper=new_upper_1, step=new_step_1)
+            else:
+                new_last = node.slices.last
         else:
+            assert_never(node.slices.last)
+        new_slices.append_final(new_last)
+        if changed:
             return PySubscriptExpr(expr=new_expr_2, open_bracket=node.open_bracket, slices=new_slices, close_bracket=node.close_bracket)
+        else:
+            return node
     if isinstance(node, PyStarredExpr):
         changed = False
         new_expr_3 = proc(node.expr)
@@ -5274,37 +4500,47 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
         if new_expr_3 is not node.expr:
             changed = True
         if changed:
-            return node
-        else:
             return PyStarredExpr(asterisk=node.asterisk, expr=new_expr_3)
+        else:
+            return node
     if isinstance(node, PyListExpr):
         changed = False
-        new_elements_1 = Punctuated()
-        for (element_1, separator_1) in node.elements:
+        new_elements_2 = Punctuated()
+        for (element_1, separator_1) in node.elements.delimited:
             new_element_2 = proc(element_1)
             assert(is_py_expr(new_element_2))
             if new_element_2 is not element_1:
                 changed = True
             new_separator_1 = separator_1
-            new_elements_1.append(new_element_2, new_separator_1)
+            new_elements_2.append(new_element_2, new_separator_1)
+        new_last_1 = proc(node.elements.last)
+        assert(is_py_expr(new_last_1))
+        if new_last_1 is not node.elements.last:
+            changed = True
+        new_elements_2.append_final(new_last_1)
         if changed:
-            return node
+            return PyListExpr(open_bracket=node.open_bracket, elements=new_elements_2, close_bracket=node.close_bracket)
         else:
-            return PyListExpr(open_bracket=node.open_bracket, elements=new_elements_1, close_bracket=node.close_bracket)
+            return node
     if isinstance(node, PyTupleExpr):
         changed = False
-        new_elements_2 = Punctuated()
-        for (element_2, separator_2) in node.elements:
+        new_elements_3 = Punctuated()
+        for (element_2, separator_2) in node.elements.delimited:
             new_element_3 = proc(element_2)
             assert(is_py_expr(new_element_3))
             if new_element_3 is not element_2:
                 changed = True
             new_separator_2 = separator_2
-            new_elements_2.append(new_element_3, new_separator_2)
+            new_elements_3.append(new_element_3, new_separator_2)
+        new_last_2 = proc(node.elements.last)
+        assert(is_py_expr(new_last_2))
+        if new_last_2 is not node.elements.last:
+            changed = True
+        new_elements_3.append_final(new_last_2)
         if changed:
-            return node
+            return PyTupleExpr(open_paren=node.open_paren, elements=new_elements_3, close_paren=node.close_paren)
         else:
-            return PyTupleExpr(open_paren=node.open_paren, elements=new_elements_2, close_paren=node.close_paren)
+            return node
     if isinstance(node, PyKeywordArg):
         changed = False
         new_expr_4 = proc(node.expr)
@@ -5312,9 +4548,9 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
         if new_expr_4 is not node.expr:
             changed = True
         if changed:
-            return node
-        else:
             return PyKeywordArg(name=node.name, equals=node.equals, expr=new_expr_4)
+        else:
+            return node
     if isinstance(node, PyCallExpr):
         changed = False
         new_operator = proc(node.operator)
@@ -5322,17 +4558,22 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
         if new_operator is not node.operator:
             changed = True
         new_args = Punctuated()
-        for (element_3, separator_3) in node.args:
+        for (element_3, separator_3) in node.args.delimited:
             new_element_4 = proc(element_3)
             assert(is_py_arg(new_element_4))
             if new_element_4 is not element_3:
                 changed = True
             new_separator_3 = separator_3
             new_args.append(new_element_4, new_separator_3)
+        new_last_3 = proc(node.args.last)
+        assert(is_py_arg(new_last_3))
+        if new_last_3 is not node.args.last:
+            changed = True
+        new_args.append_final(new_last_3)
         if changed:
-            return node
-        else:
             return PyCallExpr(operator=new_operator, open_paren=node.open_paren, args=new_args, close_paren=node.close_paren)
+        else:
+            return node
     if isinstance(node, PyPrefixExpr):
         changed = False
         new_expr_5 = proc(node.expr)
@@ -5340,9 +4581,9 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
         if new_expr_5 is not node.expr:
             changed = True
         if changed:
-            return node
-        else:
             return PyPrefixExpr(prefix_op=node.prefix_op, expr=new_expr_5)
+        else:
+            return node
     if isinstance(node, PyInfixExpr):
         changed = False
         new_left = proc(node.left)
@@ -5354,9 +4595,9 @@ def rewrite_each_py_arg(node: PyArg, proc: Callable[[PyArg], PyArg]) -> PyArg:
         if new_right is not node.right:
             changed = True
         if changed:
-            return node
-        else:
             return PyInfixExpr(left=new_left, op=node.op, right=new_right)
+        else:
+            return node
 
 
 @no_type_check
@@ -5431,9 +4672,9 @@ def rewrite_each_py_stmt(node: PyStmt, proc: Callable[[PyStmt], PyStmt]) -> PySt
         else:
             assert_never(node.else_clause)
         if changed:
-            return node
-        else:
             return PyForStmt(for_keyword=node.for_keyword, pattern=node.pattern, in_keyword=node.in_keyword, expr=node.expr, colon=node.colon, body=new_body, else_clause=new_else_clause)
+        else:
+            return node
     if isinstance(node, PyWhileStmt):
         changed = False
         if is_py_stmt(node.body):
@@ -5480,9 +4721,9 @@ def rewrite_each_py_stmt(node: PyStmt, proc: Callable[[PyStmt], PyStmt]) -> PySt
         else:
             assert_never(node.else_clause)
         if changed:
-            return node
-        else:
             return PyWhileStmt(while_keyword=node.while_keyword, expr=node.expr, colon=node.colon, body=new_body_1, else_clause=new_else_clause_1)
+        else:
+            return node
     if isinstance(node, PyBreakStmt):
         return node
     if isinstance(node, PyContinueStmt):
@@ -5564,9 +4805,9 @@ def rewrite_each_py_stmt(node: PyStmt, proc: Callable[[PyStmt], PyStmt]) -> PySt
         else:
             assert_never(node.finally_clause)
         if changed:
-            return node
-        else:
             return PyTryStmt(try_keyword=node.try_keyword, colon=node.colon, body=new_body_2, handlers=node.handlers, else_clause=new_else_clause_2, finally_clause=new_finally_clause)
+        else:
+            return node
     if isinstance(node, PyClassDef):
         changed = False
         if is_py_stmt(node.body):
@@ -5584,9 +4825,9 @@ def rewrite_each_py_stmt(node: PyStmt, proc: Callable[[PyStmt], PyStmt]) -> PySt
         else:
             assert_never(node.body)
         if changed:
-            return node
-        else:
             return PyClassDef(decorators=node.decorators, class_keyword=node.class_keyword, name=node.name, bases=node.bases, colon=node.colon, body=new_body_3)
+        else:
+            return node
     if isinstance(node, PyFuncDef):
         changed = False
         if is_py_stmt(node.body):
@@ -5604,3059 +4845,8 @@ def rewrite_each_py_stmt(node: PyStmt, proc: Callable[[PyStmt], PyStmt]) -> PySt
         else:
             assert_never(node.body)
         if changed:
-            return node
-        else:
             return PyFuncDef(decorators=node.decorators, async_keyword=node.async_keyword, def_keyword=node.def_keyword, name=node.name, open_paren=node.open_paren, params=node.params, close_paren=node.close_paren, return_type=node.return_type, colon=node.colon, body=new_body_4)
-
-
-@no_type_check
-def rewrite_each_py_node(node: PyNode, proc: Callable[[PyNode], PyNode]) -> PyNode:
-    if isinstance(node, PySlice):
-        changed = False
-        if is_py_expr(node.lower):
-            new_lower = proc(node.lower)
-            assert(is_py_expr(new_lower))
-            if new_lower is not node.lower:
-                changed = True
-        elif node.lower is None:
-            new_lower = node.lower
         else:
-            assert_never(node.lower)
-        if is_py_expr(node.upper):
-            new_upper = proc(node.upper)
-            assert(is_py_expr(new_upper))
-            if new_upper is not node.upper:
-                changed = True
-        elif node.upper is None:
-            new_upper = node.upper
-        else:
-            assert_never(node.upper)
-        if isinstance(node.step, tuple):
-            new_elements = []
-            element_0 = node.step[0]
-            new_element_0 = element_0
-            new_elements.append(new_element_0)
-            element_1 = node.step[1]
-            new_element_1 = proc(element_1)
-            assert(is_py_expr(new_element_1))
-            if new_element_1 is not element_1:
-                changed = True
-            new_elements.append(new_element_1)
-            new_step = tuple(new_elements) if changed else node.step
-        elif node.step is None:
-            new_step = node.step
-        else:
-            assert_never(node.step)
-        if changed:
-            return node
-        else:
-            return PySlice(lower=new_lower, colon=node.colon, upper=new_upper, step=new_step)
-    if isinstance(node, PyNamedPattern):
-        return node
-    if isinstance(node, PyAttrPattern):
-        changed = False
-        new_pattern = proc(node.pattern)
-        assert(is_py_pattern(new_pattern))
-        if new_pattern is not node.pattern:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyAttrPattern(pattern=new_pattern, dot=node.dot, name=node.name)
-    if isinstance(node, PySubscriptPattern):
-        changed = False
-        new_pattern_1 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_1))
-        if new_pattern_1 is not node.pattern:
-            changed = True
-        new_slices = Punctuated()
-        for (element, separator) in node.slices:
-            if isinstance(element, PySlice):
-                new_element = proc(element)
-                assert(isinstance(new_element, PySlice))
-                if new_element is not element:
-                    changed = True
-            elif is_py_pattern(element):
-                new_element = proc(element)
-                assert(is_py_pattern(new_element))
-                if new_element is not element:
-                    changed = True
-            else:
-                assert_never(element)
-            new_separator = separator
-            new_slices.append(new_element, new_separator)
-        if changed:
-            return node
-        else:
-            return PySubscriptPattern(pattern=new_pattern_1, open_bracket=node.open_bracket, slices=new_slices, close_bracket=node.close_bracket)
-    if isinstance(node, PyStarredPattern):
-        changed = False
-        new_expr = proc(node.expr)
-        assert(is_py_expr(new_expr))
-        if new_expr is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyStarredPattern(asterisk=node.asterisk, expr=new_expr)
-    if isinstance(node, PyListPattern):
-        changed = False
-        new_elements_1 = Punctuated()
-        for (element_1, separator_1) in node.elements:
-            new_element_1 = proc(element_1)
-            assert(is_py_pattern(new_element_1))
-            if new_element_1 is not element_1:
-                changed = True
-            new_separator_1 = separator_1
-            new_elements_1.append(new_element_1, new_separator_1)
-        if changed:
-            return node
-        else:
-            return PyListPattern(open_bracket=node.open_bracket, elements=new_elements_1, close_bracket=node.close_bracket)
-    if isinstance(node, PyTuplePattern):
-        changed = False
-        new_elements_2 = Punctuated()
-        for (element_2, separator_2) in node.elements:
-            new_element_2 = proc(element_2)
-            assert(is_py_pattern(new_element_2))
-            if new_element_2 is not element_2:
-                changed = True
-            new_separator_2 = separator_2
-            new_elements_2.append(new_element_2, new_separator_2)
-        if changed:
-            return node
-        else:
-            return PyTuplePattern(open_paren=node.open_paren, elements=new_elements_2, close_paren=node.close_paren)
-    if isinstance(node, PyEllipsisExpr):
-        return node
-    if isinstance(node, PyGuard):
-        changed = False
-        new_expr_1 = proc(node.expr)
-        assert(is_py_expr(new_expr_1))
-        if new_expr_1 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyGuard(if_keyword=node.if_keyword, expr=new_expr_1)
-    if isinstance(node, PyComprehension):
-        changed = False
-        new_pattern_2 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_2))
-        if new_pattern_2 is not node.pattern:
-            changed = True
-        new_target = proc(node.target)
-        assert(is_py_expr(new_target))
-        if new_target is not node.target:
-            changed = True
-        new_guards = []
-        for element_3 in node.guards:
-            new_element_3 = proc(element_3)
-            assert(isinstance(new_element_3, PyGuard))
-            if new_element_3 is not element_3:
-                changed = True
-        if changed:
-            return node
-        else:
-            return PyComprehension(async_keyword=node.async_keyword, for_keyword=node.for_keyword, pattern=new_pattern_2, in_keyword=node.in_keyword, target=new_target, guards=new_guards)
-    if isinstance(node, PyGeneratorExpr):
-        changed = False
-        new_element_4 = proc(node.element)
-        assert(is_py_expr(new_element_4))
-        if new_element_4 is not node.element:
-            changed = True
-        new_generators = []
-        for element_4 in node.generators:
-            new_element_5 = proc(element_4)
-            assert(isinstance(new_element_5, PyComprehension))
-            if new_element_5 is not element_4:
-                changed = True
-        if changed:
-            return node
-        else:
-            return PyGeneratorExpr(element=new_element_4, generators=new_generators)
-    if isinstance(node, PyIfExpr):
-        changed = False
-        new_then = proc(node.then)
-        assert(is_py_expr(new_then))
-        if new_then is not node.then:
-            changed = True
-        new_test = proc(node.test)
-        assert(is_py_expr(new_test))
-        if new_test is not node.test:
-            changed = True
-        new_alt = proc(node.alt)
-        assert(is_py_expr(new_alt))
-        if new_alt is not node.alt:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyIfExpr(then=new_then, if_keyword=node.if_keyword, test=new_test, else_keyword=node.else_keyword, alt=new_alt)
-    if isinstance(node, PyConstExpr):
-        return node
-    if isinstance(node, PyNestExpr):
-        changed = False
-        new_expr_2 = proc(node.expr)
-        assert(is_py_expr(new_expr_2))
-        if new_expr_2 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyNestExpr(open_paren=node.open_paren, expr=new_expr_2, close_paren=node.close_paren)
-    if isinstance(node, PyNamedExpr):
-        return node
-    if isinstance(node, PyAttrExpr):
-        changed = False
-        new_expr_3 = proc(node.expr)
-        assert(is_py_expr(new_expr_3))
-        if new_expr_3 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyAttrExpr(expr=new_expr_3, dot=node.dot, name=node.name)
-    if isinstance(node, PySubscriptExpr):
-        changed = False
-        new_expr_4 = proc(node.expr)
-        assert(is_py_expr(new_expr_4))
-        if new_expr_4 is not node.expr:
-            changed = True
-        new_slices_1 = Punctuated()
-        for (element_5, separator_3) in node.slices:
-            if isinstance(element_5, PySlice):
-                new_element_6 = proc(element_5)
-                assert(isinstance(new_element_6, PySlice))
-                if new_element_6 is not element_5:
-                    changed = True
-            elif is_py_expr(element_5):
-                new_element_6 = proc(element_5)
-                assert(is_py_expr(new_element_6))
-                if new_element_6 is not element_5:
-                    changed = True
-            else:
-                assert_never(element_5)
-            new_separator_3 = separator_3
-            new_slices_1.append(new_element_6, new_separator_3)
-        if changed:
-            return node
-        else:
-            return PySubscriptExpr(expr=new_expr_4, open_bracket=node.open_bracket, slices=new_slices_1, close_bracket=node.close_bracket)
-    if isinstance(node, PyStarredExpr):
-        changed = False
-        new_expr_5 = proc(node.expr)
-        assert(is_py_expr(new_expr_5))
-        if new_expr_5 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyStarredExpr(asterisk=node.asterisk, expr=new_expr_5)
-    if isinstance(node, PyListExpr):
-        changed = False
-        new_elements_3 = Punctuated()
-        for (element_6, separator_4) in node.elements:
-            new_element_7 = proc(element_6)
-            assert(is_py_expr(new_element_7))
-            if new_element_7 is not element_6:
-                changed = True
-            new_separator_4 = separator_4
-            new_elements_3.append(new_element_7, new_separator_4)
-        if changed:
-            return node
-        else:
-            return PyListExpr(open_bracket=node.open_bracket, elements=new_elements_3, close_bracket=node.close_bracket)
-    if isinstance(node, PyTupleExpr):
-        changed = False
-        new_elements_4 = Punctuated()
-        for (element_7, separator_5) in node.elements:
-            new_element_8 = proc(element_7)
-            assert(is_py_expr(new_element_8))
-            if new_element_8 is not element_7:
-                changed = True
-            new_separator_5 = separator_5
-            new_elements_4.append(new_element_8, new_separator_5)
-        if changed:
-            return node
-        else:
-            return PyTupleExpr(open_paren=node.open_paren, elements=new_elements_4, close_paren=node.close_paren)
-    if isinstance(node, PyKeywordArg):
-        changed = False
-        new_expr_6 = proc(node.expr)
-        assert(is_py_expr(new_expr_6))
-        if new_expr_6 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyKeywordArg(name=node.name, equals=node.equals, expr=new_expr_6)
-    if isinstance(node, PyCallExpr):
-        changed = False
-        new_operator = proc(node.operator)
-        assert(is_py_expr(new_operator))
-        if new_operator is not node.operator:
-            changed = True
-        new_args = Punctuated()
-        for (element_8, separator_6) in node.args:
-            new_element_9 = proc(element_8)
-            assert(is_py_arg(new_element_9))
-            if new_element_9 is not element_8:
-                changed = True
-            new_separator_6 = separator_6
-            new_args.append(new_element_9, new_separator_6)
-        if changed:
-            return node
-        else:
-            return PyCallExpr(operator=new_operator, open_paren=node.open_paren, args=new_args, close_paren=node.close_paren)
-    if isinstance(node, PyPrefixExpr):
-        changed = False
-        new_expr_7 = proc(node.expr)
-        assert(is_py_expr(new_expr_7))
-        if new_expr_7 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyPrefixExpr(prefix_op=node.prefix_op, expr=new_expr_7)
-    if isinstance(node, PyInfixExpr):
-        changed = False
-        new_left = proc(node.left)
-        assert(is_py_expr(new_left))
-        if new_left is not node.left:
-            changed = True
-        new_right = proc(node.right)
-        assert(is_py_expr(new_right))
-        if new_right is not node.right:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyInfixExpr(left=new_left, op=node.op, right=new_right)
-    if isinstance(node, PyQualName):
-        return node
-    if isinstance(node, PyAbsolutePath):
-        changed = False
-        new_name = proc(node.name)
-        assert(isinstance(new_name, PyQualName))
-        if new_name is not node.name:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyAbsolutePath(name=new_name)
-    if isinstance(node, PyRelativePath):
-        changed = False
-        if isinstance(node.name, PyQualName):
-            new_name_1 = proc(node.name)
-            assert(isinstance(new_name_1, PyQualName))
-            if new_name_1 is not node.name:
-                changed = True
-        elif node.name is None:
-            new_name_1 = node.name
-        else:
-            assert_never(node.name)
-        if changed:
-            return node
-        else:
-            return PyRelativePath(dots=node.dots, name=new_name_1)
-    if isinstance(node, PyAlias):
-        changed = False
-        new_path = proc(node.path)
-        assert(is_py_path(new_path))
-        if new_path is not node.path:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyAlias(path=new_path, asname=node.asname)
-    if isinstance(node, PyFromAlias):
-        return node
-    if isinstance(node, PyImportStmt):
-        changed = False
-        new_aliases = Punctuated()
-        for (element_9, separator_7) in node.aliases:
-            new_element_10 = proc(element_9)
-            assert(isinstance(new_element_10, PyAlias))
-            if new_element_10 is not element_9:
-                changed = True
-            new_separator_7 = separator_7
-            new_aliases.append(new_element_10, new_separator_7)
-        if changed:
-            return node
-        else:
-            return PyImportStmt(import_keyword=node.import_keyword, aliases=new_aliases)
-    if isinstance(node, PyImportFromStmt):
-        changed = False
-        new_path_1 = proc(node.path)
-        assert(is_py_path(new_path_1))
-        if new_path_1 is not node.path:
-            changed = True
-        new_aliases_1 = Punctuated()
-        for (element_10, separator_8) in node.aliases:
-            new_element_11 = proc(element_10)
-            assert(isinstance(new_element_11, PyFromAlias))
-            if new_element_11 is not element_10:
-                changed = True
-            new_separator_8 = separator_8
-            new_aliases_1.append(new_element_11, new_separator_8)
-        if changed:
-            return node
-        else:
-            return PyImportFromStmt(from_keyword=node.from_keyword, path=new_path_1, import_keyword=node.import_keyword, aliases=new_aliases_1)
-    if isinstance(node, PyRetStmt):
-        changed = False
-        if is_py_expr(node.expr):
-            new_expr_8 = proc(node.expr)
-            assert(is_py_expr(new_expr_8))
-            if new_expr_8 is not node.expr:
-                changed = True
-        elif node.expr is None:
-            new_expr_8 = node.expr
-        else:
-            assert_never(node.expr)
-        if changed:
-            return node
-        else:
-            return PyRetStmt(return_keyword=node.return_keyword, expr=new_expr_8)
-    if isinstance(node, PyExprStmt):
-        changed = False
-        new_expr_9 = proc(node.expr)
-        assert(is_py_expr(new_expr_9))
-        if new_expr_9 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyExprStmt(expr=new_expr_9)
-    if isinstance(node, PyAugAssignStmt):
-        changed = False
-        new_pattern_3 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_3))
-        if new_pattern_3 is not node.pattern:
-            changed = True
-        if isinstance(node.annotation, tuple):
-            new_elements_5 = []
-            element_0_1 = node.annotation[0]
-            new_element_0_1 = element_0_1
-            new_elements_5.append(new_element_0_1)
-            element_1_1 = node.annotation[1]
-            new_element_1_1 = proc(element_1_1)
-            assert(is_py_expr(new_element_1_1))
-            if new_element_1_1 is not element_1_1:
-                changed = True
-            new_elements_5.append(new_element_1_1)
-            new_annotation = tuple(new_elements_5) if changed else node.annotation
-        elif node.annotation is None:
-            new_annotation = node.annotation
-        else:
-            assert_never(node.annotation)
-        new_expr_10 = proc(node.expr)
-        assert(is_py_expr(new_expr_10))
-        if new_expr_10 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyAugAssignStmt(pattern=new_pattern_3, annotation=new_annotation, op=node.op, equals=node.equals, expr=new_expr_10)
-    if isinstance(node, PyAssignStmt):
-        changed = False
-        new_pattern_4 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_4))
-        if new_pattern_4 is not node.pattern:
-            changed = True
-        if isinstance(node.annotation, tuple):
-            new_elements_6 = []
-            element_0_2 = node.annotation[0]
-            new_element_0_2 = element_0_2
-            new_elements_6.append(new_element_0_2)
-            element_1_2 = node.annotation[1]
-            new_element_1_2 = proc(element_1_2)
-            assert(is_py_expr(new_element_1_2))
-            if new_element_1_2 is not element_1_2:
-                changed = True
-            new_elements_6.append(new_element_1_2)
-            new_annotation_1 = tuple(new_elements_6) if changed else node.annotation
-        elif node.annotation is None:
-            new_annotation_1 = node.annotation
-        else:
-            assert_never(node.annotation)
-        if isinstance(node.value, tuple):
-            new_elements_7 = []
-            element_0_3 = node.value[0]
-            new_element_0_3 = element_0_3
-            new_elements_7.append(new_element_0_3)
-            element_1_3 = node.value[1]
-            new_element_1_3 = proc(element_1_3)
-            assert(is_py_expr(new_element_1_3))
-            if new_element_1_3 is not element_1_3:
-                changed = True
-            new_elements_7.append(new_element_1_3)
-            new_value = tuple(new_elements_7) if changed else node.value
-        elif node.value is None:
-            new_value = node.value
-        else:
-            assert_never(node.value)
-        if changed:
-            return node
-        else:
-            return PyAssignStmt(pattern=new_pattern_4, annotation=new_annotation_1, value=new_value)
-    if isinstance(node, PyPassStmt):
-        return node
-    if isinstance(node, PyGlobalStmt):
-        return node
-    if isinstance(node, PyNonlocalStmt):
-        return node
-    if isinstance(node, PyIfCase):
-        changed = False
-        new_test_1 = proc(node.test)
-        assert(is_py_expr(new_test_1))
-        if new_test_1 is not node.test:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body = proc(node.body)
-            assert(is_py_stmt(new_body))
-            if new_body is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body = []
-            for element_11 in node.body:
-                new_element_12 = proc(element_11)
-                assert(is_py_stmt(new_element_12))
-                if new_element_12 is not element_11:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if changed:
-            return node
-        else:
-            return PyIfCase(if_keyword=node.if_keyword, test=new_test_1, colon=node.colon, body=new_body)
-    if isinstance(node, PyElifCase):
-        changed = False
-        new_test_2 = proc(node.test)
-        assert(is_py_expr(new_test_2))
-        if new_test_2 is not node.test:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body_1 = proc(node.body)
-            assert(is_py_stmt(new_body_1))
-            if new_body_1 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_1 = []
-            for element_12 in node.body:
-                new_element_13 = proc(element_12)
-                assert(is_py_stmt(new_element_13))
-                if new_element_13 is not element_12:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if changed:
-            return node
-        else:
-            return PyElifCase(elif_keyword=node.elif_keyword, test=new_test_2, colon=node.colon, body=new_body_1)
-    if isinstance(node, PyElseCase):
-        changed = False
-        if is_py_stmt(node.body):
-            new_body_2 = proc(node.body)
-            assert(is_py_stmt(new_body_2))
-            if new_body_2 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_2 = []
-            for element_13 in node.body:
-                new_element_14 = proc(element_13)
-                assert(is_py_stmt(new_element_14))
-                if new_element_14 is not element_13:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if changed:
-            return node
-        else:
-            return PyElseCase(else_keyword=node.else_keyword, colon=node.colon, body=new_body_2)
-    if isinstance(node, PyIfStmt):
-        changed = False
-        new_first = proc(node.first)
-        assert(isinstance(new_first, PyIfCase))
-        if new_first is not node.first:
-            changed = True
-        new_alternatives = []
-        for element_14 in node.alternatives:
-            new_element_15 = proc(element_14)
-            assert(isinstance(new_element_15, PyElifCase))
-            if new_element_15 is not element_14:
-                changed = True
-        if isinstance(node.last, PyElseCase):
-            new_last = proc(node.last)
-            assert(isinstance(new_last, PyElseCase))
-            if new_last is not node.last:
-                changed = True
-        elif node.last is None:
-            new_last = node.last
-        else:
-            assert_never(node.last)
-        if changed:
-            return node
-        else:
-            return PyIfStmt(first=new_first, alternatives=new_alternatives, last=new_last)
-    if isinstance(node, PyDeleteStmt):
-        changed = False
-        new_pattern_5 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_5))
-        if new_pattern_5 is not node.pattern:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyDeleteStmt(del_keyword=node.del_keyword, pattern=new_pattern_5)
-    if isinstance(node, PyRaiseStmt):
-        changed = False
-        new_expr_11 = proc(node.expr)
-        assert(is_py_expr(new_expr_11))
-        if new_expr_11 is not node.expr:
-            changed = True
-        if isinstance(node.cause, tuple):
-            new_elements_8 = []
-            element_0_4 = node.cause[0]
-            new_element_0_4 = element_0_4
-            new_elements_8.append(new_element_0_4)
-            element_1_4 = node.cause[1]
-            new_element_1_4 = proc(element_1_4)
-            assert(is_py_expr(new_element_1_4))
-            if new_element_1_4 is not element_1_4:
-                changed = True
-            new_elements_8.append(new_element_1_4)
-            new_cause = tuple(new_elements_8) if changed else node.cause
-        elif node.cause is None:
-            new_cause = node.cause
-        else:
-            assert_never(node.cause)
-        if changed:
-            return node
-        else:
-            return PyRaiseStmt(raise_keyword=node.raise_keyword, expr=new_expr_11, cause=new_cause)
-    if isinstance(node, PyForStmt):
-        changed = False
-        new_pattern_6 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_6))
-        if new_pattern_6 is not node.pattern:
-            changed = True
-        new_expr_12 = proc(node.expr)
-        assert(is_py_expr(new_expr_12))
-        if new_expr_12 is not node.expr:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body_3 = proc(node.body)
-            assert(is_py_stmt(new_body_3))
-            if new_body_3 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_3 = []
-            for element_15 in node.body:
-                new_element_16 = proc(element_15)
-                assert(is_py_stmt(new_element_16))
-                if new_element_16 is not element_15:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if isinstance(node.else_clause, tuple):
-            new_elements_9 = []
-            element_0_5 = node.else_clause[0]
-            new_element_0_5 = element_0_5
-            new_elements_9.append(new_element_0_5)
-            element_1_5 = node.else_clause[1]
-            new_element_1_5 = element_1_5
-            new_elements_9.append(new_element_1_5)
-            element_2 = node.else_clause[2]
-            if is_py_stmt(element_2):
-                new_element_2 = proc(element_2)
-                assert(is_py_stmt(new_element_2))
-                if new_element_2 is not element_2:
-                    changed = True
-            elif isinstance(element_2, list):
-                new_element_2 = []
-                for element_16 in element_2:
-                    new_element_17 = proc(element_16)
-                    assert(is_py_stmt(new_element_17))
-                    if new_element_17 is not element_16:
-                        changed = True
-            else:
-                assert_never(element_2)
-            new_elements_9.append(new_element_2)
-            new_else_clause = tuple(new_elements_9) if changed else node.else_clause
-        elif node.else_clause is None:
-            new_else_clause = node.else_clause
-        else:
-            assert_never(node.else_clause)
-        if changed:
-            return node
-        else:
-            return PyForStmt(for_keyword=node.for_keyword, pattern=new_pattern_6, in_keyword=node.in_keyword, expr=new_expr_12, colon=node.colon, body=new_body_3, else_clause=new_else_clause)
-    if isinstance(node, PyWhileStmt):
-        changed = False
-        new_expr_13 = proc(node.expr)
-        assert(is_py_expr(new_expr_13))
-        if new_expr_13 is not node.expr:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body_4 = proc(node.body)
-            assert(is_py_stmt(new_body_4))
-            if new_body_4 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_4 = []
-            for element_17 in node.body:
-                new_element_18 = proc(element_17)
-                assert(is_py_stmt(new_element_18))
-                if new_element_18 is not element_17:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if isinstance(node.else_clause, tuple):
-            new_elements_10 = []
-            element_0_6 = node.else_clause[0]
-            new_element_0_6 = element_0_6
-            new_elements_10.append(new_element_0_6)
-            element_1_6 = node.else_clause[1]
-            new_element_1_6 = element_1_6
-            new_elements_10.append(new_element_1_6)
-            element_2_1 = node.else_clause[2]
-            if is_py_stmt(element_2_1):
-                new_element_2_1 = proc(element_2_1)
-                assert(is_py_stmt(new_element_2_1))
-                if new_element_2_1 is not element_2_1:
-                    changed = True
-            elif isinstance(element_2_1, list):
-                new_element_2_1 = []
-                for element_18 in element_2_1:
-                    new_element_19 = proc(element_18)
-                    assert(is_py_stmt(new_element_19))
-                    if new_element_19 is not element_18:
-                        changed = True
-            else:
-                assert_never(element_2_1)
-            new_elements_10.append(new_element_2_1)
-            new_else_clause_1 = tuple(new_elements_10) if changed else node.else_clause
-        elif node.else_clause is None:
-            new_else_clause_1 = node.else_clause
-        else:
-            assert_never(node.else_clause)
-        if changed:
-            return node
-        else:
-            return PyWhileStmt(while_keyword=node.while_keyword, expr=new_expr_13, colon=node.colon, body=new_body_4, else_clause=new_else_clause_1)
-    if isinstance(node, PyBreakStmt):
-        return node
-    if isinstance(node, PyContinueStmt):
-        return node
-    if isinstance(node, PyTypeAliasStmt):
-        changed = False
-        if isinstance(node.type_params, tuple):
-            new_elements_11 = []
-            element_0_7 = node.type_params[0]
-            new_element_0_7 = element_0_7
-            new_elements_11.append(new_element_0_7)
-            element_1_7 = node.type_params[1]
-            new_element_1_7 = Punctuated()
-            for (element_19, separator_9) in element_1_7:
-                new_element_20 = proc(element_19)
-                assert(is_py_expr(new_element_20))
-                if new_element_20 is not element_19:
-                    changed = True
-                new_separator_9 = separator_9
-                new_element_1_7.append(new_element_20, new_separator_9)
-            new_elements_11.append(new_element_1_7)
-            element_2_2 = node.type_params[2]
-            new_element_2_2 = element_2_2
-            new_elements_11.append(new_element_2_2)
-            new_type_params = tuple(new_elements_11) if changed else node.type_params
-        elif node.type_params is None:
-            new_type_params = node.type_params
-        else:
-            assert_never(node.type_params)
-        new_expr_14 = proc(node.expr)
-        assert(is_py_expr(new_expr_14))
-        if new_expr_14 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyTypeAliasStmt(type_keyword=node.type_keyword, name=node.name, type_params=new_type_params, equals=node.equals, expr=new_expr_14)
-    if isinstance(node, PyExceptHandler):
-        changed = False
-        new_expr_15 = proc(node.expr)
-        assert(is_py_expr(new_expr_15))
-        if new_expr_15 is not node.expr:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body_5 = proc(node.body)
-            assert(is_py_stmt(new_body_5))
-            if new_body_5 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_5 = []
-            for element_20 in node.body:
-                new_element_21 = proc(element_20)
-                assert(is_py_stmt(new_element_21))
-                if new_element_21 is not element_20:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if changed:
-            return node
-        else:
-            return PyExceptHandler(except_keyword=node.except_keyword, expr=new_expr_15, binder=node.binder, colon=node.colon, body=new_body_5)
-    if isinstance(node, PyTryStmt):
-        changed = False
-        if is_py_stmt(node.body):
-            new_body_6 = proc(node.body)
-            assert(is_py_stmt(new_body_6))
-            if new_body_6 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_6 = []
-            for element_21 in node.body:
-                new_element_22 = proc(element_21)
-                assert(is_py_stmt(new_element_22))
-                if new_element_22 is not element_21:
-                    changed = True
-        else:
-            assert_never(node.body)
-        new_handlers = []
-        for element_22 in node.handlers:
-            new_element_23 = proc(element_22)
-            assert(isinstance(new_element_23, PyExceptHandler))
-            if new_element_23 is not element_22:
-                changed = True
-        if isinstance(node.else_clause, tuple):
-            new_elements_12 = []
-            element_0_8 = node.else_clause[0]
-            new_element_0_8 = element_0_8
-            new_elements_12.append(new_element_0_8)
-            element_1_8 = node.else_clause[1]
-            new_element_1_8 = element_1_8
-            new_elements_12.append(new_element_1_8)
-            element_2_3 = node.else_clause[2]
-            if is_py_stmt(element_2_3):
-                new_element_2_3 = proc(element_2_3)
-                assert(is_py_stmt(new_element_2_3))
-                if new_element_2_3 is not element_2_3:
-                    changed = True
-            elif isinstance(element_2_3, list):
-                new_element_2_3 = []
-                for element_23 in element_2_3:
-                    new_element_24 = proc(element_23)
-                    assert(is_py_stmt(new_element_24))
-                    if new_element_24 is not element_23:
-                        changed = True
-            else:
-                assert_never(element_2_3)
-            new_elements_12.append(new_element_2_3)
-            new_else_clause_2 = tuple(new_elements_12) if changed else node.else_clause
-        elif node.else_clause is None:
-            new_else_clause_2 = node.else_clause
-        else:
-            assert_never(node.else_clause)
-        if isinstance(node.finally_clause, tuple):
-            new_elements_13 = []
-            element_0_9 = node.finally_clause[0]
-            new_element_0_9 = element_0_9
-            new_elements_13.append(new_element_0_9)
-            element_1_9 = node.finally_clause[1]
-            new_element_1_9 = element_1_9
-            new_elements_13.append(new_element_1_9)
-            element_2_4 = node.finally_clause[2]
-            if is_py_stmt(element_2_4):
-                new_element_2_4 = proc(element_2_4)
-                assert(is_py_stmt(new_element_2_4))
-                if new_element_2_4 is not element_2_4:
-                    changed = True
-            elif isinstance(element_2_4, list):
-                new_element_2_4 = []
-                for element_24 in element_2_4:
-                    new_element_25 = proc(element_24)
-                    assert(is_py_stmt(new_element_25))
-                    if new_element_25 is not element_24:
-                        changed = True
-            else:
-                assert_never(element_2_4)
-            new_elements_13.append(new_element_2_4)
-            new_finally_clause = tuple(new_elements_13) if changed else node.finally_clause
-        elif node.finally_clause is None:
-            new_finally_clause = node.finally_clause
-        else:
-            assert_never(node.finally_clause)
-        if changed:
-            return node
-        else:
-            return PyTryStmt(try_keyword=node.try_keyword, colon=node.colon, body=new_body_6, handlers=new_handlers, else_clause=new_else_clause_2, finally_clause=new_finally_clause)
-    if isinstance(node, PyClassBaseArg):
-        return node
-    if isinstance(node, PyKeywordBaseArg):
-        changed = False
-        new_expr_16 = proc(node.expr)
-        assert(is_py_expr(new_expr_16))
-        if new_expr_16 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyKeywordBaseArg(name=node.name, equals=node.equals, expr=new_expr_16)
-    if isinstance(node, PyClassDef):
-        changed = False
-        new_decorators = []
-        for element_25 in node.decorators:
-            new_element_26 = proc(element_25)
-            assert(isinstance(new_element_26, PyDecorator))
-            if new_element_26 is not element_25:
-                changed = True
-        if isinstance(node.bases, tuple):
-            new_elements_14 = []
-            element_0_10 = node.bases[0]
-            new_element_0_10 = element_0_10
-            new_elements_14.append(new_element_0_10)
-            element_1_10 = node.bases[1]
-            new_element_1_10 = Punctuated()
-            for (element_26, separator_10) in element_1_10:
-                new_element_27 = proc(element_26)
-                assert(is_py_base_arg(new_element_27))
-                if new_element_27 is not element_26:
-                    changed = True
-                new_separator_10 = separator_10
-                new_element_1_10.append(new_element_27, new_separator_10)
-            new_elements_14.append(new_element_1_10)
-            element_2_5 = node.bases[2]
-            new_element_2_5 = element_2_5
-            new_elements_14.append(new_element_2_5)
-            new_bases = tuple(new_elements_14) if changed else node.bases
-        elif node.bases is None:
-            new_bases = node.bases
-        else:
-            assert_never(node.bases)
-        if is_py_stmt(node.body):
-            new_body_7 = proc(node.body)
-            assert(is_py_stmt(new_body_7))
-            if new_body_7 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_7 = []
-            for element_27 in node.body:
-                new_element_28 = proc(element_27)
-                assert(is_py_stmt(new_element_28))
-                if new_element_28 is not element_27:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if changed:
-            return node
-        else:
-            return PyClassDef(decorators=new_decorators, class_keyword=node.class_keyword, name=node.name, bases=new_bases, colon=node.colon, body=new_body_7)
-    if isinstance(node, PyNamedParam):
-        changed = False
-        new_pattern_7 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_7))
-        if new_pattern_7 is not node.pattern:
-            changed = True
-        if isinstance(node.annotation, tuple):
-            new_elements_15 = []
-            element_0_11 = node.annotation[0]
-            new_element_0_11 = element_0_11
-            new_elements_15.append(new_element_0_11)
-            element_1_11 = node.annotation[1]
-            new_element_1_11 = proc(element_1_11)
-            assert(is_py_expr(new_element_1_11))
-            if new_element_1_11 is not element_1_11:
-                changed = True
-            new_elements_15.append(new_element_1_11)
-            new_annotation_2 = tuple(new_elements_15) if changed else node.annotation
-        elif node.annotation is None:
-            new_annotation_2 = node.annotation
-        else:
-            assert_never(node.annotation)
-        if isinstance(node.default, tuple):
-            new_elements_16 = []
-            element_0_12 = node.default[0]
-            new_element_0_12 = element_0_12
-            new_elements_16.append(new_element_0_12)
-            element_1_12 = node.default[1]
-            new_element_1_12 = proc(element_1_12)
-            assert(is_py_expr(new_element_1_12))
-            if new_element_1_12 is not element_1_12:
-                changed = True
-            new_elements_16.append(new_element_1_12)
-            new_default = tuple(new_elements_16) if changed else node.default
-        elif node.default is None:
-            new_default = node.default
-        else:
-            assert_never(node.default)
-        if changed:
-            return node
-        else:
-            return PyNamedParam(pattern=new_pattern_7, annotation=new_annotation_2, default=new_default)
-    if isinstance(node, PyRestPosParam):
-        changed = False
-        if isinstance(node.annotation, tuple):
-            new_elements_17 = []
-            element_0_13 = node.annotation[0]
-            new_element_0_13 = element_0_13
-            new_elements_17.append(new_element_0_13)
-            element_1_13 = node.annotation[1]
-            new_element_1_13 = proc(element_1_13)
-            assert(is_py_expr(new_element_1_13))
-            if new_element_1_13 is not element_1_13:
-                changed = True
-            new_elements_17.append(new_element_1_13)
-            new_annotation_3 = tuple(new_elements_17) if changed else node.annotation
-        elif node.annotation is None:
-            new_annotation_3 = node.annotation
-        else:
-            assert_never(node.annotation)
-        if changed:
-            return node
-        else:
-            return PyRestPosParam(asterisk=node.asterisk, name=node.name, annotation=new_annotation_3)
-    if isinstance(node, PyRestKeywordParam):
-        changed = False
-        if isinstance(node.annotation, tuple):
-            new_elements_18 = []
-            element_0_14 = node.annotation[0]
-            new_element_0_14 = element_0_14
-            new_elements_18.append(new_element_0_14)
-            element_1_14 = node.annotation[1]
-            new_element_1_14 = proc(element_1_14)
-            assert(is_py_expr(new_element_1_14))
-            if new_element_1_14 is not element_1_14:
-                changed = True
-            new_elements_18.append(new_element_1_14)
-            new_annotation_4 = tuple(new_elements_18) if changed else node.annotation
-        elif node.annotation is None:
-            new_annotation_4 = node.annotation
-        else:
-            assert_never(node.annotation)
-        if changed:
-            return node
-        else:
-            return PyRestKeywordParam(asterisk_asterisk=node.asterisk_asterisk, name=node.name, annotation=new_annotation_4)
-    if isinstance(node, PyPosSepParam):
-        return node
-    if isinstance(node, PyKwSepParam):
-        return node
-    if isinstance(node, PyDecorator):
-        changed = False
-        new_expr_17 = proc(node.expr)
-        assert(is_py_expr(new_expr_17))
-        if new_expr_17 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyDecorator(at_sign=node.at_sign, expr=new_expr_17)
-    if isinstance(node, PyFuncDef):
-        changed = False
-        new_decorators_1 = []
-        for element_28 in node.decorators:
-            new_element_29 = proc(element_28)
-            assert(isinstance(new_element_29, PyDecorator))
-            if new_element_29 is not element_28:
-                changed = True
-        new_params = Punctuated()
-        for (element_29, separator_11) in node.params:
-            new_element_30 = proc(element_29)
-            assert(is_py_param(new_element_30))
-            if new_element_30 is not element_29:
-                changed = True
-            new_separator_11 = separator_11
-            new_params.append(new_element_30, new_separator_11)
-        if isinstance(node.return_type, tuple):
-            new_elements_19 = []
-            element_0_15 = node.return_type[0]
-            new_element_0_15 = element_0_15
-            new_elements_19.append(new_element_0_15)
-            element_1_15 = node.return_type[1]
-            new_element_1_15 = proc(element_1_15)
-            assert(is_py_expr(new_element_1_15))
-            if new_element_1_15 is not element_1_15:
-                changed = True
-            new_elements_19.append(new_element_1_15)
-            new_return_type = tuple(new_elements_19) if changed else node.return_type
-        elif node.return_type is None:
-            new_return_type = node.return_type
-        else:
-            assert_never(node.return_type)
-        if is_py_stmt(node.body):
-            new_body_8 = proc(node.body)
-            assert(is_py_stmt(new_body_8))
-            if new_body_8 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_8 = []
-            for element_30 in node.body:
-                new_element_31 = proc(element_30)
-                assert(is_py_stmt(new_element_31))
-                if new_element_31 is not element_30:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if changed:
-            return node
-        else:
-            return PyFuncDef(decorators=new_decorators_1, async_keyword=node.async_keyword, def_keyword=node.def_keyword, name=node.name, open_paren=node.open_paren, params=new_params, close_paren=node.close_paren, return_type=new_return_type, colon=node.colon, body=new_body_8)
-    if isinstance(node, PyModule):
-        changed = False
-        new_stmts = []
-        for element_31 in node.stmts:
-            new_element_32 = proc(element_31)
-            assert(is_py_stmt(new_element_32))
-            if new_element_32 is not element_31:
-                changed = True
-        if changed:
-            return node
-        else:
-            return PyModule(stmts=new_stmts)
-
-
-@no_type_check
-def rewrite_each_py_syntax(node: PySyntax, proc: Callable[[PySyntax], PySyntax]) -> PySyntax:
-    if isinstance(node, PyIdent):
-        return
-    if isinstance(node, PyFloat):
-        return
-    if isinstance(node, PyInteger):
-        return
-    if isinstance(node, PyString):
-        return
-    if isinstance(node, PySlice):
-        changed = False
-        if is_py_expr(node.lower):
-            new_lower = proc(node.lower)
-            assert(is_py_expr(new_lower))
-            if new_lower is not node.lower:
-                changed = True
-        elif node.lower is None:
-            new_lower = node.lower
-        else:
-            assert_never(node.lower)
-        new_colon = proc(node.colon)
-        assert(isinstance(new_colon, PyColon))
-        if new_colon is not node.colon:
-            changed = True
-        if is_py_expr(node.upper):
-            new_upper = proc(node.upper)
-            assert(is_py_expr(new_upper))
-            if new_upper is not node.upper:
-                changed = True
-        elif node.upper is None:
-            new_upper = node.upper
-        else:
-            assert_never(node.upper)
-        if isinstance(node.step, tuple):
-            new_elements = []
-            element_0 = node.step[0]
-            new_element_0 = proc(element_0)
-            assert(isinstance(new_element_0, PyColon))
-            if new_element_0 is not element_0:
-                changed = True
-            new_elements.append(new_element_0)
-            element_1 = node.step[1]
-            new_element_1 = proc(element_1)
-            assert(is_py_expr(new_element_1))
-            if new_element_1 is not element_1:
-                changed = True
-            new_elements.append(new_element_1)
-            new_step = tuple(new_elements) if changed else node.step
-        elif node.step is None:
-            new_step = node.step
-        else:
-            assert_never(node.step)
-        if changed:
-            return node
-        else:
-            return PySlice(lower=new_lower, colon=new_colon, upper=new_upper, step=new_step)
-    if isinstance(node, PyNamedPattern):
-        changed = False
-        new_name = proc(node.name)
-        assert(isinstance(new_name, PyIdent))
-        if new_name is not node.name:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyNamedPattern(name=new_name)
-    if isinstance(node, PyAttrPattern):
-        changed = False
-        new_pattern = proc(node.pattern)
-        assert(is_py_pattern(new_pattern))
-        if new_pattern is not node.pattern:
-            changed = True
-        new_dot = proc(node.dot)
-        assert(isinstance(new_dot, PyDot))
-        if new_dot is not node.dot:
-            changed = True
-        new_name_1 = proc(node.name)
-        assert(isinstance(new_name_1, PyIdent))
-        if new_name_1 is not node.name:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyAttrPattern(pattern=new_pattern, dot=new_dot, name=new_name_1)
-    if isinstance(node, PySubscriptPattern):
-        changed = False
-        new_pattern_1 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_1))
-        if new_pattern_1 is not node.pattern:
-            changed = True
-        new_open_bracket = proc(node.open_bracket)
-        assert(isinstance(new_open_bracket, PyOpenBracket))
-        if new_open_bracket is not node.open_bracket:
-            changed = True
-        new_slices = Punctuated()
-        for (element, separator) in node.slices:
-            if isinstance(element, PySlice):
-                new_element = proc(element)
-                assert(isinstance(new_element, PySlice))
-                if new_element is not element:
-                    changed = True
-            elif is_py_pattern(element):
-                new_element = proc(element)
-                assert(is_py_pattern(new_element))
-                if new_element is not element:
-                    changed = True
-            else:
-                assert_never(element)
-            new_separator = proc(separator)
-            assert(isinstance(new_separator, PyComma))
-            if new_separator is not separator:
-                changed = True
-            new_slices.append(new_element, new_separator)
-        new_close_bracket = proc(node.close_bracket)
-        assert(isinstance(new_close_bracket, PyCloseBracket))
-        if new_close_bracket is not node.close_bracket:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PySubscriptPattern(pattern=new_pattern_1, open_bracket=new_open_bracket, slices=new_slices, close_bracket=new_close_bracket)
-    if isinstance(node, PyStarredPattern):
-        changed = False
-        new_asterisk = proc(node.asterisk)
-        assert(isinstance(new_asterisk, PyAsterisk))
-        if new_asterisk is not node.asterisk:
-            changed = True
-        new_expr = proc(node.expr)
-        assert(is_py_expr(new_expr))
-        if new_expr is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyStarredPattern(asterisk=new_asterisk, expr=new_expr)
-    if isinstance(node, PyListPattern):
-        changed = False
-        new_open_bracket_1 = proc(node.open_bracket)
-        assert(isinstance(new_open_bracket_1, PyOpenBracket))
-        if new_open_bracket_1 is not node.open_bracket:
-            changed = True
-        new_elements_1 = Punctuated()
-        for (element_1, separator_1) in node.elements:
-            new_element_1 = proc(element_1)
-            assert(is_py_pattern(new_element_1))
-            if new_element_1 is not element_1:
-                changed = True
-            new_separator_1 = proc(separator_1)
-            assert(isinstance(new_separator_1, PyComma))
-            if new_separator_1 is not separator_1:
-                changed = True
-            new_elements_1.append(new_element_1, new_separator_1)
-        new_close_bracket_1 = proc(node.close_bracket)
-        assert(isinstance(new_close_bracket_1, PyCloseBracket))
-        if new_close_bracket_1 is not node.close_bracket:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyListPattern(open_bracket=new_open_bracket_1, elements=new_elements_1, close_bracket=new_close_bracket_1)
-    if isinstance(node, PyTuplePattern):
-        changed = False
-        new_open_paren = proc(node.open_paren)
-        assert(isinstance(new_open_paren, PyOpenParen))
-        if new_open_paren is not node.open_paren:
-            changed = True
-        new_elements_2 = Punctuated()
-        for (element_2, separator_2) in node.elements:
-            new_element_2 = proc(element_2)
-            assert(is_py_pattern(new_element_2))
-            if new_element_2 is not element_2:
-                changed = True
-            new_separator_2 = proc(separator_2)
-            assert(isinstance(new_separator_2, PyComma))
-            if new_separator_2 is not separator_2:
-                changed = True
-            new_elements_2.append(new_element_2, new_separator_2)
-        new_close_paren = proc(node.close_paren)
-        assert(isinstance(new_close_paren, PyCloseParen))
-        if new_close_paren is not node.close_paren:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyTuplePattern(open_paren=new_open_paren, elements=new_elements_2, close_paren=new_close_paren)
-    if isinstance(node, PyEllipsisExpr):
-        changed = False
-        new_dot_dot_dot = proc(node.dot_dot_dot)
-        assert(isinstance(new_dot_dot_dot, PyDotDotDot))
-        if new_dot_dot_dot is not node.dot_dot_dot:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyEllipsisExpr(dot_dot_dot=new_dot_dot_dot)
-    if isinstance(node, PyGuard):
-        changed = False
-        new_if_keyword = proc(node.if_keyword)
-        assert(isinstance(new_if_keyword, PyIfKeyword))
-        if new_if_keyword is not node.if_keyword:
-            changed = True
-        new_expr_1 = proc(node.expr)
-        assert(is_py_expr(new_expr_1))
-        if new_expr_1 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyGuard(if_keyword=new_if_keyword, expr=new_expr_1)
-    if isinstance(node, PyComprehension):
-        changed = False
-        if isinstance(node.async_keyword, PyAsyncKeyword):
-            new_async_keyword = proc(node.async_keyword)
-            assert(isinstance(new_async_keyword, PyAsyncKeyword))
-            if new_async_keyword is not node.async_keyword:
-                changed = True
-        elif node.async_keyword is None:
-            new_async_keyword = node.async_keyword
-        else:
-            assert_never(node.async_keyword)
-        new_for_keyword = proc(node.for_keyword)
-        assert(isinstance(new_for_keyword, PyForKeyword))
-        if new_for_keyword is not node.for_keyword:
-            changed = True
-        new_pattern_2 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_2))
-        if new_pattern_2 is not node.pattern:
-            changed = True
-        new_in_keyword = proc(node.in_keyword)
-        assert(isinstance(new_in_keyword, PyInKeyword))
-        if new_in_keyword is not node.in_keyword:
-            changed = True
-        new_target = proc(node.target)
-        assert(is_py_expr(new_target))
-        if new_target is not node.target:
-            changed = True
-        new_guards = []
-        for element_3 in node.guards:
-            new_element_3 = proc(element_3)
-            assert(isinstance(new_element_3, PyGuard))
-            if new_element_3 is not element_3:
-                changed = True
-        if changed:
-            return node
-        else:
-            return PyComprehension(async_keyword=new_async_keyword, for_keyword=new_for_keyword, pattern=new_pattern_2, in_keyword=new_in_keyword, target=new_target, guards=new_guards)
-    if isinstance(node, PyGeneratorExpr):
-        changed = False
-        new_element_4 = proc(node.element)
-        assert(is_py_expr(new_element_4))
-        if new_element_4 is not node.element:
-            changed = True
-        new_generators = []
-        for element_4 in node.generators:
-            new_element_5 = proc(element_4)
-            assert(isinstance(new_element_5, PyComprehension))
-            if new_element_5 is not element_4:
-                changed = True
-        if changed:
-            return node
-        else:
-            return PyGeneratorExpr(element=new_element_4, generators=new_generators)
-    if isinstance(node, PyIfExpr):
-        changed = False
-        new_then = proc(node.then)
-        assert(is_py_expr(new_then))
-        if new_then is not node.then:
-            changed = True
-        new_if_keyword_1 = proc(node.if_keyword)
-        assert(isinstance(new_if_keyword_1, PyIfKeyword))
-        if new_if_keyword_1 is not node.if_keyword:
-            changed = True
-        new_test = proc(node.test)
-        assert(is_py_expr(new_test))
-        if new_test is not node.test:
-            changed = True
-        new_else_keyword = proc(node.else_keyword)
-        assert(isinstance(new_else_keyword, PyElseKeyword))
-        if new_else_keyword is not node.else_keyword:
-            changed = True
-        new_alt = proc(node.alt)
-        assert(is_py_expr(new_alt))
-        if new_alt is not node.alt:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyIfExpr(then=new_then, if_keyword=new_if_keyword_1, test=new_test, else_keyword=new_else_keyword, alt=new_alt)
-    if isinstance(node, PyConstExpr):
-        changed = False
-        if isinstance(node.literal, PyFloat):
-            new_literal = proc(node.literal)
-            assert(isinstance(new_literal, PyFloat))
-            if new_literal is not node.literal:
-                changed = True
-        elif isinstance(node.literal, PyInteger):
-            new_literal = proc(node.literal)
-            assert(isinstance(new_literal, PyInteger))
-            if new_literal is not node.literal:
-                changed = True
-        elif isinstance(node.literal, PyString):
-            new_literal = proc(node.literal)
-            assert(isinstance(new_literal, PyString))
-            if new_literal is not node.literal:
-                changed = True
-        else:
-            assert_never(node.literal)
-        if changed:
-            return node
-        else:
-            return PyConstExpr(literal=new_literal)
-    if isinstance(node, PyNestExpr):
-        changed = False
-        new_open_paren_1 = proc(node.open_paren)
-        assert(isinstance(new_open_paren_1, PyOpenParen))
-        if new_open_paren_1 is not node.open_paren:
-            changed = True
-        new_expr_2 = proc(node.expr)
-        assert(is_py_expr(new_expr_2))
-        if new_expr_2 is not node.expr:
-            changed = True
-        new_close_paren_1 = proc(node.close_paren)
-        assert(isinstance(new_close_paren_1, PyCloseParen))
-        if new_close_paren_1 is not node.close_paren:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyNestExpr(open_paren=new_open_paren_1, expr=new_expr_2, close_paren=new_close_paren_1)
-    if isinstance(node, PyNamedExpr):
-        changed = False
-        new_name_2 = proc(node.name)
-        assert(isinstance(new_name_2, PyIdent))
-        if new_name_2 is not node.name:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyNamedExpr(name=new_name_2)
-    if isinstance(node, PyAttrExpr):
-        changed = False
-        new_expr_3 = proc(node.expr)
-        assert(is_py_expr(new_expr_3))
-        if new_expr_3 is not node.expr:
-            changed = True
-        new_dot_1 = proc(node.dot)
-        assert(isinstance(new_dot_1, PyDot))
-        if new_dot_1 is not node.dot:
-            changed = True
-        new_name_3 = proc(node.name)
-        assert(isinstance(new_name_3, PyIdent))
-        if new_name_3 is not node.name:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyAttrExpr(expr=new_expr_3, dot=new_dot_1, name=new_name_3)
-    if isinstance(node, PySubscriptExpr):
-        changed = False
-        new_expr_4 = proc(node.expr)
-        assert(is_py_expr(new_expr_4))
-        if new_expr_4 is not node.expr:
-            changed = True
-        new_open_bracket_2 = proc(node.open_bracket)
-        assert(isinstance(new_open_bracket_2, PyOpenBracket))
-        if new_open_bracket_2 is not node.open_bracket:
-            changed = True
-        new_slices_1 = Punctuated()
-        for (element_5, separator_3) in node.slices:
-            if isinstance(element_5, PySlice):
-                new_element_6 = proc(element_5)
-                assert(isinstance(new_element_6, PySlice))
-                if new_element_6 is not element_5:
-                    changed = True
-            elif is_py_expr(element_5):
-                new_element_6 = proc(element_5)
-                assert(is_py_expr(new_element_6))
-                if new_element_6 is not element_5:
-                    changed = True
-            else:
-                assert_never(element_5)
-            new_separator_3 = proc(separator_3)
-            assert(isinstance(new_separator_3, PyComma))
-            if new_separator_3 is not separator_3:
-                changed = True
-            new_slices_1.append(new_element_6, new_separator_3)
-        new_close_bracket_2 = proc(node.close_bracket)
-        assert(isinstance(new_close_bracket_2, PyCloseBracket))
-        if new_close_bracket_2 is not node.close_bracket:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PySubscriptExpr(expr=new_expr_4, open_bracket=new_open_bracket_2, slices=new_slices_1, close_bracket=new_close_bracket_2)
-    if isinstance(node, PyStarredExpr):
-        changed = False
-        new_asterisk_1 = proc(node.asterisk)
-        assert(isinstance(new_asterisk_1, PyAsterisk))
-        if new_asterisk_1 is not node.asterisk:
-            changed = True
-        new_expr_5 = proc(node.expr)
-        assert(is_py_expr(new_expr_5))
-        if new_expr_5 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyStarredExpr(asterisk=new_asterisk_1, expr=new_expr_5)
-    if isinstance(node, PyListExpr):
-        changed = False
-        new_open_bracket_3 = proc(node.open_bracket)
-        assert(isinstance(new_open_bracket_3, PyOpenBracket))
-        if new_open_bracket_3 is not node.open_bracket:
-            changed = True
-        new_elements_3 = Punctuated()
-        for (element_6, separator_4) in node.elements:
-            new_element_7 = proc(element_6)
-            assert(is_py_expr(new_element_7))
-            if new_element_7 is not element_6:
-                changed = True
-            new_separator_4 = proc(separator_4)
-            assert(isinstance(new_separator_4, PyComma))
-            if new_separator_4 is not separator_4:
-                changed = True
-            new_elements_3.append(new_element_7, new_separator_4)
-        new_close_bracket_3 = proc(node.close_bracket)
-        assert(isinstance(new_close_bracket_3, PyCloseBracket))
-        if new_close_bracket_3 is not node.close_bracket:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyListExpr(open_bracket=new_open_bracket_3, elements=new_elements_3, close_bracket=new_close_bracket_3)
-    if isinstance(node, PyTupleExpr):
-        changed = False
-        new_open_paren_2 = proc(node.open_paren)
-        assert(isinstance(new_open_paren_2, PyOpenParen))
-        if new_open_paren_2 is not node.open_paren:
-            changed = True
-        new_elements_4 = Punctuated()
-        for (element_7, separator_5) in node.elements:
-            new_element_8 = proc(element_7)
-            assert(is_py_expr(new_element_8))
-            if new_element_8 is not element_7:
-                changed = True
-            new_separator_5 = proc(separator_5)
-            assert(isinstance(new_separator_5, PyComma))
-            if new_separator_5 is not separator_5:
-                changed = True
-            new_elements_4.append(new_element_8, new_separator_5)
-        new_close_paren_2 = proc(node.close_paren)
-        assert(isinstance(new_close_paren_2, PyCloseParen))
-        if new_close_paren_2 is not node.close_paren:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyTupleExpr(open_paren=new_open_paren_2, elements=new_elements_4, close_paren=new_close_paren_2)
-    if isinstance(node, PyKeywordArg):
-        changed = False
-        new_name_4 = proc(node.name)
-        assert(isinstance(new_name_4, PyIdent))
-        if new_name_4 is not node.name:
-            changed = True
-        new_equals = proc(node.equals)
-        assert(isinstance(new_equals, PyEquals))
-        if new_equals is not node.equals:
-            changed = True
-        new_expr_6 = proc(node.expr)
-        assert(is_py_expr(new_expr_6))
-        if new_expr_6 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyKeywordArg(name=new_name_4, equals=new_equals, expr=new_expr_6)
-    if isinstance(node, PyCallExpr):
-        changed = False
-        new_operator = proc(node.operator)
-        assert(is_py_expr(new_operator))
-        if new_operator is not node.operator:
-            changed = True
-        new_open_paren_3 = proc(node.open_paren)
-        assert(isinstance(new_open_paren_3, PyOpenParen))
-        if new_open_paren_3 is not node.open_paren:
-            changed = True
-        new_args = Punctuated()
-        for (element_8, separator_6) in node.args:
-            new_element_9 = proc(element_8)
-            assert(is_py_arg(new_element_9))
-            if new_element_9 is not element_8:
-                changed = True
-            new_separator_6 = proc(separator_6)
-            assert(isinstance(new_separator_6, PyComma))
-            if new_separator_6 is not separator_6:
-                changed = True
-            new_args.append(new_element_9, new_separator_6)
-        new_close_paren_3 = proc(node.close_paren)
-        assert(isinstance(new_close_paren_3, PyCloseParen))
-        if new_close_paren_3 is not node.close_paren:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyCallExpr(operator=new_operator, open_paren=new_open_paren_3, args=new_args, close_paren=new_close_paren_3)
-    if isinstance(node, PyPrefixExpr):
-        changed = False
-        new_prefix_op = proc(node.prefix_op)
-        assert(is_py_prefix_op(new_prefix_op))
-        if new_prefix_op is not node.prefix_op:
-            changed = True
-        new_expr_7 = proc(node.expr)
-        assert(is_py_expr(new_expr_7))
-        if new_expr_7 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyPrefixExpr(prefix_op=new_prefix_op, expr=new_expr_7)
-    if isinstance(node, PyInfixExpr):
-        changed = False
-        new_left = proc(node.left)
-        assert(is_py_expr(new_left))
-        if new_left is not node.left:
-            changed = True
-        new_right = proc(node.right)
-        assert(is_py_expr(new_right))
-        if new_right is not node.right:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyInfixExpr(left=new_left, op=node.op, right=new_right)
-    if isinstance(node, PyQualName):
-        changed = False
-        new_modules = []
-        for element_9 in node.modules:
-            new_elements_5 = []
-            element_0_1 = element_9[0]
-            new_element_0_1 = proc(element_0_1)
-            assert(isinstance(new_element_0_1, PyIdent))
-            if new_element_0_1 is not element_0_1:
-                changed = True
-            new_elements_5.append(new_element_0_1)
-            element_1_1 = element_9[1]
-            new_element_1_1 = proc(element_1_1)
-            assert(isinstance(new_element_1_1, PyDot))
-            if new_element_1_1 is not element_1_1:
-                changed = True
-            new_elements_5.append(new_element_1_1)
-            new_element_10 = tuple(new_elements_5) if changed else element_9
-        new_name_5 = proc(node.name)
-        assert(isinstance(new_name_5, PyIdent))
-        if new_name_5 is not node.name:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyQualName(modules=new_modules, name=new_name_5)
-    if isinstance(node, PyAbsolutePath):
-        changed = False
-        new_name_6 = proc(node.name)
-        assert(isinstance(new_name_6, PyQualName))
-        if new_name_6 is not node.name:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyAbsolutePath(name=new_name_6)
-    if isinstance(node, PyRelativePath):
-        changed = False
-        new_dots = []
-        for element_10 in node.dots:
-            new_element_11 = proc(element_10)
-            assert(isinstance(new_element_11, PyDot))
-            if new_element_11 is not element_10:
-                changed = True
-        if isinstance(node.name, PyQualName):
-            new_name_7 = proc(node.name)
-            assert(isinstance(new_name_7, PyQualName))
-            if new_name_7 is not node.name:
-                changed = True
-        elif node.name is None:
-            new_name_7 = node.name
-        else:
-            assert_never(node.name)
-        if changed:
-            return node
-        else:
-            return PyRelativePath(dots=new_dots, name=new_name_7)
-    if isinstance(node, PyAlias):
-        changed = False
-        new_path = proc(node.path)
-        assert(is_py_path(new_path))
-        if new_path is not node.path:
-            changed = True
-        if isinstance(node.asname, tuple):
-            new_elements_6 = []
-            element_0_2 = node.asname[0]
-            new_element_0_2 = proc(element_0_2)
-            assert(isinstance(new_element_0_2, PyAsKeyword))
-            if new_element_0_2 is not element_0_2:
-                changed = True
-            new_elements_6.append(new_element_0_2)
-            element_1_2 = node.asname[1]
-            new_element_1_2 = proc(element_1_2)
-            assert(isinstance(new_element_1_2, PyIdent))
-            if new_element_1_2 is not element_1_2:
-                changed = True
-            new_elements_6.append(new_element_1_2)
-            new_asname = tuple(new_elements_6) if changed else node.asname
-        elif node.asname is None:
-            new_asname = node.asname
-        else:
-            assert_never(node.asname)
-        if changed:
-            return node
-        else:
-            return PyAlias(path=new_path, asname=new_asname)
-    if isinstance(node, PyFromAlias):
-        changed = False
-        if isinstance(node.name, PyAsterisk):
-            new_name_8 = proc(node.name)
-            assert(isinstance(new_name_8, PyAsterisk))
-            if new_name_8 is not node.name:
-                changed = True
-        elif isinstance(node.name, PyIdent):
-            new_name_8 = proc(node.name)
-            assert(isinstance(new_name_8, PyIdent))
-            if new_name_8 is not node.name:
-                changed = True
-        else:
-            assert_never(node.name)
-        if isinstance(node.asname, tuple):
-            new_elements_7 = []
-            element_0_3 = node.asname[0]
-            new_element_0_3 = proc(element_0_3)
-            assert(isinstance(new_element_0_3, PyAsKeyword))
-            if new_element_0_3 is not element_0_3:
-                changed = True
-            new_elements_7.append(new_element_0_3)
-            element_1_3 = node.asname[1]
-            new_element_1_3 = proc(element_1_3)
-            assert(isinstance(new_element_1_3, PyIdent))
-            if new_element_1_3 is not element_1_3:
-                changed = True
-            new_elements_7.append(new_element_1_3)
-            new_asname_1 = tuple(new_elements_7) if changed else node.asname
-        elif node.asname is None:
-            new_asname_1 = node.asname
-        else:
-            assert_never(node.asname)
-        if changed:
-            return node
-        else:
-            return PyFromAlias(name=new_name_8, asname=new_asname_1)
-    if isinstance(node, PyImportStmt):
-        changed = False
-        new_import_keyword = proc(node.import_keyword)
-        assert(isinstance(new_import_keyword, PyImportKeyword))
-        if new_import_keyword is not node.import_keyword:
-            changed = True
-        new_aliases = Punctuated()
-        for (element_11, separator_7) in node.aliases:
-            new_element_12 = proc(element_11)
-            assert(isinstance(new_element_12, PyAlias))
-            if new_element_12 is not element_11:
-                changed = True
-            new_separator_7 = proc(separator_7)
-            assert(isinstance(new_separator_7, PyComma))
-            if new_separator_7 is not separator_7:
-                changed = True
-            new_aliases.append(new_element_12, new_separator_7)
-        if changed:
-            return node
-        else:
-            return PyImportStmt(import_keyword=new_import_keyword, aliases=new_aliases)
-    if isinstance(node, PyImportFromStmt):
-        changed = False
-        new_from_keyword = proc(node.from_keyword)
-        assert(isinstance(new_from_keyword, PyFromKeyword))
-        if new_from_keyword is not node.from_keyword:
-            changed = True
-        new_path_1 = proc(node.path)
-        assert(is_py_path(new_path_1))
-        if new_path_1 is not node.path:
-            changed = True
-        new_import_keyword_1 = proc(node.import_keyword)
-        assert(isinstance(new_import_keyword_1, PyImportKeyword))
-        if new_import_keyword_1 is not node.import_keyword:
-            changed = True
-        new_aliases_1 = Punctuated()
-        for (element_12, separator_8) in node.aliases:
-            new_element_13 = proc(element_12)
-            assert(isinstance(new_element_13, PyFromAlias))
-            if new_element_13 is not element_12:
-                changed = True
-            new_separator_8 = proc(separator_8)
-            assert(isinstance(new_separator_8, PyComma))
-            if new_separator_8 is not separator_8:
-                changed = True
-            new_aliases_1.append(new_element_13, new_separator_8)
-        if changed:
-            return node
-        else:
-            return PyImportFromStmt(from_keyword=new_from_keyword, path=new_path_1, import_keyword=new_import_keyword_1, aliases=new_aliases_1)
-    if isinstance(node, PyRetStmt):
-        changed = False
-        new_return_keyword = proc(node.return_keyword)
-        assert(isinstance(new_return_keyword, PyReturnKeyword))
-        if new_return_keyword is not node.return_keyword:
-            changed = True
-        if is_py_expr(node.expr):
-            new_expr_8 = proc(node.expr)
-            assert(is_py_expr(new_expr_8))
-            if new_expr_8 is not node.expr:
-                changed = True
-        elif node.expr is None:
-            new_expr_8 = node.expr
-        else:
-            assert_never(node.expr)
-        if changed:
-            return node
-        else:
-            return PyRetStmt(return_keyword=new_return_keyword, expr=new_expr_8)
-    if isinstance(node, PyExprStmt):
-        changed = False
-        new_expr_9 = proc(node.expr)
-        assert(is_py_expr(new_expr_9))
-        if new_expr_9 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyExprStmt(expr=new_expr_9)
-    if isinstance(node, PyAugAssignStmt):
-        changed = False
-        new_pattern_3 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_3))
-        if new_pattern_3 is not node.pattern:
-            changed = True
-        if isinstance(node.annotation, tuple):
-            new_elements_8 = []
-            element_0_4 = node.annotation[0]
-            new_element_0_4 = proc(element_0_4)
-            assert(isinstance(new_element_0_4, PyColon))
-            if new_element_0_4 is not element_0_4:
-                changed = True
-            new_elements_8.append(new_element_0_4)
-            element_1_4 = node.annotation[1]
-            new_element_1_4 = proc(element_1_4)
-            assert(is_py_expr(new_element_1_4))
-            if new_element_1_4 is not element_1_4:
-                changed = True
-            new_elements_8.append(new_element_1_4)
-            new_annotation = tuple(new_elements_8) if changed else node.annotation
-        elif node.annotation is None:
-            new_annotation = node.annotation
-        else:
-            assert_never(node.annotation)
-        if isinstance(node.op, PyAmpersand):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PyAmpersand))
-            if new_op is not node.op:
-                changed = True
-        elif isinstance(node.op, PyAsterisk):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PyAsterisk))
-            if new_op is not node.op:
-                changed = True
-        elif isinstance(node.op, PyAsteriskAsterisk):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PyAsteriskAsterisk))
-            if new_op is not node.op:
-                changed = True
-        elif isinstance(node.op, PyAtSign):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PyAtSign))
-            if new_op is not node.op:
-                changed = True
-        elif isinstance(node.op, PyCaret):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PyCaret))
-            if new_op is not node.op:
-                changed = True
-        elif isinstance(node.op, PyGreaterThanGreaterThan):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PyGreaterThanGreaterThan))
-            if new_op is not node.op:
-                changed = True
-        elif isinstance(node.op, PyHyphen):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PyHyphen))
-            if new_op is not node.op:
-                changed = True
-        elif isinstance(node.op, PyLessThanLessThan):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PyLessThanLessThan))
-            if new_op is not node.op:
-                changed = True
-        elif isinstance(node.op, PyPercent):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PyPercent))
-            if new_op is not node.op:
-                changed = True
-        elif isinstance(node.op, PyPlus):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PyPlus))
-            if new_op is not node.op:
-                changed = True
-        elif isinstance(node.op, PySlash):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PySlash))
-            if new_op is not node.op:
-                changed = True
-        elif isinstance(node.op, PySlashSlash):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PySlashSlash))
-            if new_op is not node.op:
-                changed = True
-        elif isinstance(node.op, PyVerticalBar):
-            new_op = proc(node.op)
-            assert(isinstance(new_op, PyVerticalBar))
-            if new_op is not node.op:
-                changed = True
-        else:
-            assert_never(node.op)
-        new_equals_1 = proc(node.equals)
-        assert(isinstance(new_equals_1, PyEquals))
-        if new_equals_1 is not node.equals:
-            changed = True
-        new_expr_10 = proc(node.expr)
-        assert(is_py_expr(new_expr_10))
-        if new_expr_10 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyAugAssignStmt(pattern=new_pattern_3, annotation=new_annotation, op=new_op, equals=new_equals_1, expr=new_expr_10)
-    if isinstance(node, PyAssignStmt):
-        changed = False
-        new_pattern_4 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_4))
-        if new_pattern_4 is not node.pattern:
-            changed = True
-        if isinstance(node.annotation, tuple):
-            new_elements_9 = []
-            element_0_5 = node.annotation[0]
-            new_element_0_5 = proc(element_0_5)
-            assert(isinstance(new_element_0_5, PyColon))
-            if new_element_0_5 is not element_0_5:
-                changed = True
-            new_elements_9.append(new_element_0_5)
-            element_1_5 = node.annotation[1]
-            new_element_1_5 = proc(element_1_5)
-            assert(is_py_expr(new_element_1_5))
-            if new_element_1_5 is not element_1_5:
-                changed = True
-            new_elements_9.append(new_element_1_5)
-            new_annotation_1 = tuple(new_elements_9) if changed else node.annotation
-        elif node.annotation is None:
-            new_annotation_1 = node.annotation
-        else:
-            assert_never(node.annotation)
-        if isinstance(node.value, tuple):
-            new_elements_10 = []
-            element_0_6 = node.value[0]
-            new_element_0_6 = proc(element_0_6)
-            assert(isinstance(new_element_0_6, PyEquals))
-            if new_element_0_6 is not element_0_6:
-                changed = True
-            new_elements_10.append(new_element_0_6)
-            element_1_6 = node.value[1]
-            new_element_1_6 = proc(element_1_6)
-            assert(is_py_expr(new_element_1_6))
-            if new_element_1_6 is not element_1_6:
-                changed = True
-            new_elements_10.append(new_element_1_6)
-            new_value = tuple(new_elements_10) if changed else node.value
-        elif node.value is None:
-            new_value = node.value
-        else:
-            assert_never(node.value)
-        if changed:
-            return node
-        else:
-            return PyAssignStmt(pattern=new_pattern_4, annotation=new_annotation_1, value=new_value)
-    if isinstance(node, PyPassStmt):
-        changed = False
-        new_pass_keyword = proc(node.pass_keyword)
-        assert(isinstance(new_pass_keyword, PyPassKeyword))
-        if new_pass_keyword is not node.pass_keyword:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyPassStmt(pass_keyword=new_pass_keyword)
-    if isinstance(node, PyGlobalStmt):
-        changed = False
-        new_global_keyword = proc(node.global_keyword)
-        assert(isinstance(new_global_keyword, PyGlobalKeyword))
-        if new_global_keyword is not node.global_keyword:
-            changed = True
-        new_names = Punctuated()
-        for (element_13, separator_9) in node.names:
-            new_element_14 = proc(element_13)
-            assert(isinstance(new_element_14, PyIdent))
-            if new_element_14 is not element_13:
-                changed = True
-            new_separator_9 = proc(separator_9)
-            assert(isinstance(new_separator_9, PyComma))
-            if new_separator_9 is not separator_9:
-                changed = True
-            new_names.append(new_element_14, new_separator_9)
-        if changed:
-            return node
-        else:
-            return PyGlobalStmt(global_keyword=new_global_keyword, names=new_names)
-    if isinstance(node, PyNonlocalStmt):
-        changed = False
-        new_nonlocal_keyword = proc(node.nonlocal_keyword)
-        assert(isinstance(new_nonlocal_keyword, PyNonlocalKeyword))
-        if new_nonlocal_keyword is not node.nonlocal_keyword:
-            changed = True
-        new_names_1 = Punctuated()
-        for (element_14, separator_10) in node.names:
-            new_element_15 = proc(element_14)
-            assert(isinstance(new_element_15, PyIdent))
-            if new_element_15 is not element_14:
-                changed = True
-            new_separator_10 = proc(separator_10)
-            assert(isinstance(new_separator_10, PyComma))
-            if new_separator_10 is not separator_10:
-                changed = True
-            new_names_1.append(new_element_15, new_separator_10)
-        if changed:
-            return node
-        else:
-            return PyNonlocalStmt(nonlocal_keyword=new_nonlocal_keyword, names=new_names_1)
-    if isinstance(node, PyIfCase):
-        changed = False
-        new_if_keyword_2 = proc(node.if_keyword)
-        assert(isinstance(new_if_keyword_2, PyIfKeyword))
-        if new_if_keyword_2 is not node.if_keyword:
-            changed = True
-        new_test_1 = proc(node.test)
-        assert(is_py_expr(new_test_1))
-        if new_test_1 is not node.test:
-            changed = True
-        new_colon_1 = proc(node.colon)
-        assert(isinstance(new_colon_1, PyColon))
-        if new_colon_1 is not node.colon:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body = proc(node.body)
-            assert(is_py_stmt(new_body))
-            if new_body is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body = []
-            for element_15 in node.body:
-                new_element_16 = proc(element_15)
-                assert(is_py_stmt(new_element_16))
-                if new_element_16 is not element_15:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if changed:
-            return node
-        else:
-            return PyIfCase(if_keyword=new_if_keyword_2, test=new_test_1, colon=new_colon_1, body=new_body)
-    if isinstance(node, PyElifCase):
-        changed = False
-        new_elif_keyword = proc(node.elif_keyword)
-        assert(isinstance(new_elif_keyword, PyElifKeyword))
-        if new_elif_keyword is not node.elif_keyword:
-            changed = True
-        new_test_2 = proc(node.test)
-        assert(is_py_expr(new_test_2))
-        if new_test_2 is not node.test:
-            changed = True
-        new_colon_2 = proc(node.colon)
-        assert(isinstance(new_colon_2, PyColon))
-        if new_colon_2 is not node.colon:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body_1 = proc(node.body)
-            assert(is_py_stmt(new_body_1))
-            if new_body_1 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_1 = []
-            for element_16 in node.body:
-                new_element_17 = proc(element_16)
-                assert(is_py_stmt(new_element_17))
-                if new_element_17 is not element_16:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if changed:
-            return node
-        else:
-            return PyElifCase(elif_keyword=new_elif_keyword, test=new_test_2, colon=new_colon_2, body=new_body_1)
-    if isinstance(node, PyElseCase):
-        changed = False
-        new_else_keyword_1 = proc(node.else_keyword)
-        assert(isinstance(new_else_keyword_1, PyElseKeyword))
-        if new_else_keyword_1 is not node.else_keyword:
-            changed = True
-        new_colon_3 = proc(node.colon)
-        assert(isinstance(new_colon_3, PyColon))
-        if new_colon_3 is not node.colon:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body_2 = proc(node.body)
-            assert(is_py_stmt(new_body_2))
-            if new_body_2 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_2 = []
-            for element_17 in node.body:
-                new_element_18 = proc(element_17)
-                assert(is_py_stmt(new_element_18))
-                if new_element_18 is not element_17:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if changed:
-            return node
-        else:
-            return PyElseCase(else_keyword=new_else_keyword_1, colon=new_colon_3, body=new_body_2)
-    if isinstance(node, PyIfStmt):
-        changed = False
-        new_first = proc(node.first)
-        assert(isinstance(new_first, PyIfCase))
-        if new_first is not node.first:
-            changed = True
-        new_alternatives = []
-        for element_18 in node.alternatives:
-            new_element_19 = proc(element_18)
-            assert(isinstance(new_element_19, PyElifCase))
-            if new_element_19 is not element_18:
-                changed = True
-        if isinstance(node.last, PyElseCase):
-            new_last = proc(node.last)
-            assert(isinstance(new_last, PyElseCase))
-            if new_last is not node.last:
-                changed = True
-        elif node.last is None:
-            new_last = node.last
-        else:
-            assert_never(node.last)
-        if changed:
-            return node
-        else:
-            return PyIfStmt(first=new_first, alternatives=new_alternatives, last=new_last)
-    if isinstance(node, PyDeleteStmt):
-        changed = False
-        new_del_keyword = proc(node.del_keyword)
-        assert(isinstance(new_del_keyword, PyDelKeyword))
-        if new_del_keyword is not node.del_keyword:
-            changed = True
-        new_pattern_5 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_5))
-        if new_pattern_5 is not node.pattern:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyDeleteStmt(del_keyword=new_del_keyword, pattern=new_pattern_5)
-    if isinstance(node, PyRaiseStmt):
-        changed = False
-        new_raise_keyword = proc(node.raise_keyword)
-        assert(isinstance(new_raise_keyword, PyRaiseKeyword))
-        if new_raise_keyword is not node.raise_keyword:
-            changed = True
-        new_expr_11 = proc(node.expr)
-        assert(is_py_expr(new_expr_11))
-        if new_expr_11 is not node.expr:
-            changed = True
-        if isinstance(node.cause, tuple):
-            new_elements_11 = []
-            element_0_7 = node.cause[0]
-            new_element_0_7 = proc(element_0_7)
-            assert(isinstance(new_element_0_7, PyFromKeyword))
-            if new_element_0_7 is not element_0_7:
-                changed = True
-            new_elements_11.append(new_element_0_7)
-            element_1_7 = node.cause[1]
-            new_element_1_7 = proc(element_1_7)
-            assert(is_py_expr(new_element_1_7))
-            if new_element_1_7 is not element_1_7:
-                changed = True
-            new_elements_11.append(new_element_1_7)
-            new_cause = tuple(new_elements_11) if changed else node.cause
-        elif node.cause is None:
-            new_cause = node.cause
-        else:
-            assert_never(node.cause)
-        if changed:
-            return node
-        else:
-            return PyRaiseStmt(raise_keyword=new_raise_keyword, expr=new_expr_11, cause=new_cause)
-    if isinstance(node, PyForStmt):
-        changed = False
-        new_for_keyword_1 = proc(node.for_keyword)
-        assert(isinstance(new_for_keyword_1, PyForKeyword))
-        if new_for_keyword_1 is not node.for_keyword:
-            changed = True
-        new_pattern_6 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_6))
-        if new_pattern_6 is not node.pattern:
-            changed = True
-        new_in_keyword_1 = proc(node.in_keyword)
-        assert(isinstance(new_in_keyword_1, PyInKeyword))
-        if new_in_keyword_1 is not node.in_keyword:
-            changed = True
-        new_expr_12 = proc(node.expr)
-        assert(is_py_expr(new_expr_12))
-        if new_expr_12 is not node.expr:
-            changed = True
-        new_colon_4 = proc(node.colon)
-        assert(isinstance(new_colon_4, PyColon))
-        if new_colon_4 is not node.colon:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body_3 = proc(node.body)
-            assert(is_py_stmt(new_body_3))
-            if new_body_3 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_3 = []
-            for element_19 in node.body:
-                new_element_20 = proc(element_19)
-                assert(is_py_stmt(new_element_20))
-                if new_element_20 is not element_19:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if isinstance(node.else_clause, tuple):
-            new_elements_12 = []
-            element_0_8 = node.else_clause[0]
-            new_element_0_8 = proc(element_0_8)
-            assert(isinstance(new_element_0_8, PyElseKeyword))
-            if new_element_0_8 is not element_0_8:
-                changed = True
-            new_elements_12.append(new_element_0_8)
-            element_1_8 = node.else_clause[1]
-            new_element_1_8 = proc(element_1_8)
-            assert(isinstance(new_element_1_8, PyColon))
-            if new_element_1_8 is not element_1_8:
-                changed = True
-            new_elements_12.append(new_element_1_8)
-            element_2 = node.else_clause[2]
-            if is_py_stmt(element_2):
-                new_element_2 = proc(element_2)
-                assert(is_py_stmt(new_element_2))
-                if new_element_2 is not element_2:
-                    changed = True
-            elif isinstance(element_2, list):
-                new_element_2 = []
-                for element_20 in element_2:
-                    new_element_21 = proc(element_20)
-                    assert(is_py_stmt(new_element_21))
-                    if new_element_21 is not element_20:
-                        changed = True
-            else:
-                assert_never(element_2)
-            new_elements_12.append(new_element_2)
-            new_else_clause = tuple(new_elements_12) if changed else node.else_clause
-        elif node.else_clause is None:
-            new_else_clause = node.else_clause
-        else:
-            assert_never(node.else_clause)
-        if changed:
-            return node
-        else:
-            return PyForStmt(for_keyword=new_for_keyword_1, pattern=new_pattern_6, in_keyword=new_in_keyword_1, expr=new_expr_12, colon=new_colon_4, body=new_body_3, else_clause=new_else_clause)
-    if isinstance(node, PyWhileStmt):
-        changed = False
-        new_while_keyword = proc(node.while_keyword)
-        assert(isinstance(new_while_keyword, PyWhileKeyword))
-        if new_while_keyword is not node.while_keyword:
-            changed = True
-        new_expr_13 = proc(node.expr)
-        assert(is_py_expr(new_expr_13))
-        if new_expr_13 is not node.expr:
-            changed = True
-        new_colon_5 = proc(node.colon)
-        assert(isinstance(new_colon_5, PyColon))
-        if new_colon_5 is not node.colon:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body_4 = proc(node.body)
-            assert(is_py_stmt(new_body_4))
-            if new_body_4 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_4 = []
-            for element_21 in node.body:
-                new_element_22 = proc(element_21)
-                assert(is_py_stmt(new_element_22))
-                if new_element_22 is not element_21:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if isinstance(node.else_clause, tuple):
-            new_elements_13 = []
-            element_0_9 = node.else_clause[0]
-            new_element_0_9 = proc(element_0_9)
-            assert(isinstance(new_element_0_9, PyElseKeyword))
-            if new_element_0_9 is not element_0_9:
-                changed = True
-            new_elements_13.append(new_element_0_9)
-            element_1_9 = node.else_clause[1]
-            new_element_1_9 = proc(element_1_9)
-            assert(isinstance(new_element_1_9, PyColon))
-            if new_element_1_9 is not element_1_9:
-                changed = True
-            new_elements_13.append(new_element_1_9)
-            element_2_1 = node.else_clause[2]
-            if is_py_stmt(element_2_1):
-                new_element_2_1 = proc(element_2_1)
-                assert(is_py_stmt(new_element_2_1))
-                if new_element_2_1 is not element_2_1:
-                    changed = True
-            elif isinstance(element_2_1, list):
-                new_element_2_1 = []
-                for element_22 in element_2_1:
-                    new_element_23 = proc(element_22)
-                    assert(is_py_stmt(new_element_23))
-                    if new_element_23 is not element_22:
-                        changed = True
-            else:
-                assert_never(element_2_1)
-            new_elements_13.append(new_element_2_1)
-            new_else_clause_1 = tuple(new_elements_13) if changed else node.else_clause
-        elif node.else_clause is None:
-            new_else_clause_1 = node.else_clause
-        else:
-            assert_never(node.else_clause)
-        if changed:
-            return node
-        else:
-            return PyWhileStmt(while_keyword=new_while_keyword, expr=new_expr_13, colon=new_colon_5, body=new_body_4, else_clause=new_else_clause_1)
-    if isinstance(node, PyBreakStmt):
-        changed = False
-        new_break_keyword = proc(node.break_keyword)
-        assert(isinstance(new_break_keyword, PyBreakKeyword))
-        if new_break_keyword is not node.break_keyword:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyBreakStmt(break_keyword=new_break_keyword)
-    if isinstance(node, PyContinueStmt):
-        changed = False
-        new_continue_keyword = proc(node.continue_keyword)
-        assert(isinstance(new_continue_keyword, PyContinueKeyword))
-        if new_continue_keyword is not node.continue_keyword:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyContinueStmt(continue_keyword=new_continue_keyword)
-    if isinstance(node, PyTypeAliasStmt):
-        changed = False
-        new_type_keyword = proc(node.type_keyword)
-        assert(isinstance(new_type_keyword, PyTypeKeyword))
-        if new_type_keyword is not node.type_keyword:
-            changed = True
-        new_name_9 = proc(node.name)
-        assert(isinstance(new_name_9, PyIdent))
-        if new_name_9 is not node.name:
-            changed = True
-        if isinstance(node.type_params, tuple):
-            new_elements_14 = []
-            element_0_10 = node.type_params[0]
-            new_element_0_10 = proc(element_0_10)
-            assert(isinstance(new_element_0_10, PyOpenBracket))
-            if new_element_0_10 is not element_0_10:
-                changed = True
-            new_elements_14.append(new_element_0_10)
-            element_1_10 = node.type_params[1]
-            new_element_1_10 = Punctuated()
-            for (element_23, separator_11) in element_1_10:
-                new_element_24 = proc(element_23)
-                assert(is_py_expr(new_element_24))
-                if new_element_24 is not element_23:
-                    changed = True
-                new_separator_11 = proc(separator_11)
-                assert(isinstance(new_separator_11, PyComma))
-                if new_separator_11 is not separator_11:
-                    changed = True
-                new_element_1_10.append(new_element_24, new_separator_11)
-            new_elements_14.append(new_element_1_10)
-            element_2_2 = node.type_params[2]
-            new_element_2_2 = proc(element_2_2)
-            assert(isinstance(new_element_2_2, PyCloseBracket))
-            if new_element_2_2 is not element_2_2:
-                changed = True
-            new_elements_14.append(new_element_2_2)
-            new_type_params = tuple(new_elements_14) if changed else node.type_params
-        elif node.type_params is None:
-            new_type_params = node.type_params
-        else:
-            assert_never(node.type_params)
-        new_equals_2 = proc(node.equals)
-        assert(isinstance(new_equals_2, PyEquals))
-        if new_equals_2 is not node.equals:
-            changed = True
-        new_expr_14 = proc(node.expr)
-        assert(is_py_expr(new_expr_14))
-        if new_expr_14 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyTypeAliasStmt(type_keyword=new_type_keyword, name=new_name_9, type_params=new_type_params, equals=new_equals_2, expr=new_expr_14)
-    if isinstance(node, PyExceptHandler):
-        changed = False
-        new_except_keyword = proc(node.except_keyword)
-        assert(isinstance(new_except_keyword, PyExceptKeyword))
-        if new_except_keyword is not node.except_keyword:
-            changed = True
-        new_expr_15 = proc(node.expr)
-        assert(is_py_expr(new_expr_15))
-        if new_expr_15 is not node.expr:
-            changed = True
-        if isinstance(node.binder, tuple):
-            new_elements_15 = []
-            element_0_11 = node.binder[0]
-            new_element_0_11 = proc(element_0_11)
-            assert(isinstance(new_element_0_11, PyAsKeyword))
-            if new_element_0_11 is not element_0_11:
-                changed = True
-            new_elements_15.append(new_element_0_11)
-            element_1_11 = node.binder[1]
-            new_element_1_11 = proc(element_1_11)
-            assert(isinstance(new_element_1_11, PyIdent))
-            if new_element_1_11 is not element_1_11:
-                changed = True
-            new_elements_15.append(new_element_1_11)
-            new_binder = tuple(new_elements_15) if changed else node.binder
-        elif node.binder is None:
-            new_binder = node.binder
-        else:
-            assert_never(node.binder)
-        new_colon_6 = proc(node.colon)
-        assert(isinstance(new_colon_6, PyColon))
-        if new_colon_6 is not node.colon:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body_5 = proc(node.body)
-            assert(is_py_stmt(new_body_5))
-            if new_body_5 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_5 = []
-            for element_24 in node.body:
-                new_element_25 = proc(element_24)
-                assert(is_py_stmt(new_element_25))
-                if new_element_25 is not element_24:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if changed:
-            return node
-        else:
-            return PyExceptHandler(except_keyword=new_except_keyword, expr=new_expr_15, binder=new_binder, colon=new_colon_6, body=new_body_5)
-    if isinstance(node, PyTryStmt):
-        changed = False
-        new_try_keyword = proc(node.try_keyword)
-        assert(isinstance(new_try_keyword, PyTryKeyword))
-        if new_try_keyword is not node.try_keyword:
-            changed = True
-        new_colon_7 = proc(node.colon)
-        assert(isinstance(new_colon_7, PyColon))
-        if new_colon_7 is not node.colon:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body_6 = proc(node.body)
-            assert(is_py_stmt(new_body_6))
-            if new_body_6 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_6 = []
-            for element_25 in node.body:
-                new_element_26 = proc(element_25)
-                assert(is_py_stmt(new_element_26))
-                if new_element_26 is not element_25:
-                    changed = True
-        else:
-            assert_never(node.body)
-        new_handlers = []
-        for element_26 in node.handlers:
-            new_element_27 = proc(element_26)
-            assert(isinstance(new_element_27, PyExceptHandler))
-            if new_element_27 is not element_26:
-                changed = True
-        if isinstance(node.else_clause, tuple):
-            new_elements_16 = []
-            element_0_12 = node.else_clause[0]
-            new_element_0_12 = proc(element_0_12)
-            assert(isinstance(new_element_0_12, PyElseKeyword))
-            if new_element_0_12 is not element_0_12:
-                changed = True
-            new_elements_16.append(new_element_0_12)
-            element_1_12 = node.else_clause[1]
-            new_element_1_12 = proc(element_1_12)
-            assert(isinstance(new_element_1_12, PyColon))
-            if new_element_1_12 is not element_1_12:
-                changed = True
-            new_elements_16.append(new_element_1_12)
-            element_2_3 = node.else_clause[2]
-            if is_py_stmt(element_2_3):
-                new_element_2_3 = proc(element_2_3)
-                assert(is_py_stmt(new_element_2_3))
-                if new_element_2_3 is not element_2_3:
-                    changed = True
-            elif isinstance(element_2_3, list):
-                new_element_2_3 = []
-                for element_27 in element_2_3:
-                    new_element_28 = proc(element_27)
-                    assert(is_py_stmt(new_element_28))
-                    if new_element_28 is not element_27:
-                        changed = True
-            else:
-                assert_never(element_2_3)
-            new_elements_16.append(new_element_2_3)
-            new_else_clause_2 = tuple(new_elements_16) if changed else node.else_clause
-        elif node.else_clause is None:
-            new_else_clause_2 = node.else_clause
-        else:
-            assert_never(node.else_clause)
-        if isinstance(node.finally_clause, tuple):
-            new_elements_17 = []
-            element_0_13 = node.finally_clause[0]
-            new_element_0_13 = proc(element_0_13)
-            assert(isinstance(new_element_0_13, PyFinallyKeyword))
-            if new_element_0_13 is not element_0_13:
-                changed = True
-            new_elements_17.append(new_element_0_13)
-            element_1_13 = node.finally_clause[1]
-            new_element_1_13 = proc(element_1_13)
-            assert(isinstance(new_element_1_13, PyColon))
-            if new_element_1_13 is not element_1_13:
-                changed = True
-            new_elements_17.append(new_element_1_13)
-            element_2_4 = node.finally_clause[2]
-            if is_py_stmt(element_2_4):
-                new_element_2_4 = proc(element_2_4)
-                assert(is_py_stmt(new_element_2_4))
-                if new_element_2_4 is not element_2_4:
-                    changed = True
-            elif isinstance(element_2_4, list):
-                new_element_2_4 = []
-                for element_28 in element_2_4:
-                    new_element_29 = proc(element_28)
-                    assert(is_py_stmt(new_element_29))
-                    if new_element_29 is not element_28:
-                        changed = True
-            else:
-                assert_never(element_2_4)
-            new_elements_17.append(new_element_2_4)
-            new_finally_clause = tuple(new_elements_17) if changed else node.finally_clause
-        elif node.finally_clause is None:
-            new_finally_clause = node.finally_clause
-        else:
-            assert_never(node.finally_clause)
-        if changed:
-            return node
-        else:
-            return PyTryStmt(try_keyword=new_try_keyword, colon=new_colon_7, body=new_body_6, handlers=new_handlers, else_clause=new_else_clause_2, finally_clause=new_finally_clause)
-    if isinstance(node, PyClassBaseArg):
-        changed = False
-        new_name_10 = proc(node.name)
-        assert(isinstance(new_name_10, PyIdent))
-        if new_name_10 is not node.name:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyClassBaseArg(name=new_name_10)
-    if isinstance(node, PyKeywordBaseArg):
-        changed = False
-        new_name_11 = proc(node.name)
-        assert(isinstance(new_name_11, PyIdent))
-        if new_name_11 is not node.name:
-            changed = True
-        new_equals_3 = proc(node.equals)
-        assert(isinstance(new_equals_3, PyEquals))
-        if new_equals_3 is not node.equals:
-            changed = True
-        new_expr_16 = proc(node.expr)
-        assert(is_py_expr(new_expr_16))
-        if new_expr_16 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyKeywordBaseArg(name=new_name_11, equals=new_equals_3, expr=new_expr_16)
-    if isinstance(node, PyClassDef):
-        changed = False
-        new_decorators = []
-        for element_29 in node.decorators:
-            new_element_30 = proc(element_29)
-            assert(isinstance(new_element_30, PyDecorator))
-            if new_element_30 is not element_29:
-                changed = True
-        new_class_keyword = proc(node.class_keyword)
-        assert(isinstance(new_class_keyword, PyClassKeyword))
-        if new_class_keyword is not node.class_keyword:
-            changed = True
-        new_name_12 = proc(node.name)
-        assert(isinstance(new_name_12, PyIdent))
-        if new_name_12 is not node.name:
-            changed = True
-        if isinstance(node.bases, tuple):
-            new_elements_18 = []
-            element_0_14 = node.bases[0]
-            new_element_0_14 = proc(element_0_14)
-            assert(isinstance(new_element_0_14, PyOpenParen))
-            if new_element_0_14 is not element_0_14:
-                changed = True
-            new_elements_18.append(new_element_0_14)
-            element_1_14 = node.bases[1]
-            new_element_1_14 = Punctuated()
-            for (element_30, separator_12) in element_1_14:
-                new_element_31 = proc(element_30)
-                assert(is_py_base_arg(new_element_31))
-                if new_element_31 is not element_30:
-                    changed = True
-                new_separator_12 = proc(separator_12)
-                assert(isinstance(new_separator_12, PyComma))
-                if new_separator_12 is not separator_12:
-                    changed = True
-                new_element_1_14.append(new_element_31, new_separator_12)
-            new_elements_18.append(new_element_1_14)
-            element_2_5 = node.bases[2]
-            new_element_2_5 = proc(element_2_5)
-            assert(isinstance(new_element_2_5, PyCloseParen))
-            if new_element_2_5 is not element_2_5:
-                changed = True
-            new_elements_18.append(new_element_2_5)
-            new_bases = tuple(new_elements_18) if changed else node.bases
-        elif node.bases is None:
-            new_bases = node.bases
-        else:
-            assert_never(node.bases)
-        new_colon_8 = proc(node.colon)
-        assert(isinstance(new_colon_8, PyColon))
-        if new_colon_8 is not node.colon:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body_7 = proc(node.body)
-            assert(is_py_stmt(new_body_7))
-            if new_body_7 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_7 = []
-            for element_31 in node.body:
-                new_element_32 = proc(element_31)
-                assert(is_py_stmt(new_element_32))
-                if new_element_32 is not element_31:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if changed:
-            return node
-        else:
-            return PyClassDef(decorators=new_decorators, class_keyword=new_class_keyword, name=new_name_12, bases=new_bases, colon=new_colon_8, body=new_body_7)
-    if isinstance(node, PyNamedParam):
-        changed = False
-        new_pattern_7 = proc(node.pattern)
-        assert(is_py_pattern(new_pattern_7))
-        if new_pattern_7 is not node.pattern:
-            changed = True
-        if isinstance(node.annotation, tuple):
-            new_elements_19 = []
-            element_0_15 = node.annotation[0]
-            new_element_0_15 = proc(element_0_15)
-            assert(isinstance(new_element_0_15, PyColon))
-            if new_element_0_15 is not element_0_15:
-                changed = True
-            new_elements_19.append(new_element_0_15)
-            element_1_15 = node.annotation[1]
-            new_element_1_15 = proc(element_1_15)
-            assert(is_py_expr(new_element_1_15))
-            if new_element_1_15 is not element_1_15:
-                changed = True
-            new_elements_19.append(new_element_1_15)
-            new_annotation_2 = tuple(new_elements_19) if changed else node.annotation
-        elif node.annotation is None:
-            new_annotation_2 = node.annotation
-        else:
-            assert_never(node.annotation)
-        if isinstance(node.default, tuple):
-            new_elements_20 = []
-            element_0_16 = node.default[0]
-            new_element_0_16 = proc(element_0_16)
-            assert(isinstance(new_element_0_16, PyEquals))
-            if new_element_0_16 is not element_0_16:
-                changed = True
-            new_elements_20.append(new_element_0_16)
-            element_1_16 = node.default[1]
-            new_element_1_16 = proc(element_1_16)
-            assert(is_py_expr(new_element_1_16))
-            if new_element_1_16 is not element_1_16:
-                changed = True
-            new_elements_20.append(new_element_1_16)
-            new_default = tuple(new_elements_20) if changed else node.default
-        elif node.default is None:
-            new_default = node.default
-        else:
-            assert_never(node.default)
-        if changed:
-            return node
-        else:
-            return PyNamedParam(pattern=new_pattern_7, annotation=new_annotation_2, default=new_default)
-    if isinstance(node, PyRestPosParam):
-        changed = False
-        new_asterisk_2 = proc(node.asterisk)
-        assert(isinstance(new_asterisk_2, PyAsterisk))
-        if new_asterisk_2 is not node.asterisk:
-            changed = True
-        new_name_13 = proc(node.name)
-        assert(isinstance(new_name_13, PyIdent))
-        if new_name_13 is not node.name:
-            changed = True
-        if isinstance(node.annotation, tuple):
-            new_elements_21 = []
-            element_0_17 = node.annotation[0]
-            new_element_0_17 = proc(element_0_17)
-            assert(isinstance(new_element_0_17, PyColon))
-            if new_element_0_17 is not element_0_17:
-                changed = True
-            new_elements_21.append(new_element_0_17)
-            element_1_17 = node.annotation[1]
-            new_element_1_17 = proc(element_1_17)
-            assert(is_py_expr(new_element_1_17))
-            if new_element_1_17 is not element_1_17:
-                changed = True
-            new_elements_21.append(new_element_1_17)
-            new_annotation_3 = tuple(new_elements_21) if changed else node.annotation
-        elif node.annotation is None:
-            new_annotation_3 = node.annotation
-        else:
-            assert_never(node.annotation)
-        if changed:
-            return node
-        else:
-            return PyRestPosParam(asterisk=new_asterisk_2, name=new_name_13, annotation=new_annotation_3)
-    if isinstance(node, PyRestKeywordParam):
-        changed = False
-        new_asterisk_asterisk = proc(node.asterisk_asterisk)
-        assert(isinstance(new_asterisk_asterisk, PyAsteriskAsterisk))
-        if new_asterisk_asterisk is not node.asterisk_asterisk:
-            changed = True
-        new_name_14 = proc(node.name)
-        assert(isinstance(new_name_14, PyIdent))
-        if new_name_14 is not node.name:
-            changed = True
-        if isinstance(node.annotation, tuple):
-            new_elements_22 = []
-            element_0_18 = node.annotation[0]
-            new_element_0_18 = proc(element_0_18)
-            assert(isinstance(new_element_0_18, PyColon))
-            if new_element_0_18 is not element_0_18:
-                changed = True
-            new_elements_22.append(new_element_0_18)
-            element_1_18 = node.annotation[1]
-            new_element_1_18 = proc(element_1_18)
-            assert(is_py_expr(new_element_1_18))
-            if new_element_1_18 is not element_1_18:
-                changed = True
-            new_elements_22.append(new_element_1_18)
-            new_annotation_4 = tuple(new_elements_22) if changed else node.annotation
-        elif node.annotation is None:
-            new_annotation_4 = node.annotation
-        else:
-            assert_never(node.annotation)
-        if changed:
-            return node
-        else:
-            return PyRestKeywordParam(asterisk_asterisk=new_asterisk_asterisk, name=new_name_14, annotation=new_annotation_4)
-    if isinstance(node, PyPosSepParam):
-        changed = False
-        new_slash = proc(node.slash)
-        assert(isinstance(new_slash, PySlash))
-        if new_slash is not node.slash:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyPosSepParam(slash=new_slash)
-    if isinstance(node, PyKwSepParam):
-        changed = False
-        new_asterisk_3 = proc(node.asterisk)
-        assert(isinstance(new_asterisk_3, PyAsterisk))
-        if new_asterisk_3 is not node.asterisk:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyKwSepParam(asterisk=new_asterisk_3)
-    if isinstance(node, PyDecorator):
-        changed = False
-        new_at_sign = proc(node.at_sign)
-        assert(isinstance(new_at_sign, PyAtSign))
-        if new_at_sign is not node.at_sign:
-            changed = True
-        new_expr_17 = proc(node.expr)
-        assert(is_py_expr(new_expr_17))
-        if new_expr_17 is not node.expr:
-            changed = True
-        if changed:
-            return node
-        else:
-            return PyDecorator(at_sign=new_at_sign, expr=new_expr_17)
-    if isinstance(node, PyFuncDef):
-        changed = False
-        new_decorators_1 = []
-        for element_32 in node.decorators:
-            new_element_33 = proc(element_32)
-            assert(isinstance(new_element_33, PyDecorator))
-            if new_element_33 is not element_32:
-                changed = True
-        if isinstance(node.async_keyword, PyAsyncKeyword):
-            new_async_keyword_1 = proc(node.async_keyword)
-            assert(isinstance(new_async_keyword_1, PyAsyncKeyword))
-            if new_async_keyword_1 is not node.async_keyword:
-                changed = True
-        elif node.async_keyword is None:
-            new_async_keyword_1 = node.async_keyword
-        else:
-            assert_never(node.async_keyword)
-        new_def_keyword = proc(node.def_keyword)
-        assert(isinstance(new_def_keyword, PyDefKeyword))
-        if new_def_keyword is not node.def_keyword:
-            changed = True
-        new_name_15 = proc(node.name)
-        assert(isinstance(new_name_15, PyIdent))
-        if new_name_15 is not node.name:
-            changed = True
-        new_open_paren_4 = proc(node.open_paren)
-        assert(isinstance(new_open_paren_4, PyOpenParen))
-        if new_open_paren_4 is not node.open_paren:
-            changed = True
-        new_params = Punctuated()
-        for (element_33, separator_13) in node.params:
-            new_element_34 = proc(element_33)
-            assert(is_py_param(new_element_34))
-            if new_element_34 is not element_33:
-                changed = True
-            new_separator_13 = proc(separator_13)
-            assert(isinstance(new_separator_13, PyComma))
-            if new_separator_13 is not separator_13:
-                changed = True
-            new_params.append(new_element_34, new_separator_13)
-        new_close_paren_4 = proc(node.close_paren)
-        assert(isinstance(new_close_paren_4, PyCloseParen))
-        if new_close_paren_4 is not node.close_paren:
-            changed = True
-        if isinstance(node.return_type, tuple):
-            new_elements_23 = []
-            element_0_19 = node.return_type[0]
-            new_element_0_19 = proc(element_0_19)
-            assert(isinstance(new_element_0_19, PyRArrow))
-            if new_element_0_19 is not element_0_19:
-                changed = True
-            new_elements_23.append(new_element_0_19)
-            element_1_19 = node.return_type[1]
-            new_element_1_19 = proc(element_1_19)
-            assert(is_py_expr(new_element_1_19))
-            if new_element_1_19 is not element_1_19:
-                changed = True
-            new_elements_23.append(new_element_1_19)
-            new_return_type = tuple(new_elements_23) if changed else node.return_type
-        elif node.return_type is None:
-            new_return_type = node.return_type
-        else:
-            assert_never(node.return_type)
-        new_colon_9 = proc(node.colon)
-        assert(isinstance(new_colon_9, PyColon))
-        if new_colon_9 is not node.colon:
-            changed = True
-        if is_py_stmt(node.body):
-            new_body_8 = proc(node.body)
-            assert(is_py_stmt(new_body_8))
-            if new_body_8 is not node.body:
-                changed = True
-        elif isinstance(node.body, list):
-            new_body_8 = []
-            for element_34 in node.body:
-                new_element_35 = proc(element_34)
-                assert(is_py_stmt(new_element_35))
-                if new_element_35 is not element_34:
-                    changed = True
-        else:
-            assert_never(node.body)
-        if changed:
             return node
-        else:
-            return PyFuncDef(decorators=new_decorators_1, async_keyword=new_async_keyword_1, def_keyword=new_def_keyword, name=new_name_15, open_paren=new_open_paren_4, params=new_params, close_paren=new_close_paren_4, return_type=new_return_type, colon=new_colon_9, body=new_body_8)
-    if isinstance(node, PyModule):
-        changed = False
-        new_stmts = []
-        for element_35 in node.stmts:
-            new_element_36 = proc(element_35)
-            assert(is_py_stmt(new_element_36))
-            if new_element_36 is not element_35:
-                changed = True
-        if changed:
-            return node
-        else:
-            return PyModule(stmts=new_stmts)
-    if isinstance(node, PyTilde):
-        return
-    if isinstance(node, PyVerticalBar):
-        return
-    if isinstance(node, PyWhileKeyword):
-        return
-    if isinstance(node, PyTypeKeyword):
-        return
-    if isinstance(node, PyTryKeyword):
-        return
-    if isinstance(node, PyReturnKeyword):
-        return
-    if isinstance(node, PyRaiseKeyword):
-        return
-    if isinstance(node, PyPassKeyword):
-        return
-    if isinstance(node, PyOrKeyword):
-        return
-    if isinstance(node, PyNotKeyword):
-        return
-    if isinstance(node, PyNonlocalKeyword):
-        return
-    if isinstance(node, PyIsKeyword):
-        return
-    if isinstance(node, PyInKeyword):
-        return
-    if isinstance(node, PyImportKeyword):
-        return
-    if isinstance(node, PyIfKeyword):
-        return
-    if isinstance(node, PyGlobalKeyword):
-        return
-    if isinstance(node, PyFromKeyword):
-        return
-    if isinstance(node, PyForKeyword):
-        return
-    if isinstance(node, PyFinallyKeyword):
-        return
-    if isinstance(node, PyExceptKeyword):
-        return
-    if isinstance(node, PyElseKeyword):
-        return
-    if isinstance(node, PyElifKeyword):
-        return
-    if isinstance(node, PyDelKeyword):
-        return
-    if isinstance(node, PyDefKeyword):
-        return
-    if isinstance(node, PyContinueKeyword):
-        return
-    if isinstance(node, PyClassKeyword):
-        return
-    if isinstance(node, PyBreakKeyword):
-        return
-    if isinstance(node, PyAsyncKeyword):
-        return
-    if isinstance(node, PyAsKeyword):
-        return
-    if isinstance(node, PyAndKeyword):
-        return
-    if isinstance(node, PyCaret):
-        return
-    if isinstance(node, PyCloseBracket):
-        return
-    if isinstance(node, PyOpenBracket):
-        return
-    if isinstance(node, PyAtSign):
-        return
-    if isinstance(node, PyGreaterThanGreaterThan):
-        return
-    if isinstance(node, PyGreaterThanEquals):
-        return
-    if isinstance(node, PyGreaterThan):
-        return
-    if isinstance(node, PyEqualsEquals):
-        return
-    if isinstance(node, PyEquals):
-        return
-    if isinstance(node, PyLessThanEquals):
-        return
-    if isinstance(node, PyLessThanLessThan):
-        return
-    if isinstance(node, PyLessThan):
-        return
-    if isinstance(node, PySemicolon):
-        return
-    if isinstance(node, PyColon):
-        return
-    if isinstance(node, PySlashSlash):
-        return
-    if isinstance(node, PySlash):
-        return
-    if isinstance(node, PyDotDotDot):
-        return
-    if isinstance(node, PyDot):
-        return
-    if isinstance(node, PyRArrow):
-        return
-    if isinstance(node, PyHyphen):
-        return
-    if isinstance(node, PyComma):
-        return
-    if isinstance(node, PyPlus):
-        return
-    if isinstance(node, PyAsteriskAsterisk):
-        return
-    if isinstance(node, PyAsterisk):
-        return
-    if isinstance(node, PyCloseParen):
-        return
-    if isinstance(node, PyOpenParen):
-        return
-    if isinstance(node, PyAmpersand):
-        return
-    if isinstance(node, PyPercent):
-        return
-    if isinstance(node, PyHashtag):
-        return
-    if isinstance(node, PyExclamationMarkEquals):
-        return
-    if isinstance(node, PyCarriageReturnLineFeed):
-        return
-    if isinstance(node, PyLineFeed):
-        return
 
 
