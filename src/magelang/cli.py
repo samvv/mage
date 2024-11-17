@@ -25,8 +25,7 @@ type _ArgFn = Callable[[str, _ArgValue, _ArgValues], None]
 
 ARGFLAGS_FLAG = 1
 ARGFLAGS_POSITIONAL = 2
-ARGFLAGS_RESTFLAGS = 4
-ARGFLAGS_RESTPOS = 8
+ARGFLAGS_REST = 4
 
 def _set_arg_value(name: str, value: Any, out: _ArgValues) -> None:
     out[name] = value
@@ -51,6 +50,15 @@ def _append(name: str, value: Any, out: _ArgValues) -> None:
         out[name] = []
     out[name].append(value)
 
+def _are_bits_set(mask: int, bit: int) -> bool:
+    return mask & bit == bit
+
+def _set_bit(mask: int, bit: int, enable: bool) -> int:
+    if enable:
+        return mask | bit
+    else:
+        return mask & ~bit
+
 class _Argument:
 
     def __init__(self, name: str) -> None:
@@ -72,35 +80,26 @@ class _Argument:
 
     @property
     def is_rest_flags(self) -> bool:
-        return (self.flags & ARGFLAGS_RESTFLAGS) > 0
+        return _are_bits_set(self.flags, ARGFLAGS_FLAG | ARGFLAGS_REST)
 
     @property
     def is_rest_pos(self) -> bool:
-        return (self.flags & ARGFLAGS_RESTPOS) > 0
+        return _are_bits_set(self.flags, ARGFLAGS_POSITIONAL | ARGFLAGS_REST)
 
     def set_flag(self, enable = True) -> None:
-        if enable:
-            self.flags |= ARGFLAGS_FLAG
-        else:
-            self.flags &= ~ARGFLAGS_FLAG
+        self.flags = _set_bit(self.flags, ARGFLAGS_FLAG, enable)
 
-    def set_rest_flags(self, enable = True) -> None:
-        if enable:
-            self.flags |= ARGFLAGS_RESTFLAGS
-        else:
-            self.flags &= ~ARGFLAGS_RESTFLAGS
+    def set_rest(self, enable = True) -> None:
+        self.flags = _set_bit(self.flags, ARGFLAGS_REST, enable)
+
+    def set_positional(self, enable = True) -> None:
+        self.flags = _set_bit(self.flags, ARGFLAGS_POSITIONAL, enable)
 
     def set_default(self, value: _ArgValue) -> None:
         self.default = value
 
     def set_no_max_count(self) -> None:
         self.max_count = math.inf
-
-    def set_positional(self, enable = True) -> None:
-        if enable:
-            self.flags |= ARGFLAGS_POSITIONAL
-        else:
-            self.flags &= ~ARGFLAGS_POSITIONAL
 
     def set_type(self, ty: Any) -> None:
         self.ty = ty
@@ -331,11 +330,11 @@ def run(mod: ModuleType | str, name: str | None = None) -> int:
                 is_rest = False
                 if param.kind == param.VAR_KEYWORD:
                     is_rest = True
-                    arg.set_rest_flags()
+                    arg.set_rest()
                     arg.set_callback(_inserter(name))
                 if param.kind == param.VAR_POSITIONAL:
                     is_rest = True
-                    arg.flags |= ARGFLAGS_RESTPOS
+                    arg.set_rest()
                     arg.set_no_max_count()
                     arg.set_callback(_append)
 
