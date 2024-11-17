@@ -65,7 +65,7 @@ def generate(
     write_files(files, out_dir, force)
     return 0
 
-def check(filename: Path | str) -> int:
+def check(filename: Path | str, /) -> int:
     """
     Check the given grammar for common mistakes
     """
@@ -80,7 +80,7 @@ def check(filename: Path | str) -> int:
     apply(ctx, grammar, mage_check)
     return 0
 
-def _load_script(path: Path) -> Any:
+def _load_script(path: Path, /) -> Any:
     module_name = f'magelang.imported.{path.stem}'
     spec = importlib.util.spec_from_file_location(module_name, path)
     assert(spec is not None)
