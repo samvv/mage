@@ -90,7 +90,7 @@ def _load_script(path: Path) -> Any:
     spec.loader.exec_module(module)
     return module
 
-def dump(filename: Path | str, *passes: str, **opts: dict[str, Any]) -> int:
+def dump(filename: Path | str, *passes: str, **opts: Any) -> int:
     """
     Dump specific transformations of a grammar
     """
