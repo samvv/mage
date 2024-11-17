@@ -5,6 +5,7 @@ Stand-alone module to launch command-line applications
 import math
 import inspect
 from collections.abc import Callable, Iterable, Sequence
+from os import walk
 from pathlib import Path
 import sys
 from types import ModuleType, UnionType
@@ -175,11 +176,7 @@ class _Command:
         return self._subcommands.get(name)
 
 class Program(_Command):
-
-    def __init__(self, name: str) -> None:
-        super().__init__(name)
-        self._commands = dict[str, _Command]()
-
+    pass
 
 _T = TypeVar('_T')
 
