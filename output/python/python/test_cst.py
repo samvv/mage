@@ -50,10 +50,10 @@ def test_rewrite_call_expr():
 
     assert(isinstance(r, PyCallExpr))
     assert(r.operator is e1)
-    assert(r.args[0] is not e2)
-    assert(r.args[1] is not e3)
+    assert(r.args.elements[0] is not e2)
+    assert(r.args.elements[1] is not e3)
     assert(isinstance(r.args[0][0], PyConstExpr))
     assert(cast(PyInteger, r.args[0][0].literal).value == 2)
     assert(isinstance(r.args[1][0], PyConstExpr))
-    assert(r.args[1][0].literal.value == 3)
+    assert(cast(PyInteger, r.args[1][0].literal).value == 3)
 

@@ -1,6 +1,6 @@
 
 import io
-from typing import Any, Generic, Iterator, Never, Protocol, Sequence, SupportsIndex, TextIO, TypeGuard, TypeIs, TypeVar, overload
+from typing import Any, Callable, Generic, Iterator, Never, Protocol, Sequence, SupportsIndex, TextIO, TypeGuard, TypeIs, TypeVar, overload
 import re
 
 
@@ -46,6 +46,7 @@ def unreachable() -> Never:
 
 
 _T = TypeVar('_T')
+_R = TypeVar('_R')
 
 class Nothing:
     """
@@ -81,18 +82,16 @@ def nonnull(value: _T | None) -> _T:
 class Eq(Protocol):
     def __eq__(self, value: object, /) -> bool: ...
 
-_Elem = TypeVar('_Elem')
-
-class Seq(Generic[_Elem], Protocol):
+class MiniSeq(Protocol[_T]):
     def __len__(self) -> int: ...
     @overload
-    def __getitem__(self, i: SupportsIndex, /) -> _Elem: ...
+    def __getitem__(self, i: SupportsIndex, /) -> _T: ...
     @overload
-    def __getitem__(self, s: slice, /) -> list[_Elem]: ...
+    def __getitem__(self, s: slice, /) -> list[_T]: ...
 
 _K = TypeVar('_K', bound=Eq)
 
-def get_common_suffix(names: Sequence[Seq[_K]]) -> Seq[_K]:
+def get_common_suffix(names: Sequence[MiniSeq[_K]]) -> MiniSeq[_K]:
     i = 0
     name = names[0]
     while True:
@@ -177,5 +176,74 @@ class NameGenerator:
 
     def reset(self) -> None:
         self._counts = {}
+
+# Proxies for sequences
+
+class MapProxy(Sequence[_R], Generic[_T, _R]):
+
+    def __init__(self, elements: Sequence[_T], proc: Callable[[_T], _R]) -> None:
+        super().__init__()
+        self._elements = elements
+        self._proc = proc
+
+    def __len__(self) -> int:
+        return len(self._elements)
+
+    def __iter__(self) -> Iterator[_R]:
+        for element in self._elements:
+            yield self._proc(element)
+
+    def __reversed__(self) -> Iterator[_R]:
+        for element in reversed(self._elements):
+            yield self._proc(element)
+
+    @overload
+    def __getitem__(self, key: int) -> _R: ...
+
+    @overload
+    def __getitem__(self, key: slice) -> Sequence[_R]: ...
+
+    def __getitem__(self, key: int | slice) -> _R | Sequence[_R]:
+        if isinstance(key, slice):
+            return list(self._proc(element) for element in self._elements[key])
+        else:
+            return self._proc(self._elements[key])
+
+class DropProxy(Sequence[_T]):
+
+    def __init__(self, elements: 'Sequence[_T]', count: int) -> None:
+        assert(count <= len(elements))
+        self._elements = elements
+        self._to_drop = count
+
+    def __len__(self) -> int:
+        return len(self._elements)-self._to_drop
+
+    def __iter__(self) -> Iterator[_T]:
+        n = len(self._elements)
+        for i in range(0, n-self._to_drop):
+            yield self._elements[i]
+
+    def __reversed__(self) -> Iterator[_T]:
+        n = len(self._elements)
+        for i in range(0, n-self._to_drop):
+            yield self._elements[n-i-1]
+
+    @overload
+    def __getitem__(self, key: int) -> _T: ...
+
+    @overload
+    def __getitem__(self, key: slice) -> Sequence[_T]: ...
+
+    def __getitem__(self, key: int | slice) -> _T | Sequence[_T]:
+        max_index = len(self._elements)-self._to_drop
+        if isinstance(key, slice):
+            start = min(key.start, max_index)
+            stop = min(key.stop, max_index)
+            return self._elements[start:stop]
+        else:
+            if key >= max_index:
+                raise IndexError(f'index {key} out of bounds')
+            return self._elements[key]
 
 

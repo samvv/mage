@@ -2,7 +2,9 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from collections.abc import Collection, Reversible, Sequence
-from typing import Any, Generic, Iterable, Iterator, Protocol, SupportsIndex, TypeVar, assert_never, cast, overload
+from typing import Any, Iterable, Iterator, Protocol, SupportsIndex, TypeVar, assert_never, cast, overload
+
+from magelang.util import DropProxy, MapProxy
 
 
 EOF = '\uFFFF'
@@ -49,8 +51,9 @@ class BaseToken(BaseSyntax):
 _Element_cov = TypeVar('_Element_cov', covariant=True)
 _Separator_cov = TypeVar('_Separator_cov', covariant=True)
 
+_T = TypeVar('_T')
 _T_co = TypeVar('_T_co', covariant=True)
-
+_R = TypeVar('_R')
 
 class SequenceLike(Reversible[_T_co], Collection[_T_co], Protocol[_T_co]):
     @overload
@@ -89,7 +92,10 @@ class ImmutablePunct(Reversible[tuple[_Element_cov, _Separator_cov | None]], Ite
     def __iter__(self) -> Iterator[tuple[_Element_cov, _Separator_cov | None]]: ...
 
     @property
-    def delimited(self) -> 'PunctDelimited[_Element_cov, _Separator_cov]': ...
+    def elements(self) -> 'Sequence[_Element_cov]': ...
+
+    @property
+    def delimited(self) -> 'Sequence[tuple[_Element_cov, _Separator_cov]]': ...
 
     @property
     def last(self) -> '_Element_cov | None': ...
@@ -97,26 +103,6 @@ class ImmutablePunct(Reversible[tuple[_Element_cov, _Separator_cov | None]], Ite
 
 _Element = TypeVar('_Element')
 _Separator = TypeVar('_Separator')
-
-
-class PunctDelimited(Reversible[tuple[_Element, _Separator]]):
-
-    def __init__(self, source: 'Punctuated[_Element, _Separator]') -> None:
-        self.source = source
-
-    def __len__(self) -> int:
-        return len(self.source._storage)
-
-    def __iter__(self) -> Iterator[tuple[_Element, _Separator]]:
-        n = len(self.source._storage)
-        for i in range(0, n-1):
-            yield cast(tuple[_Element, _Separator], self.source._storage[i])
-
-    def __reversed__(self) -> Iterator[tuple[_Element, _Separator]]:
-        n = len(self.source._storage)
-        for i in range(0, n-1):
-            yield cast(tuple[_Element, _Separator], self.source._storage[n-i-1])
-
 
 class Punctuated(ImmutablePunct[_Element, _Separator]):
 
@@ -162,13 +148,27 @@ class Punctuated(ImmutablePunct[_Element, _Separator]):
     def __iter__(self) -> Iterator[tuple[_Element, _Separator | None]]:
         return iter(self._storage)
 
+    def __getitem__(self, key: int | slice) -> tuple[_Element, _Separator | None] | list[tuple[_Element, _Separator | None]]:
+        return self._storage[key]
+
     @property
-    def delimited(self) -> PunctDelimited[_Element, _Separator]:
-        return PunctDelimited(self)
+    def elements(self) -> Sequence[_Element]:
+        return MapProxy(self._storage, lambda pair: pair[0])
+
+    @property
+    def delimited(self) -> Sequence[tuple[_Element, _Separator]]:
+        return DropProxy(cast(list[tuple[_Element, _Separator]], self._storage), 1) \
+            if self and self.last_delimiter is None \
+            else cast(list[tuple[_Element, _Separator]], self._storage)
 
     @property
     def last(self) -> _Element | None:
         return self._storage[-1][0] if self else None
+
+    @property
+    def last_delimiter(self) -> _Separator | None:
+        return self._storage[-1][1] if self else None
+
 
 
 ImmutablePunct.register(Punctuated) # type: ignore
