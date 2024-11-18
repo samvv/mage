@@ -1,6 +1,6 @@
 
 @skip
-pub whitespace = [\n\r\t ]+
+whitespace = [\n\r\t ]+
 
 @keyword
 pub token ident
