@@ -29,14 +29,21 @@ escaped_ascii_char
   | '\''
   | '"'
 
-pub token char
+single_char
   = '\\' escape_sequence
   | ~[\]]
+
+pub token char
+  = single_char
+
+pub token string
+  = '\'' (!'\'' single_char)* '\''
 
 pub expr
   = char_set_expr
   | choice_expr
   | list_expr
+  | lit_expr
   | lookahead_expr
   | many_expr
   | negative_lookahead_expr
@@ -45,6 +52,9 @@ pub expr
   | repeat_expr
   | seq_expr
   | some_expr
+
+pub lit_expr
+  = string
 
 pub ref_expr
   = name:ident
