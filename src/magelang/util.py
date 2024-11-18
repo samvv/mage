@@ -2,13 +2,13 @@
 import io
 from typing import Any, Callable, Generic, Iterator, Never, Protocol, Sequence, SupportsIndex, TextIO, TypeGuard, TypeIs, TypeVar, overload
 import re
-
+from pathlib import Path
 
 def plural(name: str) -> str:
     return name if name.endswith('s') else f'{name}s'
 
 
-type Files = dict[str, str]
+type Files = dict[Path, str]
 
 
 def is_iterator(value: Any) -> TypeGuard[Iterator[Any]]:

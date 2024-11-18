@@ -59,16 +59,16 @@ def generate_files(
     grammar = load_grammar(filename)
 
     if engine == 'old':
-        files = dict[str, Pass[MageGrammar, PyModule]]()
-        trees = dict[str, Pass[Specs, PyModule]]()
+        files = dict[Path, Pass[MageGrammar, PyModule]]()
+        trees = dict[Path, Pass[Specs, PyModule]]()
         if enable_cst:
             # TODO add local `enable_cst_parent_pointers`
-            trees['cst.py'] = treespec_to_python
+            trees[Path('cst.py')] = treespec_to_python
         if enable_ast:
             # TODO add local `enable_ast_parent_pointers`
-            trees['ast.py'] = pipeline(treespec_cst_to_ast, treespec_to_python)
+            trees[Path('ast.py')] = pipeline(treespec_cst_to_ast, treespec_to_python)
         if enable_emitter:
-            files['emitter.py'] = mage_to_python_emitter
+            files[Path('emitter.py')] = mage_to_python_emitter
         mage_to_target = compose(
             merge(distribute(files), pipeline(mage_to_treespec, distribute(trees))),
             each_value(python_to_text),
@@ -82,7 +82,7 @@ def generate_files(
             panic(f"Unrecognised language '{lang}'")
         mage_to_target = pipeline(
             distribute({
-                'cst.rev': mage_to_revolv_syntax_tree,
+                Path('cst.rev'): mage_to_revolv_syntax_tree,
             }),
             revolv_to_target
         )
