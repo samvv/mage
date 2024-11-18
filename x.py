@@ -25,7 +25,6 @@ def _generate_internal(name: str, force: bool) -> int:
     files = magelang.generate_files(
         project_root / 'grammars' / (name + '.mage'),
         'python',
-        prefix='py',
         enable_cst=True,
         # enable_ast=True,
     )
