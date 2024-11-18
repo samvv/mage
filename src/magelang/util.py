@@ -8,7 +8,7 @@ def plural(name: str) -> str:
     return name if name.endswith('s') else f'{name}s'
 
 
-type Files = list[tuple[str, str]]
+type Files = dict[str, str]
 
 
 def is_iterator(value: Any) -> TypeGuard[Iterator[Any]]:

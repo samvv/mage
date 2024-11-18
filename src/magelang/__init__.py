@@ -91,15 +91,16 @@ def generate_files(
 
     grammar = load_grammar(filename)
 
-    return list(apply(ctx, grammar, pipeline(
+    return apply(ctx, grammar, pipeline(
         mage_prepare_grammar,
         mage_check if not skip_checks else identity,
         mage_to_target
-    )).items())
+    ))
 
 def write_files(files: Files, dest_dir: Path, force: bool = False) -> None:
-    for fname, text in files:
+    for fname, text in files.items():
         out_path = dest_dir / fname
+        info(f'Writing {out_path} ...')
         out_path.parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, 'w' if force else 'x') as f:
             f.write(text)
