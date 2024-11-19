@@ -84,11 +84,11 @@ def _git_list_files_in_dir(repo: git.Repo, root: Path) -> Iterable[Path]:
         if not path.is_dir() and _path_part_of(root, path):
             yield path
 
-def bump(major: bool = False, minor: bool = False, patch: bool = False, dev: bool = False) -> int:
+def bump(major: bool = False, minor: bool = False, patch: bool = False, dev: bool = False, test_upload: bool = False) -> int:
 
     import toml
 
-    none = not (major or minor or patch or dev)
+    # none = not (major or minor or patch or dev)
 
     pyproject_toml = _get_pyproject_toml()
 
@@ -105,7 +105,7 @@ def bump(major: bool = False, minor: bool = False, patch: bool = False, dev: boo
     if minor:
         v_min += 1
         v_dev = None
-    if patch or none:
+    if patch:
         v_micro += 1
         v_dev = None
     if dev:
@@ -165,7 +165,7 @@ def bump(major: bool = False, minor: bool = False, patch: bool = False, dev: boo
         toml.dump(pyproject_toml, f)
 
     # Start with a fresh slate in the package directory
-    # These files should have been added to Git so it is not dangerous to remove then
+    # These files should be tracked by Git so it is not dangerous to remove then
     shutil.rmtree(out_dir, ignore_errors=True)
 
     # Copy the actual files
@@ -179,6 +179,24 @@ def bump(major: bool = False, minor: bool = False, patch: bool = False, dev: boo
     if mode == 'stable':
         repo.index.add('pkg/stable')
         repo.index.commit(f'Bump stable version to {new_version}')
+
+    try:
+        from build import ProjectBuilder
+    except ImportError:
+        print(f"Error: could not locate the 'build' package. Ensure that it is installed with `python3 -m pip install --upgrade build`")
+        return 1
+
+    try:
+        from twine.commands.upload import upload
+        from twine.settings import Settings
+    except ImportError:
+        print(f"Error: could not locate the 'twine' package. Ensure that it is installed with `python3 -m pip install --upgrade twine`")
+        return 1
+
+    builder = ProjectBuilder(out_dir)
+    dist_path = builder.build('wheel', out_dir / 'dist')
+    repo_name = 'testpypi' if test_upload else 'pypi'
+    upload(Settings(repository_name=repo_name), [ dist_path ])
 
     return 0
 
