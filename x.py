@@ -176,10 +176,9 @@ def bump(major: bool = False, minor: bool = False, patch: bool = False, dev: boo
         print(f' - {path}')
         shutil.copy(path, new_path)
 
-
     if mode == 'stable':
         repo.index.add('pkg/stable')
-        # repo.index.commit(f'Bump stable version to {new_version}')
+        repo.index.commit(f'Bump stable version to {new_version}')
 
     return 0
 
