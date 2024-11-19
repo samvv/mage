@@ -17,7 +17,7 @@ name = "Sam Vervaeck"
 email = "samvv@pm.me"
 
 [build-system]
-requires = [ "setuptools>=43.0.0", "wheel",]
+requires = [ "setuptools>=43.0.0",]
 build-backend = "setuptools.build_meta"
 
 [project.license]
