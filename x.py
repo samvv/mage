@@ -80,7 +80,7 @@ def _path_part_of(root: Path, child: Path) -> bool:
 
 def _git_list_files_in_dir(repo: git.Repo, root: Path) -> Iterable[Path]:
     for entry in repo.commit().tree.traverse():
-        path = Path(entry).path # type: ignore
+        path = Path(entry.path) # type: ignore
         if not path.is_dir() and _path_part_of(root, path):
             yield path
 
