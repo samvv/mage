@@ -84,7 +84,15 @@ def _git_list_files_in_dir(repo: git.Repo, root: Path) -> Iterable[Path]:
         if not path.is_dir() and _path_part_of(root, path):
             yield path
 
-def bump(major: bool = False, minor: bool = False, micro: bool = False, dev: bool = False, test_upload: bool = False, no_upload: bool = False) -> int:
+def bump(
+    major: bool = False,
+    minor: bool = False,
+    micro: bool = False,
+    dev: bool = False,
+    commit: bool = True,
+    test_upload: bool = False,
+    upload: bool = True
+) -> int:
 
     import toml
 
@@ -176,9 +184,15 @@ def bump(major: bool = False, minor: bool = False, micro: bool = False, dev: boo
         print(f' - {path}')
         shutil.copy(path, new_path)
 
+    if not commit:
+        return 0
+
     if mode == 'stable':
         repo.index.add('pkg/stable')
         repo.index.commit(f'Bump stable version to {new_version}')
+
+    if not upload:
+        return 0
 
     try:
         from build import ProjectBuilder
@@ -187,17 +201,16 @@ def bump(major: bool = False, minor: bool = False, micro: bool = False, dev: boo
         return 1
 
     try:
-        from twine.commands.upload import upload
+        from twine.commands.upload import upload as twine_upload
         from twine.settings import Settings
     except ImportError:
         print(f"Error: could not locate the 'twine' package. Ensure that it is installed with `python3 -m pip install --upgrade twine`")
         return 1
 
-    if not no_upload:
-        builder = ProjectBuilder(out_dir)
-        dist_path = builder.build('wheel', out_dir / 'dist')
-        repo_name = 'testpypi' if test_upload else 'pypi'
-        upload(Settings(repository_name=repo_name), [ dist_path ])
+    builder = ProjectBuilder(out_dir)
+    dist_path = builder.build('wheel', out_dir / 'dist')
+    repo_name = 'testpypi' if test_upload else 'pypi'
+    twine_upload(Settings(repository_name=repo_name), [ dist_path ])
 
     return 0
 
