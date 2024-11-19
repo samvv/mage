@@ -5,6 +5,7 @@ import sys
 import subprocess
 from pathlib import Path
 from typing import TypeVar
+import shutil
 
 project_root = Path(__file__).parent.resolve()
 
@@ -56,6 +57,31 @@ def generate(next: bool = False, force: bool = False) -> int:
     _generate_internal('mage', force=force)
     # _generate_checked('treespec', force=force)
     _generate_internal('python', force=force)
+    return 0
+
+def lkg() -> int:
+    root = project_root / 'src'
+    from git import Repo
+    repo = Repo(project_root)
+    to_copy = set[Path]()
+    for entry in repo.commit().tree.traverse():
+        path = Path(entry.path)
+        if not path.is_dir() and root in path.absolute().parents:
+            to_copy.add(path)
+    dirty = set[Path]()
+    for entry in repo.index.diff(None):
+        path = Path(entry.a_path)
+        if root in path.absolute().parents:
+            dirty.add(path)
+    if dirty:
+        print(f"Error: there are unsaved changes in 'src':")
+        for path in dirty:
+            print(f' - {path}')
+        return 1
+    for path in to_copy:
+        new_path = project_root / 'lkg' / path.relative_to('src')
+        new_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(path, new_path)
     return 0
 
 def test() -> int:
