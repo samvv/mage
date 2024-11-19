@@ -132,7 +132,7 @@ def bump(major: bool = False, minor: bool = False, patch: bool = False, dev: boo
             if _path_part_of(other, path):
                 dirty.add(path)
 
-    if mode == 'stable' and repo.is_dirty:
+    if mode == 'stable' and repo.is_dirty():
         print(f'Error: in order to commit the new version the repository must be clean')
         return 1
 
