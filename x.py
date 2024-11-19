@@ -84,7 +84,7 @@ def _git_list_files_in_dir(repo: git.Repo, root: Path) -> Iterable[Path]:
         if not path.is_dir() and _path_part_of(root, path):
             yield path
 
-def bump(major: bool = False, minor: bool = False, micro: bool = False, dev: bool = False, test_upload: bool = False) -> int:
+def bump(major: bool = False, minor: bool = False, micro: bool = False, dev: bool = False, test_upload: bool = False, no_upload: bool = False) -> int:
 
     import toml
 
@@ -193,10 +193,11 @@ def bump(major: bool = False, minor: bool = False, micro: bool = False, dev: boo
         print(f"Error: could not locate the 'twine' package. Ensure that it is installed with `python3 -m pip install --upgrade twine`")
         return 1
 
-    builder = ProjectBuilder(out_dir)
-    dist_path = builder.build('wheel', out_dir / 'dist')
-    repo_name = 'testpypi' if test_upload else 'pypi'
-    upload(Settings(repository_name=repo_name), [ dist_path ])
+    if not no_upload:
+        builder = ProjectBuilder(out_dir)
+        dist_path = builder.build('wheel', out_dir / 'dist')
+        repo_name = 'testpypi' if test_upload else 'pypi'
+        upload(Settings(repository_name=repo_name), [ dist_path ])
 
     return 0
 
