@@ -84,7 +84,7 @@ def _git_list_files_in_dir(repo: git.Repo, root: Path) -> Iterable[Path]:
         if not path.is_dir() and _path_part_of(root, path):
             yield path
 
-def bump(major: bool = False, minor: bool = False, patch: bool = False, dev: bool = False, test_upload: bool = False) -> int:
+def bump(major: bool = False, minor: bool = False, micro: bool = False, dev: bool = False, test_upload: bool = False) -> int:
 
     import toml
 
@@ -105,7 +105,7 @@ def bump(major: bool = False, minor: bool = False, patch: bool = False, dev: boo
     if minor:
         v_min += 1
         v_dev = None
-    if patch:
+    if micro:
         v_micro += 1
         v_dev = None
     if dev:
