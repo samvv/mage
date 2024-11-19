@@ -8,8 +8,10 @@ covered!
 
 **Features**
 
- - 🚀 Full support for Python typings. Avoid runtime errors while building your language!
- - (planned) an intermediate language to very easily add support to any other programming language
+ - ✅ A simple yet expressive DSL to write your grammars in
+ - ✅ Full support for Python typings. Avoid runtime errors while building your language!
+ - 🚧 Lots of unit tests to enure your code does what you expect it to do
+ - 🚧 An intermediate language to very easily add support to any other programming language
 
 👀 Mage is written in itself. Check out the [generated code][1] of part of our Python generator!
 
