@@ -190,12 +190,13 @@ def test(mode: PackageType | None = None) -> int:
         subprocess.run([ 'docker', 'run', '-it', container_name, 'help'  ], check=True)
     return 0
 
-def commit() -> int:
-    if repo.is_dirty():
-        print(f'Error: in order to commit the new version the repository must be clean')
+def commit(force: bool = False) -> int:
+    if not force and len(repo.index.diff('HEAD')):
+        print(f'Error: in order to commit the new version the staging area must be clean or use --force if you know what you are doing')
         return 1
     pyproject_toml = _get_pyproject_toml()
     version = pyproject_toml['project']['version']
+    repo.index.add('pyproject.toml')
     repo.index.add('pkg/stable')
     repo.index.commit(f'Bump stable version to {version}')
     return 0
