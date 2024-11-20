@@ -13,6 +13,14 @@ project_root = Path(__file__).parent.resolve()
 
 repo = git.Repo(project_root)
 
+def _ensure_package(name: str, install_with: str) -> None:
+    import importlib
+    try:
+        importlib.import_module(name)
+    except ImportError:
+        print(f"Error: could not locate the '{name}' package. Ensure that it is installed with `python3 -m pip install --upgrade {install_with}`")
+        sys.exit(1)
+
 def _generate_internal(name: str, prefix: str, force: bool) -> int:
 
     import magelang
@@ -166,11 +174,9 @@ def build() -> int:
         print(f' - {path}')
         shutil.copy(path, new_path)
 
-    try:
-        from build import ProjectBuilder
-    except ImportError:
-        print(f"Error: could not locate the 'build' package. Ensure that it is installed with `python3 -m pip install --upgrade build`")
-        return 1
+    _ensure_package('build', install_with='build')
+
+    from build import ProjectBuilder
 
     builder = ProjectBuilder(out_dir)
     builder.build('sdist', out_dir / 'dist')
@@ -206,12 +212,10 @@ def publish(mode: PackageType = 'nightly', testing: bool = False) -> int:
 
     dist_paths = list(str(path) for path in (out_dir / 'dist').iterdir())
 
-    try:
-        from twine.commands.upload import upload as twine_upload
-        from twine.settings import Settings
-    except ImportError:
-        print(f"Error: could not locate the 'twine' package. Ensure that it is installed with `python3 -m pip install --upgrade twine`")
-        return 1
+    _ensure_package('twine', install_with='twine')
+
+    from twine.commands.upload import upload as twine_upload
+    from twine.settings import Settings
 
     repo_name = 'testpypi' if testing else 'pypi'
     twine_upload(Settings(repository_name=repo_name), dist_paths)
