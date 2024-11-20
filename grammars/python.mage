@@ -30,6 +30,23 @@ _ = [\t ]*
 
 # First tokens
 
+# A name in the language.
+#
+# ```
+# foo
+# ```
+#
+# ```
+# bar
+# ```
+#
+# ```
+# foobar123
+# ```
+#
+# ```
+# __contains__
+# ```
 @keyword
 pub token ident
   = [a-zA-Z_] [a-zA-Z_0-9]*
@@ -65,6 +82,31 @@ pub token integer -> Integer
 
 char = any_char
 
+# A quoted sequence of characters.
+#
+# ```
+# 'hello'
+# ```
+#
+# ```
+# "hello"
+# ```
+#
+# ```
+# 'one two three'
+# ```
+#
+# ```
+# "one two three"
+# ```
+#
+# ```
+# '44870'
+# ```
+#
+# ```
+# "44870"
+# ```
 pub token string
    = '"' char* '"'
    | '\'' char* '\''
