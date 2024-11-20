@@ -476,6 +476,8 @@ def run(mod: ModuleType | str, name: str | None = None) -> int:
                 pos_arg_count += 1
                 break
 
+    # TODO check that required arguments have been set
+
     # Build positional arguments and keyword arguments from the mapping
     posargs = []
     kwargs = {}
