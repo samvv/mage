@@ -206,7 +206,12 @@ def commit(force: bool = False) -> int:
     repo.index.commit(f'Bump stable version to {version}')
     return 0
 
-def publish(mode: PackageType = 'nightly', testing: bool = False) -> int:
+def publish(testing: bool = False) -> int:
+
+    version = _get_version()
+
+    # Infer whether this is a stable or nightly package
+    mode = 'stable' if version.dev is None else 'nightly'
 
     out_dir = project_root / 'pkg' / mode
 
