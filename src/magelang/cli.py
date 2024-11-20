@@ -385,6 +385,12 @@ def run(mod: ModuleType | str, name: str | None = None) -> int:
 
             prog.add_subcommand(cmd)
 
+    help_cmd = _Command('help')
+    def print_help() -> None:
+        print('Error: help messages not implemented yet.')
+    help_cmd.set_callback(print_help)
+    prog.add_subcommand(help_cmd)
+
     # Variables used during processing of the arguments
     cmd = prog
     args = Peek(sys.argv[1:])
