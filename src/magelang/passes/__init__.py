@@ -13,6 +13,7 @@ from .mage_insert_skip import *
 from .mage_remove_hidden import *
 from .mage_simplify import *
 from .mage_to_python_emitter import *
+from .mage_to_python_lexer import *
 from .mage_to_revolv_syntax_tree import *
 from .mage_to_treespec import *
 from .python_to_text import *
@@ -36,6 +37,7 @@ all_passes = {
     mage_remove_hidden,
     mage_simplify,
     mage_to_python_emitter,
+    mage_to_python_lexer,
     mage_to_revolv_syntax_tree,
     mage_to_treespec,
     python_to_text,

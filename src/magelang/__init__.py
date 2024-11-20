@@ -69,6 +69,8 @@ def generate_files(
             trees['ast.py'] = pipeline(treespec_cst_to_ast, treespec_to_python)
         if enable_emitter:
             files['emitter.py'] = mage_to_python_emitter
+        if enable_lexer:
+            files['lexer.py'] = mage_to_python_lexer
         mage_to_target = compose(
             merge(distribute(files), pipeline(mage_to_treespec, distribute(trees))),
             each_value(python_to_text),
