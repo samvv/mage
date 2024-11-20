@@ -125,7 +125,7 @@ def bump(
     new_version = _build_version(v_maj, v_min, v_micro, v_dev)
 
     # This lists all the files that will be added to the package
-    files = [ 'src', 'pyproject.toml', 'README.md', 'LICENSE.txt' ]
+    files = [ 'src', 'pyproject.toml', 'README.md', 'LICENSE.txt', 'Dockerfile' ]
 
     files = list(Path(fname) for fname in files)
     out_dir = project_root / 'pkg' / mode
@@ -140,7 +140,7 @@ def bump(
             if _path_part_of(other, path):
                 dirty.add(path)
 
-    if mode == 'stable' and repo.is_dirty():
+    if commit and mode == 'stable' and repo.is_dirty():
         print(f'Error: in order to commit the new version the repository must be clean')
         return 1
 
@@ -184,6 +184,22 @@ def bump(
         print(f' - {path}')
         shutil.copy(path, new_path)
 
+    # Build a package that can be uploaded to PyPI
+
+    try:
+        from build import ProjectBuilder
+    except ImportError:
+        print(f"Error: could not locate the 'build' package. Ensure that it is installed with `python3 -m pip install --upgrade build`")
+        return 1
+
+    builder = ProjectBuilder(out_dir)
+    dist_path = builder.build('wheel', out_dir / 'dist')
+
+    container_name = f'magelang-{mode}'
+    subprocess.run([ 'docker', 'build', '.', '-t', container_name ], cwd=out_dir, check=True)
+    subprocess.run([ 'docker', 'run', '--entrypoint', 'pytest', '-it', container_name, '--pyargs', 'magelang' ], check=True)
+    subprocess.run([ 'docker', 'run', '-it', container_name, 'help'  ], check=True)
+
     if not commit:
         return 0
 
@@ -195,20 +211,12 @@ def bump(
         return 0
 
     try:
-        from build import ProjectBuilder
-    except ImportError:
-        print(f"Error: could not locate the 'build' package. Ensure that it is installed with `python3 -m pip install --upgrade build`")
-        return 1
-
-    try:
         from twine.commands.upload import upload as twine_upload
         from twine.settings import Settings
     except ImportError:
         print(f"Error: could not locate the 'twine' package. Ensure that it is installed with `python3 -m pip install --upgrade twine`")
         return 1
 
-    builder = ProjectBuilder(out_dir)
-    dist_path = builder.build('wheel', out_dir / 'dist')
     repo_name = 'testpypi' if test_upload else 'pypi'
     twine_upload(Settings(repository_name=repo_name), [ dist_path ])
 
