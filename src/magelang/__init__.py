@@ -71,6 +71,7 @@ def generate_files(
             files['emitter.py'] = mage_to_python_emitter
         if enable_lexer:
             files['lexer.py'] = mage_to_python_lexer
+            files['test_lexer.py'] = mage_to_python_lexer_tests
         mage_to_target = compose(
             merge(distribute(files), pipeline(mage_to_treespec, distribute(trees))),
             each_value(python_to_text),
