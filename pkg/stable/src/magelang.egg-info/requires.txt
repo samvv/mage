@@ -1,0 +1,10 @@
+marko
+intervaltree
+
+[dev]
+check-manifest
+GitPython
+
+[test]
+pytest
+coverage
