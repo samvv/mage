@@ -164,14 +164,6 @@ class _Command:
         if arg is not None and arg.is_flag:
             return arg
 
-    def get_positional(self, index: int) -> _Argument | None:
-        k = 0
-        for i, arg in enumerate(self._pos_args):
-            assert(i == len(self._pos_args)-1 or arg.min_count == arg.max_count)
-            if index < k + arg.max_count:
-                return arg
-            k += arg.min_count
-
     def get_subcommand(self, name: str) -> '_Command | None':
         return self._subcommands.get(name)
 
@@ -395,7 +387,8 @@ def run(mod: ModuleType | str, name: str | None = None) -> int:
     cmd = prog
     args = Peek(sys.argv[1:])
     mapping: _ArgValues = {}
-    k = 0
+    pos_index = 0
+    pos_arg_count = 0
 
     # Process arguments one by one
     while True:
@@ -464,19 +457,24 @@ def run(mod: ModuleType | str, name: str | None = None) -> int:
             subcmd = cmd.get_subcommand(arg)
             if subcmd is not None:
                 cmd = subcmd
-                k = 0
+                pos_index = 0
+                pos_arg_count = 0
                 continue
 
             # If that fails, process it as a plain positional argument
-            arg_desc = cmd.get_positional(k)
-            if arg_desc is None:
-                raise UnknownArgError(arg)
 
-            value = _parse_value(arg, arg_desc.ty)
-
-            arg_desc.parse_callback(arg_desc.name, value, mapping)
-
-            k += 1
+            while True:
+                if pos_index >= len(cmd._pos_args):
+                    raise UnknownArgError(arg)
+                arg_desc = cmd._pos_args[pos_index]
+                if pos_arg_count >= arg_desc.max_count:
+                    pos_index += 1
+                    pos_arg_count = 0
+                    continue
+                value = _parse_value(arg, arg_desc.ty)
+                arg_desc.parse_callback(arg_desc.name, value, mapping)
+                pos_arg_count += 1
+                break
 
     # Build positional arguments and keyword arguments from the mapping
     posargs = []
