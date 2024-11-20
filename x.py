@@ -192,8 +192,10 @@ def bump(
         print(f"Error: could not locate the 'build' package. Ensure that it is installed with `python3 -m pip install --upgrade build`")
         return 1
 
+    dist_paths = []
     builder = ProjectBuilder(out_dir)
-    dist_path = builder.build('wheel', out_dir / 'dist')
+    dist_paths.append(builder.build('sdist', out_dir / 'dist'))
+    dist_paths.append(builder.build('wheel', out_dir / 'dist'))
 
     container_name = f'magelang-{mode}'
     subprocess.run([ 'docker', 'build', '.', '-t', container_name ], cwd=out_dir, check=True)
@@ -218,7 +220,7 @@ def bump(
         return 1
 
     repo_name = 'testpypi' if test_upload else 'pypi'
-    twine_upload(Settings(repository_name=repo_name), [ dist_path ])
+    twine_upload(Settings(repository_name=repo_name), dist_paths)
 
     return 0
 
