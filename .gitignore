@@ -14,5 +14,9 @@ Makefile
 # default output directory for Mage
 #output/
 
-# for uploading to PyPI
+# for building and uploading to PyPI
+build/
 dist/
+
+# do not track nightly builds as we dont use them
+/pkg/nightly/
