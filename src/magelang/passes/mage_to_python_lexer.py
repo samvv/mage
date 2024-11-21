@@ -16,6 +16,12 @@ def mage_to_python_lexer(
 
     generate_temporary = NameGenerator()
 
+    keywords = []
+    for rule in grammar.rules:
+        if rule.is_keyword:
+            assert(isinstance(rule.expr, MageLitExpr))
+            keywords.append((rule.name, rule.expr.text))
+
     def make_charset_predicate(element: CharSetElement, target: PyExpr) -> PyExpr:
         if isinstance(element, str):
             return PyInfixExpr(left=target, op=PyEqualsEquals(), right=PyConstExpr(literal=element))
@@ -71,9 +77,11 @@ def mage_to_python_lexer(
         """
 
         if expr.action is not None:
+
             rule = expr.action
-            old_success = success
+
             token_args = []
+
             if not grammar.is_static_token_rule(rule):
                 token_args.append(
                     PyCallExpr(
@@ -87,11 +95,29 @@ def mage_to_python_lexer(
                         ]
                     )
                 )
-            success = lambda: [
-                *old_success(),
-                PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), '_curr_offset'), value=PyNamedExpr(char_offset_name)),
-                PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(to_py_class_name(nonnull(rule).name, prefix)), args=token_args))
-            ]
+
+            old_success = success
+
+            def new_success() -> list[PyStmt]:
+                assert(rule is not None) # required because of a pyright limitation
+                out = old_success()
+                out.append(PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), '_curr_offset'), value=PyNamedExpr(char_offset_name)))
+                if rule.is_keyword_def:
+                    out.append(PyAssignStmt(
+                        PyNamedPattern('text'),
+                        value=PySubscriptExpr(
+                            PyAttrExpr(PyNamedExpr('self'), '_text'),
+                            slices=[ PyExprSlice(lower=PyNamedExpr('start'), upper=PyNamedExpr(char_offset_name)) ]
+                        )
+                    ))
+                    out.extend(make_py_cond(list((
+                        PyInfixExpr(PyNamedExpr('text'), PyEqualsEquals(), PyConstExpr(kw_text)),
+                        [ PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(to_py_class_name(kw_name, prefix)))) ]
+                    ) for kw_name, kw_text in keywords)))
+                out.append(PyRetStmt(expr=PyCallExpr(operator=PyNamedExpr(to_py_class_name(nonnull(rule).name, prefix)), args=token_args)))
+                return out
+
+            success = new_success
 
         if isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
