@@ -17,6 +17,7 @@ from .mage_to_python_lexer import *
 from .mage_to_python_lexer_tests import *
 from .mage_to_revolv_syntax_tree import *
 from .mage_to_treespec import *
+from .python_remove_pass_stmts import *
 from .python_to_text import *
 from .revolv_lift_assign_expr import *
 from .revolv_to_python import *
@@ -42,6 +43,7 @@ all_passes = {
     mage_to_python_lexer_tests,
     mage_to_revolv_syntax_tree,
     mage_to_treespec,
+    python_remove_pass_stmts,
     python_to_text,
     revolv_lift_assign_expr,
     revolv_to_python,

@@ -18,6 +18,9 @@ mage_prepare_grammar = pipeline(
     mage_extract_literals,
     mage_insert_magic_rules
 )
+python_optimise = pipeline(
+    python_remove_pass_stmts,
+)
 
 def load_grammar(filename: Path | str) -> MageGrammar:
     with open(filename, 'r') as f:
@@ -74,7 +77,7 @@ def generate_files(
             files['test_lexer.py'] = mage_to_python_lexer_tests
         mage_to_target = compose(
             merge(distribute(files), pipeline(mage_to_treespec, distribute(trees))),
-            each_value(python_to_text),
+            each_value(pipeline(python_optimise, python_to_text)),
         )
     elif engine == 'next':
         if lang == 'python':
