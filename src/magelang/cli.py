@@ -484,16 +484,16 @@ def run(mod: ModuleType | str, name: str | None = None) -> int:
     for name, value in mapping.items():
         arg_desc = cmd.get_argument(name)
         assert(arg_desc is not None)
-        if arg_desc.is_flag:
-            if arg_desc.is_rest_flags:
-                kwargs.update(value)
-            else:
-                kwargs[name] = value
-        else:
+        if arg_desc.is_positional:
             if arg_desc.is_rest_pos:
                 posargs.extend(value)
             else:
                 posargs.append(value)
+        else:
+            if arg_desc.is_rest_flags:
+                kwargs.update(value)
+            else:
+                kwargs[name] = value
 
     if cmd.callback is None:
         print('Command could not be executed. Perhaps you specified the wrong arguments?')
