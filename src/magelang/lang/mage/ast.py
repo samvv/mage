@@ -206,8 +206,12 @@ class MageCharSetExpr(MageExprBase):
             n += interval.end - interval.begin
         return n
 
-    def contains(self, ch: str) -> bool:
+    def contains_char(self, ch: str) -> bool:
         return self.tree.overlaps_point(ord(ch)) != self.invert
+
+    def contains_range(self, low: str, high: str) -> bool:
+        i = Interval(ord(low), ord(high)+1)
+        return any(ti.contains_interval(i) for ti in self.tree.overlap(i))
 
     @staticmethod
     def overlaps(a: 'MageCharSetExpr', b: 'MageCharSetExpr') -> bool:

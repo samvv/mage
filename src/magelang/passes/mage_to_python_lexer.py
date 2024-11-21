@@ -187,6 +187,9 @@ def mage_to_python_lexer(
 
             ch_name = generate_temporary(prefix='ch')
 
+            if expr.contains_range(chr(ASCII_MIN), chr(ASCII_MAX)):
+                return success()
+
             return [
                 PyAssignStmt(
                     pattern=PyNamedPattern(ch_name),

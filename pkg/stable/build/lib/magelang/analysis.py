@@ -130,9 +130,9 @@ def intersects(left: MageExpr, right: MageExpr, *, grammar: MageGrammar, default
         if isinstance(left, MageLitExpr) and isinstance(right, MageLitExpr):
             return left.text[-1] == right.text[0]
         if isinstance(left, MageLitExpr) and isinstance(right, MageCharSetExpr):
-            return right.contains(left.text[-1])
+            return right.contains_char(left.text[-1])
         if isinstance(left, MageCharSetExpr) and isinstance(right, MageLitExpr):
-            return left.contains(right.text[0])
+            return left.contains_char(right.text[0])
         if isinstance(left, MageCharSetExpr) and isinstance(right, MageCharSetExpr):
             return MageCharSetExpr.overlaps(left, right)
         print(left)

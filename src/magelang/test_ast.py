@@ -144,3 +144,24 @@ def test_charset_overlaps():
         MageCharSetExpr([ 'a', 'c', 'd' ]),
         MageCharSetExpr([ 'e' ], invert=True)
     ))
+
+def test_charset_contains_range():
+    e1 = MageCharSetExpr([ ('a', 'z') ])
+    assert(e1.contains_range('b', 'c'))
+    assert(e1.contains_range('b', 'b'))
+    assert(e1.contains_range('c', 'c'))
+    assert(e1.contains_range('y', 'y'))
+    assert(e1.contains_range('z', 'z'))
+    assert(e1.contains_range('a', 'b'))
+    assert(e1.contains_range('b', 'c'))
+    assert(e1.contains_range('y', 'z'))
+    assert(not e1.contains_range('0', '0'))
+    assert(not e1.contains_range('0', '1'))
+    assert(not e1.contains_range('0', '2'))
+    assert(not e1.contains_range('1', '2'))
+    e2 = MageCharSetExpr([ ('b', 'd') ])
+    assert(not e2.contains_range('a', 'b'))
+    assert(e2.contains_range('b', 'd'))
+    assert(e2.contains_range('c', 'c'))
+    assert(not e2.contains_range('c', 'e'))
+
