@@ -175,18 +175,21 @@ def mage_to_python_lexer(
             if expr.min == 0 and expr.max == 1:
                 return lex_visit_backtrack_on_fail(expr.expr, success)
 
+            matches_var_name = generate_temporary('matches')
+
             out: list[PyStmt] = []
 
-            out.append(PyAssignStmt(PyNamedPattern('matches'), value=PyNamedExpr('True')))
-            out.append(PyForStmt(
-                pattern=PyNamedPattern('_'),
-                expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
-                body=[
-                    *lex_visit(expr.expr, contin),
-                    PyAssignStmt(PyNamedPattern('matches'), value=PyNamedExpr('False')),
-                    PyBreakStmt(),
-                ]
-            ))
+            if expr.min > 0:
+                out.append(PyAssignStmt(PyNamedPattern(matches_var_name), value=PyNamedExpr('True')))
+                out.append(PyForStmt(
+                    pattern=PyNamedPattern('_'),
+                    expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
+                    body=[
+                        *lex_visit(expr.expr, contin),
+                        PyAssignStmt(PyNamedPattern(matches_var_name), value=PyNamedExpr('False')),
+                        PyBreakStmt(),
+                    ]
+                ))
 
             max_body = []
             assert(expr.max > 0)
@@ -206,7 +209,10 @@ def mage_to_python_lexer(
                 ))
             max_body.extend(success())
 
-            out.append(PyIfStmt(first=PyIfCase(test=PyNamedExpr('matches'), body=max_body)))
+            if expr.min > 0:
+                out.append(PyIfStmt(first=PyIfCase(test=PyNamedExpr(matches_var_name), body=max_body)))
+            else:
+                out.extend(max_body)
 
             return out
 
