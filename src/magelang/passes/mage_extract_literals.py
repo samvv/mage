@@ -7,6 +7,7 @@ from magelang.lang.mage.ast import *
 def mage_extract_literals(grammar: MageGrammar) -> MageGrammar:
 
     new_rules = []
+    new_literal_rules = []
 
     with open(Path(__file__).parent.parent / 'names.json', 'r') as f:
         names = json.load(f)
@@ -63,7 +64,7 @@ def mage_extract_literals(grammar: MageGrammar) -> MageGrammar:
         flags = PUBLIC | FORCE_TOKEN
         if name in keywords:
             flags |= FORCE_KEYWORD
-        new_rules.append(MageRule(comment=None, decorators=[], flags=flags, name=name, expr=MageLitExpr(literal), type_name=string_rule_type))
+        new_literal_rules.append(MageRule(flags=flags, name=name, expr=MageLitExpr(literal), type_name=string_rule_type))
 
-    return MageGrammar(new_rules)
+    return MageGrammar(new_literal_rules + new_rules)
 
