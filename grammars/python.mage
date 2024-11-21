@@ -108,8 +108,8 @@ char = any_char
 # "44870"
 # ```
 pub token string
-   = '"' char* '"'
-   | '\'' char* '\''
+   = '"' (!'"' char)* '"'
+   | '\'' (!'\'' char)* '\''
 
 # Patterns
 
