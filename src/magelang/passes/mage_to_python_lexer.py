@@ -239,7 +239,7 @@ def mage_to_python_lexer(
 
     choices = []
     for rule in grammar.rules:
-        if not rule.is_token or rule.expr is None:
+        if not rule.is_token or rule.expr is None or rule.is_keyword:
             continue
         rule.expr.action = rule
         choices.append(rule.expr)
