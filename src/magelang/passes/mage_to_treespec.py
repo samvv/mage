@@ -80,6 +80,8 @@ def mage_to_treespec(
         rename_duplicate_members(members)
         toplevel.append(NodeSpec(rule.name, members))
 
+    toplevel.sort(key=lambda spec: spec.name)
+
     # specs.add(VariantSpec(None, 'keyword', list((rule.name, TokenType(rule.name)) for rule in grammar.rules if rule.is_keyword)))
     # specs.add(VariantSpec(None, 'token', list((spec.name, TokenType(spec.name)) for spec in specs if isinstance(spec, TokenSpec))))
     # specs.add(VariantSpec(None, 'node', list((spec.name, NodeType(spec.name)) for spec in specs if isinstance(spec, NodeSpec))))
