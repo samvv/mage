@@ -30,6 +30,7 @@ def _generate_internal(name: str, prefix: str, force: bool) -> int:
         'python',
         prefix=prefix,
         enable_cst=True,
+        enable_lexer=True,
         # enable_ast=True,
     )
 
