@@ -59,7 +59,7 @@ def mage_to_python_lexer(
     def contin() -> list[PyStmt]: return [ PyContinueStmt() ]
 
     def lex_visit_backtrack_on_fail(expr: MageExpr, success: Callable[[], list[PyStmt]]) -> list[PyStmt]:
-        keep_name = generate_temporary(prefix='keep_')
+        keep_name = generate_temporary(prefix='keep')
         return [
             PyAssignStmt(PyNamedPattern(keep_name), value=PyNamedExpr(char_offset_name)),
             *lex_visit(expr, success),
@@ -100,8 +100,8 @@ def mage_to_python_lexer(
             return lex_visit(rule.expr, success)
 
         if isinstance(expr, MageLookaheadExpr):
-            keep_name = generate_temporary(prefix='keep_')
-            matches_name = generate_temporary(prefix='matches_')
+            keep_name = generate_temporary(prefix='keep')
+            matches_name = generate_temporary(prefix='matches')
             if expr.is_negated:
                 return [
                     PyAssignStmt(PyNamedPattern(keep_name), value=PyNamedExpr(char_offset_name)),
@@ -127,7 +127,7 @@ def mage_to_python_lexer(
             def next_char(k: int) -> list[PyStmt]:
                 if k == len(expr.text):
                     return success()
-                ch_name = generate_temporary(prefix='ch_')
+                ch_name = generate_temporary(prefix='ch')
                 ch = expr.text[k]
                 return [
                     PyAssignStmt(
@@ -159,7 +159,7 @@ def mage_to_python_lexer(
 
         if isinstance(expr, MageCharSetExpr):
 
-            ch_name = generate_temporary(prefix='ch_')
+            ch_name = generate_temporary(prefix='ch')
 
             return [
                 PyAssignStmt(
