@@ -222,7 +222,6 @@ class Parser:
 
     def parse_rule(self) -> MageRule:
         comment = self._parse_comment()
-        print(comment)
         decorators = []
         while True:
             t1 = self._peek_token()
@@ -244,7 +243,6 @@ class Parser:
             t1 = self._get_token()
         if not _is_ident(t1):
             raise ParseError(t1, [ TT_IDENT ])
-        print(t1.value)
         assert(isinstance(t1.value, str))
         t3 = self._peek_token()
         type_name = string_rule_type
