@@ -1,11 +1,7 @@
 
 from typing import assert_never
 
-from magelang.lang.treespec.ast import TokenSpec
-from magelang.lang.treespec.helpers import lookup_spec
-from magelang.passes.mage_to_treespec import mage_to_treespec
 from magelang.lang.python.cst import *
-from magelang.manager import apply, Context
 from magelang.lang.mage.ast import *
 from magelang.util import NameGenerator, nonnull
 from magelang.helpers import make_py_cond, make_py_or, extern_type_to_py_type, to_py_class_name
@@ -17,8 +13,6 @@ def mage_to_python_lexer(
 
     lexer_class_name = to_py_class_name('lexer', prefix)
     token_type_name = to_py_class_name('token', prefix)
-
-    specs = apply(Context({}), grammar, mage_to_treespec)
 
     generate_temporary = NameGenerator()
 
@@ -71,14 +65,12 @@ def mage_to_python_lexer(
         if expr.action is not None:
             rule = expr.action
             old_success = success
-            spec = lookup_spec(specs, rule.name)
-            assert(isinstance(spec, TokenSpec))
             token_args = []
-            if not spec.is_static:
+            if not grammar.is_static_token_rule(rule):
                 token_args.append(
                     PyCallExpr(
                         # PyNamedExpr(f'_parse_{to_snake_case(spec.field_type)}'),
-                        extern_type_to_py_type(spec.field_type),
+                        extern_type_to_py_type(rule.type_name),
                         args=[
                             PySubscriptExpr(
                                 PyAttrExpr(PyNamedExpr('self'), '_text'),
