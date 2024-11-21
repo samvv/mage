@@ -53,6 +53,7 @@ TT_QUEST    = TokenType(26)
 TT_AT       = TokenType(27)
 TT_TILDE    = TokenType(28)
 TT_RARROW   = TokenType(29)
+TT_COMMENT  = TokenType(30)
 
 EOF = '\uFFFF'
 
@@ -224,44 +225,38 @@ class Scanner:
         else:
             return c0
 
-    def _reset_comment(self) -> None:
-        self._comment = ''
-
-    def take_comment(self) -> str | None:
-        self._scan_whitespace_and_comments()
-        if self._last_comment_line != self.curr_pos.line-1:
-            return None
-        keep = self._comment
-        self._comment = ''
-        return keep
-
-    def _scan_whitespace_and_comments(self) -> None:
-        c0 = self._peek_char()
-        while True:
-            if c0 == '#':
-                self._get_char()
-                if self._last_comment_line != self.curr_pos.line-1:
-                    self._reset_comment()
-                self._last_comment_line = self.curr_pos.line
-                text = ''
-                while True:
-                    c1 = self._get_char()
-                    if c1 == '\n' or c1 == EOF:
-                        break
-                    text += c1
-                self._comment += text + '\n'
-                c0 = self._peek_char()
-                continue
-            if not is_space(c0):
-                break
-            self._get_char()
-            c0 = self._peek_char()
-
     def scan(self) -> Token:
 
-        self._scan_whitespace_and_comments()
+        comment = ''
+        comment_start_pos = None
+        comment_end_pos = None
+        while True:
+            c0 = self._peek_char()
+            if c0 == '#':
+                if comment_start_pos is None:
+                    comment_start_pos = self.curr_pos.clone()
+                self._get_char()
+                if comment_end_pos is not None and comment_end_pos.line != self.curr_pos.line-1:
+                    comment = ''
+                while True:
+                    c1 = self._peek_char()
+                    if c1 == '\n' or c1 == EOF:
+                        comment_end_pos = self.curr_pos.clone()
+                        self._get_char()
+                        break
+                    self._get_char()
+                    comment += c1
+                comment += '\n'
+                continue
+            if is_space(c0):
+                self._get_char()
+                continue
+            break
 
-        c0 = self._peek_char()
+        if comment:
+            assert(comment_start_pos is not None)
+            assert(comment_end_pos is not None)
+            return Token(TT_COMMENT, (comment_start_pos, comment_end_pos), comment)
 
         if c0 == EOF:
             return Token(TT_EOF, (self.curr_pos.clone(), self.curr_pos.clone()))

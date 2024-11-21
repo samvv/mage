@@ -27,15 +27,33 @@ class Parser:
         self.scanner = scanner
         self._token_buffer = deque()
 
-    def _get_token(self) -> Token:
+    def _get_token_with_comment(self) -> Token:
         if self._token_buffer:
             return self._token_buffer.popleft()
         return self.scanner.scan()
 
-    def _peek_token(self, offset=0) -> Token:
+    def _peek_token_with_comment(self, offset=0) -> Token:
         while len(self._token_buffer) <= offset:
             self._token_buffer.append(self.scanner.scan())
         return self._token_buffer[offset]
+
+    def _peek_token(self, offset = 0) -> Token:
+        i = 0
+        k = 0
+        while True:
+            t0 = self._peek_token_with_comment(i + k)
+            if t0.type == TT_COMMENT:
+                i += 1
+            elif k == offset:
+                return t0
+            else:
+                k += 1
+
+    def _get_token(self) -> Token:
+        while True:
+            t0 = self._get_token_with_comment()
+            if t0.type != TT_COMMENT:
+                return t0
 
     def _expect_token(self, expected: TokenType) -> Token:
         t0 = self._peek_token()
@@ -188,40 +206,56 @@ class Parser:
             return elements[0]
         return MageChoiceExpr(elements=elements)
 
+    def _parse_comment(self) -> str | None:
+        i = 0
+        comment = None
+        while True:
+            t0 = self._peek_token_with_comment(i)
+            if t0.type != TT_COMMENT:
+                token = t0
+                break
+            comment = t0
+            i += 1
+        if comment is None:
+            return None
+        return comment.value if comment.span[1].line == token.span[0].line-1 else None
+
     def parse_rule(self) -> MageRule:
-        comment = self.scanner.take_comment()
+        comment = self._parse_comment()
+        print(comment)
         decorators = []
         while True:
-            t0 = self._peek_token()
-            if t0.type != TT_AT:
+            t1 = self._peek_token()
+            if t1.type != TT_AT:
                 break
             self._get_token()
             name = token_to_string(self._get_ident())
             decorators.append(Decorator(name=name))
         flags = 0
-        t0 = self._get_token()
-        if t0.type == TT_PUB:
+        t1 = self._get_token()
+        if t1.type == TT_PUB:
             flags |= PUBLIC
-            t0 = self._get_token()
-        if t0.type == TT_EXTERN:
+            t1 = self._get_token()
+        if t1.type == TT_EXTERN:
             flags |= EXTERN
-            t0 = self._get_token()
-        if t0.type == TT_TOKEN:
+            t1 = self._get_token()
+        if t1.type == TT_TOKEN:
             flags |= FORCE_TOKEN
-            t0 = self._get_token()
-        if not _is_ident(t0):
-            raise ParseError(t0, [ TT_IDENT ])
-        assert(isinstance(t0.value, str))
+            t1 = self._get_token()
+        if not _is_ident(t1):
+            raise ParseError(t1, [ TT_IDENT ])
+        print(t1.value)
+        assert(isinstance(t1.value, str))
         t3 = self._peek_token()
         type_name = string_rule_type
         if t3.type == TT_RARROW:
             self._get_token()
             type_name = token_to_string(self._get_ident())
         if flags & EXTERN:
-            return MageRule(name=t0.value, expr=None, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
+            return MageRule(name=t1.value, expr=None, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
         self._expect_token(TT_EQUAL)
         expr = self.parse_expr()
-        return MageRule(name=t0.value, expr=expr, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
+        return MageRule(name=t1.value, expr=expr, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
 
     def parse_grammar(self) -> MageGrammar:
         elements = []
