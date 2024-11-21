@@ -61,6 +61,14 @@ def mage_to_python_lexer(
         ]
 
     def lex_visit(expr: MageExpr, success: Callable[[], list[PyStmt]]) -> list[PyStmt]:
+        """
+        Generate lexer logic for a specific Mage expression.
+
+        This function will return a body that on a successful lex will halt
+        control flow by either throwing an exception or returning. If the
+        returrned body let control continue, this implicitly means that lexing
+        failed and the surrounding logic is assumed to try the next token.
+        """
 
         if expr.action is not None:
             rule = expr.action
