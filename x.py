@@ -53,7 +53,7 @@ def _generate_internal(name: str, prefix: str, force: bool) -> int:
 
     return 0
 
-def generate(next: bool = False, force: bool = False) -> int:
+def generate(*, next: bool = False, force: bool = False) -> int:
     src_dir = project_root / ('src' if next else 'pkg/stable')
     sys.path.insert(0, str(src_dir))
     _generate_internal('mage', 'mage', force=force)
