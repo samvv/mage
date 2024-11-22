@@ -42,7 +42,7 @@ pub token integer -> Integer
   = [0-9]+
 
 hex_digit
-  = [0-9a-f]i+
+  = [0-9a-f]i
 
 escape_sequence
   = 'u' '{' hex_digit{4} '}'
