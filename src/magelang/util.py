@@ -89,9 +89,9 @@ class MiniSeq(Protocol[_T]):
     @overload
     def __getitem__(self, s: slice, /) -> list[_T]: ...
 
-_K = TypeVar('_K', bound=Eq)
+_Comparable = TypeVar('_Comparable', bound=Eq)
 
-def get_common_suffix(names: Sequence[MiniSeq[_K]]) -> MiniSeq[_K]:
+def get_common_suffix(names: Sequence[MiniSeq[_Comparable]]) -> MiniSeq[_Comparable]:
     i = 0
     name = names[0]
     while True:
