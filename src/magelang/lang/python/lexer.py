@@ -21,7 +21,7 @@ class PyLexer(AbstractLexer):
                 i += 1
                 while True:
                     keep_2 = i
-                    matches_2 = True
+                    matches_2 = False
                     keep_3 = i
                     keep_4 = i
                     ch_2 = self._char_at(i)
@@ -31,28 +31,30 @@ class PyLexer(AbstractLexer):
                         if ch_3 == '\n':
                             i += 1
                             i = keep_2
-                            matches_2 = False
+                            matches_2 = True
                     i = keep_4
                     keep_5 = i
                     ch_4 = self._char_at(i)
                     if ch_4 == '\n':
                         i += 1
                         i = keep_2
-                        matches_2 = False
+                        matches_2 = True
                     i = keep_5
                     i = keep_3
                     keep_6 = i
                     keep_7 = i
+                    matches_3 = False
+                    i += 1
+                    i = keep_7
                     matches_3 = True
                     i = keep_7
-                    matches_3 = False
-                    i = keep_7
-                    if matches_3:
+                    if not matches_3:
                         i = keep_2
-                        matches_2 = False
+                        matches_2 = True
                     i = keep_6
                     i = keep_2
-                    if matches_2:
+                    if not matches_2:
+                        i += 1
                         continue
                     break
                 continue
@@ -472,14 +474,15 @@ class PyLexer(AbstractLexer):
             i += 1
             while True:
                 keep_49 = i
-                matches_10 = True
+                matches_10 = False
                 ch_64 = self._char_at(i)
                 if ch_64 == '"':
                     i += 1
                     i = keep_49
-                    matches_10 = False
+                    matches_10 = True
                 i = keep_49
-                if matches_10:
+                if not matches_10:
+                    i += 1
                     continue
                 break
             ch_66 = self._char_at(i)
@@ -494,14 +497,15 @@ class PyLexer(AbstractLexer):
             i += 1
             while True:
                 keep_51 = i
-                matches_12 = True
+                matches_12 = False
                 ch_68 = self._char_at(i)
                 if ch_68 == "'":
                     i += 1
                     i = keep_51
-                    matches_12 = False
+                    matches_12 = True
                 i = keep_51
-                if matches_12:
+                if not matches_12:
+                    i += 1
                     continue
                 break
             ch_70 = self._char_at(i)
