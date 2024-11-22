@@ -201,10 +201,7 @@ class MageCharSetExpr(MageExprBase):
                 self.tree.addi(uc_range.begin+32, uc_range.end+32)
 
     def __len__(self) -> int:
-        n = 0
-        for interval in self.tree:
-            n += interval.end - interval.begin
-        return n
+        return sum(interval.end - interval.begin for interval in self.tree)
 
     def contains_char(self, ch: str) -> bool:
         return self.tree.overlaps_point(ord(ch)) != self.invert
