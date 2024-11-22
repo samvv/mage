@@ -3,7 +3,7 @@ from typing import assert_never
 
 from magelang.lang.python.cst import *
 from magelang.lang.mage.ast import *
-from magelang.util import NameGenerator, nonnull
+from magelang.util import NameGenerator, constant, nonnull
 from magelang.helpers import make_py_cond, make_py_or, extern_type_to_py_type, to_py_class_name
 
 def mage_to_python_lexer(
@@ -218,18 +218,6 @@ def mage_to_python_lexer(
 
             out: list[PyStmt] = []
 
-            if expr.min > 0:
-                out.append(PyAssignStmt(PyNamedPattern(matches_var_name), value=PyNamedExpr('True')))
-                out.append(PyForStmt(
-                    pattern=PyNamedPattern('_'),
-                    expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
-                    body=[
-                        *lex_visit(expr.expr, contin),
-                        PyAssignStmt(PyNamedPattern(matches_var_name), value=PyNamedExpr('False')),
-                        PyBreakStmt(),
-                    ]
-                ))
-
             max_body = []
             assert(expr.max > 0)
             if expr.max == POSINF:
@@ -237,7 +225,7 @@ def mage_to_python_lexer(
                     *lex_visit(expr.expr, contin),
                     PyBreakStmt(),
                 ]))
-            else:
+            elif expr.max > expr.min:
                 max_body.append(PyForStmt(
                     pattern=PyNamedPattern('_'),
                     expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.max - expr.min) ]),
@@ -248,10 +236,25 @@ def mage_to_python_lexer(
                 ))
             max_body.extend(success())
 
-            if expr.min > 0:
-                out.append(PyIfStmt(first=PyIfCase(test=PyNamedExpr(matches_var_name), body=max_body)))
-            else:
+            if expr.min == 0:
                 out.extend(max_body)
+            elif expr.min == 1:
+                out.extend([
+                    PyAssignStmt(PyNamedPattern(matches_var_name), value=PyNamedExpr('False')),
+                    *lex_visit(expr.expr, constant(max_body))
+                ])
+            else:
+                out.append(PyAssignStmt(PyNamedPattern(matches_var_name), value=PyNamedExpr('True')))
+                out.append(PyForStmt(
+                    pattern=PyNamedPattern('_'),
+                    expr=PyCallExpr(operator=PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
+                    body=[
+                        *lex_visit(expr.expr, contin),
+                        PyAssignStmt(PyNamedPattern(matches_var_name), value=PyNamedExpr('False')),
+                        PyBreakStmt(),
+                    ],
+                ))
+                out.append(PyIfStmt(first=PyIfCase(test=PyNamedExpr(matches_var_name), body=max_body)))
 
             return out
 
