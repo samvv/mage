@@ -149,6 +149,8 @@ class MageCharSetExpr(MageExprBase):
         self.invert = invert
         self.elements = []
         self.tree = IntervalTree()
+        if invert:
+            self.tree.addi(ASCII_MIN, ASCII_MAX+1)
         for element in elements:
             if isinstance(element, str):
                 self.add_char(element)
@@ -180,10 +182,16 @@ class MageCharSetExpr(MageExprBase):
             action = self.action
         return MageCharSetExpr(elements=elements, ci=ci, invert=invert, label=label, rules=rules, action=action)
 
+    def _add_to_tree(self, interval: Interval) -> None:
+        if self.invert:
+            self.tree.chop(interval.begin, interval.end)
+        else:
+            self.tree.add(interval)
+
     def add_char(self, ch: str) -> None:
         self.elements.append(ch)
         code = ord(ch)
-        self.tree.addi(code, code+1)
+        self._add_to_tree(Interval(code, code+1))
 
     def add_char_range(self, low: str, high: str) -> None:
         self.elements.append((low, high))
@@ -191,20 +199,20 @@ class MageCharSetExpr(MageExprBase):
             debug(f'Refused to index an invalid CharSetExpr element where low > high')
             return
         interval = Interval(ord(low), ord(high)+1)
-        self.tree.add(interval)
+        self._add_to_tree(interval)
         if self.ci:
             lc_range = intersect_interval(interval, _LOWERCASE)
             if lc_range is not None:
-                self.tree.addi(lc_range.begin-32, lc_range.end-32)
+                self._add_to_tree(Interval(lc_range.begin-32, lc_range.end-32))
             uc_range = intersect_interval(interval, _UPPERCASE)
             if uc_range is not None:
-                self.tree.addi(uc_range.begin+32, uc_range.end+32)
+                self._add_to_tree(Interval(uc_range.begin+32, uc_range.end+32))
 
     def __len__(self) -> int:
         return sum(interval.end - interval.begin for interval in self.tree)
 
     def contains_char(self, ch: str) -> bool:
-        return self.tree.overlaps_point(ord(ch)) != self.invert
+        return self.tree.overlaps_point(ord(ch))
 
     def contains_range(self, low: str, high: str) -> bool:
         i = Interval(ord(low), ord(high)+1)
@@ -212,9 +220,8 @@ class MageCharSetExpr(MageExprBase):
 
     @staticmethod
     def overlaps(a: 'MageCharSetExpr', b: 'MageCharSetExpr') -> bool:
-        invert = a.invert != b.invert
         for interval in b.tree:
-            if bool(a.tree.overlap(interval)) != invert:
+            if bool(a.tree.overlap(interval)):
                 return True
         return False
 
