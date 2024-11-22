@@ -131,13 +131,13 @@ def mage_to_python_lexer(
             if expr.is_negated:
                 return [
                     PyAssignStmt(PyNamedPattern(keep_name), value=PyNamedExpr(char_offset_name)),
-                    PyAssignStmt(PyNamedPattern(matches_name), value=PyNamedExpr('True')),
+                    PyAssignStmt(PyNamedPattern(matches_name), value=PyNamedExpr('False')),
                     *lex_visit(expr.expr, lambda: [
                         PyAssignStmt(PyNamedPattern(char_offset_name), value=PyNamedExpr(keep_name)),
-                        PyAssignStmt(PyNamedPattern(matches_name), value=PyNamedExpr('False'))
+                        PyAssignStmt(PyNamedPattern(matches_name), value=PyNamedExpr('True'))
                     ]),
                     PyAssignStmt(PyNamedPattern(char_offset_name), value=PyNamedExpr(keep_name)),
-                    *make_py_cond([ (PyNamedExpr(matches_name), success()) ])
+                    *make_py_cond([ (PyPrefixExpr(PyNotKeyword(), PyNamedExpr(matches_name)), success()) ])
                 ]
             return [
                 PyAssignStmt(PyNamedPattern(keep_name), value=PyNamedExpr(char_offset_name)),
