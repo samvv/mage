@@ -187,8 +187,13 @@ def mage_to_python_lexer(
 
             ch_name = generate_temporary(prefix='ch')
 
+            body = [
+                PyAugAssignStmt(PyNamedPattern(char_offset_name), PyPlus(), PyConstExpr(1)),
+                *success()
+            ]
+
             if expr.contains_range(chr(ASCII_MIN), chr(ASCII_MAX)):
-                return success()
+                return body
 
             return [
                 PyAssignStmt(
@@ -200,10 +205,7 @@ def mage_to_python_lexer(
                 ),
                 *make_py_cond([(
                     make_py_or(make_charset_predicate(element, PyNamedExpr(ch_name)) for element in expr.elements),
-                    [
-                        PyAugAssignStmt(PyNamedPattern(char_offset_name), PyPlus(), PyConstExpr(1)),
-                        *success()
-                    ]
+                    body
                 )]),
             ]
 
