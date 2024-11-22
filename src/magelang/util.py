@@ -4,11 +4,21 @@ from typing import Any, Callable, Generic, Iterator, Never, Protocol, Sequence, 
 import re
 
 
+_T = TypeVar('_T')
+_R = TypeVar('_R')
+
+
 def plural(name: str) -> str:
     return name if name.endswith('s') else f'{name}s'
 
 
 type Files = dict[str, str]
+
+
+def constant(value: _T) -> Callable[..., _T]:
+    def func(*args, **kwargs) -> _T:
+        return value
+    return func
 
 
 def is_iterator(value: Any) -> TypeGuard[Iterator[Any]]:
@@ -44,9 +54,6 @@ def panic(message: str) -> Never:
 def unreachable() -> Never:
     panic(f'Some code was executed that was not meant to be executed. This is a bug.')
 
-
-_T = TypeVar('_T')
-_R = TypeVar('_R')
 
 class Nothing:
     """
