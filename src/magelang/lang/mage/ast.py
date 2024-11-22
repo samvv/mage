@@ -7,7 +7,7 @@ make handling the AST a bit easier.
 
 import sys
 from functools import cache, lru_cache
-from typing import Any, Callable, Generator, TypeGuard, TypeIs, assert_never
+from typing import Any, Callable, Generator, Iterable, TypeGuard, TypeIs, assert_never
 from intervaltree import Interval, IntervalTree
 
 from magelang.logging import debug
@@ -217,6 +217,14 @@ class MageCharSetExpr(MageExprBase):
     def contains_range(self, low: str, high: str) -> bool:
         i = Interval(ord(low), ord(high)+1)
         return any(ti.contains_interval(i) for ti in self.tree.overlap(i))
+
+    @property
+    def canonical_elements(self) -> Iterable[CharSetElement]:
+        for interval in self.tree:
+            if interval.begin == interval.end-1:
+                yield chr(interval.begin)
+            else:
+                yield (chr(interval.begin), chr(interval.end-1))
 
     @staticmethod
     def overlaps(a: 'MageCharSetExpr', b: 'MageCharSetExpr') -> bool:

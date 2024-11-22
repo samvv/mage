@@ -204,7 +204,7 @@ def mage_to_python_lexer(
                     )
                 ),
                 *make_py_cond([(
-                    make_py_or(make_charset_predicate(element, PyNamedExpr(ch_name)) for element in expr.elements),
+                    make_py_or(make_charset_predicate(element, PyNamedExpr(ch_name)) for element in expr.canonical_elements),
                     body
                 )]),
             ]
