@@ -129,16 +129,16 @@ def test_charset_overlaps():
         MageCharSetExpr([ ('0','9') ], invert=True)
     ))
     assert(not MageCharSetExpr.overlaps(
-        MageCharSetExpr([ 'a', 'c', 'd' ]),
-        MageCharSetExpr([ 'a' ], invert=True)
+        MageCharSetExpr([ 'a' ]),
+        MageCharSetExpr([ 'a', 'c', 'd' ], invert=True)
     ))
     assert(not MageCharSetExpr.overlaps(
-        MageCharSetExpr([ 'a', 'c', 'd' ]),
-        MageCharSetExpr([ 'c' ], invert=True)
+        MageCharSetExpr([ 'c' ]),
+        MageCharSetExpr([ 'a', 'c', 'd' ], invert=True)
     ))
     assert(not MageCharSetExpr.overlaps(
-        MageCharSetExpr([ 'a', 'c', 'd' ]),
-        MageCharSetExpr([ 'd' ], invert=True)
+        MageCharSetExpr([ 'd' ]),
+        MageCharSetExpr([ 'a', 'c', 'd' ], invert=True)
     ))
     assert(MageCharSetExpr.overlaps(
         MageCharSetExpr([ 'a', 'c', 'd' ]),
