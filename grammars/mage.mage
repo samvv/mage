@@ -1,6 +1,6 @@
 
 @skip
-whitespace = [\n\r\t ]+
+whitespace = [\n\r\t ]*
 
 # Tokens
 
