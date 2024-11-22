@@ -2,10 +2,42 @@
 @skip
 whitespace = [\n\r\t ]+
 
+# Tokens
+
+# A name in the language.
+#
+# ```
+# foobar
+# ```
+#
+# ```
+# FooBar
+# ```
+#
+# ```
+# F2Bar
+# ```
 @keyword
 pub token ident
   = [a-z_]i [a-z0-9_]i*
 
+# An integral number.
+#
+# ```
+# 1
+# ```
+#
+# ```
+# 5
+# ```
+#
+# ```
+# 45
+# ```
+#
+# ```
+# 0
+# ```
 pub token integer -> Integer
   = [0-9]+
 
@@ -33,11 +65,55 @@ single_char
   = '\\' escape_sequence
   | ~[\]]
 
+# A single character in a character set expression.
+#
+# ```
+# a
+# ```
+#
+# ```
+# z
+# ```
+#
+# ```
+# _
+# ```
+#
+# ```
+# 0
+# ```
+#
+# ```
+# 9
+# ```
+#
+# ```
+# \x0A
+# ```
 pub token char
   = single_char
 
+# A string literal.
+#
+# ```
+# 'foo'
+# ```
+#
+# ```
+# 'Hello, world!'
+# ```
+#
+# ```
+# '$'
+# ```
+#
+# ```
+# '++'
+# ```
 pub token string
   = '\'' (!'\'' single_char)* '\''
+
+# Expressions
 
 pub expr
   = char_set_expr
