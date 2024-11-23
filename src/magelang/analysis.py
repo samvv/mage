@@ -64,10 +64,10 @@ def intersects(left: MageExpr, right: MageExpr, *, grammar: MageGrammar, default
     # before due to the deterministic, side-effect-free nature of the grammar.
     visited = set()
 
-    FALSE = 0 # Must be equal to int(False)
-    TRUE = 1 # Must be equal to int(True)
-    UNDEFINED = 2 # Returned when the algorithm couldn't calculate the requested property
-    SKIP_LEFT = 3 # Returned when the LHS does not parse/emit any characters
+    FALSE = 0      # Must be equal to int(False)
+    TRUE = 1       # Must be equal to int(True)
+    UNDEFINED = 2  # Returned when the algorithm couldn't calculate the requested property
+    SKIP_LEFT = 3  # Returned when the LHS does not parse/emit any characters
     SKIP_RIGHT = 4 # Reurned when the RHS does not parse/emit any characters
 
     def visit(left: MageExpr, right: MageExpr) -> int:
