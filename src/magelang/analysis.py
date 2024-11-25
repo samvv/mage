@@ -1,5 +1,5 @@
 
-from magelang.util import unreachable
+from magelang.util import nonnull, unreachable
 from magelang.lang.mage.ast import *
 
 # FIXME needs to be extensively tested
@@ -51,6 +51,112 @@ def can_be_empty(expr: MageExpr, *, grammar: MageGrammar) -> bool:
 
 def is_eof(expr: MageExpr) -> bool:
     return isinstance(expr, MageCharSetExpr) and len(expr) == 0
+
+
+Edge = str
+
+class Prefix:
+
+    def __init__(self, rules: list[MageRule] = []) -> None:
+        self.rules = rules
+        self._mapping = dict[Edge, Prefix]()
+
+    def add_rule(self, rule: MageRule) -> None:
+        self.rules.append(rule)
+
+    def __contains__(self, edge: Edge) -> bool:
+        return edge in self._mapping
+
+    def __getitem__(self, edge: Edge) -> 'Prefix':
+        return self._mapping[edge]
+
+    def __setitem__(self, edge: Edge, value: 'Prefix') -> None:
+        self._mapping[edge] = value
+
+def first_tokens(grammar: MageGrammar) -> list[MageRule]:
+
+    out = set()
+
+    def visit(expr: MageExpr):
+        assert(not isinstance(expr, MageLitExpr))
+        assert(not isinstance(expr, MageCharSetExpr))
+        if isinstance(expr, MageRefExpr):
+            rule = grammar.lookup(expr.name)
+            if rule is None or rule.expr is None:
+                return
+            if not rule.is_public:
+                visit(rule.expr)
+                return
+            if grammar.is_token_rule(rule):
+                out.add(rule.name)
+            return
+        if isinstance(expr, MageSeqExpr):
+            visit(expr.elements[0])
+            return
+        if isinstance(expr, MageChoiceExpr):
+            for element in expr.elements:
+                visit(element)
+            return
+        if isinstance(expr, MageRepeatExpr):
+            visit(expr.expr)
+            return
+        if isinstance(expr, MageListExpr):
+            visit(expr.element)
+            return
+        if isinstance(expr, MageHideExpr):
+            visit(expr.expr)
+            return
+        assert_never(expr)
+
+    for rule in grammar.rules:
+        if grammar.is_parse_rule(rule) and rule.expr is not None:
+            visit(rule.expr)
+
+    return list(nonnull(grammar.lookup(name)) for name in out)
+
+def overlapping_tokens(grammar: MageGrammar) -> list[list[MageRule]]:
+
+    main = set(rule.name for rule in grammar.rules if rule.is_token and not rule.is_keyword and rule.expr is not None)
+    print(main)
+    out = [ main ]
+
+    root_prefix = Prefix()
+
+    def split(rule: MageRule) -> None:
+        print('remove')
+        main.remove(rule.name)
+        out.append(set([ rule.name ]))
+
+    def populate(expr: MageExpr, owner: MageRule) -> None:
+        prefix = root_prefix
+        def visit(expr: MageExpr, last: bool) -> None:
+            nonlocal prefix
+            if isinstance(expr, MageRefExpr):
+                rule = grammar.lookup(expr.name)
+                if rule is not None and rule.expr is not None:
+                    visit(rule.expr, last)
+                return
+            if isinstance(expr, MageLitExpr):
+                for ch in expr.text:
+                    if ch in prefix:
+                        prefix = prefix[ch]
+                    else:
+                        new_prefix = Prefix()
+                        prefix[ch] = new_prefix
+                        prefix = new_prefix
+                if last:
+                    if prefix.rules:
+                        split(owner)
+                    prefix.add_rule(owner)
+                return
+        return visit(expr, True)
+
+    for rule in grammar.rules:
+        if rule.is_token and not rule.is_keyword and rule.expr is not None:
+            populate(rule.expr, rule)
+
+    print(out)
+    return list(list(nonnull(grammar.lookup(name)) for name in rules) for rules in out)
 
 def intersects(left: MageExpr, right: MageExpr, *, grammar: MageGrammar, default: bool = False) -> bool:
     """
