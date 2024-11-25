@@ -56,7 +56,7 @@ def mage_extract_prefixes(grammar: MageGrammar) -> MageGrammar:
             if isinstance(expr, MageRepeatExpr) \
                 or isinstance(expr, MageRefExpr):
                 return False
-            raise RuntimeError(f'unexpected {expr}')
+            assert_never(expr)
         if rule.expr is not None:
             visit(rule.expr, True)
 
