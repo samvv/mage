@@ -68,6 +68,10 @@ single_char
 # A single character in a character set expression.
 #
 # ```
+# $
+# ```
+#
+# ```
 # a
 # ```
 #
