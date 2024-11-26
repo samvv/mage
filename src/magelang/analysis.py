@@ -1,5 +1,9 @@
 
-from magelang.util import nonnull, unreachable
+from collections.abc import Iterator
+
+from sortedcontainers.sorteddict import KeysView
+from magelang.graph import Graph, dump_graph, strongconnect
+from magelang.util import unreachable
 from magelang.lang.mage.ast import *
 
 # FIXME needs to be extensively tested
@@ -50,93 +54,63 @@ def can_be_empty(expr: MageExpr, *, grammar: MageGrammar) -> bool:
     return visit(expr)
 
 def is_eof(expr: MageExpr) -> bool:
+    # FIXME What about !any_char?
+    # FIXME Why is this equivalent to MageLitExpr('') but the latter is not EOF?
     return isinstance(expr, MageCharSetExpr) and len(expr) == 0
 
 
-Edge = str
+Edge = tuple[str, str]
 
 class Prefix:
 
-    def __init__(self, rules: list[MageRule] = []) -> None:
-        self.rules = rules
-        self._mapping = dict[Edge, Prefix]()
+    def __init__(self, rules: list[MageRule] | None = None) -> None:
+        self.rules = rules if rules is not None else []
+        self._tree = IntervalTree()
 
     def add_rule(self, rule: MageRule) -> None:
         self.rules.append(rule)
 
-    def __contains__(self, edge: Edge) -> bool:
-        return edge in self._mapping
+    def __contains__(self, key: Edge | str) -> bool:
+        interval = Interval(ord(key), ord(key)+1) if isinstance(key, str) else key
+        return any(other.contains_interval(interval) for other in self._tree.overlap(interval))
 
-    def __getitem__(self, edge: Edge) -> 'Prefix':
-        return self._mapping[edge]
+    def __getitem__(self, ch: str | slice) -> 'Prefix':
+        if isinstance(ch, str):
+            interval = Interval(ord(ch), ord(ch)+1)
+        elif isinstance(ch, slice):
+            interval = Interval(ord(ch.start), ord(ch.stop)+1)
+        else:
+            raise KeyError(f'{edge} is not a valid prefix key')
+        result = self._tree.overlap(interval)
+        assert(len(result) == 1)
+        return next(iter(result)).data
 
-    def __setitem__(self, edge: Edge, value: 'Prefix') -> None:
-        self._mapping[edge] = value
+    def __setitem__(self, edge: str | slice, value: 'Prefix') -> None:
+        if isinstance(edge, str):
+            interval = Interval(ord(edge), ord(edge)+1, value)
+        elif isinstance(edge, slice):
+            interval = Interval(ord(edge.start), ord(edge.stop)+1, value)
+        else:
+            raise KeyError(f'{edge} is not a valid prefix key')
+        self._tree.add(interval)
 
-def first_tokens(grammar: MageGrammar) -> list[MageRule]:
+    def __iter__(self) -> Iterator[tuple[Edge, 'Prefix']]:
+        for interval in self._tree:
+            yield ((chr(interval.begin), chr(interval.end-1)), interval.data)
 
-    out = set()
 
-    def visit(expr: MageExpr):
-        assert(not isinstance(expr, MageLitExpr))
-        assert(not isinstance(expr, MageCharSetExpr))
-        if isinstance(expr, MageRefExpr):
-            rule = grammar.lookup(expr.name)
-            if rule is None or rule.expr is None:
-                return
-            if not rule.is_public:
-                visit(rule.expr)
-                return
-            if grammar.is_token_rule(rule):
-                out.add(rule.name)
-            return
-        if isinstance(expr, MageSeqExpr):
-            visit(expr.elements[0])
-            return
-        if isinstance(expr, MageChoiceExpr):
-            for element in expr.elements:
-                visit(element)
-            return
-        if isinstance(expr, MageRepeatExpr):
-            visit(expr.expr)
-            return
-        if isinstance(expr, MageListExpr):
-            visit(expr.element)
-            return
-        if isinstance(expr, MageHideExpr):
-            visit(expr.expr)
-            return
-        assert_never(expr)
-
-    for rule in grammar.rules:
-        if grammar.is_parse_rule(rule) and rule.expr is not None:
-            visit(rule.expr)
-
-    return list(nonnull(grammar.lookup(name)) for name in out)
-
-def overlapping_tokens(grammar: MageGrammar) -> list[list[MageRule]]:
-
-    main = set(rule.name for rule in grammar.rules if rule.is_token and not rule.is_keyword and rule.expr is not None)
-    print(main)
-    out = [ main ]
+def overlapping_tokens(grammar: MageGrammar) -> Generator[list[MageRule]]:
 
     root_prefix = Prefix()
 
-    def split(rule: MageRule) -> None:
-        print('remove')
-        main.remove(rule.name)
-        out.append(set([ rule.name ]))
-
     def populate(expr: MageExpr, owner: MageRule) -> None:
-        prefix = root_prefix
-        def visit(expr: MageExpr, last: bool) -> None:
-            nonlocal prefix
+        def visit(prefix: Prefix, expr: MageExpr, last: bool) -> list[Prefix]:
+            new_prefixes = []
             if isinstance(expr, MageRefExpr):
                 rule = grammar.lookup(expr.name)
                 if rule is not None and rule.expr is not None:
-                    visit(rule.expr, last)
-                return
-            if isinstance(expr, MageLitExpr):
+                    new_prefixes.extend(visit(prefix, rule.expr, last))
+            elif isinstance(expr, MageLitExpr):
                 for ch in expr.text:
                     if ch in prefix:
                         prefix = prefix[ch]
@@ -144,20 +118,98 @@ def overlapping_tokens(grammar: MageGrammar) -> list[list[MageRule]]:
                         new_prefix = Prefix()
                         prefix[ch] = new_prefix
                         prefix = new_prefix
-                if last:
-                    if prefix.rules:
-                        split(owner)
+            elif isinstance(expr, MageCharSetExpr):
+                for element in expr.canonical_elements:
+                    if isinstance(element, tuple):
+                        low, high = element
+                    else:
+                        low = element
+                        high = element
+                    new_prefix = Prefix()
+                    prefix[low:high] = new_prefix
+            elif isinstance(expr, MageRepeatExpr):
+                if expr.min == 0:
+                    new_prefixes.append(prefix)
+                new_prefixes.extend(visit(prefix, expr.expr, last))
+            else:
+                assert_never(expr)
+            new_prefixes.append(prefix)
+            if last:
+                for prefix in new_prefixes:
                     prefix.add_rule(owner)
-                return
-        return visit(expr, True)
+            return new_prefixes
+        visit(root_prefix, expr, True)
 
     for rule in grammar.rules:
         if rule.is_token and not rule.is_keyword and rule.expr is not None:
             populate(rule.expr, rule)
 
-    print(out)
-    return list(list(nonnull(grammar.lookup(name)) for name in rules) for rules in out)
+    def visit(prefix: Prefix) -> Generator[list[MageRule]]:
+        if prefix.rules:
+            yield prefix.rules
+        for _, child in prefix:
+            yield from visit(child)
 
+    return visit(root_prefix)
+
+    # # TODO It might be possible to cleverly optimise this
+    # graph = Graph[str]()
+    # rules = list(rule for rule in grammar.rules if grammar.is_token_rule(rule) and not rule.is_keyword)
+    # for src, dst in permutations(rules, 2):
+    #     graph.add_edge(src.name, dst.name)
+    # def visit(prefix: Prefix) -> None:
+    #     for src, dst in permutations(prefix.rules, 2):
+    #         graph.remove_edge(src.name, dst.name)
+    #     for _, child in prefix:
+    #         visit(child)
+    # visit(root_prefix)
+
+    # return list(list(nonnull(grammar.lookup(name)) for name in scc) for scc in strongconnect(graph))
+
+def issub(left: IntervalTree, right: IntervalTree) -> bool:
+    return all(right.contains_interval(interval) for interval in left)
+
+@lru_cache
+def do_match(pattern: MageExpr, expr: MageExpr, *, grammar: MageGrammar) -> bool:
+
+    def empty(): return MageLitExpr('')
+
+    def consume(pattern: MageExpr, expr: MageExpr) -> MageExpr | None:
+        if isinstance(pattern, MageLitExpr) and isinstance(expr, MageLitExpr):
+            n = len(pattern.text)
+            m = len(expr.text)
+            for i in range(0, min(n, m)):
+                ch_0 = pattern.text[i]
+                ch_1 = expr.text[i]
+                if ch_0 != ch_1:
+                    return None
+            return expr.derive(text=expr.text[n:]) if n < m else empty()
+        if isinstance(pattern, MageCharSetExpr) and isinstance(expr, MageCharSetExpr):
+            print('----')
+            print(expr.tree)
+            print(pattern.tree)
+            print(expr.tree - pattern.tree)
+            print(pattern.tree - expr.tree)
+            return empty() if issub else None
+        if isinstance(pattern, MageCharSetExpr) and isinstance(expr, MageLitExpr):
+            if len(expr.text) == 0:
+                return None
+            if not pattern.contains_char(expr.text[0]):
+                return empty()
+            return expr.derive(text=expr.text[1:])
+        if isinstance(pattern, MageSeqExpr):
+            result = expr
+            for element in pattern.elements:
+                result = consume(element, expr)
+                if result is None:
+                    return None
+            return result
+        assert_never(pattern)
+        assert_never(expr)
+
+    return bool(consume(pattern, expr))
+
+@lru_cache
 def intersects(left: MageExpr, right: MageExpr, *, grammar: MageGrammar, default: bool = False) -> bool:
     """
     Check whether the suffix of the first expression, when randomly generated,
