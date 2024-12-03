@@ -1,6 +1,75 @@
 
-from magelang.analysis import do_match, overlapping_tokens
+from magelang.analysis import get_lexer_modes, envelops, is_subset
 from magelang.lang.mage.ast import *
+
+
+def test_is_subset_consecutive():
+    t1 = IntervalTree()
+    t1.addi(1, 2)
+    t1.addi(2, 3)
+    t1.addi(3, 4)
+    t1.addi(6, 7)
+    t2 = IntervalTree()
+    t2.addi(1, 10)
+    t3 = IntervalTree()
+    t3.addi(1, 4)
+    assert(is_subset(t1, t2))
+    assert(not is_subset(t2, t1))
+    assert(is_subset(t1, t1))
+    assert(is_subset(t2, t2))
+    assert(is_subset(t3, t3))
+    assert(is_subset(t3, t1))
+    assert(is_subset(t3, t2))
+    assert(not is_subset(t1, t3))
+
+
+def test_envelops_str_str():
+    e1 = MageLitExpr('foo')
+    e2 = MageLitExpr('bar')
+    e3 = MageLitExpr('fo')
+    e4 = MageLitExpr('fob')
+    e5 = MageLitExpr('foo')
+    assert(not envelops(e1, e2))
+    assert(not envelops(e2, e1))
+    assert(envelops(e1, e3))
+    assert(not envelops(e3, e1))
+    assert(not envelops(e3, e4))
+    assert(envelops(e4, e3))
+    assert(envelops(e1, e1))
+    assert(envelops(e2, e2))
+    assert(envelops(e3, e3))
+    assert(envelops(e4, e4))
+    assert(envelops(e5, e5))
+    assert(envelops(e1, e5))
+
+
+def test_envelops_repeat():
+    e0 = MageRepeatExpr(MageLitExpr('a'), 2, 3)
+    e2 = MageLitExpr('a')
+    e3 = MageLitExpr('aa')
+    e4 = MageLitExpr('aaa')
+    e5 = MageLitExpr('aaaa')
+    assert(not envelops(e0, e2))
+    assert(not envelops(e2, e0))
+    assert(envelops(e0, e3))
+    assert(not envelops(e3, e0))
+    assert(envelops(e0, e4))
+    assert(envelops(e4, e0))
+    assert(not envelops(e0, e5))
+    assert(envelops(e5, e0))
+
+
+def test_envelops_charset_charset():
+    e1 = MageCharSetExpr([ ('a', 'a'), ('0', '9') ])
+    e2 = MageCharSetExpr([ ('a', 'z'), ('0', '9') ])
+    e3 = MageCharSetExpr([ ('$', '$') ])
+    assert(not envelops(e1, e2))
+    assert(envelops(e2, e1))
+    assert(not envelops(e1, e3))
+    assert(not envelops(e2, e3))
+    assert(not envelops(e3, e1))
+    assert(not envelops(e1, e3))
+
 
 def test_overlapping_tokens_str_str():
     r1 = MageRule('foo', flags=FORCE_TOKEN, expr=MageLitExpr('foo'))
@@ -8,43 +77,15 @@ def test_overlapping_tokens_str_str():
     r3 = MageRule('baz', flags=FORCE_TOKEN, expr=MageLitExpr('foo'))
     r4 = MageRule('bax', flags=FORCE_TOKEN, expr=MageLitExpr('bla'))
     r5 = MageRule('baa', flags=FORCE_TOKEN, expr=MageLitExpr('hello'))
-    res = list(overlapping_tokens(MageGrammar([ r1, r2, r3, r4, r5 ])))
-    assert(len(res) == 3)
+    modes = get_lexer_modes(MageGrammar([ r1, r2, r3, r4, r5 ]))
+    assert(modes['foo'] != modes['bar'] != modes['bax'])
+    assert(modes['bax'] == modes['baa'])
 
 
 def test_overlapping_tokens_str_repeat_charset():
     r1 = MageRule('foo', flags=FORCE_TOKEN, expr=MageLitExpr('foo'))
     r2 = MageRule('bax', flags=FORCE_TOKEN, expr=MageRepeatExpr(MageCharSetExpr([ ('a', 'z') ]), 0, POSINF))
     r3 = MageRule('bar', flags=FORCE_TOKEN, expr=MageLitExpr('bar'))
-    res = overlapping_tokens(MageGrammar([ r1, r2, r3 ]))
-    print(list(list(r.name for r in scc) for scc in res))
-    assert(False)
+    res = get_lexer_modes(MageGrammar([ r1, r2, r3 ]))
     assert(len(res) == 3)
-
-
-def test_envelops_lit_lit():
-    r1 = MageRule('foo', MageLitExpr('foo'))
-    r2 = MageRule('bar', MageLitExpr('foo'))
-    r3 = MageRule('bax', MageLitExpr('hello'))
-    g = MageGrammar([ r1, r2, r3 ])
-    assert(do_match(r1.expr, r2.expr, grammar=g))
-    assert(do_match(r2.expr, r1.expr, grammar=g))
-    assert(not do_match(r1.expr, r3.expr, grammar=g))
-    assert(not do_match(r2.expr, r3.expr, grammar=g))
-    assert(not do_match(r3.expr, r1.expr, grammar=g))
-    assert(not do_match(r1.expr, r3.expr, grammar=g))
-
-
-def test_envelops_charset_charset():
-    r1 = MageRule('foo', MageCharSetExpr([ ('a', 'a'), ('0', '9') ]))
-    r2 = MageRule('bar', MageCharSetExpr([ ('a', 'z'), ('0', '9') ]))
-    r3 = MageRule('bax', MageCharSetExpr([ ('$', '$') ]))
-    g = MageGrammar([ r1, r2, r3 ])
-    assert(not do_match(r1.expr, r2.expr, grammar=g))
-    assert(do_match(r2.expr, r1.expr, grammar=g))
-    assert(not do_match(r1.expr, r3.expr, grammar=g))
-    assert(not do_match(r2.expr, r3.expr, grammar=g))
-    assert(not do_match(r3.expr, r1.expr, grammar=g))
-    assert(not do_match(r1.expr, r3.expr, grammar=g))
-
 
