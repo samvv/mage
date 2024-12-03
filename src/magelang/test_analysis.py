@@ -86,6 +86,9 @@ def test_overlapping_tokens_str_repeat_charset():
     r1 = MageRule('foo', flags=FORCE_TOKEN, expr=MageLitExpr('foo'))
     r2 = MageRule('bax', flags=FORCE_TOKEN, expr=MageRepeatExpr(MageCharSetExpr([ ('a', 'z') ]), 0, POSINF))
     r3 = MageRule('bar', flags=FORCE_TOKEN, expr=MageLitExpr('bar'))
-    res = get_lexer_modes(MageGrammar([ r1, r2, r3 ]))
-    assert(len(res) == 3)
-
+    r4 = MageRule('bla', flags=FORCE_TOKEN, expr=MageLitExpr('a'))
+    modes = get_lexer_modes(MageGrammar([ r1, r2, r3, r4 ]))
+    assert(len(modes) == 4)
+    assert(modes['bar'] == modes['foo'])
+    assert(modes['bar'] != modes['bax'])
+    # TODO Assert which mode 'bla' must be
