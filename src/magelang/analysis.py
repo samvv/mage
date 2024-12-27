@@ -2,7 +2,8 @@
 from dataclasses import dataclass
 from itertools import permutations
 
-from magelang.util import nonnull, unreachable
+from magelang.logging import warn
+from magelang.util import SeqSet, nonnull, unreachable
 from magelang.lang.mage.ast import *
 
 
@@ -287,6 +288,8 @@ def envelops(left: MageExpr, right: MageExpr, *, grammar: MageGrammar | None = N
     """
     Check that whatever token `right` accepts is also always accepted by `left`.
 
+    Mathematically, this could somewhat be written as `left >= right`.
+
     `grammar` is only needed when other rules are being referenced.
     """
 
@@ -323,38 +326,30 @@ def envelops(left: MageExpr, right: MageExpr, *, grammar: MageGrammar | None = N
 
 def get_lexer_modes(grammar: MageGrammar) -> dict[str, int]:
 
-    out = dict[str, int]()
-    count = 1
+    modes = dict[str, int]()
 
-    def unique_mode() -> int:
-        nonlocal count
-        keep = count
-        count += 1
-        return keep
-
-    all_token_rules = []
-
+    token_rules = SeqSet[MageRule]()
     for rule in grammar.rules:
         if grammar.is_token_rule(rule):
-            all_token_rules.append(rule)
-            out[rule.name] = 0
+            token_rules.append(rule)
+            modes[rule.name] = 0
 
-    curr: list[list[MageRule]] = [ all_token_rules ]
-    next: list[list[MageRule]] = []
-    while curr:
-        for l in curr:
-            next_mode = unique_mode()
-            for rule_a, rule_b in permutations(l, 2):
-                smaller = []
-                mode_a = out[rule_a.name]
-                mode_b = out[rule_b.name]
-                if mode_a == mode_b and envelops(nonnull(rule_a.expr), nonnull(rule_b.expr), grammar=grammar):
-                    smaller.append(rule_b)
-                    out[rule_b.name] = next_mode
-                if smaller:
-                    next.append(smaller)
-        curr = next
-        next = []
+    next_token_rules = SeqSet[MageRule]()
+    while True:
+        n = len(token_rules)
+        for i in range(0, n):
+            rule_a = token_rules[i]
+            match = False
+            for k in range(i+1, n):
+                rule_b = token_rules[k]
+                if envelops(nonnull(rule_a.expr), nonnull(rule_b.expr), grammar=grammar):
+                    match = True
+            if match:
+                next_token_rules.append(rule_a)
+                modes[rule_a.name] += 1
+        if not next_token_rules:
+            break
+        token_rules = next_token_rules
+        next_token_rules = SeqSet[MageRule]()
 
-    return out
-
+    return modes

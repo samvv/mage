@@ -72,23 +72,28 @@ def test_envelops_charset_charset():
 
 
 def test_overlapping_tokens_str_str():
-    r1 = MageRule('foo', flags=FORCE_TOKEN, expr=MageLitExpr('foo'))
-    r2 = MageRule('bar', flags=FORCE_TOKEN, expr=MageLitExpr('foo'))
-    r3 = MageRule('baz', flags=FORCE_TOKEN, expr=MageLitExpr('foo'))
-    r4 = MageRule('bax', flags=FORCE_TOKEN, expr=MageLitExpr('bla'))
+    r1 = MageRule('foo', flags=FORCE_TOKEN, expr=MageLitExpr('foobar'))
+    r2 = MageRule('bax', flags=FORCE_TOKEN, expr=MageLitExpr('foo'))
+    r3 = MageRule('bar', flags=FORCE_TOKEN, expr=MageLitExpr('foobar'))
+    r4 = MageRule('baz', flags=FORCE_TOKEN, expr=MageLitExpr('foobar'))
     r5 = MageRule('baa', flags=FORCE_TOKEN, expr=MageLitExpr('hello'))
     modes = get_lexer_modes(MageGrammar([ r1, r2, r3, r4, r5 ]))
-    assert(modes['foo'] != modes['bar'] != modes['bax'])
     assert(modes['bax'] == modes['baa'])
+    assert(modes['baz'] == modes['bax'])
+    assert(modes['foo'] != modes['bar'])
+    assert(modes['foo'] != modes['baz'])
+    assert(modes['foo'] != modes['bax'])
+    assert(modes['bar'] != modes['baz'])
+    assert(modes['bar'] != modes['bax'])
 
 
 def test_overlapping_tokens_str_repeat_charset():
-    r1 = MageRule('foo', flags=FORCE_TOKEN, expr=MageLitExpr('foo'))
+    r1 = MageRule('foo', flags=FORCE_TOKEN, expr=MageLitExpr('@@@'))
     r2 = MageRule('bax', flags=FORCE_TOKEN, expr=MageRepeatExpr(MageCharSetExpr([ ('a', 'z') ]), 0, POSINF))
     r3 = MageRule('bar', flags=FORCE_TOKEN, expr=MageLitExpr('bar'))
     r4 = MageRule('bla', flags=FORCE_TOKEN, expr=MageLitExpr('a'))
     modes = get_lexer_modes(MageGrammar([ r1, r2, r3, r4 ]))
     assert(len(modes) == 4)
     assert(modes['bar'] == modes['foo'])
+    assert(modes['bar'] == modes['bla'])
     assert(modes['bar'] != modes['bax'])
-    # TODO Assert which mode 'bla' must be

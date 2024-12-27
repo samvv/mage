@@ -1,7 +1,10 @@
 
+from collections.abc import Iterable
 import io
 from typing import Any, Callable, Generic, Iterator, Never, Protocol, Sequence, SupportsIndex, TextIO, TypeGuard, TypeIs, TypeVar, overload
 import re
+
+from magelang.logging import warn
 
 
 _T = TypeVar('_T')
@@ -252,5 +255,34 @@ class DropProxy(Sequence[_T]):
             if key >= max_index:
                 raise IndexError(f'index {key} out of bounds')
             return self._elements[key]
+
+
+class SeqSet[T]:
+
+    def __init__(self, iter: Iterable[T] | None = None) -> None:
+        if iter is None:
+            iter = []
+        self._list = list(iter)
+        self._set = set(iter)
+
+    def append(self, element: T) -> None:
+        if element not in self._set:
+            self._list.append(element)
+            self._set.add(element)
+
+    def __len__(self) -> int:
+        return len(self._list)
+
+    def __iter__(self) -> Iterator[T]:
+        return iter(self._list)
+
+    @overload
+    def __getitem__(self, key: int) -> T: ...
+
+    @overload
+    def __getitem__(self, key: slice) -> list[T]: ...
+
+    def __getitem__(self, key: int | slice) -> T | list[T]:
+        return self._list[key]
 
 
