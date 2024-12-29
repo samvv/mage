@@ -112,7 +112,7 @@ pub token int -> Integer
 ```
 
 The conversion from the value to the type depends on which type is actually used.
-For example, the following table is used when targetting Python :
+For example, the following table is used when targeting Python:
 
 | Mage Type | Python Type | Code           |
 |-----------|-------------|----------------|
