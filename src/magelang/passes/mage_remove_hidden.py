@@ -8,17 +8,14 @@ def mage_remove_hidden(grammar: MageGrammar) -> MageGrammar:
     Use simplify() to actually eliminate these empty sequences.
     """
 
-    def filter_expr(expr: MageExpr) -> MageExpr:
+    def rewrite_expr(expr: MageExpr) -> MageExpr:
         if isinstance(expr, MageHideExpr):
             return MageSeqExpr([])
-        return rewrite_each_child_expr(expr, filter_expr)
+        return rewrite_each_child_expr(expr, rewrite_expr)
 
-    new_rules = list[MageRule]()
-
-    for rule in grammar.rules:
+    def rewrite_rule(rule: MageRule) -> MageRule:
         if rule.expr is None:
-            new_rules.append(rule)
-        else:
-            new_rules.append(rule.derive(expr=filter_expr(rule.expr)))
+            return rule
+        return rule.derive(expr=rewrite_expr(rule.expr))
 
-    return MageGrammar(new_rules)
+    return rewrite_each_rule(grammar, rewrite_rule)

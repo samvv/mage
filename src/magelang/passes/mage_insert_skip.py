@@ -1,5 +1,5 @@
 
-from magelang.lang.mage.ast import MageExpr, MageGrammar, MageRefExpr, MageSeqExpr, rewrite_each_child_expr
+from magelang.lang.mage.ast import MageExpr, MageGrammar, MageRefExpr, MageRule, MageSeqExpr, rewrite_each_child_expr, rewrite_each_rule
 
 def mage_insert_skip(grammar: MageGrammar) -> MageGrammar:
 
@@ -30,13 +30,9 @@ def mage_insert_skip(grammar: MageGrammar) -> MageGrammar:
 
         return rewrite_each_child_expr(expr, rewrite_expr)
 
-    new_rules = []
-
-    for rule in grammar.rules:
+    def rewrite_rule(rule: MageRule) -> MageRule:
         if rule.expr is None:
-            new_rule = rule
-        else:
-            new_rule = rule.derive(expr=rewrite_expr(rule.expr))
-        new_rules.append(new_rule)
+            return rule
+        return rule.derive(expr=rewrite_expr(rule.expr))
 
-    return MageGrammar(rules=new_rules)
+    return rewrite_each_rule(grammar, rewrite_rule)

@@ -33,8 +33,10 @@ def mage_check_token_no_parse(grammar: MageGrammar) -> MageGrammar:
             return references_pub_rule(expr.expr)
         assert_never(expr)
 
-    for rule in grammar.rules:
+    def visit_rule(rule: MageRule) -> None:
         if grammar.is_token_rule(rule) and rule.expr is not None and references_pub_rule(rule.expr):
             error(f"token rule '{rule.name}' references another rule marked with 'pub'.")
+
+    for_each_rule(grammar, visit_rule)
 
     return grammar

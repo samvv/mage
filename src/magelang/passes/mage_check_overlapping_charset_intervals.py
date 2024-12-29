@@ -10,7 +10,7 @@ def _pretty(low, high) -> str:
 
 def mage_check_overlapping_charset_intervals(grammar: MageGrammar) -> MageGrammar:
 
-    def visit(expr: MageExpr) -> None:
+    def visit_expr(expr: MageExpr) -> None:
 
         if isinstance(expr, MageCharSetExpr):
             tree = IntervalTree()
@@ -29,10 +29,12 @@ def mage_check_overlapping_charset_intervals(grammar: MageGrammar) -> MageGramma
                     tree.add(i)
             return
 
-        for_each_expr(expr, visit)
+        for_each_expr(expr, visit_expr)
 
-    for rule in grammar.rules:
-        if rule.expr is not None:
-            visit(rule.expr)
+    def visit_rule(element: MageRule) -> None:
+        if element.expr is not None:
+            visit_expr(element.expr)
+
+    for_each_rule(grammar, visit_rule)
 
     return grammar

@@ -147,7 +147,7 @@ def mage_to_python_emitter(
                     body = list(gen_emit_expr(element, target, skip))
                     if body:
                         cases.append((
-                            treespec_type_to_shallow_py_test(infer_type(element, grammar), target, prefix),
+                            treespec_type_to_shallow_py_test(infer_type(element, grammar), target, prefix=prefix, specs=specs),
                             body
                         ))
                 yield from make_py_cond(cases)
@@ -203,7 +203,7 @@ def mage_to_python_emitter(
         PyNonlocalStmt([ out_name ]),
     ]
 
-    for rule in grammar.rules:
+    for rule in grammar.elements:
 
         if grammar.is_token_rule(rule):
             if rule.expr is None:

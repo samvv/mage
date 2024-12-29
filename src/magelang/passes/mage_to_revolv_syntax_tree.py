@@ -567,7 +567,7 @@ class mage_to_revolv_syntax_tree(PassBase):
 
             return visit(expr, None)
 
-        for rule in grammar.rules:
+        for rule in grammar.elements:
             if grammar.is_token_rule(rule):
                 name_param_value = 'value'
                 name_field_value = 'value'

@@ -25,7 +25,7 @@ def emit(node: MageNode) -> str:
     def visit(node: MageNode) -> None:
 
         if isinstance(node, MageGrammar):
-            for rule in node.rules:
+            for rule in node.elements:
                 visit(rule)
             return
 

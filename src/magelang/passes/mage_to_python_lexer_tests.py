@@ -25,7 +25,7 @@ def mage_to_python_lexer_tests(
 
     generate_temporary = NameGenerator()
 
-    for rule in grammar.rules:
+    for rule in grammar.elements:
         if not grammar.is_token_rule(rule) or rule.comment is None:
             continue
         this_class_name = to_py_class_name(rule.name, prefix)

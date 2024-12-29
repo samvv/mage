@@ -2,6 +2,7 @@
 from typing import assert_never, cast
 
 from magelang.lang.mage.ast import *
+from magelang.logging import warn
 
 type Edge = str
 
@@ -24,9 +25,11 @@ class Prefix:
 Prefixes = dict[Edge, Prefix];
 
 # FIXME make this transform target all ChoiceExpr
+# FIXME Nested modules are not transformed
 def mage_extract_prefixes(grammar: MageGrammar) -> MageGrammar:
 
     global_prefixes = Prefixes()
+    other = list[MageModuleElement]()
 
     def populate(rule: MageRule) -> None:
         prefixes = global_prefixes
@@ -70,8 +73,11 @@ def mage_extract_prefixes(grammar: MageGrammar) -> MageGrammar:
             if i < len(expr.text):
                 return expr.text[i]
 
-    for rule in grammar.rules:
-        populate(rule)
+    for element in grammar.elements:
+        if isinstance(element, MageRule) and grammar.is_token_rule(element):
+            populate(element)
+            continue
+        other.append(element)
 
     def build_expr(edge: Edge) -> MageExpr:
         if isinstance(edge, str):
@@ -90,8 +96,9 @@ def mage_extract_prefixes(grammar: MageGrammar) -> MageGrammar:
                 seq_elements.append(generate(data.prefixes))
             # seq_elements.append(ChoiceExpr(choice_elements))
             expr = MageSeqExpr(elements=seq_elements)
-            expr.actions = data.rules
+            for rule in data.rules:
+                expr.actions.append(ReturnAction(rule))
             elements.append(expr)
         return MageChoiceExpr(elements=elements)
 
-    return MageGrammar([ MageRule(flags=PUBLIC | FORCE_TOKEN, name='$token', expr=generate(global_prefixes))])
+    return grammar.derive(elements=[ MageRule(flags=PUBLIC | FORCE_TOKEN, name='$token', expr=generate(global_prefixes)), *other ])

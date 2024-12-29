@@ -11,9 +11,8 @@ def mage_add_prefix(grammar: MageGrammar, prefix: str) -> MageGrammar:
             return expr.derive(name=rename(expr.name))
         return rewrite_each_child_expr(expr, rewrite_expr)
 
-    def visit_rule(rule: MageRule) -> MageRule:
+    def rewrite_rule(rule: MageRule) -> MageRule:
         expr = rewrite_expr(rule.expr) if rule.expr is not None else None
-        return MageRule(comment=rule.comment, decorators=rule.decorators, flags=rule.flags, name=rename(rule.name), type_name=rule.type_name, expr=expr)
+        return rule.derive(name=rename(rule.name), expr=expr)
 
-    return MageGrammar(rules=list(visit_rule(rule) for rule in grammar.rules))
-
+    return rewrite_each_rule(grammar, rewrite_rule)

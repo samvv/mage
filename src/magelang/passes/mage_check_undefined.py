@@ -1,18 +1,20 @@
 
 from magelang.logging import error
-from magelang.lang.mage.ast import MageGrammar, MageRefExpr, MageExpr, for_each_expr
+from magelang.lang.mage.ast import MageGrammar, MageRefExpr, MageExpr, MageRule, for_each_expr, for_each_rule
 
 def mage_check_undefined(grammar: MageGrammar) -> MageGrammar:
 
-    def traverse(expr: MageExpr) -> None:
+    def visit_expr(expr: MageExpr) -> None:
         if isinstance(expr, MageRefExpr):
             if grammar.lookup(expr.name) is None:
                 error(f"undefined rule referenced: {expr.name}")
             return
-        for_each_expr(expr, traverse)
+        for_each_expr(expr, visit_expr)
 
-    for rule in grammar.rules:
+    def visit_rule(rule: MageRule) -> None:
         if rule.expr is not None:
-            traverse(rule.expr)
+            visit_expr(rule.expr)
+
+    for_each_rule(grammar, visit_rule)
 
     return grammar

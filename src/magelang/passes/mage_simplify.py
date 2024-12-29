@@ -1,5 +1,6 @@
 
 from magelang.lang.mage.ast import *
+from magelang.logging import warn
 
 def mage_simplify(grammar: MageGrammar) -> MageGrammar:
 
@@ -157,15 +158,12 @@ def mage_simplify(grammar: MageGrammar) -> MageGrammar:
 
         assert_never(expr)
 
-    new_rules = []
-    for rule in grammar.rules:
+    def rewrite_rule(rule: MageRule) -> MageRule:
         if rule.is_extern:
-            new_rules.append(rule)
-            continue
+            return rule
         assert(rule.expr is not None)
         # FIXME not sure why this call to flatten is necessary for good output
         new_expr = flatten(visit(rule.expr))
-        new_rules.append(rule.derive(expr=new_expr))
+        return rule.derive(expr=new_expr)
 
-    return MageGrammar(rules=new_rules)
-
+    return rewrite_each_rule(grammar, rewrite_rule)
