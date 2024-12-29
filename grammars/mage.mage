@@ -61,10 +61,6 @@ escaped_ascii_char
   | '\''
   | '"'
 
-single_char
-  = '\\' escape_sequence
-  | ~[\]]
-
 # A single character in a character set expression.
 #
 # ```
@@ -94,8 +90,9 @@ single_char
 # ```
 # \x0A
 # ```
-pub token char
-  = single_char
+single_char
+  = '\\' escape_sequence
+  | ~[\]]
 
 # A string literal.
 #
@@ -116,6 +113,9 @@ pub token char
 # ```
 pub token string
   = '\'' (!'\'' single_char)* '\''
+
+pub token char_sets
+  = '[' elements:(single_char | single_char '-' single_char)* ']'
 
 # Expressions
 
@@ -140,7 +140,7 @@ pub ref_expr
   = name:ident
 
 pub char_set_expr
-  = '~'? '[' elements:(char | char '-' char)* ']' 'i'?
+  = '~'? char_sets 'i'?
 
 pub seq_expr
   = elements:expr{2,}
