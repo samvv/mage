@@ -263,7 +263,7 @@ In what follows, `Node` is the name of an arbitrary CST node (such as
 of such a node. Examples of field names are `expr`, `return_keyword`, `min`,
 `max,`, and so on.
 
-### Node(...)
+### `Node(...)`
 
 Construct a node with the fields specified in the `...` part of the expression.
 
@@ -304,7 +304,7 @@ stmt = PyReturnStmt(expr=PyConstExpr(42))
 assert(isinstance(stmt.return_keyword, ReturnKeyword()))
 ```
 
-### Node.count_foos() -> int
+### `Node.count_foos() -> int`
 
 This member is generated when there was a repetition in field `foo` such
 as the Mage expression `'.'+`
