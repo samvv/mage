@@ -199,7 +199,11 @@ class AbstractLexer:
         k = self._curr_offset + offset
         return self._text[k] if k < len(self._text) else EOF
 
+    def skip(self) -> None:
+        pass
+
     def at_eof(self) -> bool:
+        self.skip()
         return self._curr_offset >= len(self._text)
 
     def _get_char(self) -> str:
