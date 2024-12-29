@@ -76,9 +76,8 @@ def mage_to_python_lexer(
         failed and the surrounding logic is assumed to try the next token.
         """
 
-        if expr.action is not None:
-
-            rule = expr.action
+        rule = expr.returns
+        if rule is not None:
 
             token_args = []
 
@@ -281,7 +280,7 @@ def mage_to_python_lexer(
     for rule in grammar.rules:
         if not rule.is_token or rule.expr is None or rule.is_keyword:
             continue
-        rule.expr.action = rule
+        rule.expr.actions.append(ReturnAction(rule))
         choices.append(rule.expr)
 
     body.extend(lex_visit(MageChoiceExpr(choices), noop))

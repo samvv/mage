@@ -90,7 +90,7 @@ def mage_extract_prefixes(grammar: MageGrammar) -> MageGrammar:
                 seq_elements.append(generate(data.prefixes))
             # seq_elements.append(ChoiceExpr(choice_elements))
             expr = MageSeqExpr(elements=seq_elements)
-            expr.rules = data.rules
+            expr.actions = data.rules
             elements.append(expr)
         return MageChoiceExpr(elements=elements)
 

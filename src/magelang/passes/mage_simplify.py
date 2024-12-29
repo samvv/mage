@@ -6,8 +6,8 @@ def mage_simplify(grammar: MageGrammar) -> MageGrammar:
     def make_fail() -> MageExpr:
         return MageChoiceExpr([])
 
-    def make_empty(rules: list[MageRule] | None = None) -> MageExpr:
-        return MageSeqExpr([], rules=rules)
+    def make_empty(actions: list[Action] | None = None) -> MageExpr:
+        return MageSeqExpr([], actions=actions)
 
     def is_fail(expr: MageExpr) -> bool:
         return isinstance(expr, MageChoiceExpr) and expr.elements == 0
@@ -40,7 +40,7 @@ def mage_simplify(grammar: MageGrammar) -> MageGrammar:
 
         if isinstance(expr, MageLitExpr):
             if not expr.text:
-                return make_empty(expr.rules)
+                return make_empty(expr.actions)
             return expr
 
         if isinstance(expr, MageChoiceExpr):
@@ -51,7 +51,7 @@ def mage_simplify(grammar: MageGrammar) -> MageGrammar:
                 if is_fail(new_element):
                     continue
                 if is_empty(new_element):
-                    empty_rules.extend(new_element.rules)
+                    empty_rules.extend(new_element.actions)
                     has_empty = True
                     continue
                 new_elements.append(new_element)
@@ -60,7 +60,7 @@ def mage_simplify(grammar: MageGrammar) -> MageGrammar:
             if not new_elements:
                 return make_fail()
             if len(new_elements) == 1:
-                new_elements[0].rules.extend(expr.rules)
+                new_elements[0].rules.extend(expr.actions)
                 return new_elements[0]
             return expr.derive(elements=new_elements)
 
@@ -79,7 +79,7 @@ def mage_simplify(grammar: MageGrammar) -> MageGrammar:
             if not new_elements:
                 return make_empty()
             if len(new_elements) == 1:
-                new_elements[0].rules.extend(expr.rules)
+                new_elements[0].rules.extend(expr.actions)
                 return new_elements[0]
             return expr.derive(elements=new_elements)
 
