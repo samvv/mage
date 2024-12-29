@@ -37,8 +37,8 @@ def mage_to_python_lexer_tests(
                 body: list[PyStmt] = [
                     PyAssignStmt(PyNamedPattern('lexer'), value=PyCallExpr(PyNamedExpr(lexer_class_name), args=[ PyConstExpr(input) ])),
                     PyAssignStmt(PyNamedPattern(f't{i}'), value=PyCallExpr(PyAttrExpr(PyNamedExpr('lexer'), 'lex'))),
-                    PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ PyCallExpr(PyAttrExpr(PyNamedExpr('lexer'), 'at_eof')) ])),
                     PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ make_py_isinstance(PyNamedExpr(f't{i}'), PyNamedExpr(this_class_name)) ])),
+                    PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ PyCallExpr(PyAttrExpr(PyNamedExpr('lexer'), 'at_eof')) ])),
                 ]
                 i += 1
                 stmts.append(PyFuncDef(
