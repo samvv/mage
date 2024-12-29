@@ -94,12 +94,30 @@ Defines a new lexing rule that is defined somewhere else, possibly in a differen
 Like `pub <name> = <expr>` but forces the rule to be a token.
 
 Mage will show an error when the rule could not be converted to a token rule.
-This usually means that the rule references another rule that is `pub`.
+This usually means that the rule references another rule that is only `pub`.
 
 ```
-pub token float_expression
+pub token float
   = digits? '.' digits
 ```
+
+### `pub token <name> -> <type_expr> = <expr>`
+
+Like `pub token <name> = <expr>` but forces the value inside the token to be of
+the specific type defined by `type_expr`.
+
+```
+pub token int -> Integer
+  = digits
+```
+
+The conversion from the value to the type depends on which type is actually used.
+For example, the following table is used when targetting Python :
+
+| Mage Type | Python Type | Code           |
+|-----------|-------------|----------------|
+| Integer   | `int`       | `int(value)`   |
+| Float     | `float`     | `float(value)` |
 
 ### `expr1 expr2`
 
