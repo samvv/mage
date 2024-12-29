@@ -35,5 +35,8 @@ Source = "https://github.com/samvv/mage/"
 [project.scripts]
 mage = "magelang:main"
 
-[tool.setuptools.package-data]
-sample = [ "*.dat",]
+# [tool.setuptools.package-data]
+# sample = [ "*.dat",]
+
+[tool.pyright]
+include = [ "src", "output/python" ]
