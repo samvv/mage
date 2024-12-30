@@ -7,6 +7,7 @@ from .mage_check_token_no_parse import *
 from .mage_check_undefined import *
 from .mage_extract_literals import *
 from .mage_extract_prefixes import *
+from .mage_flatten_grammars import *
 from .mage_inline import *
 from .mage_insert_magic_rules import *
 from .mage_insert_skip import *
@@ -33,6 +34,7 @@ all_passes = {
     mage_check_undefined,
     mage_extract_literals,
     mage_extract_prefixes,
+    mage_flatten_grammars,
     mage_inline,
     mage_insert_magic_rules,
     mage_insert_skip,
