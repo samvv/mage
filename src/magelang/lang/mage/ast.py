@@ -87,10 +87,13 @@ class MageRefExpr(MageExprBase):
     def __init__(
         self,
         name: str,
+        module_path: list[str] | None = None,
         label: str | None = None,
         actions: list['Action'] | None = None,
     ) -> None:
         super().__init__(label, actions)
+        if module_path is None:
+            module_path = []
         self.name = name
 
     def derive(
@@ -636,20 +639,24 @@ class MageModule(MageModuleBase):
         self,
         name: str,
         elements: 'list[MageRule | MageModule]',
+        flags: int = 0
     ) -> None:
         super().__init__(elements)
         self.name = name
+        self.flags = flags
 
     @property
     def main_rule(self) -> 'MageModuleElement | None':
         if self.elements:
             return self.elements[-1]
 
-    def derive(self, name: str | None = None, elements: list[MageModuleElement] | None = None) -> 'MageModule':
+    def derive(self, name: str | None = None, elements: list[MageModuleElement] | None = None, flags: int | None = None) -> 'MageModule':
         if name is None:
             name = self.name
         if elements is None:
             elements = self.elements
+        if flags is None:
+            flags = self.flags
         return MageModule(name=name, elements=elements)
 
 class MageGrammar(MageModuleBase):

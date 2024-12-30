@@ -114,8 +114,11 @@ single_char
 pub token string
   = '\'' (!'\'' single_char)* '\''
 
-pub token char_sets
-  = '[' elements:(single_char | single_char '-' single_char)* ']'
+mod CharSet {
+  pub range = single_char '-' single_char
+  pub char = single_char
+  pub element = range | char
+}
 
 # Expressions
 
@@ -140,7 +143,7 @@ pub ref_expr
   = name:ident
 
 pub char_set_expr
-  = '~'? char_sets 'i'?
+  = '~'? '[' CharSet.element* ']' 'i'?
 
 pub seq_expr
   = elements:expr{2,}

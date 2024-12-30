@@ -88,8 +88,19 @@ class Parser:
             expr = self.parse_expr()
             self._expect_token(TT_RPAREN)
         elif _is_ident(t2):
+            name = token_to_string(t2)
+            module_path = []
             self._get_token()
-            expr = MageRefExpr(name=token_to_string(t2))
+            while True:
+                t3 = self._peek_token(0)
+                t4 = self._peek_token(1)
+                if t3.type != TT_DOT or t4.type != TT_IDENT:
+                    break
+                self._get_token()
+                self._get_token()
+                module_path.append(name)
+                name = token_to_string(t4)
+            expr = MageRefExpr(name=name, module_path=module_path)
         elif t2.type == TT_STR:
             self._get_token()
             assert(isinstance(t2.value, str))
@@ -175,19 +186,22 @@ class Parser:
         expr.label = label
         return expr
 
-    def _lookahead_is_rule(self) -> bool:
-            t0 = self._peek_token(0)
-            t1 = self._peek_token(1)
-            t2 = self._peek_token(2)
-            return t0.type in [ TT_PUB, TT_EXTERN, TT_AT ] \
-                   or t1.type == TT_EQUAL \
-                   or t0.type == TT_TOKEN and t2.type == TT_EQUAL
+    def _lookahead_is_module_element(self) -> bool:
+        kw = self._peek_token_after_modifiers()
+        if kw.type in [ TT_MOD ]:
+            return True
+        t0 = self._peek_token(0)
+        t1 = self._peek_token(1)
+        t2 = self._peek_token(2)
+        return t0.type in [ TT_PUB, TT_EXTERN, TT_AT ] \
+               or t1.type == TT_EQUAL \
+               or t0.type == TT_TOKEN and t2.type == TT_EQUAL
 
     def _parse_expr_sequence(self) -> MageExpr:
         elements = [ self._parse_expr_with_suffixes() ]
         while True:
             t0 = self._peek_token(0)
-            if self._lookahead_is_rule() or t0.type in [ TT_EOF, TT_VBAR, TT_RPAREN ]:
+            if self._lookahead_is_module_element() or t0.type in [ TT_EOF, TT_VBAR, TT_RPAREN, TT_RBRACE ]:
                 break
             elements.append(self._parse_expr_with_suffixes())
         if len(elements) == 1:
@@ -255,12 +269,44 @@ class Parser:
         expr = self.parse_expr()
         return MageRule(name=t1.value, expr=expr, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
 
-    def parse_grammar(self) -> MageGrammar:
+    def _peek_token_after_modifiers(self) -> Token:
+        i = 0
+        while True:
+            t0 = self._peek_token(i)
+            if t0.type not in [ TT_PUB, TT_EXTERN ]:
+                return t0
+            i += 1
+
+    def parse_module(self) -> MageModule:
+        t0 = self._peek_token()
+        flags = 0
+        if t0.type == TT_PUB:
+            self._get_token()
+            flags |= PUBLIC
+        self._expect_token(TT_MOD)
+        name = cast(str, self._expect_token(TT_IDENT).value)
+        self._expect_token(TT_LBRACE)
+        elements = self._parse_elements()
+        self._expect_token(TT_RBRACE)
+        print(elements)
+        return MageModule(name=name, elements=elements)
+
+    def parse_element(self) -> MageModuleElement:
+        t0 = self._peek_token_after_modifiers()
+        if t0.type == TT_MOD:
+            return self.parse_module()
+        else:
+            return self.parse_rule()
+
+    def _parse_elements(self) -> list[MageModuleElement]:
         elements = []
         while True:
             t0 = self._peek_token()
-            if t0.type == TT_EOF:
+            if t0.type == TT_EOF or t0.type == TT_RBRACE:
                 break
-            elements.append(self.parse_rule())
-        return MageGrammar(elements)
+            elements.append(self.parse_element())
+        return elements
+
+    def parse_grammar(self) -> MageGrammar:
+        return MageGrammar(self._parse_elements())
 

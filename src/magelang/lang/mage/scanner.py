@@ -54,6 +54,8 @@ TT_AT       = TokenType(27)
 TT_TILDE    = TokenType(28)
 TT_RARROW   = TokenType(29)
 TT_COMMENT  = TokenType(30)
+TT_MOD      = TokenType(31)
+TT_DOT      = TokenType(32)
 
 EOF = '\uFFFF'
 
@@ -64,7 +66,7 @@ _operator_regex = re.compile(r'[<>~+\-*%&!?\\]')
 def is_operator_part(ch) -> bool:
     return _operator_regex.match(ch) is not None
 
-_delimiter_to_token_type = {
+_simple_tokens = {
     '(': TT_LPAREN,
     ')': TT_RPAREN,
     #'[': TT_LBRACKET,
@@ -77,6 +79,7 @@ _delimiter_to_token_type = {
     '|': TT_VBAR,
     ':': TT_COLON,
     '@': TT_AT,
+    '.': TT_DOT,
     }
 
 _operator_to_token_type = {
@@ -95,6 +98,7 @@ _keyword_to_token_type = {
     'pub': TT_PUB,
     'token': TT_TOKEN,
     'extern': TT_EXTERN,
+    'mod': TT_MOD,
     }
 
 _ascii_escape_chars = {
@@ -140,6 +144,8 @@ token_type_descriptions = {
     TT_AT: "'@'",
     TT_TILDE: "'~'",
     TT_RARROW: "'->'",
+    TT_MOD: "'mod'",
+    TT_DOT: '.',
     }
 
 def token_to_string(token: Token) -> str:
@@ -287,11 +293,11 @@ class Scanner:
             end_pos = self.curr_pos.clone()
             return Token(TT_STR, (start_pos, end_pos), text)
 
-        if c0 in _delimiter_to_token_type:
+        if c0 in _simple_tokens:
             start_pos = self.curr_pos.clone()
             self._get_char()
             end_pos = self.curr_pos.clone()
-            return Token(_delimiter_to_token_type[c0], (start_pos, end_pos))
+            return Token(_simple_tokens[c0], (start_pos, end_pos))
 
         if c0 == '%':
             start_pos = self.curr_pos.clone()
