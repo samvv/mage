@@ -11,14 +11,15 @@ from functools import lru_cache
 from typing import Any, Callable, Generator, Iterable, TypeIs, TypeVar, assert_never, cast
 from intervaltree import Interval, IntervalTree
 
-from magelang.logging import debug
+from magelang.lang.mage.cst import MageRuleParent
+from magelang.logging import debug, warn
 
 from .constants import string_rule_type
 
 ASCII_MIN = 0x00
 ASCII_MAX = 0x7F
 
-class MageNode:
+class MageNodeBase:
     pass
 
 
@@ -38,17 +39,19 @@ type Action = ReturnAction | SetModeAction
 type MageExpr = MageLitExpr | MageRefExpr | MageCharSetExpr | MageLookaheadExpr | MageChoiceExpr | MageSeqExpr | MageHideExpr | MageListExpr | MageRepeatExpr
 
 
-class MageExprBase(MageNode):
+class MageExprBase(MageNodeBase):
 
     def __init__(
         self,
         label: str | None = None,
         actions: list['Action'] | None = None,
+        parent: 'MageExpr | MageRule | None' = None
     ) -> None:
         if actions is None:
             actions = []
         self.label = label
         self.actions = actions
+        self.parent = parent
 
     @property
     def returns(self) -> 'MageRule | None':
@@ -420,7 +423,7 @@ class MageRepeatExpr(MageExprBase):
         return MageRepeatExpr(expr=expr, min=min, max=max, label=label, actions=actions)
 
 
-class Decorator(MageNode):
+class Decorator(MageNodeBase):
 
     def __init__(self, name: str, args: list[str | int] | None = None) -> None:
         super().__init__()
@@ -436,7 +439,7 @@ FORCE_TOKEN   = 4
 FORCE_KEYWORD = 8
 
 
-class MageRule(MageNode):
+class MageRule(MageNodeBase):
 
     def __init__(
         self,
@@ -523,13 +526,14 @@ class MageRule(MageNode):
 type MageModuleElement = MageRule | MageModule
 
 
-class MageModuleBase(MageNode):
+class MageModuleBase(MageNodeBase):
 
-    def __init__(self, elements: 'list[MageModuleElement] | None' = None) -> None:
+    def __init__(self, elements: 'list[MageModuleElement] | None' = None, parent: 'MageGrammar | MageModule | None' = None) -> None:
         super().__init__()
         if elements is None:
             elements = []
         self.elements = elements
+        self.parent = parent
         self._rules_by_name = dict[str, 'MageRule']()
         for element in elements:
             if isinstance(element, MageRule):
@@ -639,25 +643,26 @@ class MageModule(MageModuleBase):
         self,
         name: str,
         elements: 'list[MageRule | MageModule]',
-        flags: int = 0
+        flags: int = 0,
+        parent: 'MageModule | MageGrammar | None' = None
     ) -> None:
-        super().__init__(elements)
+        super().__init__(elements, parent)
         self.name = name
         self.flags = flags
 
-    @property
-    def main_rule(self) -> 'MageModuleElement | None':
-        if self.elements:
-            return self.elements[-1]
-
-    def derive(self, name: str | None = None, elements: list[MageModuleElement] | None = None, flags: int | None = None) -> 'MageModule':
+    def derive(
+        self,
+        name: str | None = None,
+        elements: list[MageModuleElement] | None = None,
+        flags: int | None = None,
+    ) -> 'MageModule':
         if name is None:
             name = self.name
         if elements is None:
             elements = self.elements
         if flags is None:
             flags = self.flags
-        return MageModule(name=name, elements=elements)
+        return MageModule(name=name, elements=elements, parent=None)
 
 class MageGrammar(MageModuleBase):
 
@@ -666,10 +671,10 @@ class MageGrammar(MageModuleBase):
             elements = self.elements
         return MageGrammar(elements)
 
-type MageSyntax = MageExpr | MageRule | MageGrammar
+type MageSyntax = MageExpr | MageRule | MageGrammar | MageModule
 
 def is_mage_syntax(value: Any) -> TypeIs[MageSyntax]:
-    return isinstance(value, MageNode)
+    return isinstance(value, MageNodeBase)
 
 def rewrite_each_child_expr(expr: MageExpr, proc: Callable[[MageExpr], MageExpr]) -> MageExpr:
     """
@@ -765,6 +770,26 @@ def for_each_rule(node: MageGrammar | MageModule, proc: Callable[[MageRule], Non
             for_each_rule(element, proc)
         else:
             assert_never(element)
+
+def is_expr(node: MageSyntax) -> TypeIs[MageExpr]:
+    return isinstance(node, MageExprBase)
+
+def for_each_node(node: MageSyntax, proc: Callable[[MageSyntax], None]) -> None:
+    if isinstance(node, MageGrammar) or isinstance(node, MageModule):
+        for element in node.elements:
+            if isinstance(element, MageModule):
+                for_each_node(element, proc)
+    elif isinstance(node, MageRule):
+        if node.expr is not None:
+            for_each_expr(node.expr, lambda child: set_parents(child, node))
+    elif is_expr(node):
+        for_each_expr(node, proc)
+    else:
+        assert_never(node)
+
+def set_parents(node: MageSyntax, parent: 'MageSyntax | None' = None) -> None:
+    node.parent = parent # type: ignore
+    for_each_node(node, lambda child: set_parents(child, node))
 
 def static_expr_to_str(expr: MageExpr) -> str:
     if isinstance(expr, MageLitExpr):

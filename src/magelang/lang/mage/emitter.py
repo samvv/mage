@@ -12,7 +12,7 @@ def escape(ch: str) -> str:
         return f'\\x{code:02X}'
     return f'\\u{code:04x}'
 
-def emit(node: MageNode) -> str:
+def emit(node: MageSyntax) -> str:
 
     string = StringIO()
     out = IndentWriter(string)
@@ -22,7 +22,7 @@ def emit(node: MageNode) -> str:
             return len(expr.elements) > 1 or any(is_wide(element) for element in expr.elements)
         return False
 
-    def visit(node: MageNode) -> None:
+    def visit(node: MageSyntax) -> None:
 
         if isinstance(node, MageGrammar):
             for rule in node.elements:
