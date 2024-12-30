@@ -288,7 +288,6 @@ class Parser:
         self._expect_token(TT_LBRACE)
         elements = self._parse_elements()
         self._expect_token(TT_RBRACE)
-        print(elements)
         return MageModule(name=name, elements=elements)
 
     def parse_element(self) -> MageModuleElement:
