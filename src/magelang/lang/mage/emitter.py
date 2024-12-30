@@ -29,6 +29,17 @@ def emit(node: MageSyntax) -> str:
                 visit(rule)
             return
 
+        if isinstance(node, MageModule):
+            out.write('mod ')
+            out.write(node.name)
+            out.write(' {\n')
+            out.indent()
+            for element in node.elements:
+                visit(element)
+            out.dedent()
+            out.write('}\n')
+            return
+
         if isinstance(node, MageRule):
             if node.is_public:
                 out.write('pub ')
