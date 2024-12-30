@@ -329,7 +329,7 @@ def get_lexer_modes(grammar: MageGrammar) -> dict[str, int]:
     modes = dict[str, int]()
 
     token_rules = SeqSet[MageRule]()
-    for rule in grammar.rules:
+    for rule in grammar.elements:
         if grammar.is_token_rule(rule):
             token_rules.append(rule)
             modes[rule.name] = 0
