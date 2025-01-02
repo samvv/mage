@@ -808,6 +808,21 @@ def for_each_direct_child_node(node: MageSyntax, proc: Callable[[MageSyntax], No
     else:
         assert_never(node)
 
+def rewrite_module(module: _T, proc: Callable[[MageModuleElement], MageModuleElement]) -> _T:
+    new_elements = []
+    changed = False
+    for element in module.elements:
+        new_element = proc(element)
+        if new_element is not element:
+            changed = True
+        new_elements.append(new_element)
+    if not changed:
+        return module
+    out = module.derive(elements=new_elements)
+    for new_element in new_elements:
+        new_element.parent = out
+    return cast(_T, out)
+
 def set_parents(node: MageSyntax, parent: 'MageSyntax | None' = None) -> None:
     node.parent = parent # type: ignore
     for_each_direct_child_node(node, lambda child: set_parents(child, node))
