@@ -689,23 +689,32 @@ def rewrite_each_child_expr(expr: MageExpr, proc: Callable[[MageExpr], MageExpr]
         new_expr = proc(expr.expr)
         if new_expr is expr.expr:
             return expr
-        return MageRepeatExpr(min=expr.min, max=expr.max, expr=new_expr, actions=expr.actions, label=expr.label)
+        out = MageRepeatExpr(min=expr.min, max=expr.max, expr=new_expr, actions=expr.actions, label=expr.label)
+        new_expr.parent = out
+        return out
     if isinstance(expr, MageLookaheadExpr):
         new_expr = proc(expr.expr)
         if new_expr is expr.expr:
             return expr
-        return MageLookaheadExpr(expr=new_expr, is_negated=expr.is_negated, actions=expr.actions, label=expr.label)
+        out = MageLookaheadExpr(expr=new_expr, is_negated=expr.is_negated, actions=expr.actions, label=expr.label)
+        new_expr.parent = out
+        return out
     if isinstance(expr, MageHideExpr):
         new_expr = proc(expr.expr)
         if new_expr is expr.expr:
             return expr
-        return MageHideExpr(expr=new_expr, actions=expr.actions, label=expr.label)
+        out = MageHideExpr(expr=new_expr, actions=expr.actions, label=expr.label)
+        new_expr.parent = out
+        return out
     if isinstance(expr, MageListExpr):
         new_element = proc(expr.element)
         new_separator = proc(expr.separator)
         if new_element is expr.element and new_separator is expr.separator:
             return expr
-        return MageListExpr(element=new_element, separator=new_separator, min_count=expr.min_count, actions=expr.actions, label=expr.label)
+        out = MageListExpr(element=new_element, separator=new_separator, min_count=expr.min_count, actions=expr.actions, label=expr.label)
+        new_element.parent = out
+        new_separator.parent = out
+        return out
     if isinstance(expr, MageChoiceExpr):
         new_elements = []
         changed = False
@@ -716,7 +725,10 @@ def rewrite_each_child_expr(expr: MageExpr, proc: Callable[[MageExpr], MageExpr]
             new_elements.append(new_element)
         if not changed:
             return expr
-        return MageChoiceExpr(elements=new_elements, actions=expr.actions, label=expr.label)
+        out = MageChoiceExpr(elements=new_elements, actions=expr.actions, label=expr.label)
+        for new_element in new_elements:
+            new_element.parent = out
+        return out
     if isinstance(expr, MageSeqExpr):
         new_elements = []
         changed = False
@@ -727,7 +739,10 @@ def rewrite_each_child_expr(expr: MageExpr, proc: Callable[[MageExpr], MageExpr]
             new_elements.append(new_element)
         if not changed:
             return expr
-        return MageSeqExpr(elements=new_elements, actions=expr.actions, label=expr.label)
+        out = MageSeqExpr(elements=new_elements, actions=expr.actions, label=expr.label)
+        for new_element in new_elements:
+            new_element.parent = out
+        return out
     assert_never(expr)
 
 _T = TypeVar('_T', bound=MageGrammar | MageModule)
