@@ -449,7 +449,8 @@ class MageRule(MageNodeBase):
         decorators: list[Decorator] | None = None,
         flags: int = 0,
         type_name: str = string_rule_type,
-        mode: int = 0
+        mode: int = 0,
+        parent: 'MageModule | MageGrammar | None' = None
     ) -> None:
         super().__init__()
         if decorators is None:
@@ -461,6 +462,7 @@ class MageRule(MageNodeBase):
         self.type_name = type_name
         self.expr = expr
         self.mode = mode
+        self.parent = parent
 
     def derive(
         self,
