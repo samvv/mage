@@ -13,6 +13,7 @@ from intervaltree import Interval, IntervalTree
 
 from magelang.lang.mage.cst import MageRuleParent
 from magelang.logging import debug, warn
+from magelang.util import nonnull
 
 from .constants import string_rule_type
 
@@ -832,3 +833,18 @@ def flatten_choice(expr: MageExpr) -> Generator[MageExpr, None, None]:
     else:
         yield expr
 
+def get_enclosing_module(node: MageRule | MageExpr | MageModule) -> MageModule | MageGrammar:
+    while True:
+        if isinstance(node.parent, MageModule) or isinstance(node.parent, MageGrammar):
+            return node.parent
+        node = nonnull(node.parent)
+
+def lookup_ref(expr: MageRefExpr) -> MageRule | None:
+    mod = get_enclosing_module(expr)
+    while True:
+        rule = mod.lookup(expr.name)
+        if rule is not None:
+            return rule
+        if isinstance(mod, MageGrammar):
+            break
+        mod = nonnull(mod.parent)
