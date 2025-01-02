@@ -1,6 +1,6 @@
 
 from magelang.logging import error
-from magelang.lang.mage.ast import MageCharSetExpr, MageExpr, MageGrammar, MageRule, for_each_expr, for_each_rule
+from magelang.lang.mage.ast import MageCharSetExpr, MageExpr, MageGrammar, MageRule, for_each_direct_child_expr, for_each_rule
 from magelang.lang.mage.emitter import escape
 
 def mage_check_neg_charset_intervals(grammar: MageGrammar) -> MageGrammar:
@@ -13,7 +13,7 @@ def mage_check_neg_charset_intervals(grammar: MageGrammar) -> MageGrammar:
                     if ord(low) > ord(high):
                         error(f"invalid character range: character '{escape(low)}' (0x{ord(low):04X}) is lower than '{escape(high)}' (0x{ord(high):04X})")
             return
-        for_each_expr(expr, visit_expr)
+        for_each_direct_child_expr(expr, visit_expr)
 
     def visit_rule(rule: MageRule) -> None:
         if rule.expr is not None:

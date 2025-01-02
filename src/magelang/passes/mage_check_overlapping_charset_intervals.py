@@ -29,7 +29,7 @@ def mage_check_overlapping_charset_intervals(grammar: MageGrammar) -> MageGramma
                     tree.add(i)
             return
 
-        for_each_expr(expr, visit_expr)
+        for_each_direct_child_expr(expr, visit_expr)
 
     def visit_rule(element: MageRule) -> None:
         if element.expr is not None:

@@ -1,6 +1,6 @@
 
 from magelang.logging import error
-from magelang.lang.mage.ast import MageGrammar, MageRefExpr, MageExpr, MageRule, for_each_expr, for_each_rule
+from magelang.lang.mage.ast import MageGrammar, MageRefExpr, MageExpr, MageRule, for_each_direct_child_expr, for_each_rule
 
 def mage_check_undefined(grammar: MageGrammar) -> MageGrammar:
 
@@ -9,7 +9,7 @@ def mage_check_undefined(grammar: MageGrammar) -> MageGrammar:
             if grammar.lookup(expr.name) is None:
                 error(f"undefined rule referenced: {expr.name}")
             return
-        for_each_expr(expr, visit_expr)
+        for_each_direct_child_expr(expr, visit_expr)
 
     def visit_rule(rule: MageRule) -> None:
         if rule.expr is not None:

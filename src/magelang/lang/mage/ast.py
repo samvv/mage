@@ -759,7 +759,7 @@ def rewrite_each_rule(node: _T, proc: Callable[[MageRule], MageRule]) -> _T:
             assert_never(element)
     return cast(_T, node.derive(elements=new_elements))
 
-def for_each_expr(node: MageExpr, proc: Callable[[MageExpr], None]) -> None:
+def for_each_direct_child_expr(node: MageExpr, proc: Callable[[MageExpr], None]) -> None:
     """
     Visit each direct child of a given expression exactly once.
 
@@ -780,6 +780,10 @@ def for_each_expr(node: MageExpr, proc: Callable[[MageExpr], None]) -> None:
         return
     assert_never(node)
 
+def for_each_expr(node: MageExpr, proc: Callable[[MageExpr], None]) -> None:
+    proc(node)
+    for_each_direct_child_expr(node, proc)
+
 def for_each_rule(node: MageGrammar | MageModule, proc: Callable[[MageRule], None]) -> None:
     for element in node.elements:
         if isinstance(element, MageRule):
@@ -792,22 +796,21 @@ def for_each_rule(node: MageGrammar | MageModule, proc: Callable[[MageRule], Non
 def is_expr(node: MageSyntax) -> TypeIs[MageExpr]:
     return isinstance(node, MageExprBase)
 
-def for_each_node(node: MageSyntax, proc: Callable[[MageSyntax], None]) -> None:
+def for_each_direct_child_node(node: MageSyntax, proc: Callable[[MageSyntax], None]) -> None:
     if isinstance(node, MageGrammar) or isinstance(node, MageModule):
         for element in node.elements:
-            if isinstance(element, MageModule):
-                for_each_node(element, proc)
+            proc(element)
     elif isinstance(node, MageRule):
         if node.expr is not None:
-            for_each_expr(node.expr, lambda child: set_parents(child, node))
+            proc(node.expr)
     elif is_expr(node):
-        for_each_expr(node, proc)
+        for_each_direct_child_expr(node, proc)
     else:
         assert_never(node)
 
 def set_parents(node: MageSyntax, parent: 'MageSyntax | None' = None) -> None:
     node.parent = parent # type: ignore
-    for_each_node(node, lambda child: set_parents(child, node))
+    for_each_direct_child_node(node, lambda child: set_parents(child, node))
 
 def static_expr_to_str(expr: MageExpr) -> str:
     if isinstance(expr, MageLitExpr):
