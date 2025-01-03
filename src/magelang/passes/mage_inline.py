@@ -4,31 +4,35 @@ from magelang.lang.mage.emitter import *
 
 def mage_inline(grammar: MageGrammar) -> MageGrammar:
 
-    def inline_expr(expr: MageExpr) -> MageExpr:
+    def rewrite_expr(expr: MageExpr) -> MageExpr:
         if isinstance(expr, MageRefExpr):
-            rule = grammar.lookup(expr.name) # FIXME This lookup may fail when inside a module
-            if rule is None or rule.is_public or rule.is_extern:
+            rule = nonnull(expr.symbol).definition
+            assert(isinstance(rule, MageRule))
+            if rule is None or rule.is_public or rule.is_extern or rule.expr is None:
                 return expr
-            assert(rule.expr is not None)
             new_expr = rule.expr.derive(label=expr.label or rule.name)
-            return inline_expr(new_expr)
-        return rewrite_each_child_expr(expr, inline_expr)
+            transfer_symbols(rule.expr, new_expr)
+            return rewrite_expr(new_expr)
+        return rewrite_each_child_expr(expr, rewrite_expr)
 
-    def rewrite_elements(elements: list[MageModuleElement]) -> list[MageModuleElement]:
-        new_rules = []
-        for element in elements:
-            if isinstance(element, MageRule):
-                if element.is_extern:
-                    new_rules.append(element)
-                elif element.is_public or element.is_skip:
-                    assert(element.expr is not None)
-                    new_rules.append(element.derive(
-                        expr=inline_expr(element.expr)
-                    ))
-            elif isinstance(element, MageModule):
-                new_rules.append(element.derive(elements=rewrite_elements(element.elements)))
-            else:
-                assert_never(element)
-        return new_rules
+    def rewrite_element(element: MageModuleElement) -> MageModuleElement:
+        if isinstance(element, MageRule):
+            if element.is_extern:
+                return element
+            if (element.is_public or element.is_skip) and element.expr is not None:
+                new_expr = rewrite_expr(element.expr)
+                if new_expr is element.expr:
+                    return element
+                return element.derive(expr=new_expr)
+            return element
+        elif isinstance(element, MageModule):
+            return rewrite_module(element, rewrite_element)
+        else:
+            assert_never(element)
 
-    return grammar.derive(elements=rewrite_elements(grammar.elements))
+    def transfer_symbols(old_expr: MageExpr, new_expr: MageExpr) -> None:
+        if isinstance(old_expr, MageRefExpr) and isinstance(new_expr, MageRefExpr):
+            new_expr.symbol = old_expr.symbol
+
+    return rewrite_module(grammar, rewrite_element)
+

@@ -14,6 +14,7 @@ mage_check = pipeline(
     mage_check_neg_charset_intervals
 )
 mage_prepare_grammar = pipeline(
+    mage_resolve,
     mage_inline,
     mage_extract_literals,
     mage_insert_magic_rules

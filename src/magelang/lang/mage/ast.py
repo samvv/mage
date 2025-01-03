@@ -6,6 +6,7 @@ make handling the AST a bit easier.
 """
 
 from dataclasses import dataclass
+from enum import IntEnum
 import sys
 from functools import lru_cache
 from typing import Any, Callable, Generator, Iterable, TypeIs, TypeVar, assert_never, cast
@@ -19,6 +20,18 @@ from .constants import string_rule_type
 
 ASCII_MIN = 0x00
 ASCII_MAX = 0x7F
+
+
+class SymbolType(IntEnum):
+    module = 1
+    rule = 2
+
+
+class Symbol:
+
+    def __init__(self, ty: SymbolType) -> None:
+        self.ty = ty
+        self.definition: 'MageRule | MageModule | None' = None
 
 class MageNodeBase:
     pass
@@ -99,6 +112,8 @@ class MageRefExpr(MageExprBase):
         if module_path is None:
             module_path = []
         self.name = name
+        self.module_path = module_path
+        self.symbol: Symbol | None = None
 
     def derive(
         self,
@@ -464,6 +479,7 @@ class MageRule(MageNodeBase):
         self.expr = expr
         self.mode = mode
         self.parent = parent
+        self.symbol: Symbol | None = None
 
     def derive(
         self,
@@ -538,12 +554,18 @@ class MageModuleBase(MageNodeBase):
         self.elements = elements
         self.parent = parent
         self._rules_by_name = dict[str, 'MageRule']()
+        self._modules_by_name = dict[str, 'MageModule']()
         for element in elements:
             if isinstance(element, MageRule):
                 self._rules_by_name[element.name] = element
+            elif isinstance(element, MageModule):
+                self._modules_by_name[element.name] = element
 
     def lookup(self, name: str) -> 'MageRule | None':
         return self._rules_by_name.get(name)
+
+    def lookup_module(self, name: str) -> 'MageModule | None':
+        return self._modules_by_name.get(name)
 
     @property
     def rules(self) -> Iterable[MageRule]:
@@ -652,6 +674,7 @@ class MageModule(MageModuleBase):
         super().__init__(elements, parent)
         self.name = name
         self.flags = flags
+        self.symbol: Symbol | None = None
 
     def derive(
         self,
