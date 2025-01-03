@@ -27,7 +27,9 @@ def load_grammar(filename: Path | str) -> MageGrammar:
         text = f.read()
     scanner = Scanner(text, filename=str(filename))
     parser = Parser(scanner)
-    return parser.parse_grammar()
+    grammar = parser.parse_grammar()
+    set_parents(grammar)
+    return grammar
 
 def generate_files(
     filename: Path | str,
