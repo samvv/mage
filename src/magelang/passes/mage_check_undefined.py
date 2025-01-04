@@ -6,7 +6,7 @@ def mage_check_undefined(grammar: MageGrammar) -> MageGrammar:
 
     def visit_expr(expr: MageExpr) -> None:
         if isinstance(expr, MageRefExpr):
-            if grammar.lookup(expr.name) is None:
+            if expr.symbol is None:
                 error(f"undefined rule referenced: {expr.name}")
             return
         for_each_direct_child_expr(expr, visit_expr)
