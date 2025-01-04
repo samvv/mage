@@ -7,6 +7,8 @@ from .lang.python import *
 from .lang.treespec import *
 from .passes import *
 
+# Assume all nodes are resolved and only re-run `mage_resolve` if changes require it
+
 mage_check = pipeline(
     mage_check_token_no_parse,
     mage_check_undefined,
@@ -14,10 +16,10 @@ mage_check = pipeline(
     mage_check_neg_charset_intervals
 )
 mage_prepare_grammar = pipeline(
-    mage_resolve,
     mage_inline,
     mage_extract_literals,
-    mage_insert_magic_rules
+    mage_insert_magic_rules,
+    mage_resolve
 )
 python_optimise = pipeline(
     python_remove_pass_stmts,
@@ -101,9 +103,10 @@ def generate_files(
     grammar = load_grammar(filename)
 
     return apply(ctx, grammar, pipeline(
-        mage_prepare_grammar,
-        mage_check if not skip_checks else identity,
-        mage_to_target
+        mage_resolve, # Initial resolve
+        mage_prepare_grammar, # Inline rules etc
+        mage_check if not skip_checks else identity, # User error reporting
+        mage_to_target # Actual compilation
     ))
 
 def write_files(files: Files, dest_dir: Path, force: bool = False) -> None:

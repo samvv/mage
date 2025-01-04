@@ -12,8 +12,7 @@ from functools import lru_cache
 from typing import Any, Callable, Generator, Iterable, TypeIs, TypeVar, assert_never, cast
 from intervaltree import Interval, IntervalTree
 
-from magelang.lang.mage.cst import MageRuleParent
-from magelang.logging import debug, warn
+from magelang.logging import debug
 from magelang.util import nonnull
 
 from .constants import string_rule_type
@@ -32,6 +31,7 @@ class Symbol:
     def __init__(self, ty: SymbolType) -> None:
         self.ty = ty
         self.definition: 'MageRule | MageModule | None' = None
+
 
 class MageNodeBase:
     pass

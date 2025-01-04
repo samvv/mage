@@ -23,16 +23,19 @@ def mage_inline(grammar: MageGrammar) -> MageGrammar:
                 new_expr = rewrite_expr(element.expr)
                 if new_expr is element.expr:
                     return element
-                return element.derive(expr=new_expr)
+                new_element = element.derive(expr=new_expr)
+                transfer_symbols(element, new_element)
+                return new_element
             return element
         elif isinstance(element, MageModule):
             return rewrite_module(element, rewrite_element)
         else:
             assert_never(element)
 
-    def transfer_symbols(old_expr: MageExpr, new_expr: MageExpr) -> None:
-        if isinstance(old_expr, MageRefExpr) and isinstance(new_expr, MageRefExpr):
-            new_expr.symbol = old_expr.symbol
+    def transfer_symbols(old: MageSyntax, new: MageSyntax) -> None:
+        if (isinstance(old, MageRefExpr) and isinstance(new, MageRefExpr)) \
+                or (isinstance(old, MageRule) and isinstance(new, MageRule)):
+            new.symbol = old.symbol
 
     return rewrite_module(grammar, rewrite_element)
 
