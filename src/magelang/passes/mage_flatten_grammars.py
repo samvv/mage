@@ -12,14 +12,14 @@ def mage_flatten_grammars(grammar: MageGrammar) -> MageGrammar:
 
     new_elements = list[MageModuleElement]()
 
-    def rewrite_elements(node: MageModule) -> None:
+    def visit_module(node: MageModule) -> None:
         nonlocal mode
 
         for element in node.elements:
             if isinstance(element, MageRule):
                 new_elements.append(element.derive(name=mangle(to_snake_case(node.name), element.name), mode=mode))
             elif isinstance(element, MageModule):
-                rewrite_elements(element)
+                visit_module(element)
             else:
                 new_elements.append(element)
 
@@ -27,7 +27,7 @@ def mage_flatten_grammars(grammar: MageGrammar) -> MageGrammar:
 
     for element in grammar.elements:
         if isinstance(element, MageModule):
-            rewrite_elements(element)
+            visit_module(element)
         else:
             new_elements.append(element)
 
