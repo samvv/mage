@@ -8,7 +8,7 @@ def mage_flatten_grammars(grammar: MageGrammar) -> MageGrammar:
     def mangle(parent: str, name: str) -> str:
         return parent + '_' + name
 
-    mode = 0
+    mode = 1
 
     new_elements = list[MageModuleElement]()
 
