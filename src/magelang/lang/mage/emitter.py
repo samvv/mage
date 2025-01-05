@@ -41,6 +41,18 @@ def emit(node: MageSyntax) -> str:
             return
 
         if isinstance(node, MageRule):
+            for decorator in node.decorators:
+                out.write('@')
+                out.write(decorator.name)
+                if decorator.args:
+                    out.write('(')
+                    first = True
+                    for arg in decorator.args:
+                        if first: first = False
+                        else: out.write(', ')
+                        out.write(str(arg))
+                    out.write(')')
+                out.write('\n')
             if node.is_public:
                 out.write('pub ')
             if node.is_extern:
