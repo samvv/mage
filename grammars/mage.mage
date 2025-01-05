@@ -1,4 +1,12 @@
 
+# Should be part of standard library
+
+any_byte = [\x00-\xFF]
+
+any_char = [\x00-\x7F]
+
+# Special rules
+
 @skip
 whitespace = [\n\r\t ]*
 
@@ -92,7 +100,7 @@ escaped_ascii_char
 # ```
 single_char
   = '\\' escape_sequence
-  | ~[\]]
+  | any_char
 
 # A string literal.
 #
