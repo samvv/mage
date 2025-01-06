@@ -6,6 +6,7 @@ any_char = [\x00-\x7F]
 
 eof = !any_byte
 
+pub extern token newline
 pub extern token indent
 pub extern token dedent
 
@@ -237,6 +238,7 @@ base_op
   | '^'
   | '&'
 
+# FIXME remove this noskip decorator
 @noskip
 assign_op
   = op:base_op '='
@@ -329,9 +331,8 @@ pub global_stmt
 pub nonlocal_stmt
   = 'nonlocal' names:(ident %% ',')
 
-@noskip
 body
-  = stmt | \indent body:(stmt \eos)+ \dedent
+  = stmt \newline | \indent body:(stmt \newline)+ \dedent
 
 pub if_case
    = 'if' test:expr ':' body
