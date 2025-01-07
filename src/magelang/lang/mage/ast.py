@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 import sys
 from functools import lru_cache
-from typing import Any, Callable, Generator, Iterable, TypeIs, TypeVar, assert_never, cast
+from typing import Any, Callable, Generator, Iterable, TypeGuard, TypeIs, TypeVar, assert_never, cast
 from intervaltree import Interval, IntervalTree
 
 from magelang.logging import debug
@@ -623,7 +623,7 @@ class MageModuleBase(MageNodeBase):
             return not element.is_token
         return element.is_public and not self.is_token_rule(element)
 
-    def is_variant_rule(self, element: MageModuleElement) -> TypeIs[MageRule]:
+    def is_variant_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
         if not isinstance(element, MageRule) or element.is_extern or element.is_wrap:
             return False
         # only Rule(is_extern=True) can not hold an expression
