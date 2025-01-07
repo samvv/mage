@@ -4,8 +4,7 @@ any_byte = [\x00-\xFF]
 
 any_char = [\x00-\x7F]
 
-eof = !any_byte
-
+pub extern token eof
 pub extern token newline
 pub extern token indent
 pub extern token dedent
@@ -419,5 +418,4 @@ pub func_def
 # Toplevel expressions
 
 pub module
-  = stmts:(stmt \eolf)*
-
+  = stmts:(stmt \newline)*
