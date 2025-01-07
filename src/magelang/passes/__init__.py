@@ -17,10 +17,12 @@ from .mage_simplify import *
 from .mage_to_python_emitter import *
 from .mage_to_python_lexer import *
 from .mage_to_python_lexer_tests import *
+from .mage_to_python_parser import *
 from .mage_to_revolv_syntax_tree import *
 from .mage_to_treespec import *
 from .python_remove_pass_stmts import *
 from .python_to_text import *
+from .python_unnest_conditionals import *
 from .revolv_lift_assign_expr import *
 from .revolv_to_python import *
 from .revolv_to_rust import *
@@ -45,10 +47,12 @@ all_passes = {
     mage_to_python_emitter,
     mage_to_python_lexer,
     mage_to_python_lexer_tests,
+    mage_to_python_parser,
     mage_to_revolv_syntax_tree,
     mage_to_treespec,
     python_remove_pass_stmts,
     python_to_text,
+    python_unnest_conditionals,
     revolv_lift_assign_expr,
     revolv_to_python,
     revolv_to_rust,

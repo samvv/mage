@@ -1,5 +1,6 @@
 
 from abc import ABCMeta, abstractmethod
+from collections import deque
 from dataclasses import dataclass
 from collections.abc import Collection, Reversible, Sequence
 from typing import Any, Iterable, Iterator, Protocol, SupportsIndex, TypeVar, assert_never, cast, overload
@@ -202,9 +203,18 @@ class AbstractLexer:
     def skip(self) -> None:
         pass
 
+    def set_location(self, other: 'AbstractLexer') -> None:
+        self._curr_offset = other._curr_offset
+        self._curr_pos = other._curr_pos
+
     def at_eof(self) -> bool:
         self.skip()
         return self._curr_offset >= len(self._text)
+
+    @abstractmethod
+    #def lex(self, mode: int) -> BaseToken:
+    def lex(self) -> BaseToken:
+        raise NotImplementedError()
 
     def _get_char(self) -> str:
         if self._curr_offset >= len(self._text):
@@ -217,6 +227,52 @@ class AbstractLexer:
         else:
             self._curr_pos.column += 1
         return ch
+
+
+class ParseError(RuntimeError):
+    pass
+
+
+class AbstractParser:
+    pass
+
+
+class ParseStream:
+
+    def __init__(self, tokens: list[BaseToken], offset: int = 0) -> None:
+        self._offset = offset
+        self._tokens = tokens
+        # self._buffers = list(deque() for _ in range(0, num_modes))
+
+    def peek(self, offset = 0) -> BaseToken:
+        i = self._offset + offset
+        return self._tokens[i] if i < len(self._tokens) else self._tokens[-1]
+
+    def get(self) -> BaseToken:
+        i = self._offset
+        if i < len(self._tokens):
+            self._offset += 1
+        return self._tokens[i]
+
+    def fork(self) -> 'ParseStream':
+        return ParseStream(self._tokens, self._offset)
+
+    # def _peek(self, mode: int, offset = 0) -> BaseToken:
+    #     buffer = self._buffers[mode]
+    #     while len(buffer) <= offset:
+    #         buffer.append(self._lexer.lex(mode))
+    #     return buffer[offset]
+
+    # def _get(self, mode: int) -> BaseToken:
+    #     buffer = self._buffers[mode]
+    #     token = buffer.popleft() if buffer else self._lexer.lex(mode)
+    #     for k in range(0, self._num_modes):
+    #         if k != mode:
+    #             self._buffers[k].clear()
+    #     return token
+
+    def join_to(self, other: 'ParseStream') -> None:
+        self._offset = other._offset
 
 ## -- Designed for the emitter
 

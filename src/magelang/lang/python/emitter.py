@@ -1,7 +1,7 @@
 
 from io import StringIO
 from typing import NewType, Sequence, assert_never
-from magelang.util import IndentWriter
+from magelang.util import IndentWriter, panic
 
 from .cst import *
 
