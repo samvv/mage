@@ -24,6 +24,8 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
     def get_parse_method_name(rule: MageRule) -> str:
          return f'parse_{rule.name}'
 
+    noop: list[PyStmt] = [ PyPassStmt() ]
+
     def gen_parse_body(rule: MageRule) -> list[PyStmt]:
 
         generate_name = NameGenerator()
@@ -31,17 +33,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
 
         fields = list[str]()
 
-        def next_break() -> Generator[PyStmt]:
-            yield PyBreakStmt()
-
-        def next_return_error() -> Generator[PyStmt]:
-            yield PyRetStmt()
-
-        def next_noop() -> Generator[PyStmt]:
-            return
-            yield
-
-        def visit_prim_field_inner(expr: MageExpr, stream_name: str, target_name: str, accept: AcceptFn, reject: RejectFn, invert: bool) -> Generator[PyStmt]:
+        def visit_prim_field_inner(expr: MageExpr, stream_name: str, target_name: str, accept: list[PyStmt], reject: list[PyStmt], invert: bool) -> Generator[PyStmt]:
             """
             Generate parse logic for a single expression.
 
@@ -64,7 +56,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                 rule = cast(MageRule, expr.symbol.definition)
 
                 if rule.expr is None:
-                    yield from accept()
+                    yield from accept
                     return # TODO figure out what to yield
 
                 elif not rule.is_public:
@@ -75,48 +67,36 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                     yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr('self'), method_name), args=[ PyNamedExpr(stream_name) ]))
                     if invert:
                         yield from make_py_cond([
-                            (PyInfixExpr(PyNamedExpr(target_name), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')), list(accept())),
-                            (None, list(reject())),
+                            (PyInfixExpr(PyNamedExpr(target_name), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')), accept),
+                            (None, reject),
                         ])
                     else:
                         yield from make_py_cond([
-                            (PyInfixExpr(PyNamedExpr(target_name), PyIsKeyword(), PyNamedExpr('None')), list(reject())),
-                            (None, list(accept())),
+                            (PyInfixExpr(PyNamedExpr(target_name), PyIsKeyword(), PyNamedExpr('None')), reject),
+                            (None, accept),
                         ])
 
                 elif grammar.is_token_rule(rule):
                     yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'get')))
                     if invert:
                         yield from make_py_cond([
-                            (PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr(target_name), PyNamedExpr(to_py_class_name(rule.name, prefix=prefix)) ]), list(accept())),
-                            (None, list(reject())),
+                            (PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr(target_name), PyNamedExpr(to_py_class_name(rule.name, prefix=prefix)) ]), accept),
+                            (None, reject),
                         ])
                     else:
                         yield from make_py_cond([
-                            (PyPrefixExpr(PyNotKeyword(), PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr(target_name), PyNamedExpr(to_py_class_name(rule.name, prefix=prefix)) ])), list(reject())),
-                            (None, list(accept())),
+                            (PyPrefixExpr(PyNotKeyword(), PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr(target_name), PyNamedExpr(to_py_class_name(rule.name, prefix=prefix)) ])), reject),
+                            (None, accept),
                         ])
 
                 else:
                     unreachable()
 
             elif isinstance(expr, MageChoiceExpr):
-
-                n = len(expr.elements)
-
-                def loop(i: int) -> Generator[PyStmt]:
-                    if i == n:
-                        yield from reject()
-                    else:
-                        element = expr.elements[i]
-                        new_stream_name = generate_name('stream')
-                        def c_join_accept() -> Generator[PyStmt]:
-                            yield PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ]))
-                        yield PyAssignStmt(PyNamedPattern(new_stream_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'fork')))
-                        yield from visit_field_inner(element, new_stream_name, target_name, c_join_accept, functools.partial(loop, i+1), True)
-
-                yield from loop(0)
-                yield from accept()
+                head = reject
+                for element in reversed(expr.elements):
+                    head = list(visit_field_inner(element, stream_name, target_name, accept, head, True))
+                yield from head
 
             elif isinstance(expr, MageRepeatExpr):
 
@@ -130,11 +110,12 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                     yield PyAssignStmt(PyNamedPattern(target_name), value=PyNamedExpr('None'))
                     yield PyAssignStmt(PyNamedPattern(new_stream_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'fork')))
                     temp_name = generate_name('temp')
-                    def next_assign() -> Generator[PyStmt]:
-                        yield PyAssignStmt(PyNamedPattern(target_name), value=PyNamedExpr(temp_name))
-                        yield PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ]))
-                    yield from visit_field_inner(expr.expr, stream_name, temp_name, next_assign, next_noop, True)
-                    yield from accept()
+                    next = [
+                        PyAssignStmt(PyNamedPattern(target_name), value=PyNamedExpr(temp_name)),
+                        PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ])),
+                        *accept,
+                    ]
+                    yield from visit_field_inner(expr.expr, stream_name, temp_name, next, noop, True)
                     return
 
                 #elements_name = generate_field_name(prefix=f'{target_name}_elements')
@@ -146,35 +127,52 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                     if expr.max > expr.min:
                         if expr.max == POSINF:
                             new_stream_name = generate_name('stream')
-                            def c_join() -> Generator[PyStmt]:
-                                yield PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ]))
                             yield PyWhileStmt(
                                 PyConstExpr(True),
                                 [
                                     PyAssignStmt(PyNamedPattern(new_stream_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'fork'))),
-                                    *visit_field_inner(expr.expr, new_stream_name, element_name, c_join, next_break, False),
+                                    *visit_field_inner(
+                                        expr.expr,
+                                        new_stream_name,
+                                        element_name,
+                                        [
+                                            PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ]))
+                                        ],
+                                        [
+                                            PyBreakStmt()
+                                        ],
+                                        False
+                                    ),
                                     PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(target_name), 'append'), args=[ PyNamedExpr(element_name) ]))
                                 ]
                             )
                         else:
                             new_stream_name = generate_name('stream')
-                            def c_join() -> Generator[PyStmt]:
-                                yield PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ]))
                             yield PyForStmt(
                                 PyNamedPattern('_'),
                                 PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
                                 body=[
                                     PyAssignStmt(PyNamedPattern(new_stream_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'fork'))),
-                                    *visit_field_inner(expr.expr, new_stream_name, element_name, c_join, next_break, False),
+                                    *visit_field_inner(
+                                        expr.expr,
+                                        new_stream_name,
+                                        element_name,
+                                        [
+                                            PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ]))
+                                        ],
+                                        [
+                                            PyBreakStmt()
+                                        ],
+                                        False
+                                    ),
                                     PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(target_name), 'append'), args=[ PyNamedExpr(element_name) ]))
                                 ]
                             )
 
                 def gen_body():
-                    def next_append() -> Generator[PyStmt]:
-                        yield PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(target_name), 'append'), args=[ PyNamedExpr(element_name) ]))
-                        yield from next_min_to_max()
-                    yield from visit_field_inner(expr.expr, stream_name, element_name, next_append, reject, False)
+                    new_accept = list(next_min_to_max())
+                    new_accept.append(PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(target_name), 'append'), args=[ PyNamedExpr(element_name) ])))
+                    yield from visit_field_inner(expr.expr, stream_name, element_name, new_accept, reject, False)
 
                 if expr.min == 0:
                     yield from next_min_to_max()
@@ -189,7 +187,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                         body=list(gen_body())
                     )
 
-                yield from accept()
+                yield from accept
 
             elif isinstance(expr, MageHideExpr):
                 yield from visit_field_inner(expr.expr, stream_name, target_name, accept, reject, invert)
@@ -203,20 +201,35 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                 element_name = generate_name(prefix=f'{target_name}_element')
                 separator_name = generate_name(prefix=f'{target_name}_separator')
 
-                def next_parse_separator() -> Generator[PyStmt]:
-                    yield from visit_field_inner(expr.separator, stream_name, separator_name, next_append_and_continue, reject, invert)
-
-                def next_append_and_continue() -> Generator[PyStmt]:
-                    yield PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(element_name), 'append'), args=[ PyNamedExpr(element_name), PyNamedExpr(separator_name) ]))
-
                 yield PyWhileStmt(
                     PyConstExpr(True),
                     [
-                        *visit_field_inner(expr.element, stream_name, element_name, next_parse_separator, next_break, invert),
+                        *visit_field_inner(
+                            expr.element,
+                            stream_name,
+                            element_name,
+                            list(visit_field_inner(
+                                expr.separator,
+                                stream_name,
+                                separator_name,
+                                [
+                                    PyExprStmt(
+                                        PyCallExpr(
+                                            PyAttrExpr(PyNamedExpr(element_name), 'append'),
+                                            args=[ PyNamedExpr(element_name), PyNamedExpr(separator_name) ]
+                                        )
+                                    )
+                                ],
+                                reject,
+                                invert
+                            )),
+                            [ PyBreakStmt() ],
+                            invert
+                        ),
                     ]
                 )
 
-                yield from accept()
+                yield from accept
 
             elif isinstance(expr, MageLookaheadExpr):
                 if expr.is_negated:
@@ -227,46 +240,41 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
             else:
                 assert_never(expr)
 
-        def visit_field_inner(expr: MageExpr, stream_name: str, target_name: str, accept: AcceptFn, reject: RejectFn, invert: bool) -> Generator[PyStmt]:
+        def visit_field_inner(expr: MageExpr, stream_name: str, target_name: str, accept: list[PyStmt], reject: list[PyStmt], invert: bool) -> Generator[PyStmt]:
             if isinstance(expr, MageSeqExpr):
-                n = len(expr.elements)
                 indices = []
-                def loop(i: int) -> Generator[PyStmt]:
-                    if i == n:
-                        if len(indices):
-                            value = PyNamedExpr(f'{target_name}_{indices[0]}')
-                        else:
-                            value = PyTupleExpr(elements=list(PyNamedExpr(f'{target_name}_{i}') for i in indices))
-                        yield PyAssignStmt(PyNamedPattern(target_name), value=value)
-                        yield from accept()
+                head = accept
+                i = len(expr.elements)
+                for element in reversed(expr.elements):
+                    i -= 1
+                    if isinstance(element, MageHideExpr):
+                        element_name = generate_name('unused')
                     else:
-                        element = expr.elements[i]
-                        if isinstance(element, MageHideExpr):
-                            element_name = generate_name('unused')
-                        else:
-                            element_name = f'{target_name}_{i}'
-                            indices.append(i)
-                        yield from visit_field_inner(element, stream_name, element_name, functools.partial(loop, i+1), reject, invert)
-                yield from loop(0)
+                        element_name = f'{target_name}_{i}'
+                        indices.append(i)
+                    head = list(visit_field_inner(element, stream_name, element_name, head, reject, invert))
+                if len(indices) == 1:
+                    value = PyNamedExpr(f'{target_name}_{indices[0]}')
+                else:
+                    value = PyTupleExpr(elements=list(PyNamedExpr(f'{target_name}_{i}') for i in indices))
+                yield PyAssignStmt(PyNamedPattern(target_name), value=value)
+                yield from head
             else:
                 yield from visit_prim_field_inner(expr, stream_name, target_name, accept, reject, invert)
 
-        def visit_toplevel(expr: MageExpr, stream_name: str, accept: AcceptFn, reject: RejectFn) -> Generator[PyStmt]:
+        def visit_toplevel(expr: MageExpr, stream_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
 
             if isinstance(expr, MageSeqExpr):
-                n = len(expr.elements)
-                def loop(i: int) -> Generator[PyStmt]:
-                    if i < n:
-                        element = expr.elements[i]
-                        if isinstance(element, MageSeqExpr):
-                            yield from visit_toplevel(element, stream_name, accept, reject)
-                            return
-                        field_name = get_field_name(element)
-                        assert(field_name is not None) # FIXME generate a field name instead
-                        fields.append(field_name)
-                        yield from visit_field_inner(element, stream_name, field_name, functools.partial(loop, i+1), reject, False)
-                yield from loop(0)
-                yield from accept()
+                head = accept
+                for element in reversed(expr.elements):
+                    if isinstance(element, MageSeqExpr):
+                        head = yield from visit_toplevel(element, stream_name, head, reject)
+                        return
+                    field_name = get_field_name(element)
+                    assert(field_name is not None) # FIXME generate a field name instead
+                    fields.append(field_name)
+                    head = list(visit_field_inner(element, stream_name, field_name, head, reject, False))
+                yield from head
 
             else:
                 field_name = get_field_name(expr)
@@ -277,17 +285,25 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
         if grammar.is_variant_rule(rule):
             def c_return_result() -> Generator[PyStmt]:
                 yield PyRetStmt(expr=PyNamedExpr('result'))
-            return list(visit_field_inner(nonnull(rule.expr), 'stream', 'result', c_return_result, next_return_error, False))
+            return list(visit_field_inner(
+                nonnull(rule.expr),
+                'stream',
+                'result',
+                [ PyRetStmt(expr=PyNamedExpr('result')) ],
+                [ PyRetStmt() ],
+                False
+            ))
 
-        def c_return_struct() -> Generator[PyStmt]:
-            yield PyRetStmt(
+        return_struct: list[PyStmt] = [
+            PyRetStmt(
                 expr=PyCallExpr(
                     PyNamedExpr(to_py_class_name(rule.name, prefix=prefix)),
                     args=list(PyKeywordArg(name, PyNamedExpr(name)) for name in fields)
                 )
             )
+        ]
 
-        return list(visit_toplevel(nonnull(rule.expr), 'stream', c_return_struct, next_return_error))
+        return list(visit_toplevel(nonnull(rule.expr), 'stream', return_struct, [ PyRetStmt() ]))
 
     parser_body = []
 
