@@ -113,7 +113,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                 accept_terminates = _is_terminal(accept)
                 reject_terminates = _is_terminal(reject)
 
-                def gen_assert(test: PyExpr) -> Generator[PyStmt]:
+                def gen_assert(test: PyExpr, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
                     if invert:
                         cases: list[PyCondCase] = [
                             (test, accept),
@@ -143,11 +143,19 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                 elif grammar.is_parse_rule(rule):
                     method_name = get_parse_method_name(rule)
                     yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr('self'), method_name), args=[ PyNamedExpr(stream_name) ]))
-                    yield from gen_assert(PyInfixExpr(PyNamedExpr(target_name), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')))
+                    yield from gen_assert(
+                        PyInfixExpr(PyNamedExpr(target_name), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')),
+                        accept,
+                        reject
+                    )
 
                 elif grammar.is_token_rule(rule):
-                    yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'get')))
-                    yield from gen_assert(PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr(target_name), PyNamedExpr(to_py_class_name(rule.name, prefix=prefix)) ]))
+                    yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'peek')))
+                    yield from gen_assert(
+                        PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr(target_name), PyNamedExpr(to_py_class_name(rule.name, prefix=prefix)) ]),
+                        [ PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'get'))) ] + accept,
+                        reject
+                    )
 
                 else:
                     unreachable()
