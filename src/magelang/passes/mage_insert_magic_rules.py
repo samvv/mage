@@ -1,5 +1,5 @@
 
-from magelang.lang.mage.ast import PUBLIC, MageChoiceExpr, MageGrammar, MageRefExpr, MageRule
+from magelang.lang.mage.ast import POSINF, PUBLIC, Decorator, MageCharSetExpr, MageChoiceExpr, MageGrammar, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr
 
 any_syntax_rule_name = 'syntax'
 any_keyword_rule_name = 'keyword'
@@ -33,5 +33,12 @@ def mage_insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
         expr=MageChoiceExpr([ MageRefExpr('node'), MageRefExpr('token') ]),
         flags=PUBLIC,
     ))
+
+    if grammar.keyword_rule is None:
+        new_elements.append(MageRule(
+            decorators=[ Decorator('keyword') ],
+            name='__keyword',
+            expr=MageSeqExpr([ MageCharSetExpr([ ('a', 'z') ], ci=True), MageRepeatExpr(MageCharSetExpr([ ('a', 'z'), ('0', '9') ], ci=True), min=0, max=POSINF) ]),
+        ))
 
     return grammar.derive(elements=new_elements)

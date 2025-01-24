@@ -16,9 +16,10 @@ mage_check = pipeline(
     mage_check_neg_charset_intervals
 )
 mage_prepare_grammar = pipeline(
+    mage_insert_magic_rules,
+    mage_resolve,
     mage_inline,
     mage_extract_literals,
-    mage_insert_magic_rules,
     mage_resolve
 )
 python_optimise = pipeline(
@@ -105,7 +106,6 @@ def generate_files(
     grammar = load_grammar(filename)
 
     return apply(ctx, grammar, pipeline(
-        mage_resolve, # Initial resolve
         mage_prepare_grammar, # Inline rules etc
         mage_check if not skip_checks else identity, # User error reporting
         mage_to_target # Actual compilation
