@@ -248,6 +248,9 @@ def emit_token(node: PyToken) -> str:
 
     assert_never(node)
 
+def is_wide(expr: PyExpr) -> bool:
+    return not (isinstance(expr, PyNestExpr) or isinstance(expr, PyConstExpr) or isinstance(expr, PyNamedExpr) or isinstance(expr, PyCallExpr))
+
 def emit(node: PyNode) -> str:
 
     string = StringIO()
@@ -370,7 +373,12 @@ def emit(node: PyNode) -> str:
         if isinstance(node, PyPrefixExpr):
             visit_token(node.prefix_op)
             out.write(' ')
+            wide = is_wide(node.expr)
+            if wide:
+                out.write('(')
             visit_expr(node.expr, info)
+            if wide:
+                out.write(')')
             return
 
         if isinstance(node, PyStarredExpr):
