@@ -20,3 +20,6 @@ dist/
 
 # do not track nightly builds as we dont use them
 /pkg/nightly/
+
+# editor configuration should be user-specific
+.vscode/
