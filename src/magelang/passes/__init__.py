@@ -8,6 +8,7 @@ from .mage_check_undefined import *
 from .mage_extract_literals import *
 from .mage_extract_prefixes import *
 from .mage_flatten_grammars import *
+from .mage_hide_lookaheads import *
 from .mage_inline import *
 from .mage_insert_magic_rules import *
 from .mage_insert_skip import *
@@ -38,6 +39,7 @@ all_passes = {
     mage_extract_literals,
     mage_extract_prefixes,
     mage_flatten_grammars,
+    mage_hide_lookaheads,
     mage_inline,
     mage_insert_magic_rules,
     mage_insert_skip,

@@ -62,6 +62,34 @@ def is_eof(expr: MageExpr) -> bool:
     return isinstance(expr, MageCharSetExpr) and len(expr) == 0
 
 
+def is_tokenizable(grammar: MageGrammar) -> bool:
+    """
+    Check whether a grammar can be correctly tokenized.
+
+    When a rule is undefined, we assume the worst and this function will return `True`.
+    """
+
+    def has_nontoken(expr: MageExpr) -> bool:
+        if isinstance(expr, MageCharSetExpr) or isinstance(expr, MageLitExpr):
+            return True
+        if isinstance(expr, MageSeqExpr) or isinstance(expr, MageChoiceExpr):
+            return any(has_nontoken(element) for element in expr.elements)
+        if isinstance(expr, MageRepeatExpr) or isinstance(expr, MageHideExpr) or isinstance(expr, MageLookaheadExpr):
+            return has_nontoken(expr.expr)
+        if isinstance(expr, MageListExpr):
+            return has_nontoken(expr.element)
+        if isinstance(expr, MageRefExpr):
+            rule = grammar.lookup(expr.name)
+            if rule is None or rule.expr is None:
+                return True
+            if not rule.is_public:
+                return has_nontoken(rule.expr)
+            return False
+        assert_never(expr)
+
+    return not any(has_nontoken(nonnull(rule.expr)) for rule in grammar.rules if grammar.is_parse_rule(rule))
+
+
 @lru_cache
 def intersects(left: MageExpr, right: MageExpr, *, grammar: MageGrammar, default: bool = False) -> bool:
     """

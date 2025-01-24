@@ -18,6 +18,7 @@ mage_check = pipeline(
 mage_prepare_grammar = pipeline(
     mage_insert_magic_rules,
     mage_resolve,
+    mage_hide_lookaheads,
     mage_inline,
     mage_extract_literals,
     mage_resolve

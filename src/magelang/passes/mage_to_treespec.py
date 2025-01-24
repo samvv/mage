@@ -1,6 +1,6 @@
 
 from typing import Iterable, cast
-from magelang.helpers import infer_type, get_fields
+from magelang.helpers import get_field_name, infer_type, get_fields
 from magelang.lang.mage.ast import *
 from magelang.lang.treespec import *
 
@@ -17,32 +17,28 @@ def mage_to_treespec(
         field_counter += 1
         return name
 
-    def get_member_name(expr: MageExpr) -> str:
-        if expr.label is not None:
-            return expr.label
-        if isinstance(expr, MageRefExpr):
-            rule = grammar.lookup(expr.name)
-            if rule is None:
-                return expr.name
-            if not rule.is_public and rule.expr is not None:
-                return get_member_name(rule.expr)
-            return rule.name
-        raise NotImplementedError()
+    def get_variant_name(expr: MageExpr, i: int) -> str:
+        name = get_field_name(expr)
+        return f'member_{i}'  if name is None else name
 
-    def get_variants(expr: MageExpr) -> Generator[Variant, None, None]:
-        if isinstance(expr, MageChoiceExpr):
-            for element in expr.elements:
-                yield from get_variants(element)
-            return
-        if isinstance(expr, MageSeqExpr):
-            names = []
-            types = list()
-            for element in expr.elements:
-                names.append(get_member_name(element))
-                types.append(infer_type(element, grammar))
-            yield Variant('_'.join(names), TupleType(types))
-            return
-        yield Variant(get_member_name(expr), infer_type(expr, grammar))
+    def get_variants(expr: MageExpr) -> list[Variant]:
+        out: list[Variant] = []
+        def visit(expr: MageExpr) -> None:
+            if isinstance(expr, MageChoiceExpr):
+                for element in expr.elements:
+                    visit(element)
+                return
+            if isinstance(expr, MageSeqExpr):
+                names = []
+                types = list()
+                for element in expr.elements:
+                    names.append(get_variant_name(element, len(out)))
+                    types.append(infer_type(element, grammar))
+                out.append(Variant('_'.join(names), TupleType(types)))
+                return
+            out.append(Variant(get_variant_name(expr, len(out)), infer_type(expr, grammar)))
+        visit(expr)
+        return out
 
     def get_field_members(expr: MageExpr) -> Iterable[Field]:
         return cast(Iterable[Field], filter(lambda element: isinstance(element, Field), get_fields(expr, grammar, include_hidden=include_hidden)))

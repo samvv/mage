@@ -236,26 +236,27 @@ class ParseError(RuntimeError):
 class AbstractParser:
     pass
 
+_Self = TypeVar('_Self', bound='Stream')
 
-class ParseStream:
+class Stream[_T]:
 
-    def __init__(self, tokens: list[BaseToken], offset: int = 0) -> None:
+    def __init__(self, buffer: list[_T], offset: int = 0) -> None:
         self._offset = offset
-        self._tokens = tokens
+        self._buffer = buffer
         # self._buffers = list(deque() for _ in range(0, num_modes))
 
-    def peek(self, offset = 0) -> BaseToken:
+    def peek(self, offset = 0) -> _T:
         i = self._offset + offset
-        return self._tokens[i] if i < len(self._tokens) else self._tokens[-1]
+        return self._buffer[i] if i < len(self._buffer) else self._buffer[-1]
 
-    def get(self) -> BaseToken:
+    def get(self) -> _T:
         i = self._offset
-        if i < len(self._tokens):
+        if i < len(self._buffer):
             self._offset += 1
-        return self._tokens[i]
+        return self._buffer[i]
 
-    def fork(self) -> 'ParseStream':
-        return ParseStream(self._tokens, self._offset)
+    def fork(self: _Self) -> '_Self':
+        return cast(_Self, Stream(self._buffer, self._offset))
 
     # def _peek(self, mode: int, offset = 0) -> BaseToken:
     #     buffer = self._buffers[mode]
@@ -271,8 +272,10 @@ class ParseStream:
     #             self._buffers[k].clear()
     #     return token
 
-    def join_to(self, other: 'ParseStream') -> None:
+    def join_to(self, other: 'Stream[_T]') -> None:
         self._offset = other._offset
+
+type ParseStream = Stream[BaseToken]
 
 ## -- Designed for the emitter
 

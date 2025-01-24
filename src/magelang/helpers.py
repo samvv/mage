@@ -42,8 +42,11 @@ def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
                 return visit(rule.expr)
             return SpecType(rule.name)
 
-        if isinstance(expr, MageLitExpr) or isinstance(expr, MageCharSetExpr):
-            assert(False) # literals should already have been eliminated
+        if isinstance(expr, MageLitExpr):
+            return make_unit_type()
+
+        if isinstance(expr, MageCharSetExpr):
+            return ExternType(string_rule_type)
 
         if isinstance(expr, MageRepeatExpr):
             element_type = visit(expr.expr)
@@ -129,9 +132,6 @@ def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = Fals
             for element in expr.elements:
                 yield from visit(element, rule_name)
             return
-
-        if isinstance(expr, MageLitExpr) or isinstance(expr, MageCharSetExpr):
-            assert(False) # literals should already have been eliminated by previous passes
 
         field_name = rule_name or get_field_name(expr) or generate_field_name()
         field_type = infer_type(expr, grammar)
