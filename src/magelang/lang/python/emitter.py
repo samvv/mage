@@ -386,6 +386,27 @@ def emit(node: PyNode) -> str:
             visit_expr(node.expr, info)
             return
 
+        if isinstance(node, PyGeneratorExpr):
+            visit_expr(node.element)
+            for comprehension in node.generators:
+                if comprehension.async_keyword is not None:
+                    out.write(' ')
+                    visit_token(comprehension.async_keyword)
+                out.write(' ')
+                visit_token(comprehension.for_keyword)
+                out.write(' ')
+                visit_pattern(comprehension.pattern)
+                out.write(' ')
+                visit_token(comprehension.in_keyword)
+                out.write(' ')
+                visit_expr(comprehension.target)
+                for guard in comprehension.guards:
+                    out.write(' ')
+                    visit_token(guard.if_keyword)
+                    out.write(' ')
+                    visit_expr(guard.expr)
+            return
+
         assert_never(node)
 
     def visit_pattern(node: PyPattern) -> None:
