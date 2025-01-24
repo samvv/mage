@@ -36,7 +36,7 @@ def python_remove_pass_stmts(module: PyModule) -> PyModule:
         return stmt
 
     def rewrite_body(body: PyStmt | list[PyStmt]) -> PyStmt | list[PyStmt]:
-        if not  isinstance(body, list):
+        if not isinstance(body, list):
             return body
         new_stmts = list(rewrite_stmt(stmt) for stmt in body if not isinstance(stmt, PyPassStmt))
         return [ PyPassStmt() ] if not new_stmts else new_stmts
