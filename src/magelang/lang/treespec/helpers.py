@@ -33,13 +33,15 @@ def is_optional_type(ty: Type) -> bool:
 
 def unwrap_optional_type(ty: Type) -> Type:
     assert(isinstance(ty, UnionType))
-    found = None
+    found = []
     for el_ty in ty.types:
         if not isinstance(el_ty, NoneType):
-            assert(found is None)
-            found = el_ty
-    assert(found is not None)
-    return found
+            found.append(el_ty)
+    if len(found) == 0:
+        return NeverType()
+    if len(found) == 1:
+        return found[0]
+    return UnionType(found)
 
 
 def make_unit_type() -> Type:
