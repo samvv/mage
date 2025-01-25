@@ -240,23 +240,25 @@ _Self = TypeVar('_Self', bound='Stream')
 
 class Stream[_T]:
 
-    def __init__(self, buffer: Sequence[_T], offset: int = 0) -> None:
+    def __init__(self, buffer: Sequence[_T], sentry: _T, offset: int = 0, ) -> None:
         self._offset = offset
         self._buffer = buffer
+        self.sentry = sentry
         # self._buffers = list(deque() for _ in range(0, num_modes))
 
     def peek(self, offset = 0) -> _T:
         i = self._offset + offset
-        return self._buffer[i] if i < len(self._buffer) else self._buffer[-1]
+        return self._buffer[i] if i < len(self._buffer) else self.sentry
 
     def get(self) -> _T:
         i = self._offset
-        if i < len(self._buffer):
-            self._offset += 1
+        if i == len(self._buffer):
+            return self.sentry
+        self._offset += 1
         return self._buffer[i]
 
     def fork(self: _Self) -> '_Self':
-        return cast(_Self, Stream(self._buffer, self._offset))
+        return cast(_Self, Stream(self._buffer, self.sentry, self._offset))
 
     # def _peek(self, mode: int, offset = 0) -> BaseToken:
     #     buffer = self._buffers[mode]
