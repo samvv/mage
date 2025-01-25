@@ -245,7 +245,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
             elif isinstance(expr, MageCharSetExpr):
                 tests = []
                 yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'peek')))
-                for element in expr.elements:
+                for element in expr.canonical_elements:
                     if isinstance(element, tuple):
                         low, high = element
                         tests.append(PyInfixExpr(
