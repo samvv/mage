@@ -57,8 +57,7 @@ def can_be_empty(expr: MageExpr, *, grammar: MageGrammar) -> bool:
 
 
 def is_eof(expr: MageExpr) -> bool:
-    # FIXME What about !any_char?
-    # FIXME Why is this equivalent to MageLitExpr('') but the latter is not EOF?
+    # FIXME What about !any_char? We might want to enumerate all possible characters
     return isinstance(expr, MageCharSetExpr) and len(expr) == 0
 
 

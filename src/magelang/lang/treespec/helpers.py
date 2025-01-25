@@ -3,7 +3,7 @@ from functools import lru_cache
 from typing import Generator, assert_never
 from magelang.util import to_snake_case
 from .ast import *
-
+from magelang.lang.mage.constants import string_rule_type
 
 @lru_cache
 def _get_spec_mapping(specs: Specs) -> dict[str, Spec]:
@@ -339,6 +339,8 @@ def normalize_type(ty: Type) -> Type:
         if len(dedup_types) == 1:
             return dedup_types[0]
         return ty.derive(types=dedup_types)
+    if isinstance(ty, ListType) and isinstance(ty.element_type, ExternType) and ty.element_type.name == string_rule_type:
+        return ty.element_type
     return rewrite_each_child_type(ty, normalize_type)
 
 

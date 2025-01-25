@@ -134,6 +134,7 @@ def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = Fals
         taken[field_name] = count + 1
         if count > 0:
             field_name = f'{field_name}_{count+1}'
+        expr.field_name = field_name
         field_type = infer_type(expr, grammar)
         yield Field(field_name, field_type)
 

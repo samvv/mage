@@ -240,7 +240,7 @@ _Self = TypeVar('_Self', bound='Stream')
 
 class Stream[_T]:
 
-    def __init__(self, buffer: list[_T], offset: int = 0) -> None:
+    def __init__(self, buffer: Sequence[_T], offset: int = 0) -> None:
         self._offset = offset
         self._buffer = buffer
         # self._buffers = list(deque() for _ in range(0, num_modes))
@@ -275,7 +275,9 @@ class Stream[_T]:
     def join_to(self, other: 'Stream[_T]') -> None:
         self._offset = other._offset
 
-type ParseStream = Stream[BaseToken]
+ParseStream = Stream[BaseToken]
+
+CharStream = Stream[str]
 
 ## -- Designed for the emitter
 

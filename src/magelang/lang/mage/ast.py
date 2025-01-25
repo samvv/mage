@@ -66,6 +66,7 @@ class MageExprBase(MageNodeBase):
         self.label = label
         self.actions = actions
         self.parent = parent
+        self.field_name: str | None = None
 
     @property
     def returns(self) -> 'MageRule | None':
