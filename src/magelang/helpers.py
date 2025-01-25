@@ -104,7 +104,7 @@ def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = Fals
     taken = dict[str, int]()
 
     def generate_field_name() -> str:
-        return generator(prefix='field_')
+        return generator(prefix='field')
 
     def visit(expr: MageExpr, rule_name: str | None) -> Generator[Field | MageExpr, None, None]:
 
