@@ -80,7 +80,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
 
     stmts.append(PyImportFromStmt(
         PyAbsolutePath(PyQualName(modules=[ 'magelang' ], name='runtime')),
-        [ PyFromAlias('AbstractParser'), PyFromAlias('Punctuated'), PyFromAlias('CharStream') ]
+        [ PyFromAlias('AbstractParser'), PyFromAlias('Punctuated'), PyFromAlias('CharStream'), PyFromAlias('EOF') ]
     ))
     stmts.append(PyImportFromStmt(
         PyRelativePath(1, name='cst'),
