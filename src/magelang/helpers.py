@@ -106,6 +106,7 @@ def get_field_name(expr: MageExpr) -> str | None:
 def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = False) -> Generator[Field | MageExpr, None, None]:
 
     generator = NameGenerator()
+    taken = dict[str, int]()
 
     def generate_field_name() -> str:
         return generator(prefix='field_')
@@ -134,6 +135,10 @@ def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = Fals
             return
 
         field_name = rule_name or get_field_name(expr) or generate_field_name()
+        count = taken.get(field_name, 0)
+        taken[field_name] = count + 1
+        if count > 0:
+            field_name = f'{field_name}_{count+1}'
         field_type = infer_type(expr, grammar)
         yield Field(field_name, field_type)
 

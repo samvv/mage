@@ -43,15 +43,6 @@ def mage_to_treespec(
     def get_field_members(expr: MageExpr) -> Iterable[Field]:
         return cast(Iterable[Field], filter(lambda element: isinstance(element, Field), get_fields(expr, grammar, include_hidden=include_hidden)))
 
-    def rename_duplicate_members(members: list[Field]) -> list[Field]:
-        taken = dict[str, int]()
-        out = []
-        for field in members:
-            count = taken.get(field.name, 0)
-            taken[field.name] = count + 1
-            if count > 0:
-                field.name = f'{field.name}_{count+1}'
-        return out
 
     toplevel = []
 
@@ -73,14 +64,8 @@ def mage_to_treespec(
         field_counter = 0
         assert(rule.expr is not None)
         members = list(get_field_members(rule.expr))
-        rename_duplicate_members(members)
         toplevel.append(NodeSpec(rule.name, members))
 
     toplevel.sort(key=lambda spec: spec.name)
-
-    # specs.add(VariantSpec(None, 'keyword', list((rule.name, TokenType(rule.name)) for rule in grammar.rules if rule.is_keyword)))
-    # specs.add(VariantSpec(None, 'token', list((spec.name, TokenType(spec.name)) for spec in specs if isinstance(spec, TokenSpec))))
-    # specs.add(VariantSpec(None, 'node', list((spec.name, NodeType(spec.name)) for spec in specs if isinstance(spec, NodeSpec))))
-    # specs.add(VariantSpec(None, 'syntax', [ ('node', VariantType('node')), ('token', VariantType('token')) ]))
 
     return Specs(toplevel)
