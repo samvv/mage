@@ -1,5 +1,5 @@
 
-from magelang.helpers import PyCondCase, get_field_name, get_fields, infer_type, make_py_cond, make_py_or, make_py_union, to_py_class_name
+from magelang.helpers import PyCondCase, get_fields, infer_type, make_py_cond, make_py_or, make_py_union, to_py_class_name
 from magelang.lang.mage.ast import *
 from magelang.lang.python.cst import *
 from magelang.lang.mage.constants import string_rule_type, builtin_types
@@ -14,6 +14,7 @@ from magelang.util import NameGenerator, unreachable
 type AcceptFn = Callable[[], Generator[PyStmt]]
 type RejectFn = Callable[[], Generator[PyStmt]]
 
+MAX_LINES_DUPLICATE = 1
 
 def _lift_body(body: PyStmt | list[PyStmt]) -> list[PyStmt]:
     return body if isinstance(body, list) else [ body ]
@@ -27,6 +28,43 @@ def _to_py_cond_cases(stmt: PyIfStmt) -> list[PyCondCase]:
     if stmt.last:
         cases.append((None, _lift_body(stmt.last.body)))
     return cases
+
+
+def count_stmt_lines(stmt: PyStmt) -> int:
+    if isinstance(stmt, PyIfStmt):
+        out = 1 + count_lines(stmt.first.body) + sum(1 + count_lines(alt.body) for alt in stmt.alternatives)
+        if stmt.last is not None:
+            out += 1 + count_lines(stmt.last.body)
+        return out
+    if isinstance(stmt, PyTryStmt):
+        return 1 + count_lines(stmt.body) + sum(1 + count_lines(handler.body) for handler in stmt.handlers)
+    if isinstance(stmt, PyContinueStmt) \
+            or isinstance(stmt, PyRaiseStmt) \
+            or isinstance(stmt, PyRetStmt) \
+            or isinstance(stmt, PyBreakStmt) \
+            or isinstance(stmt, PyPassStmt) \
+            or isinstance(stmt, PyAssignStmt) \
+            or isinstance(stmt, PyAugAssignStmt) \
+            or isinstance(stmt, PyContinueStmt) \
+            or isinstance(stmt, PyDeleteStmt) \
+            or isinstance(stmt, PyExprStmt) \
+            or isinstance(stmt, PyGlobalStmt) \
+            or isinstance(stmt, PyNonlocalStmt) \
+            or isinstance(stmt, PyImportStmt) \
+            or isinstance(stmt, PyImportFromStmt) \
+            or isinstance(stmt, PyTypeAliasStmt):
+        return 1
+    if isinstance(stmt, PyForStmt) or isinstance(stmt, PyWhileStmt):
+        return 1 + count_lines(stmt.body)
+    if isinstance(stmt, PyFuncDef):
+        return 1 + count_lines(stmt.body)
+    assert_never(stmt)
+
+
+def count_lines(body: PyStmt | Sequence[PyStmt]) -> int:
+    if is_py_stmt(body):
+        body = [ body ]
+    return sum(count_stmt_lines(stmt) for stmt in body)
 
 
 def _is_stmt_terminal(stmt: PyStmt, in_loop: bool) -> bool:
@@ -63,7 +101,43 @@ def _is_stmt_terminal(stmt: PyStmt, in_loop: bool) -> bool:
         return _is_terminal(stmt.body, True)
     assert_never(stmt)
 
-def _is_terminal(body: PyStmt | Sequence[PyStmt], in_loop: bool) -> bool:
+def _is_stmt_noop(stmt: PyStmt) -> bool:
+    """
+    Returns `True` if the statement is guaranteed to have no side-effects.
+    """
+    if isinstance(stmt, PyIfStmt):
+        return all(_is_noop(body) for test, body in _to_py_cond_cases(stmt))
+    if isinstance(stmt, PyPassStmt):
+        return True
+    if isinstance(stmt, PyForStmt) or isinstance(stmt, PyWhileStmt):
+        return _is_noop(stmt.body)
+    if isinstance(stmt, PyTryStmt):
+        return _is_noop(stmt.body) and all(_is_noop(handler.body) for handler in stmt.handlers)
+    if isinstance(stmt, PyFuncDef):
+        return True
+    if isinstance(stmt, PyContinueStmt) or isinstance(stmt, PyBreakStmt):
+        return False
+    if isinstance(stmt, PyRaiseStmt) \
+            or isinstance(stmt, PyRetStmt) \
+            or isinstance(stmt, PyAssignStmt) \
+            or isinstance(stmt, PyAugAssignStmt) \
+            or isinstance(stmt, PyDeleteStmt) \
+            or isinstance(stmt, PyExprStmt) \
+            or isinstance(stmt, PyGlobalStmt) \
+            or isinstance(stmt, PyNonlocalStmt) \
+            or isinstance(stmt, PyImportStmt) \
+            or isinstance(stmt, PyImportFromStmt) \
+            or isinstance(stmt, PyTypeAliasStmt) \
+            or isinstance(stmt, PyClassDef):
+        return False
+    assert_never(stmt)
+
+def _is_noop(body: PyStmt | Sequence[PyStmt]) -> bool:
+    if is_py_stmt(body):
+        body = [ body ]
+    return all(_is_stmt_noop(stmt) for stmt in body)
+
+def _is_terminal(body: PyStmt | Sequence[PyStmt], in_loop: bool = True) -> bool:
     if is_py_stmt(body):
         body = [ body ]
     return any(_is_stmt_terminal(element, in_loop) for element in body)
@@ -72,6 +146,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
 
     enable_tokens = is_tokenizable(grammar)
     buffer_name = 'buffer'
+    stream_type_name = 'ParseStream' if enable_tokens else 'CharStream'
 
     if not enable_tokens:
         print('Warning: grammar could not be tokenized. We will fall back to a more generic algorithm.')
@@ -80,7 +155,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
 
     stmts.append(PyImportFromStmt(
         PyAbsolutePath(PyQualName(modules=[ 'magelang' ], name='runtime')),
-        [ PyFromAlias('AbstractParser'), PyFromAlias('Punctuated'), PyFromAlias('CharStream'), PyFromAlias('EOF') ]
+        [ PyFromAlias('AbstractParser'), PyFromAlias('Punctuated'), PyFromAlias(stream_type_name), PyFromAlias('EOF') ]
     ))
     stmts.append(PyImportFromStmt(
         PyRelativePath(1, name='cst'),
@@ -115,69 +190,57 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
         generate_name('buffer') # Mark buffer as being in use
         generate_name('c') # Start counting from 0
 
-        def visit_prim_field_internals(expr: MageExpr, stream_name: str, target_name: str, accept: list[PyStmt], reject: list[PyStmt], invert: bool) -> Generator[PyStmt]:
+        def visit_prim_field_internals(expr: MageExpr, stream_name: str, target_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
             """
             Generate parse logic for a single expression.
-
-            It is assumed that the code generated in either `accept` or `reject` eventually terminates control flow, either by returning of by throwing an exception.
-
-            Setting `invert` to `True` makes `reject` be the main control flow and `accept` a terminating edge case.
             """
 
-            def gen_accept_reject(test: PyExpr, accept: list[PyStmt], reject: list[PyStmt], test_negated: bool) -> Generator[PyStmt]:
-                accept_terminates = _is_terminal(accept, False)
-                reject_terminates = _is_terminal(reject, False)
-                if invert:
-                    cases: list[PyCondCase] = [
-                        (PyPrefixExpr(PyNotKeyword(), test) if test_negated else test, accept),
-                    ]
-                    if not accept_terminates and reject:
-                        cases.append((None, reject))
-                    yield from make_py_cond(cases)
-                    if accept_terminates:
-                        yield from reject
-                else:
-                    cases: list[PyCondCase] = [
+            def gen_if_stmt(test: PyExpr, accept: list[PyStmt], reject: list[PyStmt], test_negated: bool) -> Generator[PyStmt]:
+                accept_terminates = _is_terminal(accept)
+                reject_terminates = _is_terminal(reject)
+                if (accept_terminates and (not reject_terminates or count_lines(accept) < count_lines(reject))) or _is_noop(reject):
+                     yield PyIfStmt(PyIfCase(
+                        PyPrefixExpr(PyNotKeyword(), test) if test_negated else test,
+                        accept,
+                     ))
+                     yield from reject
+                elif reject_terminates or _is_noop(accept):
+                    yield PyIfStmt(PyIfCase(
+                        test if test_negated else PyPrefixExpr(PyNotKeyword(), test),
+                        reject,
+                    ))
+                    yield from accept
+                elif count_lines(reject) < count_lines(accept): # FIXME doesn't count the actual lines
+                    yield from make_py_cond([
                         (test if test_negated else PyPrefixExpr(PyNotKeyword(), test), reject),
-                    ]
-                    if not reject_terminates and accept:
-                        cases.append((None, accept))
-                    yield from make_py_cond(cases)
-                    if reject_terminates:
-                        yield from accept
+                        (None, accept),
+                    ])
+                else:
+                    yield from make_py_cond([
+                        (PyPrefixExpr(PyNotKeyword(), test) if test_negated else test, accept),
+                        (None, reject),
+                    ])
 
             if is_eof(expr):
                 temp = generate_name('c')
-                if invert:
-                    yield PyAssignStmt(PyNamedPattern(temp), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'peek')))
-                    yield PyIfStmt(PyIfCase(test=PyInfixExpr(PyNamedExpr(temp), PyEqualsEquals(), PyNamedExpr('EOF')), body=[
-                        *accept
-                    ]))
-                    yield from reject
-                else:
-                    temp = generate_name('c')
-                    yield PyAssignStmt(PyNamedPattern(temp), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'peek')))
-                    yield PyIfStmt(PyIfCase(test=PyInfixExpr(PyNamedExpr(temp), PyExclamationMarkEquals(), PyNamedExpr('EOF')), body=reject))
-                    yield from accept
+                yield PyAssignStmt(PyNamedPattern(temp), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'peek')))
+                yield from gen_if_stmt(PyInfixExpr(PyNamedExpr(temp), PyEqualsEquals(), PyNamedExpr('EOF')), accept, reject, False)
 
             elif isinstance(expr, MageLitExpr):
-                if invert:
-                    head = reject
-                    for ch in reversed(expr.text):
-                        head = [
-                            PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'peek'))),
-                            PyIfStmt(PyIfCase(test=PyInfixExpr(PyNamedExpr(target_name), PyEqualsEquals(), PyConstExpr(ch)), body=[
+                head = accept
+                for ch in reversed(expr.text):
+                    head = [
+                        PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'peek'))),
+                        *gen_if_stmt(
+                            PyInfixExpr(PyNamedExpr(target_name), PyEqualsEquals(), PyConstExpr(ch)), [
                                 PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'get'))),
-                                *accept
-                            ]))
-                        ]
-                    yield from head
-                else:
-                    for ch in expr.text:
-                        yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'peek')))
-                        yield PyIfStmt(PyIfCase(test=PyInfixExpr(PyNamedExpr(target_name), PyExclamationMarkEquals(), PyConstExpr(ch)), body=reject))
-                        yield PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'get')))
-                    yield from accept
+                                *head
+                            ],
+                            reject,
+                            False
+                        )
+                    ]
+                yield from head
 
             elif isinstance(expr, MageCharSetExpr):
                 tests = []
@@ -193,12 +256,8 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                     else:
                         tests.append(PyInfixExpr(PyNamedExpr(target_name), PyEqualsEquals(), PyConstExpr(element)))
                 test = make_py_or(tests)
-                if not invert:
-                    test = PyPrefixExpr(PyNotKeyword(), test)
-                if_body = accept if invert else reject
                 accept.insert(0, PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'get'))))
-                yield PyIfStmt(PyIfCase(test=test, body=if_body))
-                yield from reject if invert else accept
+                yield from gen_if_stmt(test, accept, reject, False)
 
             elif isinstance(expr, MageSeqExpr):
                 unreachable()
@@ -211,16 +270,16 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
 
                 if rule.expr is None:
                     yield from accept
-                    return # TODO figure out what generic logic to yield
+                    return # TODO figure out what fallback logic to yield
 
                 if not rule.is_public:
-                    yield from visit_field_internals(rule.expr, stream_name, target_name, accept, reject, invert)
+                    yield from visit_field_internals(rule.expr, stream_name, target_name, accept, reject)
                     return
 
                 if grammar.is_parse_rule(rule):
                     method_name = get_parse_method_name(rule)
                     yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr('self'), method_name), args=[ PyNamedExpr(stream_name) ]))
-                    yield from gen_accept_reject(
+                    yield from gen_if_stmt(
                         PyInfixExpr(PyNamedExpr(target_name), PyIsKeyword(), PyNamedExpr('None')),
                         accept,
                         reject,
@@ -241,7 +300,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
 
                 if enable_tokens:
                     yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'peek')))
-                    yield from gen_accept_reject(
+                    yield from gen_if_stmt(
                         PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr(target_name), PyNamedExpr(to_py_class_name(rule.name, prefix=prefix)) ]),
                         [ PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'get'))) ] + accept,
                         reject,
@@ -250,7 +309,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                 else:
                     method_name = get_parse_method_name(rule)
                     yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr('self'), method_name), args=[ PyNamedExpr(stream_name) ]))
-                    yield from gen_accept_reject(
+                    yield from gen_if_stmt(
                         PyInfixExpr(PyNamedExpr(target_name), PyIsKeyword(), PyNamedExpr('None')),
                         accept,
                         reject,
@@ -263,6 +322,19 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
 
                 new_stream_name = generate_name('stream')
 
+                # Optimisation
+                # if _is_terminal(accept) and count_lines(accept) < MAX_LINES_DUPLICATE:
+                #     head = reject
+                #     for element in reversed(expr.elements):
+                #         new_accept = [
+                #             PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ])),
+                #             *accept,
+                #         ]
+                #         head = list(visit_field_internals(element, new_stream_name, target_name, new_accept, head))
+                #         head.insert(0, PyAssignStmt(PyNamedPattern(new_stream_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'fork'))))
+                #     yield from head
+                #     return
+
                 head = []
                 match_name = generate_name('match')
                 yield PyAssignStmt(PyNamedPattern(match_name), value=PyConstExpr(False))
@@ -271,10 +343,10 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                         PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ])),
                         PyAssignStmt(PyNamedPattern(match_name), value=PyConstExpr(True)),
                     ]
-                    head = list(visit_field_internals(element, new_stream_name, target_name, new_accept, head, not invert))
+                    head = list(visit_field_internals(element, new_stream_name, target_name, new_accept, head))
                     head.insert(0, PyAssignStmt(PyNamedPattern(new_stream_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'fork'))))
                 yield from head
-                yield from gen_accept_reject(PyNamedExpr(match_name), accept, reject, False)
+                yield from gen_if_stmt(PyNamedExpr(match_name), accept, reject, False)
 
                 # head = reject
                 # for element in reversed(expr.elements):
@@ -303,7 +375,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                         PyAssignStmt(PyNamedPattern(target_name), value=PyNamedExpr(temp_name)),
                         PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ])),
                     ]
-                    yield from visit_field_internals(expr.expr, new_stream_name, temp_name, new_accept, noop, not invert)
+                    yield from visit_field_internals(expr.expr, new_stream_name, temp_name, new_accept, noop)
                     yield from accept
                     return
 
@@ -332,12 +404,13 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                                     [
                                         PyBreakStmt()
                                     ],
-                                    invert
                                 ),
                             ]
                         ))
                     else: # expr.max == expr.min
                         new_stream_name = generate_name('stream')
+                        match_name = generate_name('match')
+                        min_to_max.append(PyAssignStmt(PyNamedPattern(match_name), value=PyConstExpr(True)))
                         min_to_max.append(PyForStmt(
                             PyNamedPattern('_'),
                             PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
@@ -348,21 +421,26 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                                     new_stream_name,
                                     element_name,
                                     [
-                                        PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ]))
+                                        PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ])),
+                                        PyContinueStmt(),
                                     ],
                                     [
+                                        PyAssignStmt(PyNamedPattern(match_name), value=PyConstExpr(False)),
                                         PyBreakStmt()
                                     ],
-                                    False
                                 ),
                                 make_append(ty, target_name, PyNamedExpr(element_name)),
                             ]
                         ))
 
+                min_to_max.extend(accept)
+
                 def gen_body():
-                    new_accept = min_to_max
-                    new_accept.insert(0, make_append(ty, target_name, PyNamedExpr(element_name)))
-                    yield from visit_field_internals(expr.expr, stream_name, element_name, new_accept, reject, False)
+                    new_accept = [
+                        make_append(ty, target_name, PyNamedExpr(element_name)),
+                        *min_to_max,
+                    ]
+                    yield from visit_field_internals(expr.expr, stream_name, element_name, new_accept, reject)
 
                 if expr.min == 0:
                     yield from min_to_max
@@ -376,11 +454,10 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                         PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
                         body=list(gen_body())
                     )
-
-                yield from accept
+                    yield from min_to_max
 
             elif isinstance(expr, MageHideExpr):
-                yield from visit_field_internals(expr.expr, stream_name, target_name, accept, reject, invert)
+                yield from visit_field_internals(expr.expr, stream_name, target_name, accept, reject)
 
             elif isinstance(expr, MageListExpr):
 
@@ -411,10 +488,8 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                                     )
                                 ],
                                 reject,
-                                invert
                             )),
                             [ PyBreakStmt() ],
-                            invert
                         ),
                     ]
                 )
@@ -422,15 +497,17 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                 yield from accept
 
             elif isinstance(expr, MageLookaheadExpr):
+                new_stream_name = generate_name('stream')
+                yield PyAssignStmt(PyNamedPattern(new_stream_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'fork')))
                 if expr.is_negated:
-                    yield from visit_field_internals(expr.expr, stream_name, target_name, reject, accept, not invert)
+                    yield from visit_field_internals(expr.expr, new_stream_name, target_name, reject, accept)
                 else:
-                    yield from visit_field_internals(expr.expr, stream_name, target_name, accept, reject, invert)
+                    yield from visit_field_internals(expr.expr, new_stream_name, target_name, accept, reject)
 
             else:
                 assert_never(expr)
 
-        def visit_field_internals(expr: MageExpr, stream_name: str, target_name: str, accept: list[PyStmt], reject: list[PyStmt], invert: bool) -> Generator[PyStmt]:
+        def visit_field_internals(expr: MageExpr, stream_name: str, target_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
             if isinstance(expr, MageSeqExpr):
                 indices = list[int]()
                 n = len(expr.elements)
@@ -449,17 +526,17 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                         element_name = generate_name('unused')
                     else:
                         element_name = f'{target_name}_tuple_{n - i - 1}'
-                    head = list(visit_field_internals(element, stream_name, element_name, head, reject, invert))
+                    head = list(visit_field_internals(element, stream_name, element_name, head, reject))
                 yield from head
             else:
-                yield from visit_prim_field_internals(expr, stream_name, target_name, accept, reject, invert)
+                yield from visit_prim_field_internals(expr, stream_name, target_name, accept, reject)
 
         def visit_field(expr: MageExpr, stream_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
             field_name = generate_name('temp') if is_token else expr.field_name
             assert(field_name is not None)
             if is_token:
                 accept = [ PyAugAssignStmt(PyNamedPattern(buffer_name), PyPlus(), PyNamedExpr(field_name)), *accept ]
-            yield from visit_field_internals(expr, stream_name, field_name, accept, reject, False)
+            yield from visit_field_internals(expr, stream_name, field_name, accept, reject)
 
         def visit_fields(expr: MageExpr, stream_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
             if isinstance(expr, MageSeqExpr):
@@ -474,14 +551,12 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                 yield from visit_field(expr, stream_name, accept, reject)
 
         if grammar.is_variant_rule(rule):
-            # FIXME does not do lookaheads
             yield from visit_field_internals(
                 nonnull(rule.expr),
                 'stream',
                 'result',
                 [ PyRetStmt(expr=PyNamedExpr('result')) ],
                 [ PyRetStmt() ],
-                False
             )
             return
 
@@ -510,7 +585,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
         if grammar.is_parse_rule(element) or (not enable_tokens and grammar.is_token_rule(element)):
             parser_body.append(PyFuncDef(
                 name=f'parse_{element.name}',
-                params=[ PyNamedParam(PyNamedPattern('self')), PyNamedParam(PyNamedPattern('stream'), annotation=PyNamedExpr('ParseStream' if enable_tokens else 'CharStream')) ],
+                params=[ PyNamedParam(PyNamedPattern('self')), PyNamedParam(PyNamedPattern('stream'), annotation=PyNamedExpr(stream_type_name)) ],
                 return_type=make_py_union([
                     PyNamedExpr(to_py_class_name(element.name, prefix=prefix)),
                     PyNamedExpr('None'),
