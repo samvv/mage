@@ -327,6 +327,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str) -> PyModule:
                                     [
                                         PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ])),
                                         make_append(ty, target_name, PyNamedExpr(element_name)),
+                                        PyContinueStmt(),
                                     ],
                                     [
                                         PyBreakStmt()
