@@ -90,6 +90,54 @@ def _load_script(path: Path, /) -> Any:
     spec.loader.exec_module(module)
     return module
 
+@dataclass
+class Test:
+    rule: MageRule
+    text: str
+    should_fail: bool
+
+from tempfile import TemporaryDirectory
+
+def _collect_tests(grammar: MageGrammar) -> list[Test]:
+    tests = []
+    for rule in grammar.rules:
+        if rule.comment is not None:
+            doc = parse_doc(rule.comment)
+            for text in get_accept_blocks(doc):
+                tests.append(Test(rule, text, False))
+            for text in get_reject_blocks(doc):
+                tests.append(Test(rule, text, True))
+    return tests
+
+def _test_external(filename: Path | str) -> bool:
+    import pytest
+    with TemporaryDirectory(prefix='mage-test-') as test_dir:
+        generate('python', filename, enable_lexer=True, enable_parser=True, enable_parser_tests=True, out_dir=Path(test_dir))
+        return pytest.main([ test_dir ]) == 0
+
+def _test_internal(filename: Path | str) -> bool:
+    grammar = load_grammar(filename)
+    tests = _collect_tests(grammar)
+    succeeded = set()
+    failed = set()
+    for test in tests:
+        result = evaluate(grammar, test.rule.name, test.text)
+        if result is None:
+            if test.should_fail:
+                succeeded.add(test)
+            else:
+                failed.add(test)
+    if not failed:
+        print(f'{len(succeeded)} tests succeeded, 0 failed')
+        return True
+    else:
+        print(f'{len(succeeded)} tests failed, {len(succeeded)} succeedded.')
+        return False
+
+def test(filename: Path | str, *, generate: bool) -> int:
+    test = _test_external if generate else _test_internal
+    return test(filename)
+
 def dump(filename: Path | str, *passes: str, **opts: Any) -> int:
     """
     Dump specific transformations of a grammar
