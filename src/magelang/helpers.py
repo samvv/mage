@@ -15,13 +15,9 @@ from magelang.util import to_camel_case, is_iterator, NameGenerator, plural
 
 def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
 
-    buffer = list()
-
     def visit(expr: MageExpr) -> Type:
-        nonlocal buffer
 
         if isinstance(expr, MageHideExpr):
-            buffer.append(expr.expr)
             # TODO return some internal constant rather than a public type
             return make_unit_type()
 
@@ -66,7 +62,6 @@ def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
                 ty = visit(element)
                 if is_unit_type(ty):
                     continue
-                buffer = []
                 types.append(ty)
             if len(types) == 1:
                 return types[0]
