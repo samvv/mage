@@ -109,20 +109,20 @@ def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = Fals
         if isinstance(expr, MageLookaheadExpr):
             return
 
-        if isinstance(expr, MageRefExpr):
+        elif isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
             if rule is not None and rule.expr is not None and not rule.is_public:
                 yield from visit(rule.expr, rule.name)
                 return
 
-        if isinstance(expr, MageHideExpr):
+        elif isinstance(expr, MageHideExpr):
             if include_hidden:
                 yield from visit(expr.expr, rule_name)
             else:
                 yield expr.expr
             return
 
-        if isinstance(expr, MageSeqExpr):
+        elif isinstance(expr, MageSeqExpr):
             for element in expr.elements:
                 yield from visit(element, rule_name)
             return
