@@ -154,7 +154,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str = '') -> PyModule:
 
     stmts.append(PyImportFromStmt(
         PyAbsolutePath(PyQualName(modules=[ 'magelang' ], name='runtime')),
-        [ PyFromAlias('AbstractParser'), PyFromAlias('Punctuated'), PyFromAlias(stream_type_name), PyFromAlias('EOF') ]
+        [ PyFromAlias('Punctuated'), PyFromAlias(stream_type_name), PyFromAlias('EOF') ]
     ))
     stmts.append(PyImportFromStmt(
         PyRelativePath(1, name='cst'),
@@ -277,7 +277,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str = '') -> PyModule:
 
                 if grammar.is_parse_rule(rule):
                     method_name = get_parse_method_name(rule)
-                    yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr('self'), method_name), args=[ PyNamedExpr(stream_name) ]))
+                    yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyNamedExpr(method_name), args=[ PyNamedExpr(stream_name) ]))
                     yield from gen_if_stmt(
                         PyInfixExpr(PyNamedExpr(target_name), PyIsKeyword(), PyNamedExpr('None')),
                         accept,
@@ -307,7 +307,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str = '') -> PyModule:
                     )
                 else:
                     method_name = get_parse_method_name(rule)
-                    yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr('self'), method_name), args=[ PyNamedExpr(stream_name) ]))
+                    yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyNamedExpr(method_name), args=[ PyNamedExpr(stream_name) ]))
                     yield from gen_if_stmt(
                         PyInfixExpr(PyNamedExpr(target_name), PyIsKeyword(), PyNamedExpr('None')),
                         accept,
@@ -579,24 +579,16 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str = '') -> PyModule:
 
         yield from visit_fields(nonnull(rule.expr), 'stream', return_struct, [ PyRetStmt() ])
 
-    parser_body = []
     for element in grammar.elements:
         if grammar.is_parse_rule(element) or (not enable_tokens and grammar.is_token_rule(element)):
-            parser_body.append(PyFuncDef(
+            stmts.append(PyFuncDef(
                 name=f'parse_{element.name}',
-                params=[ PyNamedParam(PyNamedPattern('self')), PyNamedParam(PyNamedPattern('stream'), annotation=PyNamedExpr(stream_type_name)) ],
+                params=[ PyNamedParam(PyNamedPattern('stream'), annotation=PyNamedExpr(stream_type_name)) ],
                 return_type=make_py_union([
                     PyNamedExpr(to_py_class_name(element.name, prefix=prefix)),
                     PyNamedExpr('None'),
                 ]),
                 body=list(gen_parse_body(element))
             ))
-
-    stmts.append(PyClassDef(
-        name=to_py_class_name('parser', prefix),
-        bases=[ PyClassBaseArg('AbstractParser') ],
-        body=parser_body,
-    ))
-
 
     return PyModule(stmts=stmts)
