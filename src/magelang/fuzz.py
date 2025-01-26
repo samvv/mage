@@ -189,7 +189,6 @@ def fuzz_grammar(
 ) -> None:
     random.seed(seed)
     parser = load_parser(grammar, native=True, enable_tokens=enable_tokens)
-    print()
     count = 0
     done = False
     while True:
