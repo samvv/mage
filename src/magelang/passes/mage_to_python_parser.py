@@ -534,10 +534,7 @@ def mage_to_python_parser(
                 yield from visit_prim_field_internals(expr, stream_name, target_name, accept, reject)
 
         def visit_field(expr: MageExpr, stream_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
-            # FIXME If not inlined, fields are incorrectyl generated
-            # TODO Maybe require inlining?
-            field_name = generate_name('temp') if inside_token else expr.field_name
-            assert(field_name is not None)
+            field_name = generate_name('temp') if expr.field_name is None else expr.field_name
             if inside_token:
                 accept = [ PyAugAssignStmt(PyNamedPattern(buffer_name), PyPlus(), PyNamedExpr(field_name)), *accept ]
             yield from visit_field_internals(expr, stream_name, field_name, accept, reject)
