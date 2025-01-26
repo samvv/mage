@@ -34,7 +34,7 @@ def mage_insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
         flags=PUBLIC,
     ))
 
-    if grammar.keyword_rule is None:
+    if grammar.keyword_rule is not None:
         new_elements.append(MageRule(
             decorators=[ Decorator('keyword') ],
             name='__keyword',
