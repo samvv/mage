@@ -263,11 +263,9 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str = '') -> PyModule:
 
             elif isinstance(expr, MageRefExpr):
 
-                assert(expr.symbol is not None)
+                rule = lookup_ref(expr)
 
-                rule = cast(MageRule, expr.symbol.definition)
-
-                if rule.expr is None:
+                if rule is None or rule.expr is None:
                     yield from accept
                     return # TODO figure out what fallback logic to yield
 
