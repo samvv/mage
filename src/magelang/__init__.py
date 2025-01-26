@@ -52,12 +52,14 @@ def generate_files(
     enable_ast_parent_pointers: bool = False,
     enable_visitor: bool = False,
     enable_rewriter: bool = False,
-    enable_linecol: bool = False
-) -> Files:
+    enable_linecol: bool = False,
+    emit_single_file: bool = False,
+) -> Files | str:
 
     opts: dict[str, Any] = {
         'prefix': prefix,
         'enable_asserts': enable_asserts,
+        'emit_single_file': emit_single_file,
     }
 
     ctx = Context(opts)
@@ -105,11 +107,27 @@ def generate_files(
     else:
         panic("Unrecognised engine requested")
 
-    return apply(ctx, grammar, pipeline(
+    files = apply(ctx, grammar, pipeline(
         mage_prepare_grammar, # Inline rules etc
         mage_check if not skip_checks else identity, # User error reporting
         mage_to_target # Actual compilation
     ))
+
+    if not emit_single_file:
+        return files
+
+    out = ''
+    if enable_cst:
+        out += '\n\n' + files['cst.py']
+    if enable_ast:
+        out += '\n\n' + files['ast.py']
+    if enable_lexer:
+        out += '\n\n' + files['lexer.py']
+    if enable_parser:
+        out += '\n\n' + files['parser.py']
+    if enable_emitter:
+        out += '\n\n' + files['emitter.py']
+    return out
 
 def write_files(files: Files, dest_dir: Path, force: bool = False) -> None:
     for fname, text in files.items():

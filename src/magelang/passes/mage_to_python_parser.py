@@ -141,7 +141,11 @@ def _is_terminal(body: PyStmt | Sequence[PyStmt], in_loop: bool = True) -> bool:
         body = [ body ]
     return any(_is_stmt_terminal(element, in_loop) for element in body)
 
-def mage_to_python_parser(grammar: MageGrammar, prefix: str = '') -> PyModule:
+def mage_to_python_parser(
+    grammar: MageGrammar,
+    prefix: str = '',
+    emit_single_file: bool = False,
+) -> PyModule:
 
     enable_tokens = is_tokenizable(grammar)
     buffer_name = 'buffer'
@@ -156,10 +160,11 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str = '') -> PyModule:
         PyAbsolutePath(PyQualName(modules=[ 'magelang' ], name='runtime')),
         [ PyFromAlias('Punctuated'), PyFromAlias(stream_type_name), PyFromAlias('EOF') ]
     ))
-    stmts.append(PyImportFromStmt(
-        PyRelativePath(1, name='cst'),
-        [ PyAsterisk() ]
-    ))
+    if not emit_single_file:
+        stmts.append(PyImportFromStmt(
+            PyRelativePath(1, name='cst'),
+            [ PyAsterisk() ]
+        ))
 
     def get_parse_method_name(rule: MageRule) -> str:
          return f'parse_{rule.name}'
