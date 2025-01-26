@@ -175,3 +175,4 @@ def fuzz(filename: str | None, /, *, all: bool = False, limit: int | None = None
     grammar = load_grammar(filename)
     fuzz_grammar(grammar, num_sentences=limit, break_on_failure=break_on_failure)
     return 0
+

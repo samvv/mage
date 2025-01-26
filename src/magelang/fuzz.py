@@ -1,9 +1,9 @@
 from collections.abc import Iterable
-from os import walk
 import random
 from types import ModuleType
 from typing import assert_never, cast
 import importlib.util
+import time
 
 import magelang
 from magelang.analysis import is_eof
@@ -187,21 +187,26 @@ def fuzz_grammar(
     enable_tokens: bool = False,
     break_on_failure: bool = False
 ) -> None:
-    random.seed(seed)
     parser = load_parser(grammar, native=True, enable_tokens=enable_tokens)
-    count = 0
+    succeeded = 0
     done = False
+    if seed is None:
+        seed = round(time.time() * 1000)
+    n = 0
     while True:
         for rule in grammar.rules:
             if not rule.is_public:
                 continue
             for sentence in range(random.randrange(min_sentences_per_rule, max_sentences_per_rule)):
-                if num_sentences is not None and count >= num_sentences:
+                if num_sentences is not None and succeeded >= num_sentences:
                     done = True
                     break
                 if rule.expr is None:
                     continue
+                local_seed = seed + n
+                random.seed(local_seed)
                 sentence, fails = random_sentence(rule.expr)
+                n += 1
                 valid = accepts(rule.expr, sentence, grammar=grammar)
                 if (not fails and not valid) or (fails and valid):
                     continue
@@ -209,7 +214,7 @@ def fuzz_grammar(
                 parse = getattr(parser, f'parse_{rule.name}')
                 node = parse(stream)
                 if (node is None) != fails:
-                    message = f"\nOn sentence {repr(sentence)} and rule {rule.name}: "
+                    message = f"\nOn sentence {repr(sentence)} and rule {rule.name} with seed {local_seed}: "
                     if fails:
                         message += "parser returned success where failure was expected."
                     else:
@@ -217,8 +222,8 @@ def fuzz_grammar(
                     print(message)
                     if break_on_failure:
                         return
-                count += 1
-                print(f'\r{count} sentences succeeded.', end='')
+                succeeded += 1
+                print(f'\r{succeeded} sentences succeeded.', end='')
             if done:
                 break
         if done:
