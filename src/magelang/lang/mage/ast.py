@@ -9,10 +9,10 @@ from dataclasses import dataclass
 from enum import IntEnum
 import sys
 from functools import lru_cache
-from typing import Any, Callable, Generator, Iterable, TypeGuard, TypeIs, TypeVar, assert_never, cast
+from typing import Any, Callable, Generator, Iterable, TypeGuard, TypeIs, TypeVar, assert_never, cast, no_type_check
 from intervaltree import Interval, IntervalTree
 
-from magelang.logging import debug
+from magelang.logging import debug, warn
 from magelang.util import nonnull
 
 from .constants import string_rule_type
@@ -35,8 +35,7 @@ class Symbol:
 
 class MageNodeBase:
 
-    parent: 'MageSyntax | None'
-
+    @no_type_check
     def get_grammar(self) -> 'MageGrammar':
         curr = self
         while curr is not None:
@@ -582,12 +581,11 @@ type MageModuleElement = MageRule | MageModule
 
 class MageModuleBase(MageNodeBase):
 
-    def __init__(self, elements: 'list[MageModuleElement] | None' = None, parent: 'MageGrammar | MageModule | None' = None) -> None:
+    def __init__(self, elements: 'list[MageModuleElement] | None' = None) -> None:
         super().__init__()
         if elements is None:
             elements = []
         self.elements = elements
-        self.parent = parent
         self._rules_by_name = dict[str, 'MageRule']()
         self._modules_by_name = dict[str, 'MageModule']()
         for element in elements:
@@ -706,10 +704,11 @@ class MageModule(MageModuleBase):
         flags: int = 0,
         parent: 'MageModule | MageGrammar | None' = None
     ) -> None:
-        super().__init__(elements, parent)
+        super().__init__(elements)
         self.name = name
         self.flags = flags
         self.symbol: Symbol | None = None
+        self.parent = parent
 
     def derive(
         self,
@@ -730,6 +729,14 @@ class MageModule(MageModuleBase):
         return out
 
 class MageGrammar(MageModuleBase):
+
+    def __init__(
+        self,
+        elements: 'list[MageRule | MageModule] | None' = None,
+    ) -> None:
+        super().__init__(elements)
+        self.symbol: Symbol | None = None
+        self.parent = None
 
     def derive(self, elements: list[MageModuleElement] | None = None) -> 'MageGrammar':
         if elements is None:
