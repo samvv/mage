@@ -1,4 +1,4 @@
-from collections.abc import Generator
+from collections.abc import Iterable
 import random
 from types import ModuleType
 from typing import assert_never, cast
@@ -38,7 +38,7 @@ class Table:
             x1 = ord(low)
             x2 = ord(high)
             d = x2 - x1 + 1
-            if n <= d:
+            if n < d:
                 return chr(x1 + n)
             n -= d
 
@@ -130,14 +130,14 @@ def random_sentence(
         assert_never(expr)
     return visit(expr)
 
+def xrange(n: int | None) -> Iterable[None]:
+    if n is None:
+        while True:
+            yield
+    return range(n)
 
-def explode(rule: MageRule, min_sentences: int, max_sentences: int) -> Generator[str]:
-    for _ in range(random.randrange(min_sentences, max_sentences)):
-        yield random_sentence(nonnull(rule.expr))
-
-
-def fuzz_all(count: int) -> None:
-    for i in range(0, count):
+def fuzz_all(count: int | None = None) -> None:
+    for i in xrange(count):
         grammar = random_grammar()
         fuzz_grammar(grammar, seed=i)
 
@@ -145,17 +145,37 @@ def fuzz_all(count: int) -> None:
 def fuzz_grammar(
     grammar: MageGrammar,
     seed: int | None = None,
-    min_sentences = 10,
-    max_sentences = 100,
+    num_sentences: int | None = None,
+    min_sentences_per_rule = 10,
+    max_sentences_per_rule = 100,
     enable_tokens: bool = False,
+    break_on_failure: bool = False
 ) -> None:
     random.seed(seed)
     parser = load_parser(grammar, native=True, enable_tokens=enable_tokens)
-    for rule in grammar.rules:
-        if rule.is_public:
-            for sentence in explode(rule, min_sentences, max_sentences):
-                print(repr(sentence))
+    print()
+    count = 0
+    done = False
+    while True:
+        for rule in grammar.rules:
+            if not rule.is_public:
+                continue
+            for sentence in range(random.randrange(min_sentences_per_rule, max_sentences_per_rule)):
+                if num_sentences is not None and count >= num_sentences:
+                    done = True
+                    break
+                sentence = random_sentence(nonnull(rule.expr))
                 stream = CharStream(sentence, sentry=EOF)
                 parse = getattr(parser, f'parse_{rule.name}')
-                assert(parse(stream) is not None)
+                if parse(stream) is None:
+                    print(f"\nOn sentence {repr(sentence)} and rule {rule.name}: parser returned failure where success was expected.")
+                    if break_on_failure:
+                        return
+                count += 1
+                print(f'\r{count} sentences succeeded.', end='')
+            if done:
+                break
+        if done:
+            break
+    print("\nFinished with no failures.")
 
