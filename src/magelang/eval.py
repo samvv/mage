@@ -1,6 +1,7 @@
 
 from typing import assert_never
 
+from magelang.analysis import is_eof
 from magelang.lang.mage.ast import *
 
 EOF = '\uFFFF'
@@ -23,6 +24,9 @@ def accepts(expr: MageExpr, text: str, grammar: MageGrammar) -> bool:
 
         nonlocal offset
 
+        if is_eof(expr):
+            return offset >= len(text)
+
         if isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
             assert(rule is not None)
@@ -38,49 +42,29 @@ def accepts(expr: MageExpr, text: str, grammar: MageGrammar) -> bool:
 
         if isinstance(expr, MageCharSetExpr):
             ch = peek()
-            if expr.invert:
-                for element in expr.elements:
-                    if isinstance(element, str):
-                        low = element
-                        high = element
-                    else:
-                        low, high = element
-                    if expr.ci:
-                        ch = ch.lower()
-                        low = low.lower()
-                        high = high.lower()
-                    if ord(ch) >= ord(low) and ord(ch) <= ord(high):
-                        return False
-                offset += 1
-                return True
-            else:
-                for element in expr.elements:
-                    if isinstance(element, str):
-                        low = element
-                        high = element
-                    else:
-                        low, high = element
-                    if expr.ci:
-                        ch = ch.lower()
-                        low = low.lower()
-                        high = high.lower()
-                    if ord(ch) >= ord(low) and ord(ch) <= ord(high):
-                        offset += 1
-                        return True
-                return False
+            for element in expr.canonical_elements:
+                if isinstance(element, str):
+                    low = element
+                    high = element
+                else:
+                    low, high = element
+                if ord(ch) >= ord(low) and ord(ch) <= ord(high):
+                    offset += 1
+                    return True
+            return False
 
         if isinstance(expr, MageSeqExpr):
-            keep = offset
             for element in expr.elements:
                 if not visit(element):
-                    offset = keep
                     return False
             return True
 
         if isinstance(expr, MageChoiceExpr):
+            keep = offset
             for element in expr.elements:
                 if visit(element):
                     return True
+                offset = keep
             return False
 
         if isinstance(expr, MageRepeatExpr):
@@ -104,7 +88,7 @@ def accepts(expr: MageExpr, text: str, grammar: MageGrammar) -> bool:
             keep = offset
             result = visit(expr.expr)
             offset = keep
-            return result
+            return not result if expr.is_negated else result
 
         if isinstance(expr, MageListExpr):
             if not visit(expr.element):
