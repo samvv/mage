@@ -182,7 +182,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str = '') -> PyModule:
 
     def gen_parse_body(rule: MageRule) -> Generator[PyStmt]:
 
-        is_token = grammar.is_token_rule(rule)
+        inside_token = grammar.is_token_rule(rule)
 
         generate_name = NameGenerator()
         generate_name('stream') # Mark function parameter as being in use
@@ -533,7 +533,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str = '') -> PyModule:
         def visit_field(expr: MageExpr, stream_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
             field_name = generate_name('temp') if is_token else expr.field_name
             assert(field_name is not None)
-            if is_token:
+            if inside_token:
                 accept = [ PyAugAssignStmt(PyNamedPattern(buffer_name), PyPlus(), PyNamedExpr(field_name)), *accept ]
             yield from visit_field_internals(expr, stream_name, field_name, accept, reject)
 
@@ -559,7 +559,7 @@ def mage_to_python_parser(grammar: MageGrammar, prefix: str = '') -> PyModule:
             )
             return
 
-        if is_token:
+        if inside_token:
             yield PyAssignStmt(PyNamedPattern(buffer_name), value=PyConstExpr(''))
             args = []
             if not grammar.is_static_token_rule(rule):
