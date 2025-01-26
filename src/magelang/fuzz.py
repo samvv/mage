@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from os import walk
 import random
 from types import ModuleType
 from typing import assert_never, cast
@@ -7,7 +8,7 @@ import importlib.util
 import magelang
 from magelang.analysis import is_eof
 from magelang.intervaltree import nonnull
-from magelang.lang.mage.ast import POSINF, PUBLIC, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, set_parents
+from magelang.lang.mage.ast import ASCII_MAX, ASCII_MIN, POSINF, PUBLIC, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, set_parents
 from magelang.eval import accepts
 from magelang.runtime import EOF, CharStream, ParseStream
 
@@ -83,17 +84,50 @@ def random_grammar(
     set_parents(grammar)
     return grammar
 
+def random_char():
+    return chr(random.randrange(ASCII_MIN, ASCII_MAX))
+
+def toss():
+    return random.randint(0, 1) == 0
 
 def random_sentence(
     expr: MageExpr,
-    max_inf_repeat: int = 10
-) -> str:
+    failure_rate: float = 0.1,
+    max_inf_repeat: int = 10,
+    max_char_delta = 5,
+) -> tuple[str, bool]:
+
+    fails = False
+
     def visit(expr: MageExpr) -> str:
+        nonlocal fails
         if is_eof(expr):
             return ''
         if isinstance(expr, MageLitExpr):
-            return expr.text
+            r = random.random()
+            if r >= failure_rate:
+                return expr.text
+            fails = True
+            out = ''
+            k = random.randrange(len(expr.text))
+            n = random.randrange(len(expr.text) - k)
+            left = random.randrange(-max_char_delta, max_char_delta)
+            right = random.randrange(-max_char_delta, max_char_delta)
+            for _ in range(left + max_char_delta):
+                out += random_char()
+            for i in range(n):
+                if toss():
+                    out += random_char()
+                else:
+                    out += expr.text[i + k]
+            for _ in range(right + max_char_delta):
+                out += random_char()
+            return out
         if isinstance(expr, MageCharSetExpr):
+            r = random.random()
+            if r < failure_rate:
+                fails = True
+                return random_char()
             table = Table()
             for element in expr.canonical_elements:
                 if isinstance(element, tuple):
@@ -129,7 +163,8 @@ def random_sentence(
                 out += visit(expr.expr)
             return out
         assert_never(expr)
-    return visit(expr)
+
+    return visit(expr), fails
 
 def xrange(n: int | None) -> Iterable[None]:
     if n is None:
@@ -167,13 +202,20 @@ def fuzz_grammar(
                     break
                 if rule.expr is None:
                     continue
-                sentence = random_sentence(rule.expr)
-                if not accepts(rule.expr, sentence, grammar=grammar):
+                sentence, fails = random_sentence(rule.expr)
+                valid = accepts(rule.expr, sentence, grammar=grammar)
+                if (not fails and not valid) or (fails and valid):
                     continue
                 stream = CharStream(sentence, sentry=EOF)
                 parse = getattr(parser, f'parse_{rule.name}')
-                if parse(stream) is None:
-                    print(f"\nOn sentence {repr(sentence)} and rule {rule.name}: parser returned failure where success was expected.")
+                node = parse(stream)
+                if (node is None) != fails:
+                    message = f"\nOn sentence {repr(sentence)} and rule {rule.name}: "
+                    if fails:
+                        message += "parser returned success where failure was expected."
+                    else:
+                        message += "parser returned failure where success was expected."
+                    print(message)
                     if break_on_failure:
                         return
                 count += 1
