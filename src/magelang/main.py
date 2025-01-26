@@ -14,6 +14,7 @@ from .lang.mage.parser import Parser
 from .lang.mage.scanner import Scanner
 from .lang.python.emitter import emit as py_emit
 from .passes import *
+from .fuzz import fuzz_all, fuzz_grammar
 
 type TargetLanguage = Literal['python', 'rust']
 
@@ -164,3 +165,10 @@ def dump(filename: Path | str, *passes: str, **opts: Any) -> int:
         return 1
     return 0
 
+def fuzz(filename: str | None, n: int = 100) -> int:
+    if filename is None:
+        fuzz_all(n)
+        return 0
+    grammar = load_grammar(filename)
+    fuzz_grammar(grammar)
+    return 0
