@@ -8,6 +8,7 @@ import magelang
 from magelang.analysis import is_eof
 from magelang.intervaltree import nonnull
 from magelang.lang.mage.ast import POSINF, PUBLIC, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, set_parents
+from magelang.eval import accepts
 from magelang.runtime import EOF, CharStream, ParseStream
 
 def load_parser(grammar: MageGrammar, native: bool = False, enable_tokens: bool = True) -> ModuleType:
@@ -164,7 +165,11 @@ def fuzz_grammar(
                 if num_sentences is not None and count >= num_sentences:
                     done = True
                     break
-                sentence = random_sentence(nonnull(rule.expr))
+                if rule.expr is None:
+                    continue
+                sentence = random_sentence(rule.expr)
+                if not accepts(rule.expr, sentence, grammar=grammar):
+                    continue
                 stream = CharStream(sentence, sentry=EOF)
                 parse = getattr(parser, f'parse_{rule.name}')
                 if parse(stream) is None:
