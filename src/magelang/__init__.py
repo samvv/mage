@@ -37,7 +37,7 @@ def load_grammar(filename: Path | str) -> MageGrammar:
     return grammar
 
 def generate_files(
-    filename: Path | str,
+    grammar: MageGrammar | Path | str,
     lang: str,
     prefix: str = '',
     engine: str = 'old',
@@ -66,7 +66,8 @@ def generate_files(
     #if enable_opt:
     #    pass_ = pipeline(pass_, extract_prefixes, simplify)
 
-    grammar = load_grammar(filename)
+    if not isinstance(grammar, MageGrammar):
+        grammar = load_grammar(grammar)
 
     if engine == 'old':
         files = dict[str, Pass[MageGrammar, PyModule]]()
@@ -103,8 +104,6 @@ def generate_files(
         )
     else:
         panic("Unrecognised engine requested")
-
-    grammar = load_grammar(filename)
 
     return apply(ctx, grammar, pipeline(
         mage_prepare_grammar, # Inline rules etc
