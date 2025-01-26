@@ -55,6 +55,14 @@ mage generate python foo.mage --prefix foo --out-dir src/foolang
 
 Run all tests inside the documentation of the given grammar.
 
+### `mage fuzz [filename]`
+
+Fuzz the given grammar using a pseudorandom number generator for replayable results.
+
+```
+mage fuzz grammars/magedown.mage
+```
+
 ## Grammar
 
 ### `pub <name> = <expr>`
