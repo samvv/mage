@@ -94,9 +94,7 @@ def get_field_name(expr: MageExpr) -> str | None:
         if element_label is not None:
             return plural(element_label)
         return None
-    if isinstance(expr, MageCharSetExpr) or isinstance(expr, MageChoiceExpr) or isinstance(expr, MageSeqExpr):
-        return None
-    raise RuntimeError(f'unexpected {expr}')
+    return None
 
 def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = False) -> Generator[Field | MageExpr, None, None]:
 
