@@ -34,7 +34,16 @@ class Symbol:
 
 
 class MageNodeBase:
-    pass
+
+    parent: 'MageSyntax | None'
+
+    def get_grammar(self) -> 'MageGrammar':
+        curr = self
+        while curr is not None:
+            if isinstance(curr, MageGrammar):
+                return curr
+            curr = curr.parent
+        raise RuntimeError(f'Could not get the grammmar of a node. Are the parent pointers correctly set?')
 
 
 @dataclass
@@ -161,7 +170,10 @@ class MageLookaheadExpr(MageExprBase):
             label = self.label
         if actions is None:
             actions = self.actions
-        return MageLookaheadExpr(expr=expr, is_negated=is_negated, label=label, actions=actions)
+        out = MageLookaheadExpr(expr=expr, is_negated=is_negated, label=label, actions=actions)
+        if expr is not None:
+            expr.parent = out
+        return out
 
 
 type CharSetElement = str | tuple[str, str]
@@ -313,7 +325,11 @@ class MageChoiceExpr(MageExprBase):
             label = self.label
         if actions is None:
             actions = self.actions
-        return MageChoiceExpr(elements=elements, label=label, actions=actions)
+        out = MageChoiceExpr(elements=elements, label=label, actions=actions)
+        if elements is not None:
+            for element in elements:
+                element.parent = out
+        return out
 
 
 class MageSeqExpr(MageExprBase):
@@ -338,7 +354,11 @@ class MageSeqExpr(MageExprBase):
             label = self.label
         if actions is None:
             actions = self.actions
-        return MageSeqExpr(elements=elements, label=label, actions=actions)
+        out = MageSeqExpr(elements=elements, label=label, actions=actions)
+        if elements is not None:
+            for element in elements:
+                element.parent = out
+        return out
 
 
 class MageListExpr(MageExprBase):
@@ -373,7 +393,12 @@ class MageListExpr(MageExprBase):
             label = self.label
         if actions is None:
             actions = self.actions
-        return MageListExpr(element=element, separator=separator, min_count=min_count, label=label, actions=actions)
+        out = MageListExpr(element=element, separator=separator, min_count=min_count, label=label, actions=actions)
+        if element is not None:
+            element.parent = out
+        if separator is not None:
+            separator.parent = out
+        return out
 
 
 class MageHideExpr(MageExprBase):
@@ -398,7 +423,10 @@ class MageHideExpr(MageExprBase):
             label = self.label
         if actions is None:
             actions = self.actions
-        return MageHideExpr(expr=expr, label=label, actions=actions)
+        out = MageHideExpr(expr=expr, label=label, actions=actions)
+        if expr is not None:
+            expr.parent = out
+        return out
 
 
 POSINF = sys.maxsize
@@ -437,7 +465,10 @@ class MageRepeatExpr(MageExprBase):
             label = self.label
         if actions is None:
             actions = self.actions
-        return MageRepeatExpr(expr=expr, min=min, max=max, label=label, actions=actions)
+        out = MageRepeatExpr(expr=expr, min=min, max=max, label=label, actions=actions)
+        if expr is not None:
+            expr.parent = out
+        return out
 
 
 class Decorator(MageNodeBase):
@@ -506,7 +537,10 @@ class MageRule(MageNodeBase):
             type_name = self.type_name
         if mode is None:
             mode = self.mode
-        return MageRule(name=name, expr=expr, comment=comment, decorators=decorators, flags=flags, type_name=type_name, mode=mode)
+        out = MageRule(name=name, expr=expr, comment=comment, decorators=decorators, flags=flags, type_name=type_name, mode=mode)
+        if expr is not None:
+            expr.parent = out
+        return out
 
     @property
     def is_public(self) -> bool:
@@ -689,14 +723,22 @@ class MageModule(MageModuleBase):
             elements = self.elements
         if flags is None:
             flags = self.flags
-        return MageModule(name=name, elements=elements, parent=None)
+        out = MageModule(name=name, elements=elements, parent=None)
+        if elements is not None:
+            for element in elements:
+                element.parent = out
+        return out
 
 class MageGrammar(MageModuleBase):
 
     def derive(self, elements: list[MageModuleElement] | None = None) -> 'MageGrammar':
         if elements is None:
             elements = self.elements
-        return MageGrammar(elements)
+        out = MageGrammar(elements)
+        if elements is not None:
+            for element in elements:
+                element.parent = out
+        return out
 
 type MageSyntax = MageExpr | MageRule | MageGrammar | MageModule
 
