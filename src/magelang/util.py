@@ -155,6 +155,10 @@ class IndentWriter:
                 self.at_blank_line = False
             self.output.write(ch)
 
+    def writeln(self, text: str = '') -> None:
+        self.write(text)
+        self.write('\n')
+
 
 class NameGenerator:
 
