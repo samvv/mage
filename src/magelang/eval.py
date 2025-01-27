@@ -7,6 +7,11 @@ from magelang.lang.mage.ast import *
 EOF = '\uFFFF'
 
 def accepts(expr: MageExpr, text: str, grammar: MageGrammar) -> bool | None:
+    """
+    Check whether the given expression accepts the given text.
+
+    Returns `None` when the maximum recursion depth was reached. This usually means that the grammar has an infinite loop.
+    """
 
     offset = 0
 
