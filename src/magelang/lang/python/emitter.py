@@ -246,6 +246,9 @@ def emit_token(node: PyToken) -> str:
     if isinstance(node, PyAsteriskAsterisk):
         return '**'
 
+    if isinstance(node, PySlashSlash):
+        return '//'
+
     assert_never(node)
 
 def is_wide(expr: PyExpr) -> bool:
