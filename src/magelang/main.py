@@ -188,7 +188,17 @@ def fuzz(filename: str | None = None, /, *, all: bool = False, limit: int | None
     if filename is None:
         error("Provide a grammar to fuzz or use --all to fuzz mage itself.")
         return 1
-    grammar = load_grammar(filename)
-    fuzz_grammar(grammar, num_sentences=limit, break_on_failure=break_on_failure)
+    if filename.startswith(SEED_FILENAME_PREFIX):
+        import random
+        seed = int(filename[len(SEED_FILENAME_PREFIX):])
+        info(f"Using seed {seed}")
+        random.seed(seed)
+        grammar = random_grammar()
+    else:
+        grammar = load_grammar(filename)
+    if fuzz_grammar(grammar, num_sentences=limit, break_on_failure=break_on_failure):
+        print("Finished with no failures.")
+    else:
+        print("Finished with failures.")
     return 0
 
