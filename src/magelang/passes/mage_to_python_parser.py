@@ -145,13 +145,14 @@ def mage_to_python_parser(
     grammar: MageGrammar,
     prefix: str = '',
     emit_single_file: bool = False,
+    silent: bool = False,
 ) -> PyModule:
 
     enable_tokens = is_tokenizable(grammar)
     buffer_name = 'buffer'
     stream_type_name = 'ParseStream' if enable_tokens else 'CharStream'
 
-    if not enable_tokens:
+    if not enable_tokens and not silent:
         print('Warning: grammar could not be tokenized. We will fall back to a more generic algorithm.')
 
     stmts = list[PyStmt]()
