@@ -13,7 +13,6 @@ from .mage_inline import *
 from .mage_insert_magic_rules import *
 from .mage_insert_skip import *
 from .mage_remove_hidden import *
-from .mage_resolve import *
 from .mage_simplify import *
 from .mage_to_python_emitter import *
 from .mage_to_python_lexer import *
@@ -45,7 +44,6 @@ all_passes = {
     mage_insert_magic_rules,
     mage_insert_skip,
     mage_remove_hidden,
-    mage_resolve,
     mage_simplify,
     mage_to_python_emitter,
     mage_to_python_lexer,

@@ -7,8 +7,6 @@ from .lang.python import *
 from .lang.treespec import *
 from .passes import *
 
-# Assume all nodes are resolved and only re-run `mage_resolve` if changes require it
-
 mage_check = pipeline(
     mage_check_token_no_parse,
     mage_check_undefined,
@@ -17,11 +15,9 @@ mage_check = pipeline(
 )
 mage_prepare_grammar = pipeline(
     mage_insert_magic_rules,
-    mage_resolve,
     mage_hide_lookaheads,
     mage_inline,
     mage_extract_literals,
-    mage_resolve
 )
 python_optimise = pipeline(
     python_remove_pass_stmts,
