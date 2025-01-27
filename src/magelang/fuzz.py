@@ -270,6 +270,9 @@ def fuzz_grammar(
                 sentence, fails = random_sentence(rule.expr)
                 n += 1
                 valid = accepts(rule.expr, sentence, grammar=grammar)
+                if valid is None:
+                    print(f"\nPotential infinite grammar with seed {seed}")
+                    continue
                 if (not fails and not valid) or (fails and valid):
                     continue
                 stream = CharStream(sentence, sentry=EOF)

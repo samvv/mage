@@ -6,7 +6,7 @@ from magelang.lang.mage.ast import *
 
 EOF = '\uFFFF'
 
-def accepts(expr: MageExpr, text: str, grammar: MageGrammar) -> bool:
+def accepts(expr: MageExpr, text: str, grammar: MageGrammar) -> bool | None:
 
     offset = 0
 
@@ -106,4 +106,7 @@ def accepts(expr: MageExpr, text: str, grammar: MageGrammar) -> bool:
 
         assert_never(expr)
 
-    return visit(expr)
+    try:
+        return visit(expr)
+    except RecursionError:
+        return
