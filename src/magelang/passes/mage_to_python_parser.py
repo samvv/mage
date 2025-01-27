@@ -401,7 +401,6 @@ def mage_to_python_parser(
                                     [
                                         PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ])),
                                         make_append(ty, target_name, PyNamedExpr(element_name)),
-                                        PyContinueStmt(),
                                     ],
                                     [
                                         PyBreakStmt()
@@ -409,13 +408,13 @@ def mage_to_python_parser(
                                 ),
                             ]
                         ))
-                    else: # expr.max == expr.min
+                    else:
                         new_stream_name = generate_name('stream')
                         match_name = generate_name('match')
                         min_to_max.append(PyAssignStmt(PyNamedPattern(match_name), value=PyConstExpr(True)))
                         min_to_max.append(PyForStmt(
                             PyNamedPattern('_'),
-                            PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
+                            PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(expr.min), PyConstExpr(expr.max) ]),
                             body=[
                                 PyAssignStmt(PyNamedPattern(new_stream_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'fork'))),
                                 *visit_field_internals(
@@ -424,7 +423,6 @@ def mage_to_python_parser(
                                     element_name,
                                     [
                                         PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'join_to'), args=[ PyNamedExpr(new_stream_name) ])),
-                                        PyContinueStmt(),
                                     ],
                                     [
                                         PyAssignStmt(PyNamedPattern(match_name), value=PyConstExpr(False)),
@@ -454,7 +452,9 @@ def mage_to_python_parser(
                     yield PyForStmt(
                         PyNamedPattern('_'),
                         PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
-                        body=list(gen_body())
+                        body=[
+                            *visit_field_internals(expr.expr, stream_name, element_name, [ make_append(ty, target_name, PyNamedExpr(element_name)) ], reject),
+                        ]
                     )
                     yield from min_to_max
 
