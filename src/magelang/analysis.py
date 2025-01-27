@@ -65,7 +65,7 @@ def is_tokenizable(grammar: MageGrammar) -> bool:
     """
     Check whether a grammar can be correctly tokenized.
 
-    When a rule is undefined, we assume the worst and this function will return `True`.
+    When a rule is undefined, we assume the worst and this function will return `False`.
     """
 
     def has_nontoken(expr: MageExpr) -> bool:
