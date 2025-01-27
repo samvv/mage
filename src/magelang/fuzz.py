@@ -1,6 +1,5 @@
 from collections.abc import Iterable
 import random
-import sys
 from types import ModuleType
 from typing import assert_never, cast
 import importlib.util
@@ -239,15 +238,17 @@ def fuzz_all(
 ) -> None:
     # sys.setrecursionlimit(10000)
     for i in xrange(count):
+        # FIXME might lead to duplicate grammars
         seed = round(time.time() * 1000)
         random.seed(seed)
         grammar = random_grammar()
-        if not fuzz_grammar(grammar, num_sentences=num_sentences_per_grammar):
+        if not fuzz_grammar(grammar, num_sentences=num_sentences_per_grammar, grammar_seed=seed):
             print(f"Grammar with seed {seed} failed.")
 
 def fuzz_grammar(
     grammar: MageGrammar,
     seed: int | None = None,
+    grammar_seed: int | None = None,
     num_sentences: int | None = None,
     min_sentences_per_rule = 10,
     max_sentences_per_rule = 100,
@@ -257,7 +258,7 @@ def fuzz_grammar(
     try:
         parser = load_parser(grammar, native=True, enable_tokens=enable_tokens)
     except Exception as e:
-        print(f"Failed to generate parser: {e}")
+        print(f"Failed to generate parser for grammar with seed {grammar_seed}: {e}")
         return False
     succeeded = 0
     failed = 0
@@ -266,6 +267,7 @@ def fuzz_grammar(
         seed = round(time.time() * 1000)
     n = 0
     while True:
+        keep = n
         for rule in grammar.rules:
             if not rule.is_public:
                 continue
@@ -289,7 +291,7 @@ def fuzz_grammar(
                 parse = getattr(parser, f'parse_{rule.name}')
                 node = parse(stream)
                 if (node is None) != fails:
-                    message = f"\nOn sentence {repr(sentence)} and rule {rule.name} with seed {seed}: "
+                    message = f"\nOn sentence {repr(sentence)} and rule {rule.name} with seed {grammar_seed}: "
                     if fails:
                         message += "parser returned success where failure was expected."
                     else:
@@ -303,6 +305,9 @@ def fuzz_grammar(
                 print(f'\r{succeeded} sentences succeeded.', end='')
             if done:
                 break
+        if n == keep:
+            print("\nGrammar had no fuzzable rules")
+            break
         if done:
             break
     print()
