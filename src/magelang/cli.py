@@ -297,7 +297,10 @@ def run(mod: ModuleType | str, name: str | None = None) -> int:
 
             enable_flags = []
             disable_flags = []
-            sig = inspect.signature(proc)
+            try:
+                sig = inspect.signature(proc)
+            except ValueError:
+                continue
 
             for name, param in sig.parameters.items():
 
