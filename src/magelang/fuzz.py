@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 import random
+import sys
 from types import ModuleType
 from typing import assert_never, cast
 import importlib.util
@@ -10,7 +11,9 @@ from magelang.analysis import is_eof
 from magelang.intervaltree import nonnull
 from magelang.lang.mage.ast import ASCII_MAX, ASCII_MIN, POSINF, PUBLIC, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, set_parents
 from magelang.eval import accepts
+from magelang.lang.mage.emitter import emit
 from magelang.runtime import EOF, CharStream, ParseStream
+from magelang.util import unreachable
 
 def load_parser(grammar: MageGrammar, native: bool = False, enable_tokens: bool = True) -> ModuleType:
     if native:
@@ -70,16 +73,68 @@ def random_name() -> str:
     return out
 
 
+def random_expr(
+    rule_names: list[str],
+    max_choices: int = 2,
+    max_repeat_min: int = 5,
+    max_lit_chars: int = 10,
+    max_repeat_min_max: int = 5,
+    max_charset_elements: int = 20,
+) -> MageExpr:
+    def generate() -> MageExpr:
+        n = random.randrange(7)
+        if n == 0:
+            out = ''
+            for _ in range(random.randrange(0, max_lit_chars)):
+                out += random_char()
+            return MageLitExpr(out)
+        if n == 1:
+            elements = []
+            for _ in range(random.randrange(1, max_choices)):
+                elements.append(generate())
+            return MageChoiceExpr(elements)
+        if n == 2:
+            elements = []
+            for _ in range(random.randrange(1, max_choices)):
+                elements.append(generate())
+            return MageSeqExpr(elements)
+        if n == 3:
+            min = random.randrange(max_repeat_min)
+            d = random.randrange(max_repeat_min_max+1)
+            if d == max_repeat_min_max:
+                max = POSINF
+            else:
+                max = min + d
+            expr = generate()
+            return MageRepeatExpr(expr, min, max)
+        if n == 4:
+            elements = []
+            ci = toss()
+            invert = toss()
+            for _ in range(random.randrange(max_charset_elements)):
+                l = random.randrange(ASCII_MIN, ASCII_MAX)
+                h = random.randrange(l, ASCII_MAX)
+                elements.append((chr(l), chr(h)))
+            return MageCharSetExpr(elements, ci, invert)
+        if n == 5:
+            return MageHideExpr(generate())
+        if n == 6:
+            return MageRefExpr(random.choice(rule_names))
+        unreachable()
+    return generate()
+
 def random_grammar(
     min_rules: int = 0,
     max_rules: int = 100
 ) -> MageGrammar:
     # FIXME Also generate random modules and references to them
     elements = []
+    rule_names = []
     n = random.randrange(min_rules, max_rules)
-    for _ in range(0, n):
-        name = random_name()
-        elements.append(MageRule(name=name, flags=PUBLIC, expr=random_expr()))
+    for _ in range(n):
+        rule_names.append(random_name())
+    for i in range(n):
+        elements.append(MageRule(name=rule_names[i], flags=PUBLIC, expr=random_expr(rule_names)))
     grammar = MageGrammar(elements=elements)
     set_parents(grammar)
     return grammar
@@ -173,10 +228,13 @@ def xrange(n: int | None) -> Iterable[None]:
     return range(n)
 
 def fuzz_all(count: int | None = None) -> None:
+    # sys.setrecursionlimit(10000)
     for i in xrange(count):
+        seed = round(time.time() * 1000)
+        random.seed(seed)
         grammar = random_grammar()
-        fuzz_grammar(grammar, seed=i)
-
+        if not fuzz_grammar(grammar):
+            print(f"Grammar with seed {seed} failed.")
 
 def fuzz_grammar(
     grammar: MageGrammar,
@@ -186,9 +244,13 @@ def fuzz_grammar(
     max_sentences_per_rule = 100,
     enable_tokens: bool = False,
     break_on_failure: bool = False
-) -> None:
-    parser = load_parser(grammar, native=True, enable_tokens=enable_tokens)
+) -> bool:
+    try:
+        parser = load_parser(grammar, native=True, enable_tokens=enable_tokens)
+    except:
+        return False
     succeeded = 0
+    failed = 0
     done = False
     if seed is None:
         seed = round(time.time() * 1000)
@@ -220,13 +282,19 @@ def fuzz_grammar(
                     else:
                         message += "parser returned failure where success was expected."
                     print(message)
+                    failed += 1
                     if break_on_failure:
-                        return
-                succeeded += 1
+                        return False
+                else:
+                    succeeded += 1
                 print(f'\r{succeeded} sentences succeeded.', end='')
             if done:
                 break
         if done:
             break
-    print("\nFinished with no failures.")
+    if failed == 0:
+        print("\nFinished with no failures.")
+    else:
+        print("\nFinished with failures.")
+    return True
 
