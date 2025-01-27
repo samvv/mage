@@ -2,10 +2,10 @@
 import importlib.util
 from pathlib import Path
 from pprint import pprint
-from typing import Literal
 
-from magelang import generate_files, load_grammar, mage_check, write_files
+from magelang import GenerateConfig, TargetLanguage, default_config, generate_files, load_grammar, mage_check, write_files
 from magelang.constants import SEED_FILENAME_PREFIX
+from magelang.util import Files
 
 from .manager import Context, apply, pipeline
 from .logging import error, info
@@ -17,30 +17,15 @@ from .lang.python.emitter import emit as py_emit
 from .passes import *
 from .fuzz import fuzz_all, fuzz_grammar, random_grammar
 
-type TargetLanguage = Literal['python', 'rust']
-
 def generate(
     lang: TargetLanguage,
     filename: str,
     /,
     *,
-    seed: int | None = None,
     out_dir: Path | str,
-    prefix: str = '',
-    engine: str = 'old',
-    skip_checks: bool = False,
+    debug: bool = False,
     force: bool = False,
-    enable_cst: bool = True,
-    enable_ast: bool = True,
-    enable_asserts: bool = False,
-    enable_lexer: bool = True,
-    enable_parser: bool = True,
-    enable_emitter: bool = True,
-    enable_cst_parent_pointers: bool = True,
-    enable_ast_parent_pointers: bool = True,
-    enable_visitor: bool = True,
-    enable_rewriter: bool = True,
-    enable_linecol: bool = False
+    **opts: Unpack[GenerateConfig]
 ) -> int:
     """
     Generate programming code from a grammar
@@ -54,24 +39,12 @@ def generate(
     else:
         grammar = load_grammar(filename)
     out_dir = Path(out_dir)
-    files = generate_files(
+    files = cast(Files, generate_files(
         grammar,
         lang,
-        prefix=prefix,
-        engine=engine,
-        skip_checks=skip_checks,
-        enable_cst=enable_cst,
-        enable_ast=enable_ast,
-        enable_asserts=enable_asserts,
-        enable_lexer=enable_lexer,
-        enable_parser=enable_parser,
-        enable_emitter=enable_emitter,
-        enable_cst_parent_pointers=enable_cst_parent_pointers,
-        enable_ast_parent_pointers=enable_ast_parent_pointers,
-        enable_visitor=enable_visitor,
-        enable_rewriter=enable_rewriter,
-        enable_linecol=enable_linecol,
-    )
+        debug=debug,
+        **opts,
+    ))
     write_files(files, out_dir, force)
     return 0
 
@@ -145,6 +118,9 @@ def _test_internal(filename: Path | str) -> bool:
         return False
 
 def test(filename: Path | str, *, generate: bool) -> int:
+    """
+    Test the examples inside the documentation of a grammar
+    """
     test = _test_external if generate else _test_internal
     return test(filename)
 

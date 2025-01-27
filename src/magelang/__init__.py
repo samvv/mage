@@ -1,4 +1,5 @@
 
+from enum import StrEnum
 from pathlib import Path
 from magelang.util import Files
 from .manager import *
@@ -32,35 +33,78 @@ def load_grammar(filename: Path | str) -> MageGrammar:
     set_parents(grammar)
     return grammar
 
+class Engine(StrEnum):
+    NEW = 'new'
+    OLD = 'old'
+
+type TargetLanguage = Literal['python', 'rust']
+
+def _is_functional(lang: str) -> bool:
+    return lang in [ 'elm', 'purescript', 'haskell', 'agda', 'idris' ]
+
+class GenerateConfig(TypedDict, total=False):
+    engine: Engine
+    prefix: str
+    skip_checks: bool
+    silent: bool
+    emit_single_file: bool
+    enable_cst: bool
+    enable_ast: bool
+    enable_asserts: bool
+    enable_lexer: bool
+    enable_parser: bool
+    enable_emitter: bool
+    enable_cst_parent_pointers: bool
+    enable_ast_parent_pointers: bool
+    enable_visitor: bool
+    enable_rewriter: bool
+    enable_linecol: bool
+    max_named_chars: int
+
+def default_config(lang: TargetLanguage, is_debug: bool) -> GenerateConfig:
+    return GenerateConfig(
+        prefix='',
+        engine=Engine.OLD,
+        skip_checks=False,
+        emit_single_file=False,
+        silent=False,
+        enable_cst=True,
+        enable_ast=True,
+        enable_asserts=is_debug,
+        enable_lexer=True,
+        enable_parser=True,
+        enable_emitter=True,
+        enable_cst_parent_pointers=not _is_functional(lang),
+        enable_ast_parent_pointers=not _is_functional(lang),
+        enable_visitor=True,
+        enable_rewriter=True,
+        enable_linecol=False,
+        max_named_chars=4,
+    )
+
 def generate_files(
     grammar: MageGrammar | Path | str,
-    lang: str,
-    prefix: str = '',
-    engine: str = 'old',
-    skip_checks: bool = False,
-    enable_cst: bool = False,
-    enable_ast: bool = False,
-    enable_asserts: bool = False,
-    enable_lexer: bool = False,
-    enable_parser: bool = False,
-    enable_emitter: bool = False,
-    enable_cst_parent_pointers: bool = False,
-    enable_ast_parent_pointers: bool = False,
-    enable_visitor: bool = False,
-    enable_rewriter: bool = False,
-    enable_linecol: bool = False,
-    silent: bool = False,
-    emit_single_file: bool = False,
+    lang: TargetLanguage,
+    *,
+    debug: bool = False,
+    **config: Unpack[GenerateConfig]
 ) -> Files | str:
 
-    opts: dict[str, Any] = {
-        'prefix': prefix,
-        'enable_asserts': enable_asserts,
-        'emit_single_file': emit_single_file,
-        'silent': silent,
-    }
+    for k, v in default_config(lang, debug).items():
+        if k not in config:
+            config[k] = v
 
-    ctx = Context(opts, quiet=True)
+    engine = nonnull(config.get('engine'))
+    enable_cst = nonnull(config.get('enable_cst'))
+    enable_ast = nonnull(config.get('enable_ast'))
+    enable_emitter = nonnull(config.get('enable_emitter'))
+    enable_parser = nonnull(config.get('enable_parser'))
+    enable_lexer = nonnull(config.get('enable_lexer'))
+    emit_single_file = nonnull(config.get('emit_single_file'))
+    skip_checks = nonnull(config.get('skip_checks'))
+    silent = nonnull(config.get('silent'))
+
+    ctx = Context(cast(dict[str, Any], config), silent=True)
 
     # FIXME should only happen in the parser generator and lexer generator
     #if enable_opt:
@@ -69,7 +113,7 @@ def generate_files(
     if not isinstance(grammar, MageGrammar):
         grammar = load_grammar(grammar)
 
-    if engine == 'old':
+    if engine == Engine.OLD:
         files = dict[str, Pass[MageGrammar, PyModule]]()
         trees = dict[str, Pass[Specs, PyModule]]()
         if enable_cst:
@@ -89,7 +133,7 @@ def generate_files(
             merge(distribute(files), pipeline(mage_to_treespec, distribute(trees))),
             each_value(pipeline(python_optimise, python_to_text)),
         )
-    elif engine == 'next':
+    elif engine == Engine.NEW:
         if lang == 'python':
             revolv_to_target = each_value(pipeline(revolv_lift_assign_expr, revolv_to_python, python_to_text))
         elif lang == 'rust':

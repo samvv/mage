@@ -26,9 +26,9 @@ class PassBase(Generic[_X, _Y]):
 
 class Context:
 
-    def __init__(self, opts: dict[str, Any], quiet: bool = False) -> None:
+    def __init__(self, opts: dict[str, Any], silent: bool = False) -> None:
         self.opts = opts
-        self.silent = quiet
+        self.silent = silent
 
     def has_option(self, name: str) -> bool:
         return name in self.opts

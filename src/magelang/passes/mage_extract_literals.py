@@ -8,7 +8,10 @@ from magelang.analysis import is_tokenizable
 
 T = TypeVar('T', bound=MageGrammar | MageModule)
 
-def mage_extract_literals(grammar: MageGrammar) -> MageGrammar:
+def mage_extract_literals(
+    grammar: MageGrammar,
+    max_named_chars: int = 4,
+) -> MageGrammar:
 
     enable_tokens = is_tokenizable(grammar)
 
@@ -43,7 +46,7 @@ def mage_extract_literals(grammar: MageGrammar) -> MageGrammar:
                 name = f'{text}_keyword'
                 keywords.add(name)
                 return name
-            if len(text) <= 4:
+            if len(text) <= max_named_chars:
                 # First try to name the entire word
                 if text in names:
                     return names[text]
