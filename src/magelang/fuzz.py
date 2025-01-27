@@ -16,7 +16,18 @@ from magelang.util import unreachable
 
 def load_parser(grammar: MageGrammar, native: bool = False, enable_tokens: bool = True) -> ModuleType:
     if native:
-        source = cast(str, magelang.generate_files(grammar, lang='python', enable_cst=True, enable_parser=True, emit_single_file=True, silent=True, enable_ast=False, enable_emitter=False))
+        # TODO conditionally enable the lexer and fuzz that as well
+        source = cast(str, magelang.generate_files(
+            grammar,
+            lang='python',
+            enable_cst=True,
+            enable_parser=True,
+            emit_single_file=True,
+            silent=True,
+            enable_ast=False,
+            enable_emitter=False,
+            enable_lexer=False
+        ))
         spec = importlib.util.spec_from_loader('magelang.fuzzparser', loader=None)
         assert(spec is not None)
         module = importlib.util.module_from_spec(spec)
