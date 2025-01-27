@@ -5,12 +5,14 @@ Stand-alone module to launch command-line applications
 import math
 import inspect
 from collections.abc import Callable, Iterable, Sequence
-from os import walk
 from pathlib import Path
 import sys
 from types import ModuleType, UnionType
+import types
 from typing import Any, Generic, Literal, TypeAliasType, TypeVar, Union
 import typing
+
+from magelang.util import IndentWriter
 
 def _to_kebab_case(name: str) -> str:
     return name.replace('_', '-')
@@ -65,7 +67,7 @@ class _Argument:
     def __init__(self, name: str) -> None:
         self.name = name
         self.flags = 0
-        self.ty = Any
+        self.ty: Any = None
         self.min_count = 1
         self.max_count = 1
         self.default: _ArgValue | None = None
@@ -78,6 +80,10 @@ class _Argument:
     @property
     def is_flag(self) -> bool:
         return (self.flags & ARGFLAGS_FLAG) > 0
+
+    @property
+    def is_rest(self) -> bool:
+        return _are_bits_set(self.flags, ARGFLAGS_REST)
 
     @property
     def is_rest_flags(self) -> bool:
@@ -119,12 +125,19 @@ class _Command:
 
     def __init__(self, name: str) -> None:
         self.name = name
+        self.description: str | None = None
         self.callback: Callable[..., int] | None = None
         self._subcommands = dict[str, _Command]()
         self._arguments = dict[str, _Argument]()
         self._pos_args: list[_Argument] = []
         self._rest_flags_argument = None
         # self._arguments_by_flag = dict[str, Argument]()
+
+    def arguments(self) -> Iterable[_Argument]:
+        return self._arguments.values()
+
+    def subcommands(self) -> 'Iterable[_Command]':
+        return self._subcommands.values()
 
     def add_subcommand(self, cmd: '_Command') -> None:
         """
@@ -134,6 +147,9 @@ class _Command:
         """
         assert(cmd.name not in self._subcommands)
         self._subcommands[cmd.name] = cmd
+
+    def count_arguments(self) -> int:
+        return len(self._arguments)
 
     def add_argument(self, arg: _Argument) -> None:
         """
@@ -158,6 +174,9 @@ class _Command:
 
     def get_argument(self, name: str) -> _Argument | None:
         return self._arguments.get(name)
+
+    def count_subcommands(self) -> int:
+        return len(self._subcommands)
 
     def get_flag(self, name: str) -> _Argument | None:
         arg = self.get_argument(name)
@@ -278,6 +297,127 @@ def _unwrap_optional(ty: Any) -> Any:
         return Union[*(arg for arg in args if arg is not None)]
     return ty
 
+def add_complements(prog: Program) -> None:
+    """
+    Generates additional arguments that are the inverse of existing arguments.
+
+    Example: `--enable-foo` will ackquire `--disable-foo` and both will work.
+
+    Two additional flags can also be enabled that enable/disable all flags at once.
+
+    Example: `--enable-all` and `--disable-all`
+    """
+
+    def visit(cmd: _Command) -> None:
+
+        enable_flags = []
+        disable_flags = []
+
+        for arg in list(cmd.arguments()):
+            if not arg.is_rest and arg.ty is bool:
+                if arg.name.startswith('enable_'):
+                    suffix = arg.name[7:]
+                    enable_flags.append(arg.name)
+                    arg.set_callback(_bool_setter(arg.name))
+                    inv_arg = _Argument('disable_' + suffix)
+                    inv_arg.set_callback(_bool_setter(arg.name, inverted=True))
+                    inv_arg.set_optional()
+                    inv_arg.set_type(bool)
+                    inv_arg.set_flag()
+                    cmd.add_argument(inv_arg)
+                elif arg.name.startswith('disable_'):
+                    suffix = arg.name[8:]
+                    disable_flags.append(arg.name)
+                    arg.set_callback(_bool_setter(arg.name))
+                    inv_arg = _Argument('enable_' + suffix)
+                    inv_arg.set_optional()
+                    inv_arg.set_flag()
+                    inv_arg.set_type(bool)
+                    inv_arg.set_callback(_bool_setter(arg.name, inverted=True))
+
+        if enable_flags or disable_flags:
+            enable_all = _Argument('enable_all')
+            enable_all.set_flag()
+            enable_all.set_optional()
+            enable_all.set_type(bool)
+            def enable_all_cb(_: str, value: bool, out: _ArgValues) -> None:
+                for name in enable_flags:
+                    out[name] = value
+                for name in disable_flags:
+                    out[name] = not value
+            enable_all.set_callback(enable_all_cb)
+            cmd.add_argument(enable_all)
+            disable_all = _Argument('disable_all')
+            disable_all.set_flag()
+            disable_all.set_optional()
+            disable_all.set_type(bool)
+            def disble_all_cb(_: str, value: bool, out: _ArgValues) -> None:
+                for name in disable_flags:
+                    out[name] = value
+                for name in disable_flags:
+                    out[name] = not value
+            disable_all.set_callback(disble_all_cb)
+            cmd.add_argument(disable_all)
+
+        for subcmd in cmd.subcommands():
+            visit(subcmd)
+
+    visit(prog)
+
+def describe_type(ty: Any) -> str:
+    if type(ty) is typing.TypeAliasType:
+        return describe_type(ty.__value__)
+    origin = typing.get_origin(ty)
+    if origin is None:
+        return ty.__name__
+    elif origin is typing.Union or origin is types.UnionType:
+        return ' | '.join(describe_type(arg) for arg in typing.get_args(ty))
+    elif origin is typing.Literal:
+        return ' | '.join(repr(lit) for lit in typing.get_args(ty))
+    else:
+        raise NotImplementedError(f"{ty} cannot be printed yet")
+
+def print_help_loop(cmd: _Command, out: IndentWriter, depth: int) -> None:
+    out.write(f'{cmd.name}')
+    if cmd.description is not None:
+        out.write('    ')
+        out.write(cmd.description)
+    out.writeln()
+    out.indent()
+    if cmd.count_arguments() > 0 and depth == 0:
+        out.writeln('Arguments and flags:')
+        for arg in cmd.arguments():
+            if arg.is_flag:
+                if len(arg.name) == 1:
+                    out.write(f'-{arg.name}')
+                else:
+                    out.write(f'--{arg.name}')
+            elif arg.min_count == 0:
+                if arg.max_count == 1:
+                    out.write(f'[{arg.name}]')
+                else:
+                    out.write(f'[{arg.name}..]')
+            else:
+                if arg.max_count == 1:
+                    out.write(f'<{arg.name}>')
+                else:
+                    out.write(f'<{arg.name}..>')
+            out.write('    ')
+            out.write(describe_type(arg.ty))
+            out.writeln()
+    if cmd.count_subcommands() > 0:
+        out.writeln('\nSubcommands:')
+        out.indent()
+        for sub in cmd.subcommands():
+            print_help_loop(sub, out, depth+1)
+        out.dedent()
+    out.dedent()
+
+def print_help(cmd: _Command) -> None:
+    out = IndentWriter(sys.stderr)
+    print_help_loop(cmd, out, 0)
+    exit(1)
+
 def run(mod: ModuleType | str, name: str | None = None) -> int:
 
     if name is None:
@@ -289,22 +429,23 @@ def run(mod: ModuleType | str, name: str | None = None) -> int:
 
     prog = Program(name)
 
+
     for name, proc in mod.__dict__.items():
 
         if not name.startswith('_') and callable(proc) and proc.__module__ == mod.__name__:
 
-            cmd = _Command(_to_kebab_case(name))
-
-            enable_flags = []
-            disable_flags = []
             try:
                 sig = inspect.signature(proc)
             except ValueError:
                 continue
 
+            cmd = _Command(_to_kebab_case(name))
+
+            types = typing.get_type_hints(proc)
+
             for name, param in sig.parameters.items():
 
-                ty = param.annotation
+                ty = types[param.name]
 
                 arg = _Argument(name)
 
@@ -319,72 +460,49 @@ def run(mod: ModuleType | str, name: str | None = None) -> int:
                 if param.kind == param.KEYWORD_ONLY or param.kind == param.POSITIONAL_OR_KEYWORD or param.kind == param.VAR_KEYWORD:
                     arg.set_flag()
 
-                is_rest = False
                 if param.kind == param.VAR_KEYWORD:
-                    is_rest = True
-                    arg.set_rest()
-                    arg.set_callback(_inserter(name))
+                    if typing.get_origin(ty) is typing.Unpack:
+                        args = typing.get_args(ty)
+                        total = args[0].__total__
+                        for k, v in typing.get_type_hints(args[0]).items():
+                            arg = _Argument(k)
+                            arg.set_flag()
+                            required = True
+                            if typing.get_origin(v) is typing.NotRequired:
+                                required = False
+                                v = typing.get_args(v)[0]
+                            arg.set_type(v)
+                            if not total or not required:
+                                arg.set_optional()
+                            cmd.add_argument(arg)
+                        continue
+                    else:
+                        arg.set_rest()
+                        arg.set_callback(_inserter(name))
                 if param.kind == param.VAR_POSITIONAL:
-                    is_rest = True
                     arg.set_rest()
                     arg.set_no_max_count()
                     arg.set_callback(_append)
 
-                # Generate special cases for flags such as '--enable-foo' and '--disable-bar'
-                if not is_rest and ty is bool:
-                    if name.startswith('enable_'):
-                        suffix = name[7:]
-                        enable_flags.append(arg)
-                        arg.set_callback(_bool_setter(name))
-                        inv_arg = _Argument('disable_' + suffix)
-                        inv_arg.set_callback(_bool_setter(name, inverted=True))
-                        inv_arg.set_optional()
-                        inv_arg.set_type(bool)
-                        inv_arg.set_flag()
-                        cmd.add_argument(inv_arg)
-                    elif name.startswith('disable_'):
-                        suffix = name[8:]
-                        disable_flags.append(name)
-                        arg.set_callback(_bool_setter(name))
-                        inv_arg = _Argument('enable_' + suffix)
-                        inv_arg.set_optional()
-                        inv_arg.set_flag()
-                        inv_arg.set_type(bool)
-                        inv_arg.set_callback(_bool_setter(name, inverted=True))
-
                 cmd.add_argument(arg)
-
-            if enable_flags or disable_flags:
-                enable_all = _Argument('enable_all')
-                enable_all.set_optional()
-                enable_all.set_type(bool)
-                def enable_all_cb(_: str, value: bool, out: _ArgValues) -> None:
-                    for name in enable_flags:
-                        out[name] = value
-                    for name in disable_flags:
-                        out[name] = not value
-                enable_all.set_callback(enable_all_cb)
-                cmd.add_argument(enable_all)
-                disable_all = _Argument('disable_all')
-                disable_all.set_optional()
-                disable_all.set_type(bool)
-                def disble_all_cb(_: str, value: bool, out: _ArgValues) -> None:
-                    for name in disable_flags:
-                        out[name] = value
-                    for name in disable_flags:
-                        out[name] = not value
-                disable_all.set_callback(disble_all_cb)
-                cmd.add_argument(disable_all)
 
             cmd.set_callback(proc)
 
+            help_arg = _Argument('help')
+            help_arg.set_flag()
+            help_arg.set_type(bool)
+            help_arg.set_callback(lambda key, value, out, cmd=cmd: print_help(cmd))
+            cmd.add_argument(help_arg)
+
             prog.add_subcommand(cmd)
 
-    help_cmd = _Command('help')
-    def print_help() -> None:
-        print('Error: help messages not implemented yet.')
-    help_cmd.set_callback(print_help)
-    prog.add_subcommand(help_cmd)
+    help_arg = _Argument('help')
+    help_arg.set_flag()
+    help_arg.set_type(bool)
+    help_arg.set_callback(lambda key, value, out: print_help(prog))
+    prog.add_argument(help_arg)
+
+    add_complements(prog)
 
     # Variables used during processing of the arguments
     cmd = prog
