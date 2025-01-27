@@ -70,7 +70,7 @@ def emit(node: MageSyntax) -> str:
             if node.expr is not None:
                 out.write(' = ')
                 visit(node.expr)
-            out.write('\n')
+            out.write('\n\n')
             return
 
         if isinstance(node, MageRefExpr):
