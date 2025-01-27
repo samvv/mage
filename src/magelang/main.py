@@ -74,22 +74,22 @@ def _load_script(path: Path, /) -> Any:
     return module
 
 @dataclass
-class Test:
+class _Test:
     rule: MageRule
     text: str
     should_fail: bool
 
 from tempfile import TemporaryDirectory
 
-def _collect_tests(grammar: MageGrammar) -> list[Test]:
+def _collect_tests(grammar: MageGrammar) -> list[_Test]:
     tests = []
     for rule in grammar.rules:
         if rule.comment is not None:
             doc = parse_doc(rule.comment)
             for text in get_accept_blocks(doc):
-                tests.append(Test(rule, text, False))
+                tests.append(_Test(rule, text, False))
             for text in get_reject_blocks(doc):
-                tests.append(Test(rule, text, True))
+                tests.append(_Test(rule, text, True))
     return tests
 
 def _test_external(filename: Path | str) -> bool:
