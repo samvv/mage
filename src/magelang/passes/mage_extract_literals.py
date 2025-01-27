@@ -46,6 +46,9 @@ def mage_extract_literals(
                 name = f'{text}_keyword'
                 keywords.add(name)
                 return name
+            if not text:
+                # Empty literals cannot be named by this function
+                return
             if len(text) <= max_named_chars:
                 # First try to name the entire word
                 if text in names:
