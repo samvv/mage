@@ -5,24 +5,26 @@ from pprint import pprint
 from typing import Literal
 
 from magelang import generate_files, load_grammar, mage_check, write_files
+from magelang.constants import SEED_FILENAME_PREFIX
 
 from .manager import Context, apply, pipeline
-from .logging import error
+from .logging import error, info
 from .lang.mage.ast import *
 from .lang.mage.emitter import emit as mage_emit
 from .lang.mage.parser import Parser
 from .lang.mage.scanner import Scanner
 from .lang.python.emitter import emit as py_emit
 from .passes import *
-from .fuzz import fuzz_all, fuzz_grammar
+from .fuzz import fuzz_all, fuzz_grammar, random_grammar
 
 type TargetLanguage = Literal['python', 'rust']
 
 def generate(
     lang: TargetLanguage,
-    filename: Path | str,
+    filename: str,
     /,
     *,
+    seed: int | None = None,
     out_dir: Path | str,
     prefix: str = '',
     engine: str = 'old',
@@ -43,10 +45,17 @@ def generate(
     """
     Generate programming code from a grammar
     """
-    filename = Path(filename)
+    if filename.startswith(SEED_FILENAME_PREFIX):
+        import random
+        seed = int(filename[len(SEED_FILENAME_PREFIX):])
+        info(f"Using seed {seed}")
+        random.seed(seed)
+        grammar = random_grammar()
+    else:
+        grammar = load_grammar(filename)
     out_dir = Path(out_dir)
     files = generate_files(
-        filename,
+        grammar,
         lang,
         prefix=prefix,
         engine=engine,
@@ -139,18 +148,25 @@ def test(filename: Path | str, *, generate: bool) -> int:
     test = _test_external if generate else _test_internal
     return test(filename)
 
-def dump(filename: Path | str, *passes: str, **opts: Any) -> int:
+def dump(filename: str, *passes: str,  **opts: Any) -> int:
     """
     Dump specific transformations of a grammar
     """
-    filename = Path(filename)
-    if filename.suffix == '.mage':
-        input = load_grammar(filename)
-    elif filename.suffix == '.py':
-        input = _load_script(filename).output
+    if filename.startswith(SEED_FILENAME_PREFIX):
+        import random
+        seed = int(filename[len(SEED_FILENAME_PREFIX):])
+        info(f"Using seed {seed}")
+        random.seed(seed)
+        input = random_grammar()
     else:
-        error(f'unrecognised file type: {filename.suffix}')
-        return 1
+        p = Path(filename)
+        if p.suffix == '.mage':
+            input = load_grammar(p)
+        elif p.suffix == '.py':
+            input = _load_script(p).output
+        else:
+            error(f'unrecognised file type: {p.suffix}')
+            return 1
     ctx = Context(opts)
     pass_ = pipeline(*(get_pass_by_name(name) for name in passes))
     result = apply(ctx, input, pass_)

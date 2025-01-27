@@ -1,5 +1,5 @@
 
-from magelang.manager import Pass
+from magelang.manager import Pass, identity
 
 from .mage_check_neg_charset_intervals import *
 from .mage_check_overlapping_charset_intervals import *
@@ -32,6 +32,7 @@ from .treespec_cst_to_ast import *
 from .treespec_to_python import *
 
 all_passes = {
+    identity,
     mage_check_neg_charset_intervals,
     mage_check_overlapping_charset_intervals,
     mage_check_token_no_parse,
