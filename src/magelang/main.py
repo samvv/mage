@@ -165,13 +165,13 @@ def dump(filename: Path | str, *passes: str, **opts: Any) -> int:
         return 1
     return 0
 
-def fuzz(filename: str | None, /, *, all: bool = False, limit: int | None = None, break_on_failure: bool = False) -> int:
-    if filename is None:
-        error("Provide a grammar to fuzz or use --all to fuzz mage itself.")
-        return 1
+def fuzz(filename: str | None = None, /, *, all: bool = False, limit: int | None = None, break_on_failure: bool = False) -> int:
     if all:
         fuzz_all(limit)
         return 0
+    if filename is None:
+        error("Provide a grammar to fuzz or use --all to fuzz mage itself.")
+        return 1
     grammar = load_grammar(filename)
     fuzz_grammar(grammar, num_sentences=limit, break_on_failure=break_on_failure)
     return 0
