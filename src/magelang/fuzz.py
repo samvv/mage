@@ -234,7 +234,8 @@ def xrange(n: int | None) -> Iterable[None]:
 
 def fuzz_all(
     count: int | None = None,
-    num_sentences_per_grammar=50000
+    num_sentences_per_grammar=50000,
+    break_on_failure: bool = False,
 ) -> None:
     # sys.setrecursionlimit(10000)
     for i in xrange(count):
@@ -242,7 +243,8 @@ def fuzz_all(
         seed = round(time.time() * 1000)
         random.seed(seed)
         grammar = random_grammar()
-        if not fuzz_grammar(grammar, num_sentences=num_sentences_per_grammar, grammar_seed=seed):
+        print(f"Starting fuzz of grammar with seed {seed}")
+        if not fuzz_grammar(grammar, num_sentences=num_sentences_per_grammar, grammar_seed=seed, break_on_failure=break_on_failure):
             print(f"Grammar with seed {seed} failed.")
 
 def fuzz_grammar(
@@ -255,11 +257,14 @@ def fuzz_grammar(
     enable_tokens: bool = False,
     break_on_failure: bool = False
 ) -> bool:
-    try:
+    if break_on_failure:
         parser = load_parser(grammar, native=True, enable_tokens=enable_tokens)
-    except Exception as e:
-        print(f"Failed to generate parser for grammar with seed {grammar_seed}: {e}")
-        return False
+    else:
+        try:
+            parser = load_parser(grammar, native=True, enable_tokens=enable_tokens)
+        except Exception as e:
+            print(f"Failed to generate parser for grammar with seed {grammar_seed}: {e}")
+            return False
     succeeded = 0
     failed = 0
     done = False
