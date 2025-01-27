@@ -244,8 +244,8 @@ def pipeline(p0: Pass[_T0, _T1], p1: Pass[_T1, _T2], p2: Pass[_T2, _T3], p3: Pas
 @overload
 def pipeline(p0: Pass[_T0, _T1], p1: Pass[_T1, _T2], p2: Pass[_T2, _T3], p3: Pass[_T3, _T4], p4: Pass[_T4, _T5], p5: Pass[_T5, _T6], p6: Pass[_T6, _T7], p7: Pass[_T7, _T8], p8: Pass[_T8, _T9], p9: Pass[_T9, _T10], p10: Pass[_T10, _T11], p11: Pass[_T11, _T12], p12: Pass[_T12, _T13], p13: Pass[_T13, _T14], p14: Pass[_T14, _T15], p15: Pass[_T15, _T16], p16: Pass[_T16, _T17], p17: Pass[_T17, _T18], p18: Pass[_T18, _T19], p19: Pass[_T19, _T20], p20: Pass[_T20, _T21], p21: Pass[_T21, _T22], p22: Pass[_T22, _T23], p23: Pass[_T23, _T24], /) -> Pass[_T0, _T24]: ...
 
-def pipeline(first: Pass, *passes: Pass) -> Pass:
-    out = first
+def pipeline(*passes: Pass) -> Pass:
+    out = identity
     for pass_ in passes:
         out = compose(out, pass_)
     return out
