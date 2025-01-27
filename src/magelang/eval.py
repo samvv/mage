@@ -112,6 +112,9 @@ def accepts(expr: MageExpr, text: str, grammar: MageGrammar) -> bool | None:
         assert_never(expr)
 
     try:
-        return visit(expr)
+        result = visit(expr)
     except RecursionError:
         return
+    if not result:
+        return result
+    return offset == len(text)
