@@ -227,13 +227,16 @@ def xrange(n: int | None) -> Iterable[None]:
             yield
     return range(n)
 
-def fuzz_all(count: int | None = None) -> None:
+def fuzz_all(
+    count: int | None = None,
+    num_sentences_per_grammar=50000
+) -> None:
     # sys.setrecursionlimit(10000)
     for i in xrange(count):
         seed = round(time.time() * 1000)
         random.seed(seed)
         grammar = random_grammar()
-        if not fuzz_grammar(grammar):
+        if not fuzz_grammar(grammar, num_sentences=num_sentences_per_grammar):
             print(f"Grammar with seed {seed} failed.")
 
 def fuzz_grammar(
@@ -247,7 +250,8 @@ def fuzz_grammar(
 ) -> bool:
     try:
         parser = load_parser(grammar, native=True, enable_tokens=enable_tokens)
-    except:
+    except Exception as e:
+        print(f"Failed to generate parser: {e}")
         return False
     succeeded = 0
     failed = 0
@@ -259,14 +263,14 @@ def fuzz_grammar(
         for rule in grammar.rules:
             if not rule.is_public:
                 continue
-            for sentence in range(random.randrange(min_sentences_per_rule, max_sentences_per_rule)):
+            for _ in range(random.randrange(min_sentences_per_rule, max_sentences_per_rule)):
                 if num_sentences is not None and succeeded >= num_sentences:
                     done = True
                     break
                 if rule.expr is None:
                     continue
-                local_seed = seed + n
-                random.seed(local_seed)
+                sentence_seed = seed + n
+                random.seed(sentence_seed)
                 sentence, fails = random_sentence(rule.expr)
                 n += 1
                 valid = accepts(rule.expr, sentence, grammar=grammar)
@@ -279,7 +283,7 @@ def fuzz_grammar(
                 parse = getattr(parser, f'parse_{rule.name}')
                 node = parse(stream)
                 if (node is None) != fails:
-                    message = f"\nOn sentence {repr(sentence)} and rule {rule.name} with seed {local_seed}: "
+                    message = f"\nOn sentence {repr(sentence)} and rule {rule.name} with seed {seed}: "
                     if fails:
                         message += "parser returned success where failure was expected."
                     else:
@@ -295,9 +299,6 @@ def fuzz_grammar(
                 break
         if done:
             break
-    if failed == 0:
-        print("\nFinished with no failures.")
-    else:
-        print("\nFinished with failures.")
+    print()
     return True
 
