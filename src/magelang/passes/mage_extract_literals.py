@@ -4,10 +4,13 @@ from typing import TypeVar, cast
 
 from magelang.eval import accepts
 from magelang.lang.mage.ast import *
+from magelang.analysis import is_tokenizable
 
 T = TypeVar('T', bound=MageGrammar | MageModule)
 
 def mage_extract_literals(grammar: MageGrammar) -> MageGrammar:
+
+    enable_tokens = is_tokenizable(grammar)
 
     def rewrite_module(node: T) -> T:
 
@@ -71,7 +74,9 @@ def mage_extract_literals(grammar: MageGrammar) -> MageGrammar:
 
         for literal in reversed(sorted(literal_to_name.keys())):
             name = literal_to_name[literal]
-            flags = PUBLIC | FORCE_TOKEN
+            flags = PUBLIC
+            if enable_tokens:
+                flags |= FORCE_TOKEN
             if name in keywords:
                 flags |= FORCE_KEYWORD
             new_literal_rules.append(MageRule(flags=flags, name=name, expr=MageLitExpr(literal), type_name=string_rule_type))
