@@ -53,6 +53,7 @@ def generate_files(
     enable_visitor: bool = False,
     enable_rewriter: bool = False,
     enable_linecol: bool = False,
+    silent: bool = False,
     emit_single_file: bool = False,
 ) -> Files | str:
 
@@ -60,9 +61,10 @@ def generate_files(
         'prefix': prefix,
         'enable_asserts': enable_asserts,
         'emit_single_file': emit_single_file,
+        'silent': silent,
     }
 
-    ctx = Context(opts)
+    ctx = Context(opts, quiet=True)
 
     # FIXME should only happen in the parser generator and lexer generator
     #if enable_opt:
@@ -109,7 +111,7 @@ def generate_files(
 
     files = apply(ctx, grammar, pipeline(
         mage_prepare_grammar, # Inline rules etc
-        mage_check if not skip_checks else identity, # User error reporting
+        identity if skip_checks or silent else mage_check , # User error reporting
         mage_to_target # Actual compilation
     ))
 

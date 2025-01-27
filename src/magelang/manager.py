@@ -26,8 +26,9 @@ class PassBase(Generic[_X, _Y]):
 
 class Context:
 
-    def __init__(self, opts: dict[str, Any]) -> None:
+    def __init__(self, opts: dict[str, Any], quiet: bool = False) -> None:
         self.opts = opts
+        self.silent = quiet
 
     def has_option(self, name: str) -> bool:
         return name in self.opts
@@ -91,7 +92,7 @@ def apply(ctx: Context, input: _T, pass_: Pass[_T, _R]) -> _R:
         return fn(*out_args, **out_kwargs)
 
     name = pass_.__name__ # type: ignore
-    if name != '_wrapper':
+    if name != '_wrapper' and not ctx.silent:
         info(f'Running {name}')
 
     fn = apply_inject(pass_).apply if inspect.isclass(pass_) else pass_
