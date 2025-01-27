@@ -148,11 +148,13 @@ def toss():
 def random_sentence(
     expr: MageExpr,
     failure_rate: float = 0.1,
+    max_recurse = 3,
     max_inf_repeat: int = 10,
     max_char_delta = 5,
 ) -> tuple[str, bool]:
 
     fails = False
+    visits = dict[MageRule, int]()
 
     def visit(expr: MageExpr) -> str:
         nonlocal fails
@@ -195,6 +197,10 @@ def random_sentence(
         if isinstance(expr, MageRefExpr):
             grammar = expr.get_grammar()
             rule = grammar.lookup(expr.name)
+            n = visits.get(rule, 0)
+            if n >= max_recurse:
+                return ''
+            visits[rule] = n + 1
             assert(rule is not None and rule.expr is not None)
             return visit(rule.expr)
         if isinstance(expr, MageHideExpr):
