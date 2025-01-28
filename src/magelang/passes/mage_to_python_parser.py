@@ -441,18 +441,15 @@ def mage_to_python_parser(
 
                 min_to_max.extend(accept)
 
-                def gen_body():
+                if expr.min == 0:
+                    yield from min_to_max
+
+                elif expr.min == 1:
                     new_accept = [
                         make_append(ty, target_name, PyNamedExpr(element_name)),
                         *min_to_max,
                     ]
                     yield from visit_field_internals(expr.expr, stream_name, element_name, new_accept, reject)
-
-                if expr.min == 0:
-                    yield from min_to_max
-
-                elif expr.min == 1:
-                    yield from gen_body()
 
                 else:
                     yield PyForStmt(
