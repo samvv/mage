@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 import sys
 from functools import lru_cache
-from typing import Any, Callable, Generator, Iterable, TypeGuard, TypeIs, TypeVar, assert_never, cast, no_type_check
+from typing import Any, Callable, Generator, Iterable, TypeGuard, TypeIs, TypeVar, assert_never, cast, no_type_check, reveal_type
 from intervaltree import Interval, IntervalTree
 
 from magelang.logging import debug, warn
@@ -35,8 +35,9 @@ class Symbol:
 
 class MageNodeBase:
 
+    @property
     @no_type_check
-    def get_grammar(self) -> 'MageGrammar':
+    def grammar(self) -> 'MageGrammar':
         curr = self
         while curr is not None:
             if isinstance(curr, MageGrammar):
@@ -576,6 +577,10 @@ class MageRule(MageNodeBase):
 
     @property
     def is_token(self) -> bool:
+        return is_token(self)
+
+    @property
+    def is_lexer_token(self) -> bool:
         return (self.flags & FORCE_TOKEN) > 0
 
     @property
@@ -642,37 +647,11 @@ class MageModuleBase(MageNodeBase):
     def is_token_rule(self, element: MageModuleElement) -> TypeIs[MageRule]:
         return isinstance(element, MageRule) and element.is_token
 
-    def is_static(self, expr: MageExpr) -> bool:
-        if isinstance(expr, MageRefExpr):
-            rule = self.lookup(expr.name)
-            return rule is not None and self.is_static_token_rule(rule)
-        if isinstance(expr, MageLitExpr):
-            return True
-        if isinstance(expr, MageCharSetExpr):
-            return len(expr) == 1
-        if isinstance(expr, MageSeqExpr):
-            return all(self.is_static(element) for element in expr.elements)
-        if isinstance(expr, MageChoiceExpr):
-            # FIXME should I check whether the choices are actually different?
-            return False
-        if isinstance(expr, MageRepeatExpr):
-            # Only return true if we're dealing with a fixed width repition
-            return expr.min == expr.max and self.is_static(expr.expr)
-        if isinstance(expr, MageListExpr):
-            # List expressions always repeat an unpredictable amount of times
-            return False
-        if isinstance(expr, MageLookaheadExpr):
-            # Lookahead has no effect on what (non-)static characters are generated
-            return True
-        if isinstance(expr, MageHideExpr):
-            return self.is_static(expr.expr)
-        assert_never(expr)
-
     def is_static_token_rule(self, element: MageModuleElement) -> TypeIs[MageRule]:
         if not isinstance(element, MageRule) or element.is_extern:
             return False
         assert(element.expr is not None)
-        return self.is_static(element.expr)
+        return is_static(element.expr)
 
     def is_parse_rule(self, element: MageModuleElement) -> TypeIs[MageRule]:
         if not isinstance(element, MageRule):
@@ -949,3 +928,59 @@ def lookup_ref(expr: MageRefExpr) -> MageRule | None:
         if isinstance(mod, MageGrammar):
             break
         mod = nonnull(mod.parent)
+
+def referenced(expr: MageExpr) -> list[MageRule]:
+    out = []
+    def visit(expr: MageExpr) -> None:
+        if isinstance(expr, MageRefExpr):
+            rule = lookup_ref(expr)
+            if rule is not None:
+                out.append(rule)
+            return
+        for_each_direct_child_expr(expr, visit)
+    visit(expr)
+    return out
+
+def is_static(expr: MageExpr, visited: set[MageRule] | None = None) -> bool:
+    if visited is None:
+        visited = set[MageRule]()
+    if isinstance(expr, MageRefExpr):
+        rule = expr.grammar.lookup(expr.name)
+        if rule is None or rule.expr is None or rule in visited:
+            return False
+        visited.add(rule)
+        return is_static(rule.expr, visited)
+    if isinstance(expr, MageLitExpr):
+        return True
+    if isinstance(expr, MageCharSetExpr):
+        return len(expr) == 1
+    if isinstance(expr, MageSeqExpr):
+        return all(is_static(element, visited) for element in expr.elements)
+    if isinstance(expr, MageChoiceExpr):
+        # FIXME should I check whether the choices are actually different?
+        return False
+    if isinstance(expr, MageRepeatExpr):
+        # Only return true if we're dealing with a fixed width repition
+        return expr.min == expr.max and is_static(expr.expr, visited)
+    if isinstance(expr, MageListExpr):
+        # List expressions always repeat an unpredictable amount of times
+        return False
+    if isinstance(expr, MageLookaheadExpr):
+        # Lookahead has no effect on what (non-)static characters are generated
+        return True
+    if isinstance(expr, MageHideExpr):
+        return is_static(expr.expr, visited)
+    assert_never(expr)
+
+
+def is_token(rule: MageRule, visited: set[MageRule] | None = None) -> bool:
+    if visited is None:
+        visited = set[MageRule]()
+    if rule.is_lexer_token:
+        # A rule that was explicitly declared a token is always a token
+        return True
+    if rule.expr is None:
+        # If it was not explicitly declared a lexer token, a rule with no
+        # expression can never be a token
+        return False
+    return is_static(rule.expr, visited) and not any(is_token(rule, visited) for rule in referenced(rule.expr))
