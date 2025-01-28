@@ -455,7 +455,7 @@ def mage_to_python_parser(
                         PyNamedPattern('_'),
                         PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyConstExpr(expr.min) ]),
                         body=[
-                            *visit_field_internals(expr.expr, stream_name, element_name, [ make_append(ty, target_name, PyNamedExpr(element_name)) ], reject),
+                            *visit_field_internals(expr.expr, stream_name, element_name, [ make_append(ty, target_name, PyNamedExpr(element_name)) ], [ *reject, PyRetStmt() ]),
                         ]
                     )
                     yield from min_to_max
