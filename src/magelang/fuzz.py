@@ -314,6 +314,8 @@ def fuzz_grammar(
                         raise e
                     failed += 1
                     continue
+                if stream.peek() != EOF:
+                    node = None
                 if (node is None) != fails:
                     if fails:
                         progress.write_line(f"Parser returned success on rule {rule.name} and sentence {repr(sentence)} where failure was expected.")
