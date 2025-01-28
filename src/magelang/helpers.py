@@ -205,6 +205,8 @@ def treespec_type_to_py_type(ty: Type, prefix: str, immutable=False) -> PyExpr:
     if isinstance(ty, PunctType):
         return PySubscriptExpr(expr=PyNamedExpr('ImmutablePunct' if immutable else 'Punctuated'), slices=[ treespec_type_to_py_type(ty.element_type, prefix, immutable), treespec_type_to_py_type(ty.separator_type, prefix, immutable) ])
     if isinstance(ty, TupleType):
+        if not ty.element_types:
+            return PyNamedExpr('None')
         return PySubscriptExpr(expr=PyNamedExpr('tuple'), slices=list(treespec_type_to_py_type(element, prefix, immutable) for element in ty.element_types))
     if isinstance(ty, UnionType):
         out = treespec_type_to_py_type(ty.types[0], prefix, immutable)
@@ -256,6 +258,8 @@ def treespec_type_to_shallow_py_test(ty: Type, expr: PyExpr, *, prefix: str, spe
     if isinstance(ty, NoneType):
         return make_py_is_none(expr)
     if isinstance(ty, TupleType):
+        if not ty.element_types:
+            return PyInfixExpr(expr, PyIsKeyword(), PyNamedExpr('None'))
         return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ expr, PyNamedExpr('tuple') ])
     if isinstance(ty, ListType):
         return PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ expr, PyNamedExpr('list') ])
@@ -282,6 +286,8 @@ def treespec_type_to_deep_py_test(ty: Type, target: PyExpr, *, prefix: str, spec
     if isinstance(ty, NoneType):
         return make_py_is_none(target)
     if isinstance(ty, TupleType):
+        if not ty.element_types:
+            return PyInfixExpr(target, PyIsKeyword(), PyNamedExpr('None'))
         return make_py_and([
             PyCallExpr(operator=PyNamedExpr('isinstance'), args=[ target, PyNamedExpr('tuple') ]),
             *(treespec_type_to_deep_py_test(element, PySubscriptExpr(target, slices=[ PyConstExpr(i) ]), prefix=prefix, specs=specs) for i, element in enumerate(ty.element_types))
@@ -393,6 +399,8 @@ def make_py_default_constructor(ty: Type, *, specs: Specs, prefix: str) -> PyExp
         # FIXME maybe add the generic arguments?
         return PyCallExpr(PyNamedExpr('Punctuated'))
     if isinstance(ty, TupleType):
+        if not ty.element_types:
+            return PyNamedExpr('None')
         return PyTupleExpr(elements=list(make_py_default_constructor(element_type, specs=specs, prefix=prefix) for element_type in ty.element_types))
     if isinstance(ty, UnionType):
         # This assumes we already detected that there is exactly one
