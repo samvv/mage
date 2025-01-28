@@ -239,7 +239,7 @@ def xrange(n: int | None) -> Iterable[None]:
     return range(n)
 
 def fuzz_all(
-    count: int | None = None,
+    max_grammar_count: int | None = None,
     num_sentences_per_grammar=50000,
     break_on_failure: bool = False,
     dest_dir: Path = DEFAULT_FUZZ_DIR,
@@ -248,7 +248,7 @@ def fuzz_all(
     if progress is None:
         progress = Progress()
     # sys.setrecursionlimit(10000)
-    for i in xrange(count):
+    for _ in xrange(max_grammar_count):
         # FIXME might lead to duplicate grammars
         seed = round(time.time() * 1000)
         random.seed(seed)
@@ -259,7 +259,7 @@ def fuzz_all(
 
 def fuzz_grammar(
     grammar: MageGrammar,
-    seed: int | None = None,
+    sentence_seed: int | None = None,
     grammar_seed: int | None = None,
     num_sentences: int | None = None,
     min_sentences_per_rule = 10,
@@ -280,8 +280,8 @@ def fuzz_grammar(
     succeeded = 0
     failed = 0
     done = False
-    if seed is None:
-        seed = round(time.time() * 1000)
+    if sentence_seed is None:
+        sentence_seed = round(time.time() * 1000)
     sentence_count = 0
     while True:
         keep = sentence_count
@@ -294,13 +294,13 @@ def fuzz_grammar(
                     break
                 if rule.expr is None:
                     continue
-                sentence_seed = seed + sentence_count
+                sentence_seed = sentence_seed + sentence_count
                 random.seed(sentence_seed)
                 sentence, fails = random_sentence(rule.expr)
                 sentence_count += 1
                 valid = accepts(rule.expr, sentence, grammar=grammar)
                 if valid is None:
-                    progress.write_line(f"Potential infinite rule {rule.name} in grammar with seed {seed}. Skipping.")
+                    progress.write_line(f"Potential infinite rule {rule.name} in grammar with seed {grammar_seed}. Skipping.")
                     continue
                 if (not fails and not valid) or (fails and valid):
                     continue
@@ -330,9 +330,10 @@ def fuzz_grammar(
             if done:
                 break
         if sentence_count == keep:
-            progress.write_line(f"Grammar with seed {seed} had no fuzzable rules")
+            progress.write_line(f"Grammar with seed {sentence_seed} had no fuzzable rules")
             break
         if done:
             break
+    progress.status(f"Processed {sentence_count} sentences ({failed} failures).")
     return failed == 0
 
