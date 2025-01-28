@@ -1,39 +1,33 @@
 from collections.abc import Iterable
+from pathlib import Path
 import random
+from sys import deactivate_stack_trampoline
 from types import ModuleType
 from typing import assert_never, cast
-import importlib.util
 import time
 
 import magelang
 from magelang.analysis import is_eof
-from magelang.intervaltree import nonnull
+from magelang.constants import DEFAULT_FUZZ_DIR
 from magelang.lang.mage.ast import ASCII_MAX, ASCII_MIN, POSINF, PUBLIC, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, set_parents
 from magelang.eval import accepts
-from magelang.lang.mage.emitter import emit
 from magelang.runtime import EOF, CharStream, ParseStream
-from magelang.util import unreachable
+from magelang.util import Files, load_py_file, unreachable
 
-def load_parser(grammar: MageGrammar, native: bool = False, enable_tokens: bool = True) -> ModuleType:
-    if native:
-        # TODO conditionally enable the lexer and fuzz that as well
-        source = cast(str, magelang.generate_files(
-            grammar,
-            lang='python',
-            enable_cst=True,
-            enable_parser=True,
-            emit_single_file=True,
-            silent=True,
-            enable_ast=False,
-            enable_emitter=False,
-            enable_lexer=False
-        ))
-        spec = importlib.util.spec_from_loader('magelang.fuzzparser', loader=None)
-        assert(spec is not None)
-        module = importlib.util.module_from_spec(spec)
-        exec(source, module.__dict__)
-        return module
-    raise NotImplementedError()
+def load_parser(grammar: MageGrammar, dest_dir: Path) -> ModuleType:
+    # TODO conditionally enable the lexer and fuzz that as well
+    files = cast(Files, magelang.generate_files(
+        grammar,
+        lang='python',
+        enable_cst=True,
+        enable_parser=True,
+        silent=True,
+        enable_ast=False,
+        enable_emitter=False,
+        enable_lexer=False
+    ))
+    magelang.write_files(files, dest_dir, force=True)
+    return load_py_file(dest_dir / 'parser.py')
 
 class Table:
 
@@ -95,7 +89,7 @@ def random_expr(
         n = random.randrange(7)
         if n == 0:
             out = ''
-            for _ in range(random.randrange(0, max_lit_chars)):
+            for _ in range(random.randrange(1, max_lit_chars)):
                 out += random_char()
             return MageLitExpr(out)
         if n == 1:
@@ -249,6 +243,7 @@ def fuzz_all(
     count: int | None = None,
     num_sentences_per_grammar=50000,
     break_on_failure: bool = False,
+    dest_dir: Path = DEFAULT_FUZZ_DIR,
 ) -> None:
     # sys.setrecursionlimit(10000)
     for i in xrange(count):
@@ -257,7 +252,7 @@ def fuzz_all(
         random.seed(seed)
         grammar = random_grammar()
         print(f"Starting fuzz of grammar with seed {seed}")
-        if not fuzz_grammar(grammar, num_sentences=num_sentences_per_grammar, grammar_seed=seed, break_on_failure=break_on_failure):
+        if not fuzz_grammar(grammar, num_sentences=num_sentences_per_grammar, grammar_seed=seed, break_on_failure=break_on_failure, dest_dir=dest_dir):
             print(f"Grammar with seed {seed} failed.")
 
 def fuzz_grammar(
@@ -267,17 +262,16 @@ def fuzz_grammar(
     num_sentences: int | None = None,
     min_sentences_per_rule = 10,
     max_sentences_per_rule = 100,
-    enable_tokens: bool = False,
-    break_on_failure: bool = False
+    break_on_failure: bool = False,
+    dest_dir: Path = DEFAULT_FUZZ_DIR,
 ) -> bool:
-    if break_on_failure:
-        parser = load_parser(grammar, native=True, enable_tokens=enable_tokens)
-    else:
-        try:
-            parser = load_parser(grammar, native=True, enable_tokens=enable_tokens)
-        except Exception as e:
-            print(f"Failed to generate parser for grammar with seed {grammar_seed}: {e}")
-            return False
+    try:
+        parser = load_parser(grammar, dest_dir=dest_dir)
+    except Exception as e:
+        print(f"Failed to generate parser for grammar with seed {grammar_seed}: {e}")
+        if break_on_failure:
+            raise e
+        return False
     succeeded = 0
     failed = 0
     done = False
@@ -301,20 +295,25 @@ def fuzz_grammar(
                 n += 1
                 valid = accepts(rule.expr, sentence, grammar=grammar)
                 if valid is None:
-                    print(f"\nPotential infinite grammar with seed {seed}")
+                    print(f"\nPotential infinite rule {rule.name} in grammar with seed {seed}")
                     continue
                 if (not fails and not valid) or (fails and valid):
                     continue
                 stream = CharStream(sentence, sentry=EOF)
                 parse = getattr(parser, f'parse_{rule.name}')
-                node = parse(stream)
+                try:
+                    node = parse(stream)
+                except Exception as e:
+                    print(f"\nParser crashed during test of sentence {repr(sentence)} on grammar with seed {grammar_seed}")
+                    if break_on_failure:
+                        raise e
+                    failed += 1
+                    continue
                 if (node is None) != fails:
-                    message = f"\nOn sentence {repr(sentence)} and rule {rule.name} with seed {grammar_seed}: "
                     if fails:
-                        message += "parser returned success where failure was expected."
+                        print(f"\nParser returned success on rule {rule.name} and sentence {repr(sentence)} where failure was expected.")
                     else:
-                        message += "parser returned failure where success was expected."
-                    print(message)
+                        print(f"\nParser returned failure on rule {rule.name} and sentence {repr(sentence)} where success was expected.")
                     failed += 1
                     if break_on_failure:
                         return False

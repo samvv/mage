@@ -1,8 +1,13 @@
 
 from collections.abc import Iterable
+import importlib.util
 import io
+from pathlib import Path
+import sys
+from types import ModuleType
 from typing import Any, Callable, Generic, Iterator, Never, Protocol, Sequence, SupportsIndex, TextIO, TypeGuard, TypeIs, TypeVar, overload
 import re
+
 
 from magelang.logging import warn
 
@@ -289,4 +294,24 @@ class SeqSet[T]:
     def __getitem__(self, key: int | slice) -> T | list[T]:
         return self._list[key]
 
+def load_py_file(path: Path, /) -> ModuleType:
+    module_name = f'{path.parent.name}.{path.stem}'
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    assert(spec is not None)
+    module = importlib.util.module_from_spec(spec)
+    dir = str(path.parent.parent)
+    if dir not in sys.path:
+        print('Appending to PYTHONPATH')
+        sys.path.append(dir)
+    sys.modules[module_name] = module
+    assert(spec.loader is not None)
+    spec.loader.exec_module(module)
+    return module
+
+def load_py_source(source: str) -> ModuleType:
+    spec = importlib.util.spec_from_loader('magelang.dynamic.module', loader=None)
+    assert(spec is not None)
+    module = importlib.util.module_from_spec(spec)
+    exec(source, module.__dict__)
+    return module
 

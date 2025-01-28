@@ -5,7 +5,7 @@ from pprint import pprint
 
 from magelang import GenerateConfig, TargetLanguage, default_config, generate_files, load_grammar, mage_check, write_files
 from magelang.constants import SEED_FILENAME_PREFIX
-from magelang.util import Files
+from magelang.util import Files, load_py_file
 
 from .manager import Context, apply, pipeline
 from .logging import error, info
@@ -62,16 +62,6 @@ def check(filename: Path | str, /) -> int:
     ctx = Context(opts)
     apply(ctx, grammar, mage_check)
     return 0
-
-def _load_script(path: Path, /) -> Any:
-    module_name = f'magelang.imported.{path.stem}'
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    assert(spec is not None)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    assert(spec.loader is not None)
-    spec.loader.exec_module(module)
-    return module
 
 @dataclass
 class _Test:
@@ -139,7 +129,7 @@ def dump(filename: str, *passes: str,  **opts: Any) -> int:
         if p.suffix == '.mage':
             input = load_grammar(p)
         elif p.suffix == '.py':
-            input = _load_script(p).output
+            input = load_py_file(p).output
         else:
             error(f'unrecognised file type: {p.suffix}')
             return 1
