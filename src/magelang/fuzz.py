@@ -1,7 +1,6 @@
 from collections.abc import Iterable
 from pathlib import Path
 import random
-from sys import deactivate_stack_trampoline
 from types import ModuleType
 from typing import assert_never, cast
 import time
@@ -12,7 +11,7 @@ from magelang.constants import DEFAULT_FUZZ_DIR
 from magelang.lang.mage.ast import ASCII_MAX, ASCII_MIN, POSINF, PUBLIC, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, set_parents
 from magelang.eval import accepts
 from magelang.runtime import EOF, CharStream, ParseStream
-from magelang.util import Files, load_py_file, unreachable
+from magelang.util import Files, Progress, load_py_file, unreachable
 
 def load_parser(grammar: MageGrammar, dest_dir: Path) -> ModuleType:
     # TODO conditionally enable the lexer and fuzz that as well
@@ -244,16 +243,19 @@ def fuzz_all(
     num_sentences_per_grammar=50000,
     break_on_failure: bool = False,
     dest_dir: Path = DEFAULT_FUZZ_DIR,
+    progress: Progress | None = None,
 ) -> None:
+    if progress is None:
+        progress = Progress()
     # sys.setrecursionlimit(10000)
     for i in xrange(count):
         # FIXME might lead to duplicate grammars
         seed = round(time.time() * 1000)
         random.seed(seed)
         grammar = random_grammar()
-        print(f"Starting fuzz of grammar with seed {seed}")
+        progress.write_line(f"Starting fuzz of grammar with seed {seed}")
         if not fuzz_grammar(grammar, num_sentences=num_sentences_per_grammar, grammar_seed=seed, break_on_failure=break_on_failure, dest_dir=dest_dir):
-            print(f"Grammar with seed {seed} failed.")
+            progress.write_line(f"Grammar with seed {seed} failed.")
 
 def fuzz_grammar(
     grammar: MageGrammar,
@@ -264,7 +266,10 @@ def fuzz_grammar(
     max_sentences_per_rule = 100,
     break_on_failure: bool = False,
     dest_dir: Path = DEFAULT_FUZZ_DIR,
+    progress: Progress | None = None,
 ) -> bool:
+    if progress is None:
+        progress = Progress()
     try:
         parser = load_parser(grammar, dest_dir=dest_dir)
     except Exception as e:
@@ -277,9 +282,9 @@ def fuzz_grammar(
     done = False
     if seed is None:
         seed = round(time.time() * 1000)
-    n = 0
+    sentence_count = 0
     while True:
-        keep = n
+        keep = sentence_count
         for rule in grammar.rules:
             if not rule.is_public:
                 continue
@@ -289,13 +294,13 @@ def fuzz_grammar(
                     break
                 if rule.expr is None:
                     continue
-                sentence_seed = seed + n
+                sentence_seed = seed + sentence_count
                 random.seed(sentence_seed)
                 sentence, fails = random_sentence(rule.expr)
-                n += 1
+                sentence_count += 1
                 valid = accepts(rule.expr, sentence, grammar=grammar)
                 if valid is None:
-                    print(f"\nPotential infinite rule {rule.name} in grammar with seed {seed}")
+                    progress.write_line(f"Potential infinite rule {rule.name} in grammar with seed {seed}. Skipping.")
                     continue
                 if (not fails and not valid) or (fails and valid):
                     continue
@@ -304,29 +309,28 @@ def fuzz_grammar(
                 try:
                     node = parse(stream)
                 except Exception as e:
-                    print(f"\nParser crashed during test of sentence {repr(sentence)} on grammar with seed {grammar_seed}")
+                    progress.write_line(f"Parser crashed during test of sentence {repr(sentence)} on grammar with seed {grammar_seed}")
                     if break_on_failure:
                         raise e
                     failed += 1
                     continue
                 if (node is None) != fails:
                     if fails:
-                        print(f"\nParser returned success on rule {rule.name} and sentence {repr(sentence)} where failure was expected.")
+                        progress.write_line(f"Parser returned success on rule {rule.name} and sentence {repr(sentence)} where failure was expected.")
                     else:
-                        print(f"\nParser returned failure on rule {rule.name} and sentence {repr(sentence)} where success was expected.")
+                        progress.write_line(f"Parser returned failure on rule {rule.name} and sentence {repr(sentence)} where success was expected.")
                     failed += 1
                     if break_on_failure:
                         return False
                 else:
                     succeeded += 1
-                print(f'\r{succeeded} sentences succeeded.', end='')
+                progress.status(f'{succeeded} sentences succeeded.')
             if done:
                 break
-        if n == keep:
-            print("\nGrammar had no fuzzable rules")
+        if sentence_count == keep:
+            progress.write_line(f"Grammar with seed {seed} had no fuzzable rules")
             break
         if done:
             break
-    print()
-    return True
+    return failed == 0
 

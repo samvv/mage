@@ -5,7 +5,7 @@ from pprint import pprint
 
 from magelang import GenerateConfig, TargetLanguage, default_config, generate_files, load_grammar, mage_check, write_files
 from magelang.constants import SEED_FILENAME_PREFIX
-from magelang.util import Files, load_py_file
+from magelang.util import Files, Progress, load_py_file
 
 from .manager import Context, apply, pipeline
 from .logging import error, info
@@ -148,23 +148,26 @@ def dump(filename: str, *passes: str,  **opts: Any) -> int:
     return 0
 
 def fuzz(filename: str | None = None, /, *, all: bool = False, limit: int | None = None, break_on_failure: bool = False) -> int:
+    progress = Progress()
+    progress.start()
     if all:
-        fuzz_all(limit, break_on_failure=break_on_failure)
-        return 0
-    if filename is None:
+        result = fuzz_all(limit, break_on_failure=break_on_failure, progress=progress)
+    elif filename is None:
         error("Provide a grammar to fuzz or use --all to fuzz mage itself.")
         return 1
-    if filename.startswith(SEED_FILENAME_PREFIX):
-        import random
-        seed = int(filename[len(SEED_FILENAME_PREFIX):])
-        info(f"Using seed {seed}")
-        random.seed(seed)
-        grammar = random_grammar()
     else:
-        grammar = load_grammar(filename)
-    if fuzz_grammar(grammar, num_sentences=limit, break_on_failure=break_on_failure):
-        print("Finished with no failures.")
-    else:
-        print("Finished with failures.")
-    return 0
+        if filename.startswith(SEED_FILENAME_PREFIX):
+            import random
+            seed = int(filename[len(SEED_FILENAME_PREFIX):])
+            info(f"Using seed {seed}")
+            random.seed(seed)
+            grammar = random_grammar()
+        else:
+            grammar = load_grammar(filename)
+        result = fuzz_grammar(grammar, num_sentences=limit, break_on_failure=break_on_failure, progress=progress)
+    if result:
+        progress.finish("All test succeeded")
+        return 0
+    progress.finish("Some grammars failed.")
+    return 1
 

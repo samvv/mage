@@ -315,3 +315,44 @@ def load_py_source(source: str) -> ModuleType:
     exec(source, module.__dict__)
     return module
 
+ANSI_CLEAR_LINE = '\33[2K\r'
+
+class Progress:
+
+    def __init__(self, out: TextIO = sys.stderr) -> None:
+        self.started = False
+        self.out = out
+        self._progress_text = ''
+
+    def start(self) -> None:
+        self.started = True
+
+    def stop(self) -> None:
+        self.started = False
+
+    def replace_last_line(self, text: str) -> None:
+        self.out.write(ANSI_CLEAR_LINE + '\r' + text)
+
+    def _write_progress(self) -> None:
+        assert(self.started)
+        self.replace_last_line(self._progress_text)
+
+    def status(self, text: str) -> None:
+        assert(self.started)
+        self._progress_text = text
+        self._write_progress()
+
+    def write_line(self, text: str) -> None:
+        if self.started:
+            self.replace_last_line(text)
+            self.out.write('\n')
+            self._write_progress()
+        else:
+            self.out.write(text + '\n')
+
+    def finish(self, message: str) -> None:
+        assert(self.started)
+        self.stop()
+        self.replace_last_line(message)
+        self.out.write('\n')
+
