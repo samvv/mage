@@ -413,6 +413,7 @@ def make_py_default_constructor(ty: Type, *, specs: Specs, prefix: str) -> PyExp
 def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str, PyFuncDef]) -> tuple[Type, PyExpr]:
 
     param_name = 'value'
+    visited = set[str]()
 
     @cache
     def gen_coerce_fn(ty: Type, forbid_default: bool) -> tuple[Type, PyExpr]:
@@ -538,6 +539,10 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
                 optional_fields: list[Field] = []
                 required_fields: list[Field] = []
 
+                # TODO mark each element in the cycle to be cyclic, not just the one that happens to close the cycle
+                is_cyclic = ty.name in visited
+                visited.add(ty.name)
+
                 for field in spec.fields:
                     if is_optional_type(field.ty) or is_py_default_constructible(field.ty, specs=specs):
                         optional_fields.append(field)
@@ -551,7 +556,7 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
                             PyRetStmt(expr=PyCallExpr(PyNamedExpr(this_class_name)))
                         ]
 
-                elif len(required_fields) == 1:
+                elif len(required_fields) == 1 and not is_cyclic:
 
                     required_type = required_fields[0].ty
 
