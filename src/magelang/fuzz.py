@@ -205,13 +205,13 @@ def random_sentence(
                 table.add(low, high)
             return table.pick_random_char()
         if isinstance(expr, MageRefExpr):
-            grammar = expr.get_grammar()
+            grammar = expr.grammar
             rule = grammar.lookup(expr.name)
+            assert(rule is not None and rule.expr is not None)
             n = visits.get(rule, 0)
             if n >= max_recurse:
                 return ''
             visits[rule] = n + 1
-            assert(rule is not None and rule.expr is not None)
             return visit(rule.expr)
         if isinstance(expr, MageHideExpr):
             return visit(expr.expr)
@@ -227,6 +227,8 @@ def random_sentence(
         if isinstance(expr, MageRepeatExpr):
             if expr.max == POSINF:
                 n = expr.min + random.randrange(max_inf_repeat)
+            elif expr.min == expr.max:
+                n = expr.min
             else:
                 n = random.randrange(expr.min, expr.max)
             out = ''
