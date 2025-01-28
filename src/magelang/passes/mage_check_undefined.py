@@ -1,12 +1,12 @@
 
 from magelang.logging import error
-from magelang.lang.mage.ast import MageGrammar, MageRefExpr, MageExpr, MageRule, for_each_direct_child_expr, for_each_rule
+from magelang.lang.mage.ast import MageGrammar, MageRefExpr, MageExpr, MageRule, for_each_direct_child_expr, for_each_rule, lookup_ref
 
 def mage_check_undefined(grammar: MageGrammar) -> MageGrammar:
 
     def visit_expr(expr: MageExpr) -> None:
         if isinstance(expr, MageRefExpr):
-            if expr.symbol is None:
+            if lookup_ref(expr) is None:
                 error(f"undefined rule referenced: {expr.name}")
             return
         for_each_direct_child_expr(expr, visit_expr)
