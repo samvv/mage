@@ -1,4 +1,5 @@
 
+from functools import cache
 from typing import Generator, Iterator, Iterable, Sequence
 
 import marko.inline
@@ -405,6 +406,7 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
 
     param_name = 'value'
 
+    @cache
     def gen_coerce_fn(ty: Type, forbid_default: bool) -> tuple[Type, PyExpr]:
 
         cases: list[PyCondCase] = []
