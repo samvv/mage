@@ -63,6 +63,21 @@ Fuzz the given grammar using a pseudorandom number generator for replayable resu
 mage fuzz grammars/magedown.mage
 ```
 
+> [!WARNING]
+>
+> If you let `mage fuzz --all` run, Mage may write a lot of data to disk.
+>
+> We recommend creating a temporary file system. A size of 64M should be more
+> than enough. For example:
+>
+> ```sh
+> mkdir -p output/fuzz
+> sudo mount -t tmpfs tmpfs -o size=64m output/fuzz
+> mage fuzz --all
+> ```
+>
+> When you're done run `sudo umount output/fuzz` to unmount it.
+
 ## Grammar
 
 ### `pub <name> = <expr>`
