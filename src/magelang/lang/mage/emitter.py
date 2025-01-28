@@ -53,10 +53,11 @@ def emit(node: MageSyntax) -> str:
                         out.write(str(arg))
                     out.write(')')
                 out.write('\n')
-            out.write('@mode')
-            out.write('(')
-            out.write(str(node.mode))
-            out.write(')\n')
+            if node.mode != 0:
+                out.write('@mode')
+                out.write('(')
+                out.write(str(node.mode))
+                out.write(')\n')
             if node.is_public:
                 out.write('pub ')
             if node.is_extern:
