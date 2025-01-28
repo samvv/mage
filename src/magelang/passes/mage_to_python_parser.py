@@ -382,6 +382,11 @@ def mage_to_python_parser(
                     yield from accept
                     return
 
+                if expr.min == 1 and expr.max == 1:
+                    print(expr.min,expr.max)
+                    yield from visit_field_internals(expr.expr, stream_name, target_name, accept, reject)
+                    return
+
                 element_name = generate_name(prefix=f'{target_name}_element')
                 ty = infer_type(expr.expr, grammar=grammar)
 
