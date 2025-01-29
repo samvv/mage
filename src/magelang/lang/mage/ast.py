@@ -824,6 +824,13 @@ def rewrite_each_rule(node: _T, proc: Callable[[MageRule], MageRule]) -> _T:
             assert_never(element)
     return cast(_T, node.derive(elements=new_elements))
 
+def rewrite_each_expr(grammar: MageGrammar, proc: Callable[[MageExpr], MageExpr]) -> MageGrammar:
+    def rewrite_rule(rule: MageRule) -> MageRule:
+        if rule.expr is None:
+            return rule
+        return rule.derive(expr=proc(rule.expr))
+    return rewrite_each_rule(grammar, rewrite_rule)
+
 def rewrite_module(module: _T, proc: Callable[[MageModuleElement], MageModuleElement]) -> _T:
     new_elements = []
     changed = False
