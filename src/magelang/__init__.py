@@ -1,6 +1,7 @@
 
 from enum import StrEnum
 from pathlib import Path
+from typing import Literal
 from magelang.util import Files
 from .manager import *
 from .lang.mage import *
