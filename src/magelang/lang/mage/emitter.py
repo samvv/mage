@@ -120,7 +120,10 @@ def emit(node: MageSyntax) -> str:
         if isinstance(node, MageListExpr):
             out.write('(')
             visit(node.element)
-            out.write(' % ')
+            out.write(' %')
+            for _ in range(node.min_count):
+                out.write('%')
+            out.write(' ')
             visit(node.separator)
             out.write(')')
             return
