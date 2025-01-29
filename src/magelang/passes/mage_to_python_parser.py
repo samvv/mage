@@ -536,23 +536,15 @@ def mage_to_python_parser(
             else:
                 yield from visit_prim_field_internals(expr, stream_name, target_name, accept, reject)
 
-        def visit_field(expr: MageExpr, stream_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
-            field_name = generate_name('temp') if expr.field_name is None else expr.field_name
-            if inside_token:
-                accept = [ PyAugAssignStmt(PyNamedPattern(buffer_name), PyPlus(), PyNamedExpr(field_name)), *accept ]
-            yield from visit_field_internals(expr, stream_name, field_name, accept, reject)
-
         def visit_fields(expr: MageExpr, stream_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
-            if isinstance(expr, MageSeqExpr):
-                head = accept
-                for element in reversed(expr.elements):
-                    if isinstance(element, MageSeqExpr):
-                        head = list(visit_fields(element, stream_name, head, reject))
-                    else:
-                        head = list(visit_field(element, stream_name, head, reject))
-                yield from head
-            else:
-                yield from visit_field(expr, stream_name, accept, reject)
+            head = accept
+            for expr, field in reversed(list(get_fields(expr, grammar=grammar))):
+                field_name = field.name if field is not None else generate_name('temp')
+                new_accept = head
+                if inside_token:
+                    new_accept = [ PyAugAssignStmt(PyNamedPattern(buffer_name), PyPlus(), PyNamedExpr(field_name)), *accept ]
+                head = list(visit_field_internals(expr, stream_name, field_name, new_accept, reject))
+            yield from head
 
         if grammar.is_variant_rule(rule):
             yield from visit_field_internals(
