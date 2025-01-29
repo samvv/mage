@@ -18,6 +18,7 @@ from .mage_to_python_lexer_tests import mage_to_python_lexer_tests
 from .mage_to_python_parser import mage_to_python_parser
 from .mage_to_revolv_syntax_tree import mage_to_revolv_syntax_tree
 from .mage_to_treespec import mage_to_treespec
+from .mage_unhide import mage_unhide
 from .python_remove_pass_stmts import python_remove_pass_stmts
 from .python_to_text import python_to_text
 from .python_unnest_conditionals import python_unnest_conditionals
@@ -27,4 +28,3 @@ from .revolv_to_rust import revolv_to_rust
 from .rust_to_text import rust_to_text
 from .treespec_cst_to_ast import treespec_cst_to_ast
 from .treespec_to_python import treespec_to_python
-from .mage_unhide import mage_unhide
