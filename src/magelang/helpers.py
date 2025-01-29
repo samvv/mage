@@ -359,8 +359,10 @@ def is_py_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences
         if isinstance(ty, SpecType):
             spec = lookup_spec(specs, ty.name)
             assert(not isinstance(spec, TypeSpec))
-            if spec is None or isinstance(spec, EnumSpec):
+            if spec is None:
                 return False
+            if isinstance(spec, EnumSpec):
+                return len(spec.members) < 2
             if isinstance(spec, ConstEnumSpec):
                 return True
             if isinstance(spec, NodeSpec):
