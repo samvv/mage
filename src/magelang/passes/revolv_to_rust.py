@@ -3,7 +3,9 @@
 
 from magelang.lang.revolv.ast import *
 from magelang.lang.rust import *
+from magelang.manager import declare_pass
 
+@declare_pass()
 def revolv_to_rust(program: Program) -> RustSourceFile:
 
     items = []

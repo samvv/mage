@@ -3,9 +3,11 @@ from typing import assert_never
 
 from magelang.lang.python.cst import *
 from magelang.lang.mage.ast import *
+from magelang.manager import declare_pass
 from magelang.util import NameGenerator, constant, nonnull
 from magelang.helpers import make_py_cond, make_py_or, extern_type_to_py_type, to_py_class_name
 
+@declare_pass()
 def mage_to_python_lexer(
     grammar: MageGrammar,
     prefix = '',

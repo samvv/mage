@@ -1,6 +1,7 @@
 
 from typing import Iterable, assert_never
 
+from magelang.manager import declare_pass
 from magelang.passes.mage_insert_magic_rules import any_node_rule_name, any_token_rule_name, any_syntax_rule_name
 from magelang.helpers import make_py_cond, make_py_or, make_py_union, treespec_type_to_deep_py_test, make_py_coercions, treespec_type_to_py_type, treespec_type_to_shallow_py_test, namespaced, extern_type_to_py_type, to_py_class_name, quote_py_type, make_py_isinstance, PyCondCase, lookup_spec
 from magelang.lang.treespec.helpers import contains_type, expand_variant_types, is_self_referential, is_optional_type, is_type_assignable, resolve_type_references, spec_to_type
@@ -16,6 +17,7 @@ def make_py_optional(ty: PyExpr) -> PyExpr:
 def make_py_return(expr: PyExpr) -> PyStmt:
     return PyRetStmt(expr=expr)
 
+@declare_pass()
 def treespec_to_python(
     specs: Specs,
     prefix: str = '',

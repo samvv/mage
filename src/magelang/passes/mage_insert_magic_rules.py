@@ -1,11 +1,13 @@
 
 from magelang.lang.mage.ast import POSINF, PUBLIC, Decorator, MageCharSetExpr, MageChoiceExpr, MageGrammar, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr
+from magelang.manager import declare_pass
 
 any_syntax_rule_name = 'syntax'
 any_keyword_rule_name = 'keyword'
 any_node_rule_name = 'node'
 any_token_rule_name = 'token'
 
+@declare_pass()
 def mage_insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
 
     new_elements = list(grammar.elements)

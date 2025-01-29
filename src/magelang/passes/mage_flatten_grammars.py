@@ -1,8 +1,10 @@
 
 from magelang.lang.mage.ast import *
+from magelang.manager import declare_pass
 from magelang.util import to_snake_case
 
 # FIXME Reference expressions will point to the wrong module
+@declare_pass()
 def mage_flatten_grammars(grammar: MageGrammar) -> MageGrammar:
 
     def mangle(parent: str, name: str) -> str:

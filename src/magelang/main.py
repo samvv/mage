@@ -133,7 +133,13 @@ def dump(filename: str, *passes: str,  **opts: Any) -> int:
             error(f'unrecognised file type: {p.suffix}')
             return 1
     ctx = Context(opts)
-    pass_ = pipeline(*(get_pass_by_name(name) for name in passes))
+    pass_ = identity
+    for name in passes:
+        found = get_pass_by_name(name)
+        if found is None:
+            error(f"failed to find a pass named '{name}'")
+            return 1
+        pass_ = compose(pass_, found)
     result = apply(ctx, input, pass_)
     if is_mage_syntax(result):
         print(mage_emit(result))

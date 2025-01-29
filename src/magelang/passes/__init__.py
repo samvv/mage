@@ -1,6 +1,3 @@
-
-from magelang.manager import Pass, identity
-
 from .mage_check_neg_charset_intervals import *
 from .mage_check_overlapping_charset_intervals import *
 from .mage_check_token_no_parse import *
@@ -29,41 +26,3 @@ from .revolv_to_rust import *
 from .rust_to_text import *
 from .treespec_cst_to_ast import *
 from .treespec_to_python import *
-
-all_passes = {
-    identity,
-    mage_check_neg_charset_intervals,
-    mage_check_overlapping_charset_intervals,
-    mage_check_token_no_parse,
-    mage_check_undefined,
-    mage_extract_literals,
-    mage_extract_prefixes,
-    mage_flatten_grammars,
-    mage_hide_lookaheads,
-    mage_inline,
-    mage_insert_magic_rules,
-    mage_insert_skip,
-    mage_remove_hidden,
-    mage_simplify,
-    mage_to_python_emitter,
-    mage_to_python_lexer,
-    mage_to_python_lexer_tests,
-    mage_to_python_parser,
-    mage_to_revolv_syntax_tree,
-    mage_to_treespec,
-    python_remove_pass_stmts,
-    python_to_text,
-    python_unnest_conditionals,
-    revolv_lift_assign_expr,
-    revolv_to_python,
-    revolv_to_rust,
-    rust_to_text,
-    treespec_cst_to_ast,
-    treespec_to_python,
-}
-
-def get_pass_by_name(name: str) -> Pass[Any, Any]:
-    for pass_ in all_passes:
-        if pass_.__name__ == name:
-            return pass_
-    raise RuntimeError(f"A pass named '{name}' was not found")

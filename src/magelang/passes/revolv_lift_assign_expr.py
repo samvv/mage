@@ -1,6 +1,7 @@
 
 from typing import assert_never, cast
 from magelang.lang.revolv.ast import *
+from magelang.manager import declare_pass
 from magelang.util import NameGenerator
 
 IN_CASE_TEST = 1
@@ -9,6 +10,7 @@ def prepend(l, els):
     for el in reversed(els):
         l.insert(0, el)
 
+@declare_pass()
 def revolv_lift_assign_expr(source: Program) -> Program:
 
     generate_temporary = NameGenerator()

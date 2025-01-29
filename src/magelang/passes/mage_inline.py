@@ -1,7 +1,9 @@
 
 from magelang.lang.mage.ast import *
 from magelang.lang.mage.emitter import *
+from magelang.manager import declare_pass
 
+@declare_pass()
 def mage_inline(grammar: MageGrammar) -> MageGrammar:
 
     def rewrite_expr(expr: MageExpr) -> MageExpr:

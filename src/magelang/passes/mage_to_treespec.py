@@ -3,7 +3,9 @@ from typing import Iterable
 from magelang.helpers import get_field_name, infer_type, get_fields
 from magelang.lang.mage.ast import *
 from magelang.lang.treespec import *
+from magelang.manager import declare_pass
 
+@declare_pass()
 def mage_to_treespec(
     grammar: MageGrammar,
     strong_enums: bool = False,

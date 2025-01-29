@@ -2,7 +2,7 @@
 from typing import assert_never, cast
 
 from magelang.lang.mage.ast import *
-from magelang.logging import warn
+from magelang.manager import declare_pass
 
 type Edge = str
 
@@ -26,6 +26,7 @@ Prefixes = dict[Edge, Prefix];
 
 # FIXME make this transform target all ChoiceExpr
 # FIXME Nested modules are not transformed
+@declare_pass()
 def mage_extract_prefixes(grammar: MageGrammar) -> MageGrammar:
 
     global_prefixes = Prefixes()

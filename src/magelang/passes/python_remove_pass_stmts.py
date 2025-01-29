@@ -1,6 +1,8 @@
 
 from magelang.lang.python.cst import *
+from magelang.manager import declare_pass
 
+@declare_pass()
 def python_remove_pass_stmts(module: PyModule) -> PyModule:
 
     def rewrite_stmt(stmt: PyStmt) -> PyStmt:

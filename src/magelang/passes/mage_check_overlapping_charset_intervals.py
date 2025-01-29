@@ -4,10 +4,12 @@ from intervaltree import Interval, IntervalTree
 from magelang.lang.mage.ast import *
 from magelang.logging import warn
 from magelang.lang.mage.emitter import escape
+from magelang.manager import declare_pass
 
 def _pretty(low, high) -> str:
     return escape(low) if low == high else f'{escape(low)}-{escape(high)}'
 
+@declare_pass()
 def mage_check_overlapping_charset_intervals(grammar: MageGrammar) -> MageGrammar:
 
     def visit_expr(expr: MageExpr) -> None:

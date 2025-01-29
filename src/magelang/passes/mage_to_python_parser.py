@@ -4,8 +4,9 @@ from magelang.lang.mage.ast import *
 from magelang.lang.python.cst import *
 from magelang.lang.mage.constants import string_rule_type, builtin_types
 from magelang.analysis import is_eof, is_tokenizable
-from magelang.lang.treespec.ast import ExternType, Field, Type
-from magelang.util import NameGenerator, unreachable
+from magelang.lang.treespec.ast import ExternType, Type
+from magelang.manager import declare_pass
+from magelang.util import NameGenerator
 
 # FIXME every expr may only peek or fork so that when there is an error, the stream can correctly be skipped
 # def ; def foo(): bar <- if ';' is consumed during parsing error we skip too many tokens
@@ -141,6 +142,7 @@ def _is_terminal(body: PyStmt | Sequence[PyStmt], in_loop: bool = True) -> bool:
         body = [ body ]
     return any(_is_stmt_terminal(element, in_loop) for element in body)
 
+@declare_pass()
 def mage_to_python_parser(
     grammar: MageGrammar,
     prefix: str = '',
@@ -195,10 +197,13 @@ def mage_to_python_parser(
         generate_name('buffer') # Mark buffer as being in use
         generate_name('c') # Start counting from 0
 
-        def visit_prim_field_internals(expr: MageExpr, stream_name: str, target_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
+        def visit_field_internals(expr: MageExpr, stream_name: str, target_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
             """
             Generate parse logic for a single expression.
             """
+
+            def gen_tuple_element_name(i: int) -> str:
+                return generate_name(f'{target_name}_tuple_{i}')
 
             def gen_if_stmt(test: PyExpr, accept: list[PyStmt], reject: list[PyStmt], test_negated: bool) -> Generator[PyStmt]:
                 accept_terminates = _is_terminal(accept)
@@ -263,9 +268,6 @@ def mage_to_python_parser(
                 test = make_py_or(tests)
                 accept.insert(0, PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'get'))))
                 yield from gen_if_stmt(test, accept, reject, False)
-
-            elif isinstance(expr, MageSeqExpr):
-                unreachable()
 
             elif isinstance(expr, MageRefExpr):
 
@@ -461,8 +463,8 @@ def mage_to_python_parser(
                     yield from min_to_max
 
             elif isinstance(expr, MageHideExpr):
-                new_target_name = generate_name('unused')
-                yield from visit_field_internals(expr.expr, stream_name, new_target_name, accept, reject)
+                # new_target_name = generate_name('unused')
+                yield from visit_field_internals(expr.expr, stream_name, target_name, accept, reject)
 
             elif isinstance(expr, MageListExpr):
 
@@ -499,6 +501,29 @@ def mage_to_python_parser(
                     ]
                 )
 
+            elif isinstance(expr, MageSeqExpr):
+                indices = list[tuple[int, str]]()
+                n = len(expr.elements)
+                for i, element in enumerate(expr.elements):
+                    if not isinstance(element, MageHideExpr):
+                        indices.append((i, gen_tuple_element_name(i)))
+                if len(indices) == 1:
+                    # Tuple only contains one value; extract it
+                    value = PyNamedExpr(indices[0][1])
+                else:
+                    # Tuple contains many elements
+                    value = PyTupleExpr(elements=list(PyNamedExpr(name) for i, name in indices))
+                head: list[PyStmt] = [ PyAssignStmt(PyNamedPattern(target_name), value=value) ] + accept
+                i = 0
+                for element in reversed(expr.elements):
+                    if isinstance(element, MageHideExpr):
+                        element_name = generate_name(f'{target_name}_unused')
+                    else:
+                        element_name = indices[len(indices) - i - 1][1]
+                        i += 1
+                    head = list(visit_field_internals(element, stream_name, element_name, head, reject))
+                yield from head
+
                 yield from accept
 
             elif isinstance(expr, MageLookaheadExpr):
@@ -511,30 +536,6 @@ def mage_to_python_parser(
 
             else:
                 assert_never(expr)
-
-        def visit_field_internals(expr: MageExpr, stream_name: str, target_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
-            if isinstance(expr, MageSeqExpr):
-                indices = list[int]()
-                n = len(expr.elements)
-                for i, element in enumerate(expr.elements):
-                    if not isinstance(element, MageHideExpr):
-                        indices.append(i)
-                if len(indices) == 1:
-                    # Tuple only contains one value; extract it
-                    value = PyNamedExpr(f'{target_name}_tuple_{indices[0]}')
-                else:
-                    # Tuple contains many elements
-                    value = PyTupleExpr(elements=list(PyNamedExpr(f'{target_name}_{i}') for i in indices))
-                head: list[PyStmt] = [ PyAssignStmt(PyNamedPattern(target_name), value=value) ] + accept
-                for i, element in enumerate(reversed(expr.elements)):
-                    if isinstance(element, MageHideExpr):
-                        element_name = generate_name('unused')
-                    else:
-                        element_name = f'{target_name}_tuple_{n - i - 1}'
-                    head = list(visit_field_internals(element, stream_name, element_name, head, reject))
-                yield from head
-            else:
-                yield from visit_prim_field_internals(expr, stream_name, target_name, accept, reject)
 
         def visit_fields(expr: MageExpr, stream_name: str, accept: list[PyStmt], reject: list[PyStmt]) -> Generator[PyStmt]:
             head = accept

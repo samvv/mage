@@ -1,7 +1,9 @@
 
 from magelang.logging import error
 from magelang.lang.mage.ast import MageGrammar, MageRefExpr, MageExpr, MageRule, for_each_direct_child_expr, for_each_rule, lookup_ref
+from magelang.manager import declare_pass
 
+@declare_pass()
 def mage_check_undefined(grammar: MageGrammar) -> MageGrammar:
 
     def visit_expr(expr: MageExpr) -> None:

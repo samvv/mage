@@ -2,12 +2,14 @@ from pathlib import Path
 import json
 from typing import TypeVar, cast
 
-from magelang.eval import accepts
+from magelang.eval import SUCCESS, accepts
 from magelang.lang.mage.ast import *
 from magelang.analysis import is_tokenizable
+from magelang.manager import declare_pass
 
 T = TypeVar('T', bound=MageGrammar | MageModule)
 
+@declare_pass()
 def mage_extract_literals(
     grammar: MageGrammar,
     max_named_chars: int = 4,
@@ -42,7 +44,7 @@ def mage_extract_literals(
             # If the evaluation engine matches it as a keyword
             # FIXME Keyword detection should work with the @keyword decorator
             keyword_rule = node.keyword_rule
-            if keyword_rule is not None and keyword_rule.expr is not None and accepts(keyword_rule.expr, text, node):
+            if keyword_rule is not None and keyword_rule.expr is not None and accepts(keyword_rule.expr, text, node) == SUCCESS:
                 name = f'{text}_keyword'
                 keywords.add(name)
                 return name

@@ -3,7 +3,7 @@ from typing import Iterable, Iterator
 
 from magelang.lang.mage.ast import *
 from magelang.analysis import can_be_empty
-from magelang.manager import Pass, PassBase, pipeline
+from magelang.manager import Pass, PassBase, declare_pass, pipeline
 from magelang.lang.revolv.ast import *
 from magelang.ir.constants import *
 from magelang.util import NameGenerator, plural, to_snake_case, unreachable

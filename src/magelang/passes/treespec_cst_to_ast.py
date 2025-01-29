@@ -1,4 +1,6 @@
 
+from magelang.logging import warn
+from magelang.manager import declare_pass
 from .mage_insert_magic_rules import any_token_rule_name, any_syntax_rule_name
 from magelang.helpers import lookup_spec
 from magelang.lang.mage.constants import integer_rule_type
@@ -9,7 +11,7 @@ from magelang.lang.treespec.helpers import flatten_union_types, is_optional_type
 def is_ignored(ty: Type) -> bool:
     return all(isinstance(el_ty, NoneType) or is_unit_type(el_ty) for el_ty in flatten_union_types(ty))
 
-
+@declare_pass()
 def treespec_cst_to_ast(specs: Specs) -> Specs:
 
     def rewrite_type(ty: Type) -> Type:

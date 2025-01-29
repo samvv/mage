@@ -1,11 +1,13 @@
 
 from textwrap import dedent
 import marko
+from magelang.manager import declare_pass
 from magelang.util import NameGenerator
 from magelang.lang.mage.ast import MageGrammar
 from magelang.lang.python.cst import *
 from magelang.helpers import make_py_isinstance, get_marko_element_text, to_py_class_name
 
+@declare_pass()
 def mage_to_python_lexer_tests(
     grammar: MageGrammar,
     prefix = '',

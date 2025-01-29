@@ -2,7 +2,7 @@
 import inspect
 from abc import abstractmethod
 from typing import Any, Callable, Generic, Protocol, TypeVar, overload
-from .logging import info
+from .logging import info, warn
 
 from magelang.util import Nothing, Option, Something, is_nothing, panic, to_maybe_none
 
@@ -12,6 +12,8 @@ _Y = TypeVar('_Y', covariant=True)
 type Pass[_X, _Y] = PassFn[_X, _Y] | type[PassBase[_X, _Y]]
 
 class PassFn(Protocol[_X, _Y]):
+
+    __name__: str
 
     @abstractmethod
     def __call__(self, input: _X, /, *args, **kwargs) -> _Y: ...
@@ -35,6 +37,17 @@ class Context:
 
     def get_option(self, name: str, default: Any = None) -> Any:
         return self.opts.get(name, default)
+
+_pass_registry = dict[str, Pass[Any, Any]]()
+
+def declare_pass() -> Callable[[PassFn[_X, _Y]], PassFn[_X, _Y]]:
+    def decorator(func: PassFn[_X, _Y]) -> PassFn[_X, _Y]:
+        _pass_registry[func.__name__] = func
+        return func
+    return decorator
+
+def get_pass_by_name(name: str) -> Pass[Any, Any] | None:
+    return _pass_registry.get(name)
 
 _K = TypeVar('_K')
 _K1 = TypeVar('_K1')

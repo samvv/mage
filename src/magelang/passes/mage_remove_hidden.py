@@ -1,6 +1,8 @@
 
 from magelang.lang.mage.ast import *
+from magelang.manager import declare_pass
 
+@declare_pass()
 def mage_remove_hidden(grammar: MageGrammar) -> MageGrammar:
     """
     Remove hide expressions from the grammar and replace them with the empty string.

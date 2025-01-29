@@ -1,7 +1,9 @@
 
 from magelang.lang.mage.ast import *
 from magelang.logging import warn
+from magelang.manager import declare_pass
 
+@declare_pass()
 def mage_simplify(grammar: MageGrammar) -> MageGrammar:
 
     def make_fail() -> MageExpr:

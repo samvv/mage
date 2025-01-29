@@ -1,5 +1,6 @@
 
 from typing import Generator, TypeIs, assert_never, Iterable, Iterator
+from magelang.manager import declare_pass
 from magelang.util import is_iterator, panic, to_camel_case, todo
 from magelang.lang.revolv.ast import *
 from magelang.ir.constants import *
@@ -28,6 +29,7 @@ def is_stmt_expr(expr: Expr) -> TypeIs[StmtExpr]:
 
 type PyCondCase = tuple[PyExpr | None, Sequence[PyStmt]]
 
+@declare_pass()
 def revolv_to_python(node: Program) -> PyModule:
 
     imports = set[str]()

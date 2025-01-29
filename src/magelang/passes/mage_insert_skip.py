@@ -1,6 +1,8 @@
 
 from magelang.lang.mage.ast import MageExpr, MageGrammar, MageRefExpr, MageRule, MageSeqExpr, rewrite_each_child_expr, rewrite_each_rule
+from magelang.manager import declare_pass
 
+@declare_pass()
 def mage_insert_skip(grammar: MageGrammar) -> MageGrammar:
 
     assert(grammar.skip_rule is not None)

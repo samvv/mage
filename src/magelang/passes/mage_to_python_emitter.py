@@ -8,9 +8,11 @@ from magelang.analysis import intersects, can_be_empty
 from magelang.lang.mage.ast import MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageListExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, static_expr_to_str
 from magelang.helpers import Field, get_fields, infer_type, is_unit_type
 from magelang.lang.python.cst import *
+from magelang.manager import declare_pass
 from magelang.util import unreachable
 from magelang.helpers import PyCondCase, make_py_cond, treespec_type_to_shallow_py_test, namespaced, to_py_class_name, make_py_isinstance
 
+@declare_pass()
 def mage_to_python_emitter(
     grammar: MageGrammar,
     prefix: str = '',

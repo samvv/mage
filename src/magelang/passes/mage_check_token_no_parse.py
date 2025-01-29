@@ -1,7 +1,9 @@
 
 from magelang.logging import error
 from magelang.lang.mage.ast import *
+from magelang.manager import declare_pass
 
+@declare_pass()
 def mage_check_token_no_parse(grammar: MageGrammar) -> MageGrammar:
 
     def references_pub_rule(expr: MageExpr) -> bool:

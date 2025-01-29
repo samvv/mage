@@ -2,7 +2,9 @@
 from magelang.logging import error
 from magelang.lang.mage.ast import MageCharSetExpr, MageExpr, MageGrammar, MageRule, for_each_direct_child_expr, for_each_rule
 from magelang.lang.mage.emitter import escape
+from magelang.manager import declare_pass
 
+@declare_pass()
 def mage_check_neg_charset_intervals(grammar: MageGrammar) -> MageGrammar:
 
     def visit_expr(expr: MageExpr) -> None:
