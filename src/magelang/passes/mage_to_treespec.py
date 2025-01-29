@@ -1,5 +1,5 @@
 
-from typing import Iterable, cast
+from typing import Iterable
 from magelang.helpers import get_field_name, infer_type, get_fields
 from magelang.lang.mage.ast import *
 from magelang.lang.treespec import *
@@ -41,8 +41,9 @@ def mage_to_treespec(
         return out
 
     def get_field_members(expr: MageExpr) -> Iterable[Field]:
-        return cast(Iterable[Field], filter(lambda element: isinstance(element, Field), get_fields(expr, grammar, include_hidden=include_hidden)))
-
+        for expr, field in get_fields(expr, grammar, include_hidden=include_hidden):
+            if field is not None:
+                yield field
 
     toplevel = []
 
