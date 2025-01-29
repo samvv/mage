@@ -7,7 +7,7 @@ import time
 from magelang import generate_and_load_parser
 from magelang.analysis import is_eof
 from magelang.constants import DEFAULT_FUZZ_DIR
-from magelang.lang.mage.ast import ASCII_MAX, ASCII_MIN, POSINF, PUBLIC, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, set_parents
+from magelang.lang.mage.ast import ASCII_MAX, ASCII_MIN, POSINF, PUBLIC, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageListExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, set_parents
 from magelang.eval import RECMAX, SUCCESS, accepts
 from magelang.runtime import EOF, CharStream, ParseStream
 from magelang.util import Progress, unreachable
@@ -69,9 +69,10 @@ def random_expr(
     max_lit_chars: int = 10,
     max_repeat_min_max: int = 5,
     max_charset_elements: int = 20,
+    max_list_min_count: int = 3,
 ) -> MageExpr:
     def generate() -> MageExpr:
-        n = random.randrange(7)
+        n = random.randrange(8)
         if n == 0:
             out = ''
             for _ in range(random.randrange(1, max_lit_chars)):
@@ -109,6 +110,12 @@ def random_expr(
             return MageHideExpr(generate())
         if n == 6:
             return MageRefExpr(random.choice(rule_names))
+        if n == 7:
+            return MageListExpr(
+                generate(),
+                generate(),
+                min_count=random.randrange(max_list_min_count)
+            )
         unreachable()
     return generate()
 
