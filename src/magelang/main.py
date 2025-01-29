@@ -151,10 +151,10 @@ def fuzz(filename: str | None = None, /, *, all: bool = False, limit: int | None
     progress.start()
     if all:
         result = fuzz_all(limit, break_on_failure=break_on_failure, progress=progress)
-    elif filename is None:
-        error("Provide a grammar to fuzz or use --all to fuzz mage itself.")
-        return 1
     else:
+        if filename is None:
+            error("Provide a grammar to fuzz or use --all to fuzz mage itself.")
+            return 1
         seed = None
         if filename.startswith(SEED_FILENAME_PREFIX):
             import random
