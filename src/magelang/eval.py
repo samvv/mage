@@ -130,22 +130,25 @@ def evaluate(
                 return ''
             return
 
-        # if isinstance(expr, MageListExpr):
-        #     elements = Punctuated()
-        #     count = 0
-        #     result = visit(expr.element)
-        #     if result is not None:
-        #         count += 1
-        #         while True:
-        #             result = visit(expr.separator)
-        #             if result is None:
-        #                 break
-        #             result = visit(expr.element)
-        #             if result is None:
-        #                 break
-        #     if count < expr.min_count:
-        #         return
-        #     return elements
+        if isinstance(expr, MageListExpr):
+            elements = Punctuated()
+            count = 0
+            prev_element = visit_backtrack(expr.element)
+            if prev_element is not None:
+                count += 1
+                while True:
+                    result = visit_backtrack(MageSeqExpr([
+                        expr.separator,
+                        expr.element,
+                    ]))
+                    if result is None:
+                        break
+                    elements.append(prev_element, result[0])
+                    prev_element = result[1]
+                elements.append_final(prev_element)
+            if count < expr.min_count:
+                return
+            return elements
 
         if isinstance(expr, MageHideExpr):
             return visit(expr.expr)
