@@ -1,6 +1,5 @@
 
 from magelang.lang.mage.ast import *
-from magelang.logging import warn
 from magelang.manager import declare_pass
 
 @declare_pass()
@@ -47,7 +46,7 @@ def mage_simplify(grammar: MageGrammar) -> MageGrammar:
             return expr
 
         if isinstance(expr, MageChoiceExpr):
-            new_elements = []
+            new_elements = list[MageExpr]()
             has_empty = False
             empty_rules = []
             for new_element in flatten_choice(expr.elements):
@@ -63,12 +62,12 @@ def mage_simplify(grammar: MageGrammar) -> MageGrammar:
             if not new_elements:
                 return make_fail()
             if len(new_elements) == 1:
-                new_elements[0].rules.extend(expr.actions)
+                new_elements[0].actions.extend(expr.actions)
                 return new_elements[0]
             return expr.derive(elements=new_elements)
 
         if isinstance(expr, MageSeqExpr):
-            new_elements = []
+            new_elements = list[MageExpr]()
             has_fail = False
             for new_element in flatten_seq(expr.elements):
                 if is_empty(new_element):
@@ -82,7 +81,7 @@ def mage_simplify(grammar: MageGrammar) -> MageGrammar:
             if not new_elements:
                 return make_empty()
             if len(new_elements) == 1:
-                new_elements[0].rules.extend(expr.actions)
+                new_elements[0].actions.extend(expr.actions)
                 return new_elements[0]
             return expr.derive(elements=new_elements)
 
