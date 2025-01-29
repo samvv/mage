@@ -571,7 +571,7 @@ def mage_to_python_parser(
             yield from visit_fields(nonnull(rule.expr), 'stream', [ PyRetStmt(expr=PyCallExpr(PyNamedExpr(to_py_class_name(rule.name, prefix=prefix)), args=args)) ], [ PyRetStmt() ])
             return
 
-        fields = list(field for field in get_fields(nonnull(rule.expr), grammar=grammar) if isinstance(field, Field))
+        fields = list(field for _, field in get_fields(nonnull(rule.expr), grammar=grammar) if field is not None)
         return_struct: list[PyStmt] = [
             PyRetStmt(
                 expr=PyCallExpr(

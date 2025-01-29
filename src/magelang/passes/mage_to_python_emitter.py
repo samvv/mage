@@ -46,14 +46,10 @@ def mage_to_python_emitter(
         assert(skip_rule is not None and skip_rule.expr is not None)
         return gen_emit_expr(skip_rule.expr, None, False)
 
-    def get_expr(item: MageExpr | Field) -> MageExpr:
-        return item.expr if isinstance(item, Field) else item
-
-    def is_skip(elements: Sequence[MageExpr | Field], i: int) -> bool:
-        expr = get_expr(elements[i])
+    def is_skip(items: Sequence[MageExpr], i: int) -> bool:
+        expr = items[i]
         for k in range(i+1, len(items)):
-            item_2 = items[k]
-            expr_2 = item_2.expr if isinstance(item_2, Field) else item_2
+            expr_2 = items[k]
             if intersects(expr, expr_2, grammar=grammar):
                 return True
             if not can_be_empty(expr_2, grammar=grammar):
@@ -227,11 +223,11 @@ def mage_to_python_emitter(
             assert(rule.expr is not None)
             if_body = []
             items = list(get_fields(rule.expr, include_hidden=include_hidden, grammar=grammar))
-            for i, item in enumerate(items):
-                expr = get_expr(item)
-                skip = is_skip(items, i)
-                if isinstance(item, Field):
-                    if_body.extend(gen_emit_expr(expr, PyAttrExpr(PyNamedExpr(param_name), item.name), skip))
+            exps = list(expr for expr, _ in items)
+            for i, (expr, field)  in enumerate(items):
+                skip = is_skip(exps, i)
+                if field is not None:
+                    if_body.extend(gen_emit_expr(expr, PyAttrExpr(PyNamedExpr(param_name), field.name), skip))
                 else:
                     if_body.extend(gen_emit_expr(expr, None, skip))
             if_body.append(PyRetStmt())
