@@ -16,8 +16,54 @@ from .lang.mage.emitter import emit as mage_emit
 from .lang.mage.parser import Parser
 from .lang.mage.scanner import Scanner
 from .lang.python.emitter import emit as py_emit
-from .passes import *
-from .fuzz import fuzz_all, fuzz_grammar, random_grammar
+from .fuzz import fuzz_all, fuzz_grammar, generate_and_load_parser, random_grammar
+from .eval import NO_MATCH, RECMAX, SUCCESS, evaluate
+
+
+def _grammar_from_file_or_seed(filename: str) -> MageGrammar:
+    if filename.startswith(SEED_FILENAME_PREFIX):
+        import random
+        seed = int(filename[len(SEED_FILENAME_PREFIX):])
+        info(f"Using seed {seed}")
+        random.seed(seed)
+        return random_grammar()
+    return load_grammar(filename)
+
+
+def eval(filename: str, value: str, /, *, generate: bool = False, rule: str | None = None) -> int:
+    cache_dir = Path.home() / '.cache' / 'magelang'
+    grammar = _grammar_from_file_or_seed(filename)
+    if rule is None:
+        rules = list(grammar.rules)
+        if not rules:
+            error("Grammar has no rules")
+            return 1
+        rule = rules[-1].name
+    dest_dir = cache_dir / 'last-eval'
+    # hash = hash_grammar(grammar)
+    # dest_dir = cache_dir / f'{hash:010d}'
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    if generate:
+        parser = generate_and_load_parser(grammar, dest_dir=dest_dir)
+        parse = getattr(parser, f'parse_{rule}')
+        print(parse(value))
+        return 0
+    else:
+        entry = grammar.lookup(rule)
+        if entry is None:
+            error(f"Rule '{rule}' was not found in the grammar")
+            return 1
+        result = evaluate(entry, value)
+        if result == NO_MATCH:
+            error("Failed to parse sentence");
+            return 1
+        if result == RECMAX:
+            error("Maximum recursion depth exceeded. Your grammar probably contains loops that consume nothing.")
+            return 1
+        if result == SUCCESS:
+            print(result)
+            return 0
+
 
 def generate(
     lang: TargetLanguage,
@@ -32,14 +78,7 @@ def generate(
     """
     Generate programming code from a grammar
     """
-    if filename.startswith(SEED_FILENAME_PREFIX):
-        import random
-        seed = int(filename[len(SEED_FILENAME_PREFIX):])
-        info(f"Using seed {seed}")
-        random.seed(seed)
-        grammar = random_grammar()
-    else:
-        grammar = load_grammar(filename)
+    grammar = _grammar_from_file_or_seed(filename)
     out_dir = Path(out_dir)
     files = cast(Files, generate_files(
         grammar,

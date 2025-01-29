@@ -1,32 +1,17 @@
 from collections.abc import Iterable
 from pathlib import Path
 import random
-from types import ModuleType
-from typing import assert_never, cast
+from typing import assert_never
 import time
 
-import magelang
+from magelang import generate_and_load_parser
 from magelang.analysis import is_eof
 from magelang.constants import DEFAULT_FUZZ_DIR
 from magelang.lang.mage.ast import ASCII_MAX, ASCII_MIN, POSINF, PUBLIC, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, set_parents
-from magelang.eval import accepts
+from magelang.eval import RECMAX, SUCCESS, accepts
 from magelang.runtime import EOF, CharStream, ParseStream
-from magelang.util import Files, Progress, load_py_file, unreachable
+from magelang.util import Progress, unreachable
 
-def load_parser(grammar: MageGrammar, dest_dir: Path) -> ModuleType:
-    # TODO conditionally enable the lexer and fuzz that as well
-    files = cast(Files, magelang.generate_files(
-        grammar,
-        lang='python',
-        enable_cst=True,
-        enable_parser=True,
-        silent=True,
-        enable_ast=False,
-        enable_emitter=False,
-        enable_lexer=False
-    ))
-    magelang.write_files(files, dest_dir, force=True)
-    return load_py_file(dest_dir / 'parser.py')
 
 class Table:
 
@@ -78,8 +63,9 @@ def random_name() -> str:
 
 def random_expr(
     rule_names: list[str],
-    max_choices: int = 2,
-    max_repeat_min: int = 5,
+    max_choices: int = 5,
+    max_repeat_min: int = 3,
+    max_sequence_len: int = 3,
     max_lit_chars: int = 10,
     max_repeat_min_max: int = 5,
     max_charset_elements: int = 20,
@@ -93,7 +79,7 @@ def random_expr(
             return MageLitExpr(out)
         if n == 1:
             elements = []
-            for _ in range(random.randrange(1, max_choices)):
+            for _ in range(random.randrange(1, max_sequence_len)):
                 elements.append(generate())
             return MageChoiceExpr(elements)
         if n == 2:
@@ -114,7 +100,7 @@ def random_expr(
             elements = []
             ci = toss()
             invert = toss()
-            for _ in range(random.randrange(max_charset_elements)):
+            for _ in range(random.randrange(1, max_charset_elements)):
                 l = random.randrange(ASCII_MIN, ASCII_MAX)
                 h = random.randrange(l, ASCII_MAX)
                 elements.append((chr(l), chr(h)))
@@ -128,7 +114,7 @@ def random_expr(
 
 def random_grammar(
     min_rules: int = 0,
-    max_rules: int = 100
+    max_rules: int = 10
 ) -> MageGrammar:
     # FIXME Also generate random modules and references to them
     elements = []
@@ -254,7 +240,7 @@ def fuzz_all(
         random.seed(seed)
         grammar = random_grammar()
         progress.write_line(f"Starting fuzz of grammar with seed {seed}")
-        if not fuzz_grammar(grammar, num_sentences=num_sentences_per_grammar, grammar_seed=seed, break_on_failure=break_on_failure, dest_dir=dest_dir):
+        if not fuzz_grammar(grammar, num_sentences=num_sentences_per_grammar, grammar_seed=seed, break_on_failure=break_on_failure, dest_dir=dest_dir, progress=progress):
             progress.write_line(f"Grammar with seed {seed} failed.")
 
 def fuzz_grammar(
@@ -271,7 +257,8 @@ def fuzz_grammar(
     if progress is None:
         progress = Progress()
     try:
-        parser = load_parser(grammar, dest_dir=dest_dir)
+        # TODO conditionally enable the lexer and fuzz that as well
+        parser = generate_and_load_parser(grammar, dest_dir=dest_dir)
     except Exception as e:
         print(f"Failed to generate parser for grammar with seed {grammar_seed}: {e}")
         if break_on_failure:
@@ -298,11 +285,11 @@ def fuzz_grammar(
                 random.seed(sentence_seed)
                 sentence, fails = random_sentence(rule.expr)
                 sentence_count += 1
-                valid = accepts(rule.expr, sentence, grammar=grammar)
-                if valid is None:
+                valid = accepts(rule, sentence)
+                if valid == RECMAX:
                     progress.write_line(f"Potential infinite rule {rule.name} in grammar with seed {grammar_seed}. Skipping.")
                     continue
-                if (not fails and not valid) or (fails and valid):
+                if (not fails and valid != SUCCESS) or (fails and valid == SUCCESS):
                     continue
                 stream = CharStream(sentence, sentry=EOF)
                 parse = getattr(parser, f'parse_{rule.name}')

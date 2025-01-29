@@ -1,49 +1,70 @@
 
-from typing import assert_never
+from typing import NewType, assert_never
 
 from magelang.analysis import is_eof
+from magelang.constants import DEFAULT_MAX_REPEATS
+from magelang.helpers import get_field_name
 from magelang.lang.mage.ast import *
+from magelang.runtime import Punctuated
+from magelang.util import NameGenerator
 
 EOF = '\uFFFF'
 
-def accepts(expr: MageExpr, text: str, grammar: MageGrammar) -> bool | None:
-    """
-    Check whether the given expression accepts the given text.
+Error = NewType('Error', int)
 
-    Returns `None` when the maximum recursion depth was reached. This usually means that the grammar has an infinite loop.
-    """
+SUCCESS   = Error(0)
+NO_MATCH  = Error(1)
+RECMAX    = Error(2)
+
+class DynamicNode:
+
+    def __init__(self, name: str, fields: 'dict[str, DynamicNode | str]') -> None:
+        self.name = name
+        self.fields = fields
+
+def evaluate(
+    rule: MageRule,
+    text: str,
+    max_repeats: int = DEFAULT_MAX_REPEATS
+) -> DynamicNode | Error:
 
     offset = 0
+    grammar = rule.grammar
 
     def peek(i: int = 0) -> str:
         k = offset + i
         return text[k] if k < len(text) else EOF
 
-    def get_char() -> str:
+    def visit_backtrack(expr: MageExpr) -> tuple | DynamicNode | str | None:
         nonlocal offset
-        ch = text[offset]
-        offset += 1
-        return ch
+        keep = offset
+        result = visit(expr)
+        if result is not None:
+            return result
+        offset = keep
 
-    def visit(expr: MageExpr) -> bool:
+    def visit(expr: MageExpr) -> tuple | DynamicNode | str | None:
 
         nonlocal offset
 
         if is_eof(expr):
-            return offset >= len(text)
+            if offset < len(text):
+                return
+            return ''
 
         if isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
             assert(rule is not None)
             assert(rule.expr is not None)
+            debug(f"enterig {expr.name}")
             return visit(rule.expr)
 
         if isinstance(expr, MageLitExpr):
             for i, ch in enumerate(expr.text):
                 if peek(i) != ch:
-                    return False
+                    return
             offset += len(expr.text)
-            return True
+            return expr.text
 
         if isinstance(expr, MageCharSetExpr):
             ch = peek()
@@ -55,66 +76,113 @@ def accepts(expr: MageExpr, text: str, grammar: MageGrammar) -> bool | None:
                     low, high = element
                 if ord(ch) >= ord(low) and ord(ch) <= ord(high):
                     offset += 1
-                    return True
-            return False
+                    return ch
+            return
 
         if isinstance(expr, MageSeqExpr):
+            elements = []
             for element in expr.elements:
-                if not visit(element):
-                    return False
-            return True
+                result = visit(element)
+                if result is None:
+                    return
+                elements.append(element)
+            return tuple(elements)
 
         if isinstance(expr, MageChoiceExpr):
             keep = offset
             for element in expr.elements:
-                if visit(element):
-                    return True
+                result = visit_backtrack(element)
+                if result is not None:
+                    return result
                 offset = keep
-            return False
+            return
 
         if isinstance(expr, MageRepeatExpr):
-            keep = offset
+            elements = []
             for _ in range(0, expr.min):
-                if not visit(expr.expr):
-                    offset = keep
-                    return False
+                result = visit(expr.expr)
+                if result is None:
+                    return
+                elements.append(result)
             if expr.max == POSINF:
-                while True:
-                    if not visit(expr.expr):
+                for _ in range(0, max_repeats):
+                    result = visit_backtrack(expr.expr)
+                    if result is None:
                         break
+                    elements.append(result)
+                raise RecursionError()
             else:
-                assert(isinstance(expr.max, int))
-                for _ in range(expr.min, expr.max):
-                    if not visit(expr.expr):
+                n = min(max_repeats, expr.max - expr.min)
+                for _ in range(n):
+                    result = visit_backtrack(expr.expr)
+                    if result is None:
                         break
-            return True
+                    elements.append(result)
+                if n == max_repeats:
+                    raise RecursionError()
+            return elements
 
         if isinstance(expr, MageLookaheadExpr):
             keep = offset
             result = visit(expr.expr)
             offset = keep
-            return not result if expr.is_negated else result
+            if result != expr.is_negated:
+                return ''
+            return
 
-        if isinstance(expr, MageListExpr):
-            if not visit(expr.element):
-                return True
-            while True:
-                keep = offset
-                if not visit(expr.separator):
-                    return True
-                if not visit(expr.element):
-                    offset = keep
-                    return True
+        # if isinstance(expr, MageListExpr):
+        #     elements = Punctuated()
+        #     count = 0
+        #     result = visit(expr.element)
+        #     if result is not None:
+        #         count += 1
+        #         while True:
+        #             result = visit(expr.separator)
+        #             if result is None:
+        #                 break
+        #             result = visit(expr.element)
+        #             if result is None:
+        #                 break
+        #     if count < expr.min_count:
+        #         return
+        #     return elements
 
         if isinstance(expr, MageHideExpr):
             return visit(expr.expr)
 
         assert_never(expr)
 
-    try:
-        result = visit(expr)
-    except RecursionError:
-        return
-    if not result:
-        return result
-    return offset == len(text)
+    if rule.expr is None:
+        return NO_MATCH
+
+    generate_name = NameGenerator()
+    fields = dict[str, DynamicNode]()
+    for expr in flatten_sequence(rule.expr):
+        name = get_field_name(expr) or generate_name('field')
+        try:
+            result = visit(expr)
+        except RecursionError:
+            return RECMAX
+        if result is None:
+            return NO_MATCH
+        fields[name] = result
+
+    if offset < len(text):
+        return NO_MATCH
+
+    return DynamicNode(rule.name, fields)
+
+def accepts(
+    rule: MageRule,
+    text: str,
+    max_repeats: int = DEFAULT_MAX_REPEATS,
+) -> Error:
+    """
+    Check whether the given expression accepts the given text.
+
+    Returns `None` when the maximum recursion depth was reached. This usually means that the grammar has an infinite loop.
+
+    This function might get optimised in the future.
+    """
+    result = evaluate(rule, text, max_repeats=max_repeats)
+    return SUCCESS if isinstance(result, DynamicNode) else result

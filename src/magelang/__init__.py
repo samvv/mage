@@ -1,8 +1,10 @@
 
 from enum import StrEnum
+import os
 from pathlib import Path
+from types import ModuleType
 from typing import Literal
-from magelang.util import Files
+from magelang.util import Files, load_py_file
 from .manager import *
 from .lang.mage import *
 from .lang.python import *
@@ -172,6 +174,7 @@ def generate_files(
         out += '\n\n' + files['emitter.py']
     return out
 
+
 def write_files(files: Files, dest_dir: Path, force: bool = False) -> None:
     for fname, text in files.items():
         out_path = dest_dir / fname
@@ -179,6 +182,27 @@ def write_files(files: Files, dest_dir: Path, force: bool = False) -> None:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, 'w' if force else 'x') as f:
             f.write(text)
+
+
+def generate_and_load_parser(grammar: MageGrammar, dest_dir: Path) -> ModuleType:
+    files = cast(Files, generate_files(
+        grammar,
+        lang='python',
+        enable_cst=True,
+        enable_parser=True,
+        silent=True,
+        enable_ast=False,
+        enable_emitter=False,
+        enable_lexer=False
+    ))
+    write_files(files, dest_dir, force=True)
+    os.sync()
+    return load_parser(dest_dir)
+
+
+def load_parser(dest_dir: Path) -> ModuleType:
+    return load_py_file(dest_dir / 'parser.py')
+
 
 def main() -> int:
     from .cli import run
