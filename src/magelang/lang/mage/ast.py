@@ -644,16 +644,16 @@ class MageModuleBase(MageNodeBase):
             if isinstance(element, MageRule) and element.is_skip:
                 return element
 
-    def is_token_rule(self, element: MageModuleElement) -> TypeIs[MageRule]:
+    def is_token_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
         return isinstance(element, MageRule) and element.is_token
 
-    def is_static_token_rule(self, element: MageModuleElement) -> TypeIs[MageRule]:
+    def is_static_token_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
         if not isinstance(element, MageRule) or element.is_extern:
             return False
         assert(element.expr is not None)
         return is_static(element.expr)
 
-    def is_parse_rule(self, element: MageModuleElement) -> TypeIs[MageRule]:
+    def is_parse_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
         if not isinstance(element, MageRule):
             return False
         if element.is_extern:
@@ -667,7 +667,7 @@ class MageModuleBase(MageNodeBase):
         assert(element.expr is not None)
         return isinstance(element.expr, MageChoiceExpr)
 
-    def is_token_variant_rule(self, element: MageRule) -> TypeIs[MageRule]:
+    def is_token_variant_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
         if not isinstance(element, MageRule) or element.is_extern or element.is_wrap:
             return False
         # only Rule(is_extern=True) can not hold an expression
