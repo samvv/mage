@@ -10,6 +10,7 @@ from .mage_hide_lookaheads import mage_hide_lookaheads
 from .mage_inline import mage_inline
 from .mage_insert_magic_rules import mage_insert_magic_rules
 from .mage_insert_skip import mage_insert_skip
+from .mage_reduce_list_expr import mage_reduce_list_expr
 from .mage_remove_hidden import mage_remove_hidden
 from .mage_simplify import mage_simplify
 from .mage_to_python_emitter import mage_to_python_emitter
