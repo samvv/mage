@@ -1,12 +1,15 @@
 
 from pathlib import Path
 from pprint import pprint
+from typing import Unpack
 
-from magelang import GenerateConfig, TargetLanguage, default_config, generate_files, load_grammar, mage_check, write_files
+from magelang import GenerateConfig, TargetLanguage, generate_files, load_grammar, mage_check, write_files
 from magelang.constants import SEED_FILENAME_PREFIX
+from magelang.lang.python.cst import PyModule
+from magelang.lang.revolv.ast import Program
 from magelang.util import Files, Progress, load_py_file
 
-from .manager import Context, apply, pipeline
+from .manager import Context, apply, compose, get_pass_by_name, identity
 from .logging import error, info
 from .lang.mage.ast import *
 from .lang.mage.emitter import emit as mage_emit
