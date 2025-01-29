@@ -184,10 +184,14 @@ def do_types_shallow_overlap(a: Type, b: Type) -> bool:
 
 
 def expand_variant_types(ty: Type, *, specs: Specs) -> Type:
+    visited = set[str]()
     def rewriter(ty: Type) -> Type:
         if isinstance(ty, SpecType):
             spec = lookup_spec(specs, ty.name)
             if isinstance(spec, EnumSpec):
+                if spec.name in visited:
+                    return ty
+                visited.add(spec.name)
                 types = list()
                 assert(isinstance(spec, EnumSpec))
                 for member in spec.members:
