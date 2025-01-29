@@ -461,7 +461,8 @@ def mage_to_python_parser(
                     yield from min_to_max
 
             elif isinstance(expr, MageHideExpr):
-                yield from visit_field_internals(expr.expr, stream_name, target_name, accept, reject)
+                new_target_name = generate_name('unused')
+                yield from visit_field_internals(expr.expr, stream_name, new_target_name, accept, reject)
 
             elif isinstance(expr, MageListExpr):
 
