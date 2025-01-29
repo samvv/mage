@@ -63,6 +63,8 @@ def is_static_type(ty: Type, specs: Specs) -> bool:
         if isinstance(ty, NoneType):
             return True
         if isinstance(ty, UnionType):
+            if len(ty.types) >= 2:
+                return False
             return all(visit(ty_2) for ty_2 in ty.types)
         if isinstance(ty, SpecType):
             if ty.name in visited:
