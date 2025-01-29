@@ -19,7 +19,11 @@ def emit(node: MageSyntax) -> str:
 
     def is_wide(expr: MageExpr) -> bool:
         if isinstance(expr, MageSeqExpr):
-            return len(expr.elements) > 1 or any(is_wide(element) for element in expr.elements)
+            if len(expr.elements) == 0:
+                return False
+            if len(expr.elements) == 1:
+                return is_wide(expr.elements[0])
+            return True
         return False
 
     def visit(node: MageSyntax) -> None:
