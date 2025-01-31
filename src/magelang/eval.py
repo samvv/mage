@@ -3,14 +3,23 @@ from typing import NewType, assert_never
 
 from magelang.analysis import is_eof
 from magelang.constants import DEFAULT_MAX_REPEATS
-from magelang.helpers import get_field_name
+from magelang.helpers import get_field_name, get_fields
 from magelang.lang.mage.ast import *
 from magelang.runtime import Punctuated
 from magelang.util import NameGenerator
 
 EOF = '\uFFFF'
 
-Error = NewType('Error', int)
+class Error:
+
+    def __init__(self, code: int) -> None:
+        self.code = code
+
+    def __eq__(self, value: object, /) -> bool:
+        return isinstance(value, Error) and self.code == value.code
+
+    def __hash__(self) -> int:
+        return hash(self.code)
 
 SUCCESS   = Error(0)
 NO_MATCH  = Error(1)
@@ -18,7 +27,7 @@ RECMAX    = Error(2)
 
 class DynamicNode:
 
-    def __init__(self, name: str, fields: 'dict[str, DynamicNode | str]') -> None:
+    def __init__(self, name: str, fields: 'dict[str, Any]') -> None:
         self.name = name
         self.fields = fields
 
@@ -43,7 +52,7 @@ def evaluate(
             return result
         offset = keep
 
-    def visit(expr: MageExpr) -> tuple | DynamicNode | str | None:
+    def visit(expr: MageExpr) -> Any:
 
         nonlocal offset
 
@@ -105,21 +114,32 @@ def evaluate(
                     return
                 elements.append(result)
             if expr.max == POSINF:
-                for _ in range(0, max_repeats):
+                i = 0
+                while True:
+                    if i == max_repeats:
+                        raise RecursionError()
                     result = visit_backtrack(expr.expr)
                     if result is None:
                         break
                     elements.append(result)
-                raise RecursionError()
+                    i += 1
             else:
-                n = min(max_repeats, expr.max - expr.min)
-                for _ in range(n):
-                    result = visit_backtrack(expr.expr)
-                    if result is None:
-                        break
-                    elements.append(result)
-                if n == max_repeats:
-                    raise RecursionError()
+                if expr.max - expr.min < max_repeats:
+                    for _ in range(expr.max - expr.min):
+                        result = visit_backtrack(expr.expr)
+                        if result is None:
+                            break
+                        elements.append(result)
+                else:
+                    i = 0
+                    while True:
+                        if i == max_repeats:
+                            raise RecursionError()
+                        result = visit_backtrack(expr.expr)
+                        if result is None:
+                            break
+                        elements.append(result)
+                        i += 1
             return elements
 
         if isinstance(expr, MageLookaheadExpr):
@@ -130,25 +150,25 @@ def evaluate(
                 return ''
             return
 
-        if isinstance(expr, MageListExpr):
-            elements = Punctuated()
-            count = 0
-            prev_element = visit_backtrack(expr.element)
-            if prev_element is not None:
-                count += 1
-                while True:
-                    result = visit_backtrack(MageSeqExpr([
-                        expr.separator,
-                        expr.element,
-                    ]))
-                    if result is None:
-                        break
-                    elements.append(prev_element, result[0])
-                    prev_element = result[1]
-                elements.append_final(prev_element)
-            if count < expr.min_count:
-                return
-            return elements
+        # if isinstance(expr, MageListExpr):
+        #     elements = Punctuated()
+        #     count = 0
+        #     prev_element = visit_backtrack(expr.element)
+        #     if prev_element is not None:
+        #         count += 1
+        #         while True:
+        #             result = visit_backtrack(MageSeqExpr([
+        #                 expr.separator,
+        #                 expr.element,
+        #             ]))
+        #             if result is None:
+        #                 break
+        #             elements.append(prev_element, result[0])
+        #             prev_element = result[1]
+        #         elements.append_final(prev_element)
+        #     if count < expr.min_count:
+        #         return
+        #     return elements
 
         if isinstance(expr, MageHideExpr):
             return visit(expr.expr)
@@ -158,17 +178,16 @@ def evaluate(
     if rule.expr is None:
         return NO_MATCH
 
-    generate_name = NameGenerator()
-    fields = dict[str, DynamicNode]()
-    for expr in flatten_sequence(rule.expr):
-        name = get_field_name(expr) or generate_name('field')
+    fields = dict[str, Any]()
+    for expr, field in get_fields(rule.expr, grammar=grammar):
         try:
             result = visit(expr)
         except RecursionError:
             return RECMAX
         if result is None:
             return NO_MATCH
-        fields[name] = result
+        if field is not None:
+            fields[field.name] = result
 
     if offset < len(text):
         return NO_MATCH
@@ -188,4 +207,4 @@ def accepts(
     This function might get optimised in the future.
     """
     result = evaluate(rule, text, max_repeats=max_repeats)
-    return SUCCESS if isinstance(result, DynamicNode) else result
+    return result if isinstance(result, Error) else SUCCESS
