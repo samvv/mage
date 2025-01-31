@@ -98,6 +98,9 @@ def get_field_name(expr: MageExpr) -> str | None:
     return None
 
 def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = False) -> Generator[tuple[MageExpr, Field | None]]:
+    """
+    Split an expression into all possible fields, also returning the expressions that go in between.
+    """
 
     generator = NameGenerator()
     taken = dict[str, int]()
