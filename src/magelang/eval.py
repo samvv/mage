@@ -65,7 +65,6 @@ def evaluate(
             rule = grammar.lookup(expr.name)
             assert(rule is not None)
             assert(rule.expr is not None)
-            debug(f"enterig {expr.name}")
             return visit(rule.expr)
 
         if isinstance(expr, MageLitExpr):
