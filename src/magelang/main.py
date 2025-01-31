@@ -60,9 +60,8 @@ def eval(filename: str, value: str, /, *, generate: bool = False, rule: str | No
         if result == RECMAX:
             error("Maximum recursion depth exceeded. Your grammar probably contains loops that consume nothing.")
             return 1
-        if result == SUCCESS:
-            print(result)
-            return 0
+        print(result)
+        return 0
 
 
 def generate(
