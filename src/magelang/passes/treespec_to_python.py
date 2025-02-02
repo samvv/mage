@@ -413,7 +413,7 @@ def treespec_to_python(
         main_type = expand_variant_types(spec_to_type(main_spec), specs=specs)
         visited = set[str]()
 
-        body: list[PyStmt] = []
+        inner_body: list[PyStmt] = []
 
         def gen_visit_fields(spec: NodeSpec, input: PyExpr) -> Generator[PyStmt]:
             for field in spec.fields:
@@ -500,7 +500,7 @@ def treespec_to_python(
 
                 if_body = list(gen_visit_fields(spec, PyNamedExpr(node_param_name)))
                 if_body.append(PyRetStmt())
-                body.append(PyIfStmt(first=PyIfCase(
+                inner_body.append(PyIfStmt(first=PyIfCase(
                     test=PyCallExpr(
                         operator=PyNamedExpr('isinstance'),
                         args=[
@@ -516,7 +516,7 @@ def treespec_to_python(
                 if_body = []
                 if_body.append(PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ PyNamedExpr(node_param_name) ])))
                 if_body.append(PyRetStmt())
-                body.append(PyIfStmt(first=PyIfCase(
+                inner_body.append(PyIfStmt(first=PyIfCase(
                     test=make_py_isinstance(
                         PyNamedExpr(node_param_name),
                         PyNamedExpr(to_py_class_name(spec.name, prefix))
@@ -542,7 +542,20 @@ def treespec_to_python(
                     annotation=PySubscriptExpr(expr=PyNamedExpr('Callable'), slices=[ PyListExpr(elements=[ PyNamedExpr(to_py_class_name(main_spec.name, prefix)) ]), PyNamedExpr('None') ])
                 ),
             ],
-            body=body,
+            body=[
+                PyFuncDef(
+                    name=inner_visit_fn_name,
+                    params=[
+                        PyNamedParam(
+                            PyNamedPattern(node_param_name),
+                            annotation=PyNamedExpr(to_py_class_name(any_syntax_rule_name, prefix))
+                        ),
+                    ],
+                    return_type=PyNamedExpr('None'),
+                    body=inner_body
+                ),
+                PyExprStmt(PyCallExpr(PyNamedExpr(inner_visit_fn_name), args=[ PyNamedExpr(node_param_name) ])),
+            ],
         )
 
     stmts.extend(gen_visitor(spec) for spec in specs.elements if isinstance(spec, EnumSpec) and is_self_referential(spec.name, specs=specs))
