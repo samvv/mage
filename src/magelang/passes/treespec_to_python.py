@@ -409,8 +409,9 @@ def treespec_to_python(
     def gen_visitor(main_spec: Spec) -> PyFuncDef:
 
         generate_temporary = NameGenerator()
-
+        inner_visit_fn_name = 'visit'
         main_type = expand_variant_types(spec_to_type(main_spec), specs=specs)
+        visited = set[str]()
 
         body: list[PyStmt] = []
 
@@ -444,6 +445,11 @@ def treespec_to_python(
                 assert(not isinstance(spec, TypeSpec))
                 if spec is None or isinstance(spec, TokenSpec) or isinstance(spec, ConstEnumSpec):
                     return
+                if spec.name in visited:
+                    # If we've already reached this spec before, we can recurse
+                    yield PyExprStmt(PyCallExpr(PyNamedExpr(inner_visit_fn_name), args=[ input ]))
+                    return
+                visited.add(spec.name)
                 if isinstance(spec, EnumSpec):
                     yield from gen_visit_union(input, (member.ty for member in spec.members))
                     return
