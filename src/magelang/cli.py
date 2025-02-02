@@ -2,6 +2,7 @@
 Stand-alone module to launch command-line applications
 """
 
+from enum import Enum, IntEnum, StrEnum
 import math
 import inspect
 from collections.abc import Callable, Generator, Iterable, Sequence
@@ -279,6 +280,16 @@ def _parse_value(text: str, ty: Any) -> Any:
             return int(text)
         except ValueError:
             raise ValueParseError()
+    if issubclass(ty, StrEnum):
+        try:
+            return ty(text) # type: ignore
+        except ValueError:
+            raise ValueParseError()
+    if issubclass(ty, IntEnum):
+        try:
+            return ty(int(text)) # type: ignore
+        except ValueError:
+            raise ValueParseError()
     raise RuntimeError(f'parsing the given value according to {ty} is not supported')
 
 def _is_optional(ty: Any) -> bool:
@@ -425,6 +436,11 @@ def _flatten_union_type(ty: Any) -> Generator[Any]:
             yield from _flatten_union_type(arg)
     else:
         yield ty
+
+def _get_type_default(ty: Any) -> Any:
+    if isinstance(ty, Enum):
+        if hasattr(ty, '_default_'):
+            return getattr(ty, '_default_')
 
 def _has_type(left: Any, right: Any) -> bool:
     """
@@ -585,8 +601,14 @@ def run(mod: ModuleType | str, name: str | None = None) -> int:
                     # For all types except bool, attempt to assign the default
                     # value of the flag.
                     value = arg_desc.default
-                elif arg_desc.min_count > 0: # If the flag was required
-                    raise ValueMissingError(name)
+                else:
+                    # If the user didn't explicitly specify a default, maybe we
+                    # can derive a default from the type.
+                    default = _get_type_default(arg_desc.ty)
+                    if default is not None:
+                        value = default
+                    elif arg_desc.min_count > 0: # If the flag was required
+                        raise ValueMissingError(name)
 
             arg_desc.parse_callback(name, value, mapping)
 
