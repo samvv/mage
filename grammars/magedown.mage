@@ -1,0 +1,57 @@
+
+# Should be part of standard library
+
+any_byte = [\x00-\xFF]
+
+any_char = [\x00-\x7F]
+
+eof = [] # Is this really a good representation?
+
+eolf = '\n' | eof
+
+# Tokens
+
+ws
+  = [\n\r\t ]
+
+pub token name
+  = [a-z]i [a-z0-9_]i*
+
+# Parse rules
+
+pub code_block
+  = '```' lang:(name \ws)? text:(!'```' any_char)* '```'
+
+pub inline_code
+  = '`' text:(!'`' any_char)* '`'
+
+pub heading
+  = '#'+ text:(!'\n' any_char)+ \eolf
+
+pub ref
+  = '[[' name ']]'
+
+pub link
+  = '[' text:(!']' any_char)* ']' '(' href:(!')' any_char)* ')'
+
+pub open_tag
+  = '[' name ']'
+
+pub close_tag
+  = '[/' name ']'
+
+pub special
+  = code_block
+  | inline_code
+  | heading
+  | ref
+  | link
+  | open_tag
+  | close_tag
+
+pub text
+  = contents:(!special any_char)+
+
+pub document
+  = elements:(text | special)*
+
