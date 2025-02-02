@@ -47,22 +47,87 @@ def _is_functional(lang: str) -> bool:
 
 class GenerateConfig(TypedDict, total=False):
     engine: Engine
+    """
+    What internal generator to use.
+
+    new - The future engine (experimental)
+    old - An engine that is guaranteed to work
+    """
     prefix: str
+    """
+    Prepend this name to all classes and functions.
+
+    This value should be lowercase without trailing underscore.
+    """
     skip_checks: bool
+    """
+    Do not perform any sanity checks except for the ones that prevent crashing the compiler.
+
+    This might provide a small performance boost to grammars that are already known to be correct.
+    """
     silent: bool
+    """
+    Do not print information on standard output.
+    """
     emit_single_file: bool
+    """
+    Concatenate all files into one big file.
+    """
     enable_cst: bool
+    """
+    Generate a concrete syntax tree (CST)
+
+    A CST is a direct representation of a source text in tree form.
+    """
     enable_ast: bool
+    """
+    Generate an abstract syntax tree (AST)
+
+    An AST is like a CST but with some information removed.
+    """
     enable_asserts: bool
+    """
+    Generate additional assertions in the source code. This has a slight
+    performance impact and it generally not recommended for production.
+    """
     enable_lexer: bool
+    """
+    Set to `None` to automatically try to enable the lexer and fall back to
+    parsing without if the grammar does not support it.
+    """
     enable_parser: bool
+    """
+    Generate a parser based on the given grammar.
+    """
     enable_emitter: bool
+    """
+    Attempt to write an experimental emitter.
+    """
     enable_cst_parent_pointers: bool
+    """
+    Add parent pointers to the CST.
+    """
     enable_ast_parent_pointers: bool
+    """
+    Add parent pointers to the AST.
+    """
     enable_visitor: bool
+    """
+    Generate in addition to an AST and/or CST functions that traverse over the tree.
+    """
     enable_rewriter: bool
+    """
+    Generate in addition to an AST and/or CST functions that rewrite the tree.
+    """
     enable_linecol: bool
+    """
+    Enable tracking of line/column numbers in the lexer/parser.
+    """
     max_named_chars: int
+    """
+    The maximum amount of characters to give an explicit name before falling
+    back to generating a special name.
+    """
 
 def default_config(lang: TargetLanguage, is_debug: bool) -> GenerateConfig:
     return GenerateConfig(
