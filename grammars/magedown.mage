@@ -14,7 +14,7 @@ eolf = '\n' | eof
 ws
   = [\n\r\t ]
 
-pub token name
+pub name
   = [a-z]i [a-z0-9_]i*
 
 # Parse rules
