@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from types import ModuleType
 from typing import Literal
+from magelang.logging import error
 from magelang.util import Files, load_py_file
 from .manager import *
 from .lang.mage import *
@@ -39,11 +40,21 @@ def load_grammar(filename: Path | str) -> MageGrammar:
 class Engine(StrEnum):
     NEW = 'new'
     OLD = 'old'
+    _default = OLD
 
 type TargetLanguage = Literal['python', 'rust']
 
 def _is_functional(lang: str) -> bool:
     return lang in [ 'elm', 'purescript', 'haskell', 'agda', 'idris' ]
+
+class YesNoAuto(StrEnum):
+    AUTO = 'auto'
+    YES = 'yes'
+    NO = 'no'
+
+    _true = YES
+    _false = NO
+    _default = AUTO
 
 class GenerateConfig(TypedDict, total=False):
     engine: Engine
@@ -90,7 +101,7 @@ class GenerateConfig(TypedDict, total=False):
     Generate additional assertions in the source code. This has a slight
     performance impact and it generally not recommended for production.
     """
-    enable_lexer: bool
+    enable_lexer: YesNoAuto
     """
     Set to `None` to automatically try to enable the lexer and fall back to
     parsing without if the grammar does not support it.
@@ -139,7 +150,7 @@ def default_config(lang: TargetLanguage, is_debug: bool) -> GenerateConfig:
         enable_cst=True,
         enable_ast=True,
         enable_asserts=is_debug,
-        enable_lexer=True,
+        enable_lexer=YesNoAuto.AUTO,
         enable_parser=True,
         enable_emitter=True,
         enable_cst_parent_pointers=not _is_functional(lang),
@@ -156,18 +167,32 @@ def generate_files(
     *,
     debug: bool = False,
     **config: Unpack[GenerateConfig]
-) -> Files | str:
+) -> Files | str | None:
 
     for k, v in default_config(lang, debug).items():
         if k not in config:
             config[k] = v
+
+    if not isinstance(grammar, MageGrammar):
+        grammar = load_grammar(grammar)
+
+    # FIXME enable_lexer is defined here but not propagated to Context
+    can_lexer_be_enabled = any(rule.is_lexer_token for rule in grammar.rules)
+    if nonnull(config.get('enable_lexer')) == YesNoAuto.AUTO:
+        enable_lexer = can_lexer_be_enabled
+    elif nonnull(config.get('enable_lexer')) == YesNoAuto.YES:
+        if not can_lexer_be_enabled:
+            error('could not enable lexer because there are no tokens defined in the grammar')
+            return
+        enable_lexer = True
+    else:
+        enable_lexer = False
 
     engine = nonnull(config.get('engine'))
     enable_cst = nonnull(config.get('enable_cst'))
     enable_ast = nonnull(config.get('enable_ast'))
     enable_emitter = nonnull(config.get('enable_emitter'))
     enable_parser = nonnull(config.get('enable_parser'))
-    enable_lexer = nonnull(config.get('enable_lexer'))
     emit_single_file = nonnull(config.get('emit_single_file'))
     skip_checks = nonnull(config.get('skip_checks'))
     silent = nonnull(config.get('silent'))
@@ -177,9 +202,6 @@ def generate_files(
     # FIXME should only happen in the parser generator and lexer generator
     #if enable_opt:
     #    pass_ = pipeline(pass_, extract_prefixes, simplify)
-
-    if not isinstance(grammar, MageGrammar):
-        grammar = load_grammar(grammar)
 
     if engine == Engine.OLD:
         files = dict[str, Pass[MageGrammar, PyModule]]()
