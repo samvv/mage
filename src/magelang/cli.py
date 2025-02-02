@@ -4,7 +4,7 @@ Stand-alone module to launch command-line applications
 
 import math
 import inspect
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Generator, Iterable, Sequence
 from pathlib import Path
 import sys
 from types import ModuleType, UnionType
@@ -418,6 +418,24 @@ def print_help(cmd: _Command) -> None:
     print_help_loop(cmd, out, 0)
     exit(1)
 
+def _flatten_union_type(ty: Any) -> Generator[Any]:
+    origin = typing.get_origin(ty)
+    if origin is typing.Union or origin is types.UnionType:
+        for arg in typing.get_args(ty):
+            yield from _flatten_union_type(arg)
+    else:
+        yield ty
+
+def _has_type(left: Any, right: Any) -> bool:
+    """
+    Check whether `right` occurs somewhere in `left`.
+
+    For instance:
+    has_type(int | bool | str, bool) == True
+    has_type(int | bool | str, float) == False
+    """
+    return right in _flatten_union_type(left)
+
 def run(mod: ModuleType | str, name: str | None = None) -> int:
 
     if name is None:
@@ -558,7 +576,7 @@ def run(mod: ModuleType | str, name: str | None = None) -> int:
                         pass # `value` remains `None` and lookahead is discarded
 
             if value is None:
-                if arg_desc.ty is bool or arg_desc.is_rest_flags:
+                if _has_type(arg_desc.ty, bool) or arg_desc.is_rest_flags:
                     # Assume `True` in the cases where a boolean is expected or
                     # when it could potentially be a boolean but we don't know
                     # for sure
