@@ -17,7 +17,7 @@ from .lang.mage.parser import Parser
 from .lang.mage.scanner import Scanner
 from .lang.python.emitter import emit as py_emit
 from .fuzz import fuzz_all, fuzz_grammar, generate_and_load_parser, random_grammar
-from .eval import NO_MATCH, RECMAX, SUCCESS, evaluate
+from .eval import NO_MATCH, RECMAX, evaluate
 
 
 def _grammar_from_file_or_seed(filename: str) -> MageGrammar:
