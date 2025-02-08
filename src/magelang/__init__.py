@@ -283,7 +283,7 @@ def generate_and_load_parser(grammar: MageGrammar, dest_dir: Path | None = None)
         silent=True,
         enable_ast=False,
         enable_emitter=False,
-        enable_lexer=False
+        enable_lexer=YesNoAuto.NO,
     ))
     write_files(files, dest_dir, force=True)
     os.sync()
