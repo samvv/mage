@@ -271,7 +271,10 @@ def write_files(files: Files, dest_dir: Path, force: bool = False) -> None:
             f.write(text)
 
 
-def generate_and_load_parser(grammar: MageGrammar, dest_dir: Path) -> ModuleType:
+def generate_and_load_parser(grammar: MageGrammar, dest_dir: Path | None = None) -> ModuleType:
+    if dest_dir is None:
+        # TODO maybe hash grammar and append the result to the path?
+        dest_dir = Path.home() / '.cache' / 'magelang' / 'generated'
     files = cast(Files, generate_files(
         grammar,
         lang='python',
