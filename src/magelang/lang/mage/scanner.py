@@ -187,8 +187,8 @@ class Scanner:
             self.curr_pos.column += 1
         return ch
 
-    def _peek_char(self, offset=1):
-        real_offset = self._text_offset + offset - 1
+    def _peek_char(self, offset=0):
+        real_offset = self._text_offset + offset
         return self.text[real_offset] \
                 if real_offset < len(self.text) \
                 else EOF
