@@ -9,13 +9,15 @@
 pub token name
   = [a-z_]i [a-z0-9]i*
 
-pub extern token integer -> Integer
-
-pub extern token string -> String
-
 pub boolean
   = 'true'
   | 'false'
+
+pub token integer
+  = '0' | [1-9] [0-9]*
+
+pub token string
+  = '"' (!'"' any_char)* '"'
 
 # Shared parse rules
 
