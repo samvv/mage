@@ -34,9 +34,11 @@ class DynamicNode:
 def evaluate(
     rule: MageRule,
     text: str,
-    max_repeats: int = DEFAULT_MAX_REPEATS
+    max_repeats: int = DEFAULT_MAX_REPEATS,
+    trace: bool = False,
 ) -> DynamicNode | Error:
 
+    depth = 0
     offset = 0
     grammar = rule.grammar
 
@@ -54,7 +56,7 @@ def evaluate(
 
     def visit(expr: MageExpr) -> Any:
 
-        nonlocal offset
+        nonlocal offset, depth
 
         if is_eof(expr):
             if offset < len(text):
@@ -65,7 +67,14 @@ def evaluate(
             rule = grammar.lookup(expr.name)
             assert(rule is not None)
             assert(rule.expr is not None)
-            return visit(rule.expr)
+            if trace:
+                print('  ' * depth + 'entering ' + expr.name)
+                depth += 1
+            v = visit(rule.expr)
+            if trace:
+                depth -= 1
+                print('  ' * depth + 'exiting ' + expr.name)
+            return v
 
         if isinstance(expr, MageLitExpr):
             for i, ch in enumerate(expr.text):
