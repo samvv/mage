@@ -143,9 +143,9 @@ def evaluate(
 
         if isinstance(expr, MageLookaheadExpr):
             keep = offset
-            result = visit(expr.expr)
+            result = visit_backtrack(expr.expr)
             offset = keep
-            if result != expr.is_negated:
+            if (result is None) == expr.is_negated:
                 return ''
             return
 
