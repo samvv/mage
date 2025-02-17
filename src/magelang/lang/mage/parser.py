@@ -9,7 +9,7 @@ class ParseError(RuntimeError):
 
     def __init__(self, actual: Token, expected: list[TokenType]) -> None:
         start_pos = actual.span[0]
-        super().__init__(f"{start_pos.line}:{start_pos.column}: got an unexpected {token_type_descriptions[actual.type]}")
+        super().__init__(f"{start_pos.line}:{start_pos.column}: got {token_type_descriptions[actual.type]} but expected something else")
         self.actual = actual
         self.expected = expected
 
