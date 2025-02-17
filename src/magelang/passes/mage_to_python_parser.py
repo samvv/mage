@@ -524,8 +524,6 @@ def mage_to_python_parser(
                     head = list(visit_field_internals(element, stream_name, element_name, head, reject))
                 yield from head
 
-                yield from accept
-
             elif isinstance(expr, MageLookaheadExpr):
                 new_stream_name = generate_name('stream')
                 yield PyAssignStmt(PyNamedPattern(new_stream_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'fork')))
