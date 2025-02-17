@@ -3,7 +3,7 @@ from pathlib import Path
 from magelang.lang.mage.ast import *
 from magelang.manager import declare_pass
 
-here = Path(__file__).parent.parent.parent.parent.resolve()
+here = Path(__file__).parent.parent.resolve()
 
 words = []
 
