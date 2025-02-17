@@ -577,6 +577,8 @@ def mage_to_python_parser(
         yield from visit_fields(nonnull(rule.expr), 'stream', return_struct, [ PyRetStmt() ])
 
     for element in grammar.elements:
+        if not isinstance(element, MageRule) or not element.is_public:
+            continue
         if grammar.is_parse_rule(element) or (not enable_tokens and grammar.is_token_rule(element)):
             stmts.append(PyFuncDef(
                 name=f'parse_{element.name}',
