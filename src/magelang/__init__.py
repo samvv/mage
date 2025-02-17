@@ -295,5 +295,5 @@ def load_parser(dest_dir: Path) -> ModuleType:
 
 
 def main() -> int:
-    from .cli import run
-    return run('magelang.main')
+    from turbolaunch import launch
+    return launch('magelang.main')
