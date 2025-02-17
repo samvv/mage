@@ -5,8 +5,10 @@ from typing import Unpack
 
 from magelang import GenerateConfig, TargetLanguage, generate_files, load_grammar, mage_check, write_files
 from magelang.constants import SEED_FILENAME_PREFIX
+from magelang.lang.magedown.cst import MagedownDocument, MagedownNode, MagedownAccepts, MagedownRejects
 from magelang.lang.python.cst import PyModule
 from magelang.lang.revolv.ast import Program
+from magelang.runtime import CharStream
 from magelang.util import Files, Progress, load_py_file
 
 from .manager import Context, apply, compose, get_pass_by_name, identity
@@ -17,7 +19,7 @@ from .lang.mage.parser import Parser
 from .lang.mage.scanner import Scanner
 from .lang.python.emitter import emit as py_emit
 from .fuzz import fuzz_all, fuzz_grammar, generate_and_load_parser, random_grammar
-from .eval import NO_MATCH, RECMAX, evaluate
+from .eval import NO_MATCH, RECMAX, DynamicNode, Error, evaluate
 
 
 def _grammar_from_file_or_seed(filename: str) -> MageGrammar:
@@ -103,7 +105,7 @@ def check(filename: Path | str, /) -> int:
     apply(ctx, grammar, mage_check)
     return 0
 
-@dataclass
+@dataclass(frozen=True)
 class _Test:
     rule: MageRule
     text: str
@@ -111,48 +113,81 @@ class _Test:
 
 from tempfile import TemporaryDirectory
 
+def _parse_doc(text: str) -> MagedownDocument:
+    stream = CharStream(text)
+    from magelang.lang.magedown.parser import parse_document
+    doc = parse_document(stream)
+    if doc is None:
+        raise RuntimeError(f"failed to parse Magedown document")
+    return doc
+
+def magedown_emit(element: MagedownNode | str) -> str:
+    if isinstance(element, str):
+        return element
+    raise NotImplementedError()
+
+# def _get_special_blocks(doc: MagedownDocument, tag: str) -> Iterable[str]:
+#     i = 0
+#     while i < len(doc.elements):
+#         element = doc.elements[i]
+#         i += 1
+#         if isinstance(element, MagedownOpenTag):
+#             buffer = ''
+#             while True:
+#                 if i >= len(doc.elements):
+#                     raise RuntimeError(f"while parsing a Magedown document: '{tag}' was not closed")
+#                 child = doc.elements[i]
+#                 i += 1
+#                 if isinstance(child, MagedownCloseTag):
+#                     break
+#                 buffer += magedown_emit(child)
+#             yield buffer
+
 def _collect_tests(grammar: MageGrammar) -> list[_Test]:
     tests = []
     for rule in grammar.rules:
         if rule.comment is not None:
-            doc = parse_doc(rule.comment)
-            for text in get_accept_blocks(doc):
-                tests.append(_Test(rule, text, False))
-            for text in get_reject_blocks(doc):
-                tests.append(_Test(rule, text, True))
+            doc = _parse_doc(rule.comment)
+            for element in doc.elements:
+                if isinstance(element, MagedownAccepts):
+                    tests.append(_Test(rule, element.text.strip(), False))
+                elif isinstance(element, MagedownRejects):
+                    tests.append(_Test(rule, element.text.strip(), True))
     return tests
 
-def _test_external(filename: Path | str) -> bool:
+def _test_external(filename: Path | str) -> tuple[int, int]:
     import pytest
     with TemporaryDirectory(prefix='mage-test-') as test_dir:
         generate('python', filename, enable_lexer=True, enable_parser=True, enable_parser_tests=True, out_dir=Path(test_dir))
-        return pytest.main([ test_dir ]) == 0
+        if pytest.main([ test_dir ]) == 0:
+            return 1, 0
+        else:
+            return 0, 1
 
-def _test_internal(filename: Path | str) -> bool:
+def _test_internal(filename: Path | str) -> tuple[int, int]:
     grammar = load_grammar(filename)
     tests = _collect_tests(grammar)
     succeeded = set()
     failed = set()
     for test in tests:
-        result = evaluate(grammar, test.rule.name, test.text)
-        if result is None:
-            if test.should_fail:
-                succeeded.add(test)
-            else:
-                failed.add(test)
-    if not failed:
-        print(f'{len(succeeded)} tests succeeded, 0 failed')
-        return True
-    else:
-        print(f'{len(succeeded)} tests failed, {len(succeeded)} succeedded.')
-        return False
+        result = evaluate(test.rule, test.text)
+        if result == RECMAX:
+            warn(f"recursion depth reached while trying to evaluate a test.")
+        elif test.should_fail == isinstance(result, Error):
+            succeeded.add(test)
+        else:
+            print(f"Test for rule {test.rule.name} and {repr(test.text)} failed.")
+            failed.add(test)
+    return len(succeeded), len(failed)
 
-def test(filename: Path | str, *, generate: bool) -> int:
+def test(filename: Path | str, *, generate: bool = False) -> int:
     """
     Test the examples inside the documentation of a grammar
     """
-    test = _test_external if generate else _test_internal
-    return test(filename)
+    proc = _test_external if generate else _test_internal
+    succ, fail = proc(filename)
+    print(f'{succ} tests succeeded, {fail} failed')
+    return 1 if fail else 0
 
 def dump(filename: str, *passes: str,  **opts: Any) -> int:
     """
