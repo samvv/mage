@@ -34,11 +34,17 @@ pub ref
 pub link
   = '[' text:(!']' any_char)* ']' '(' href:(!')' any_char)* ')'
 
-pub open_tag
-  = '[' name ']'
+accepts_tag
+  = 'accept'
 
-pub close_tag
-  = '[/' name ']'
+pub accepts
+  = '{' accepts_tag '}' text:(!('{/' accepts_tag '}') any_char)* '{/' accepts_tag '}'
+
+rejects_tag
+  = 'reject'
+
+pub rejects
+  = '{' rejects_tag '}' text:(!('{/' rejects_tag '}') any_char)* '{/' rejects_tag '}'
 
 pub special
   = code_block
@@ -46,8 +52,8 @@ pub special
   | heading
   | ref
   | link
-  | open_tag
-  | close_tag
+  | accepts
+  | rejects
 
 pub text
   = contents:(!special any_char)+
