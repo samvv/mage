@@ -9,9 +9,6 @@ from typing import Any, Callable, Generic, Iterator, Never, Protocol, Sequence, 
 import re
 
 
-from magelang.logging import warn
-
-
 _T = TypeVar('_T')
 _R = TypeVar('_R')
 
