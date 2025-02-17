@@ -279,7 +279,10 @@ class Stream[_T]:
 
 ParseStream = Stream[BaseToken]
 
-CharStream = Stream[str]
+class CharStream(Stream[str]):
+
+    def __init__(self, buffer: str, offset: int = 0) -> None:
+        super().__init__(buffer, EOF, offset)
 
 ## -- Designed for the emitter
 
