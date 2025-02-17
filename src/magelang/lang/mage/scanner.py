@@ -1,5 +1,6 @@
 
 import re
+from textwrap import dedent
 from typing import Any, NewType
 
 TokenType = NewType('TokenType', int)
@@ -233,36 +234,58 @@ class Scanner:
 
     def scan(self) -> Token:
 
-        comment = ''
-        comment_start_pos = None
-        comment_end_pos = None
+        doc_comment = ''
+        doc_comment_start_pos = None
+        doc_comment_end_pos = None
+
+        def reset_doc_comment():
+            nonlocal doc_comment, doc_comment_start_pos, doc_comment_end_pos
+            doc_comment = ''
+            doc_comment_start_pos = None
+            doc_comment_end_pos = None
+
         while True:
-            c0 = self._peek_char()
-            if c0 == '#':
-                if comment_start_pos is None:
-                    comment_start_pos = self.curr_pos.clone()
+            c0 = self._peek_char(0)
+            c1 = self._peek_char(1)
+            if c0 == '#' and c1 == '#':
+                # If the next doc line is not underneath the previous one
+                if doc_comment_end_pos is not None and doc_comment_end_pos.line != self.curr_pos.line-1:
+                    reset_doc_comment()
+                # If this is the start of a new doc comment
+                if doc_comment_start_pos is None:
+                    doc_comment_start_pos = self.curr_pos.clone()
+                # Get the '##'
                 self._get_char()
-                if comment_end_pos is not None and comment_end_pos.line != self.curr_pos.line-1:
-                    comment = ''
+                self._get_char()
+                # Get the rest of the line
                 while True:
                     c1 = self._peek_char()
                     if c1 == '\n' or c1 == EOF:
-                        comment_end_pos = self.curr_pos.clone()
+                        doc_comment_end_pos = self.curr_pos.clone()
                         self._get_char()
                         break
                     self._get_char()
-                    comment += c1
-                comment += '\n'
+                    doc_comment += c1
+                doc_comment += '\n'
+                continue
+            if c0 == '#':
+                reset_doc_comment()
+                self._get_char()
+                while True:
+                    c2 = self._get_char()
+                    if c2 == '\n' or c2 == EOF:
+                        break
                 continue
             if is_space(c0):
+                reset_doc_comment()
                 self._get_char()
                 continue
             break
 
-        if comment:
-            assert(comment_start_pos is not None)
-            assert(comment_end_pos is not None)
-            return Token(TT_COMMENT, (comment_start_pos, comment_end_pos), comment)
+        if doc_comment:
+            assert(doc_comment_start_pos is not None)
+            assert(doc_comment_end_pos is not None)
+            return Token(TT_COMMENT, (doc_comment_start_pos, doc_comment_end_pos), dedent(doc_comment))
 
         if c0 == EOF:
             return Token(TT_EOF, (self.curr_pos.clone(), self.curr_pos.clone()))
