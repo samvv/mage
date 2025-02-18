@@ -155,7 +155,7 @@ def _collect_tests(grammar: MageGrammar) -> list[_Test]:
                     tests.append(_Test(rule, element.text.strip(), True))
     return tests
 
-def _test_external(filename: Path | str) -> tuple[int, int]:
+def _test_external(filename: str) -> tuple[int, int]:
     import pytest
     with TemporaryDirectory(prefix='mage-test-') as test_dir:
         generate('python', filename, enable_lexer=True, enable_parser=True, enable_parser_tests=True, out_dir=Path(test_dir))
@@ -180,7 +180,7 @@ def _test_internal(filename: Path | str) -> tuple[int, int]:
             failed.add(test)
     return len(succeeded), len(failed)
 
-def test(*filenames: Path | str, generate: bool = False) -> int:
+def test(*filenames: str, generate: bool = False) -> int:
     """
     Test the examples inside the documentation of a grammar
     """
