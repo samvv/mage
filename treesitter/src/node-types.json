@@ -1,0 +1,557 @@
+[
+  {
+    "type": "choice_expr",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "expr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "expr",
+    "named": true,
+    "fields": {
+      "label": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": ":",
+            "named": false
+          },
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "choice_expr",
+          "named": true
+        },
+        {
+          "type": "lit_expr",
+          "named": true
+        },
+        {
+          "type": "many_expr",
+          "named": true
+        },
+        {
+          "type": "nest_expr",
+          "named": true
+        },
+        {
+          "type": "opt_expr",
+          "named": true
+        },
+        {
+          "type": "ref_expr",
+          "named": true
+        },
+        {
+          "type": "repeat_expr",
+          "named": true
+        },
+        {
+          "type": "seq_expr",
+          "named": true
+        },
+        {
+          "type": "some_expr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "grammar",
+    "named": true,
+    "root": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "module_element",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "lit_expr",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "escape_sequence",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "many_expr",
+    "named": true,
+    "fields": {
+      "label": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": ":",
+            "named": false
+          },
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "lit_expr",
+          "named": true
+        },
+        {
+          "type": "many_expr",
+          "named": true
+        },
+        {
+          "type": "nest_expr",
+          "named": true
+        },
+        {
+          "type": "opt_expr",
+          "named": true
+        },
+        {
+          "type": "ref_expr",
+          "named": true
+        },
+        {
+          "type": "repeat_expr",
+          "named": true
+        },
+        {
+          "type": "some_expr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "module",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "module_element",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "module_element",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "module",
+          "named": true
+        },
+        {
+          "type": "rule",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "nest_expr",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "expr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "opt_expr",
+    "named": true,
+    "fields": {
+      "label": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": ":",
+            "named": false
+          },
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "lit_expr",
+          "named": true
+        },
+        {
+          "type": "many_expr",
+          "named": true
+        },
+        {
+          "type": "nest_expr",
+          "named": true
+        },
+        {
+          "type": "opt_expr",
+          "named": true
+        },
+        {
+          "type": "ref_expr",
+          "named": true
+        },
+        {
+          "type": "repeat_expr",
+          "named": true
+        },
+        {
+          "type": "some_expr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "ref_expr",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "repeat_expr",
+    "named": true,
+    "fields": {
+      "label": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": ":",
+            "named": false
+          },
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "integer",
+          "named": true
+        },
+        {
+          "type": "lit_expr",
+          "named": true
+        },
+        {
+          "type": "many_expr",
+          "named": true
+        },
+        {
+          "type": "nest_expr",
+          "named": true
+        },
+        {
+          "type": "opt_expr",
+          "named": true
+        },
+        {
+          "type": "ref_expr",
+          "named": true
+        },
+        {
+          "type": "repeat_expr",
+          "named": true
+        },
+        {
+          "type": "some_expr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "rule",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "expr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "seq_expr",
+    "named": true,
+    "fields": {
+      "label": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": ":",
+            "named": false
+          },
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "lit_expr",
+          "named": true
+        },
+        {
+          "type": "many_expr",
+          "named": true
+        },
+        {
+          "type": "nest_expr",
+          "named": true
+        },
+        {
+          "type": "opt_expr",
+          "named": true
+        },
+        {
+          "type": "ref_expr",
+          "named": true
+        },
+        {
+          "type": "repeat_expr",
+          "named": true
+        },
+        {
+          "type": "some_expr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "some_expr",
+    "named": true,
+    "fields": {
+      "label": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": ":",
+            "named": false
+          },
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "lit_expr",
+          "named": true
+        },
+        {
+          "type": "many_expr",
+          "named": true
+        },
+        {
+          "type": "nest_expr",
+          "named": true
+        },
+        {
+          "type": "opt_expr",
+          "named": true
+        },
+        {
+          "type": "ref_expr",
+          "named": true
+        },
+        {
+          "type": "repeat_expr",
+          "named": true
+        },
+        {
+          "type": "some_expr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "\"",
+    "named": false
+  },
+  {
+    "type": "(",
+    "named": false
+  },
+  {
+    "type": ")",
+    "named": false
+  },
+  {
+    "type": "*",
+    "named": false
+  },
+  {
+    "type": "+",
+    "named": false
+  },
+  {
+    "type": ",",
+    "named": false
+  },
+  {
+    "type": ":",
+    "named": false
+  },
+  {
+    "type": "=",
+    "named": false
+  },
+  {
+    "type": "?",
+    "named": false
+  },
+  {
+    "type": "escape_sequence",
+    "named": true
+  },
+  {
+    "type": "identifier",
+    "named": true
+  },
+  {
+    "type": "integer",
+    "named": true
+  },
+  {
+    "type": "mod",
+    "named": false
+  },
+  {
+    "type": "pub",
+    "named": false
+  },
+  {
+    "type": "token",
+    "named": false
+  },
+  {
+    "type": "{",
+    "named": false
+  },
+  {
+    "type": "|",
+    "named": false
+  },
+  {
+    "type": "}",
+    "named": false
+  }
+]
