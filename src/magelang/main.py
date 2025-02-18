@@ -180,14 +180,18 @@ def _test_internal(filename: Path | str) -> tuple[int, int]:
             failed.add(test)
     return len(succeeded), len(failed)
 
-def test(filename: Path | str, *, generate: bool = False) -> int:
+def test(*filenames: Path | str, generate: bool = False) -> int:
     """
     Test the examples inside the documentation of a grammar
     """
-    proc = _test_external if generate else _test_internal
-    succ, fail = proc(filename)
-    print(f'{succ} tests succeeded, {fail} failed')
-    return 1 if fail else 0
+    code = 0
+    for filename in filenames:
+        proc = _test_external if generate else _test_internal
+        succ, fail = proc(filename)
+        print(f'Test {filename}: {succ} tests succeeded, {fail} failed')
+        if fail:
+            code = 1
+    return code
 
 def dump(filename: str, *passes: str,  **opts: Any) -> int:
     """
