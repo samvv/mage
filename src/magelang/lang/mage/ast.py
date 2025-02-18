@@ -24,13 +24,12 @@ ASCII_MAX = 0x7F
 class MageNodeBase:
 
     @property
-    @no_type_check
     def grammar(self) -> 'MageGrammar':
         curr = self
         while curr is not None:
             if isinstance(curr, MageGrammar):
                 return curr
-            curr = curr.parent
+            curr = curr.parent # type: ignore
         raise RuntimeError(f'Could not get the grammmar of a node. Are the parent pointers correctly set?')
 
 
