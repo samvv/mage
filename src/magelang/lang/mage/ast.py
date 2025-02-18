@@ -21,18 +21,6 @@ ASCII_MIN = 0x00
 ASCII_MAX = 0x7F
 
 
-class SymbolType(IntEnum):
-    module = 1
-    rule = 2
-
-
-class Symbol:
-
-    def __init__(self, ty: SymbolType) -> None:
-        self.ty = ty
-        self.definition: 'MageRule | MageModule | None' = None
-
-
 class MageNodeBase:
 
     @property
@@ -128,7 +116,6 @@ class MageRefExpr(MageExprBase):
             module_path = []
         self.name = name
         self.module_path = module_path
-        self.symbol: Symbol | None = None
 
     def set_parents(self) -> None:
         pass
@@ -534,7 +521,6 @@ class MageRule(MageNodeBase):
         self.expr = expr
         self.mode = mode
         self.parent = parent
-        self.symbol: Symbol | None = None
         self.set_parents()
 
     def set_parents(self) -> None:
@@ -711,7 +697,6 @@ class MageModule(MageModuleBase):
         super().__init__(elements)
         self.name = name
         self.flags = flags
-        self.symbol: Symbol | None = None
         self.parent = parent
         self.set_parents()
 
@@ -740,7 +725,6 @@ class MageGrammar(MageModuleBase):
         elements: 'list[MageRule | MageModule] | None' = None,
     ) -> None:
         super().__init__(elements)
-        self.symbol: Symbol | None = None
         self.parent = None
         self.set_parents()
 
