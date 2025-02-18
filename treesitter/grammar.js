@@ -78,8 +78,8 @@ module.exports = grammar({
     repeat_expr: $ => seq(
       $._prim_expr,
       '{',
-      optional($.integer),
-      optional(seq(',', $.integer)),
+      $.integer,
+      optional(seq(',', optional($.integer))),
       '}'
     ),
     nest_expr: $ => seq(
