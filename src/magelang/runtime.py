@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 from collections import deque
 from dataclasses import dataclass
 from collections.abc import Collection, Reversible, Sequence
-from typing import Any, Iterable, Iterator, Protocol, SupportsIndex, TypeVar, assert_never, cast, overload
+from typing import Any, Callable, Iterable, Iterator, Protocol, Self, SupportsIndex, TypeVar, assert_never, cast, overload
 
 from magelang.util import DropProxy, MapProxy
 
@@ -236,8 +236,6 @@ class ParseError(RuntimeError):
 class AbstractParser:
     pass
 
-_Self = TypeVar('_Self', bound='Stream')
-
 class Stream[_T]:
 
     def __init__(self, buffer: Sequence[_T], sentry: _T, offset: int = 0, ) -> None:
@@ -257,8 +255,8 @@ class Stream[_T]:
         self._offset += 1
         return self._buffer[i]
 
-    def fork(self: _Self) -> '_Self':
-        return cast(_Self, Stream(self._buffer, self.sentry, self._offset))
+    def fork(self) -> Self:
+        return cast(Self, Stream(self._buffer, self.sentry, self._offset))
 
     # def _peek(self, mode: int, offset = 0) -> BaseToken:
     #     buffer = self._buffers[mode]
