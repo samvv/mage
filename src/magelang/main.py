@@ -158,7 +158,7 @@ def _collect_tests(grammar: MageGrammar) -> list[_Test]:
 def _test_external(filename: str) -> tuple[int, int]:
     import pytest
     with TemporaryDirectory(prefix='mage-test-') as test_dir:
-        generate('python', filename, enable_lexer=True, enable_parser=True, enable_parser_tests=True, out_dir=Path(test_dir))
+        generate('python', filename, enable_lexer=True, enable_parser=True, enable_parser_tests=True, enable_emitter=False, enable_ast=False, out_dir=Path(test_dir))
         if pytest.main([ test_dir ]) == 0:
             return 1, 0
         else:
