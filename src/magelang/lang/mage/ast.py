@@ -48,6 +48,8 @@ type Action = ReturnAction | SetModeAction
 
 type MageExpr = MageLitExpr | MageRefExpr | MageCharSetExpr | MageLookaheadExpr | MageChoiceExpr | MageSeqExpr | MageHideExpr | MageListExpr | MageRepeatExpr
 
+type MageExprParent = MageExpr | MageRule | MageFixity
+
 
 class MageExprBase(MageNodeBase):
 
@@ -55,7 +57,7 @@ class MageExprBase(MageNodeBase):
         self,
         label: str | None = None,
         actions: list['Action'] | None = None,
-        parent: 'MageExpr | MageRule | None' = None
+        parent: 'MageExprParent | None' = None
     ) -> None:
         if actions is None:
             actions = []
@@ -78,7 +80,7 @@ class MageLitExpr(MageExprBase):
         text: str,
         label: str | None = None,
         actions: list['Action'] | None = None,
-        parent: 'MageRule | MageExpr | None' = None,
+        parent: 'MageExprParent | None' = None,
     ) -> None:
         super().__init__(label, actions, parent)
         self.text = text
@@ -108,7 +110,7 @@ class MageRefExpr(MageExprBase):
         module_path: list[str] | None = None,
         label: str | None = None,
         actions: list['Action'] | None = None,
-        parent: 'MageRule | MageExpr | None' = None,
+        parent: 'MageExprParent | None' = None,
     ) -> None:
         super().__init__(label, actions, parent)
         if module_path is None:
@@ -143,7 +145,7 @@ class MageLookaheadExpr(MageExprBase):
         is_negated: bool,
         label: str | None = None,
         actions: list['Action'] | None = None,
-        parent: 'MageRule | MageExpr | None' = None,
+        parent: 'MageExprParent | None' = None,
     ) -> None:
         super().__init__(label, actions, parent)
         self.expr = expr
@@ -186,7 +188,7 @@ class MageCharSetExpr(MageExprBase):
         invert: bool = False,
         label: str | None = None,
         actions: list['Action'] | None = None,
-        parent: 'MageRule | MageExpr | None' = None,
+        parent: 'MageExprParent | None' = None,
     ) -> None:
         super().__init__(label, actions, parent)
         self.ci = ci
@@ -309,7 +311,7 @@ class MageChoiceExpr(MageExprBase):
         elements: list[MageExpr],
         label: str | None = None,
         actions: list['Action'] | None = None,
-        parent: 'MageRule | MageExpr | None' = None,
+        parent: 'MageExprParent | None' = None,
     ) -> None:
         super().__init__(label, actions, parent)
         self.elements = elements
@@ -340,7 +342,7 @@ class MageSeqExpr(MageExprBase):
         elements: list[MageExpr],
         label: str | None = None,
         actions: list['Action'] | None = None,
-        parent: 'MageRule | MageExpr | None' = None,
+        parent: 'MageExprParent | None' = None,
     ) -> None:
         super().__init__(label, actions, parent)
         self.elements = elements
@@ -373,7 +375,7 @@ class MageListExpr(MageExprBase):
         min_count: int,
         label: str | None = None,
         actions: list['Action'] | None = None,
-        parent: 'MageRule | MageExpr | None' = None,
+        parent: 'MageExprParent | None' = None,
     ) -> None:
         super().__init__(label, actions, parent)
         self.element = element
@@ -412,7 +414,7 @@ class MageHideExpr(MageExprBase):
         expr: MageExpr,
         label: str | None = None,
         actions: list['Action'] | None = None,
-        parent: 'MageRule | MageExpr | None' = None,
+        parent: 'MageExprParent | None' = None,
     ) -> None:
         super().__init__(label, actions, parent)
         self.expr = expr
@@ -448,7 +450,7 @@ class MageRepeatExpr(MageExprBase):
         max: int,
         label: str | None = None,
         actions: list['Action'] | None = None,
-        parent: 'MageRule | MageExpr | None' = None,
+        parent: 'MageExprParent | None' = None,
     ) -> None:
         super().__init__(label, actions, parent)
         self.expr = expr
