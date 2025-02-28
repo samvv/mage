@@ -6,13 +6,12 @@ make handling the AST a bit easier.
 """
 
 from dataclasses import dataclass
-from enum import IntEnum
 import sys
 from functools import lru_cache
-from typing import Any, Callable, Generator, Iterable, TypeGuard, TypeIs, TypeVar, assert_never, cast, no_type_check, reveal_type
+from typing import Any, Callable, Generator, Iterable, TypeGuard, TypeIs, TypeVar, assert_never, cast
 from intervaltree import Interval, IntervalTree
 
-from magelang.logging import debug, warn
+from magelang.logging import debug
 from magelang.util import nonnull
 
 from .constants import string_rule_type
