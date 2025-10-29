@@ -137,6 +137,7 @@ pub expr
   | choice_expr
   | list_expr
   | lit_expr
+  | label_expr
   | lookahead_expr
   | many_expr
   | negative_lookahead_expr
@@ -145,6 +146,9 @@ pub expr
   | repeat_expr
   | seq_expr
   | some_expr
+
+pub label_expr
+  = name ':' expr
 
 pub lit_expr
   = string
