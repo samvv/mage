@@ -65,7 +65,7 @@ def mage_extract_literals(
                     name = generate_token_name()
                 if expr.text not in literal_to_name:
                     literal_to_name[expr.text] = name
-                return MageRefExpr(name)
+                return MageRefExpr(name, parent=expr.parent)
             return rewrite_each_child_expr(expr, rewrite_expr)
 
         for element in node.elements:
