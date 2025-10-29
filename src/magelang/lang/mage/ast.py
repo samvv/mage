@@ -5,10 +5,12 @@ Also defines some visitors over Mage expressions and other useful procedures to
 make handling the AST a bit easier.
 """
 
+from typing import Self, TypedDict, Unpack
 from dataclasses import dataclass
 import sys
 from functools import lru_cache
 from typing import Any, Callable, Generator, Iterable, TypeGuard, TypeIs, TypeVar, assert_never, cast
+import typing
 from intervaltree import Interval, IntervalTree
 
 from magelang.logging import debug
@@ -31,6 +33,17 @@ class MageNodeBase:
             curr = curr.parent # type: ignore
         raise RuntimeError(f'Could not get the grammmar of a node. Are the parent pointers correctly set?')
 
+    def get_fields(self) -> dict:
+        out = {}
+        for cls in self.__class__.__mro__:
+            for name in typing.get_type_hints(cls):
+                out[name] = getattr(self, name) # type: ignore
+        return out
+
+    def derive(self, **kwargs) -> Self:
+        fields = self.get_fields()
+        fields.update(kwargs)
+        return self.__class__(**fields) # type: ignore
 
 @dataclass
 class ReturnAction:
@@ -47,22 +60,32 @@ type Action = ReturnAction | SetModeAction
 
 type MageExpr = MageLitExpr | MageRefExpr | MageCharSetExpr | MageLookaheadExpr | MageChoiceExpr | MageSeqExpr | MageHideExpr | MageListExpr | MageRepeatExpr
 
-type MageExprParent = MageExpr | MageRule | MageFixity
+
+type MageExprParent = MageExpr | MageRule
 
 
 class MageExprBase(MageNodeBase):
+
+    label: str | None
+    actions: list['Action']
+    parent: 'MageExprParent | None'
+    decorators: list['Decorator']
 
     def __init__(
         self,
         label: str | None = None,
         actions: list['Action'] | None = None,
-        parent: 'MageExprParent | None' = None
+        parent: 'MageExprParent | None' = None,
+        decorators: list['Decorator'] | None = None
     ) -> None:
         if actions is None:
             actions = []
+        if decorators is None:
+            decorators = []
         self.label = label
         self.actions = actions
         self.parent = parent
+        self.decorators = decorators
         self.field_name: str | None = None
 
     @property
@@ -72,7 +95,16 @@ class MageExprBase(MageNodeBase):
                 return action.rule
 
 
+class MageLitExprDeriveArgs(TypedDict, total=False):
+    text: str
+    label: str | None
+    actions: list['Action']
+    decorators: list['Decorator']
+
+
 class MageLitExpr(MageExprBase):
+
+    text: str
 
     def __init__(
         self,
@@ -80,28 +112,27 @@ class MageLitExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
+        decorators: list['Decorator'] | None = None
     ) -> None:
-        super().__init__(label, actions, parent)
+        super().__init__(label, actions, parent, decorators)
         self.text = text
 
     def set_parents(self) -> None:
         pass
 
-    def derive(
-        self,
-        text: str | None = None,
-        label: str | None = None,
-        actions: list['Action'] | None = None
-    ) -> 'MageLitExpr':
-        if text is None:
-            text = self.text
-        if label is None:
-            label = self.label
-        if actions is None:
-            actions = self.actions
-        return MageLitExpr(text=text, label=label, actions=actions, parent=self.parent)
+    def derive(self, **kwargs: MageLitExprDeriveArgs) -> 'MageLitExpr':
+        return super().derive(**kwargs)
+
+
+class MageRefExprDeriveArgs(TypedDict, total=False):
+    name: str
+    label: str | None
+    actions: list['Action']
+    decorators: list['Decorator']
 
 class MageRefExpr(MageExprBase):
+
+    name: str
 
     def __init__(
         self,
@@ -110,8 +141,9 @@ class MageRefExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
+        decorators: list['Decorator'] | None = None
     ) -> None:
-        super().__init__(label, actions, parent)
+        super().__init__(label, actions, parent, decorators)
         if module_path is None:
             module_path = []
         self.name = name
@@ -120,23 +152,22 @@ class MageRefExpr(MageExprBase):
     def set_parents(self) -> None:
         pass
 
-    def derive(
-        self,
-        *,
-        name: str | None = None,
-        label: str | None = None,
-        actions: list['Action'] | None = None,
-    ) -> 'MageRefExpr':
-        if name is None:
-            name = self.name
-        if label is None:
-            label = self.label
-        if actions is None:
-            actions = self.actions
-        return MageRefExpr(name=name, label=label, actions=actions, parent=self.parent)
+    def derive(self, **kwargs: MageRefExprDeriveArgs) -> 'MageRefExpr':
+        return super().derive(**kwargs)
+
+
+class MageLookaheadExprDeriveArgs(TypedDict, total=False):
+    expr: MageExpr
+    is_negated: bool
+    label: str | None
+    actions: list['Action']
+    decorators: list['Decorator']
 
 
 class MageLookaheadExpr(MageExprBase):
+
+    expr: MageExpr
+    is_negated: bool
 
     def __init__(
         self,
@@ -145,8 +176,9 @@ class MageLookaheadExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
+        decorators: list['Decorator'] | None = None
     ) -> None:
-        super().__init__(label, actions, parent)
+        super().__init__(label, actions, parent, decorators)
         self.expr = expr
         self.is_negated = is_negated
         self.set_parents()
@@ -154,31 +186,35 @@ class MageLookaheadExpr(MageExprBase):
     def set_parents(self) -> None:
         self.expr.parent = self
 
-    def derive(
-        self,
-        *,
-        expr: MageExpr | None = None,
-        is_negated: bool | None = None,
-        label: str | None = None,
-        actions: list['Action'] | None = None,
-    ) -> 'MageLookaheadExpr':
-        if expr is None:
-            expr = self.expr
-        if is_negated is None:
-            is_negated = self.is_negated
-        if label is None:
-            label = self.label
-        if actions is None:
-            actions = self.actions
-        return MageLookaheadExpr(expr=expr, is_negated=is_negated, label=label, actions=actions, parent=self.parent)
+    def derive(self, **kwargs: MageLookaheadExprDeriveArgs) -> 'MageLookaheadExpr':
+        return super().derive(**kwargs)
+
+
+ASSOC_LEFT = 1
+ASSOC_RIGHT = 2
 
 
 type CharSetElement = str | tuple[str, str]
 
+
 _LOWERCASE = Interval(97, 122+1)
 _UPPERCASE = Interval(65, 90+1)
 
+
+class MageCharSetExprDeriveArgs(TypedDict, total=False):
+    elements: list[CharSetElement]
+    ci: bool
+    invert: bool
+    label: str | None
+    actions: list['Action']
+    decorators: list['Decorator']
+
+
 class MageCharSetExpr(MageExprBase):
+
+    elements: list[CharSetElement]
+    ci: bool
+    invert: bool
 
     def __init__(
         self,
@@ -188,8 +224,9 @@ class MageCharSetExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
+        decorators: list['Decorator'] | None = None
     ) -> None:
-        super().__init__(label, actions, parent)
+        super().__init__(label, actions, parent, decorators)
         self.ci = ci
         self.invert = invert
         self.elements = []
@@ -206,26 +243,8 @@ class MageCharSetExpr(MageExprBase):
     def set_parents(self) -> None:
         pass
 
-    def derive(
-        self,
-        *,
-        elements: list[CharSetElement] | None = None,
-        ci: bool | None = None,
-        invert: bool | None = None,
-        label: str | None = None,
-        actions: list['Action'] | None = None,
-    ) -> 'MageCharSetExpr':
-        if elements is None:
-            elements = self.elements
-        if ci is None:
-            ci = self.ci
-        if invert is None:
-            invert = self.invert
-        if label is None:
-            label = self.label
-        if actions is None:
-            actions = self.actions
-        return MageCharSetExpr(elements=elements, ci=ci, invert=invert, label=label, actions=actions, parent=self.parent)
+    def derive(self, **kwargs: MageCharSetExprDeriveArgs) -> 'MageCharSetExpr':
+        return super().derive(**kwargs)
 
     def _add_to_tree(self, interval: Interval) -> None:
         if self.invert:
@@ -303,7 +322,17 @@ def intersect_interval(a: Interval, b: Interval) -> Interval | None:
         high = b.end
         return Interval(low, high)
 
+
+class MageChoiceExprDeriveArgs(TypedDict, total=False):
+    elements: list[MageExpr]
+    label: str | None
+    actions: list['Action']
+    decorators: list['Decorator']
+
+
 class MageChoiceExpr(MageExprBase):
+
+    elements: list[MageExpr]
 
     def __init__(
         self,
@@ -311,8 +340,9 @@ class MageChoiceExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
+        decorators: list['Decorator'] | None = None
     ) -> None:
-        super().__init__(label, actions, parent)
+        super().__init__(label, actions, parent, decorators)
         self.elements = elements
         self.set_parents()
 
@@ -320,30 +350,30 @@ class MageChoiceExpr(MageExprBase):
         for element in self.elements:
             element.parent = self
 
-    def derive(
-        self,
-        elements: list[MageExpr] | None = None,
-        label: str | None = None,
-        actions: list['Action'] | None = None
-    ) -> 'MageChoiceExpr':
-        if elements is None:
-            elements = self.elements
-        if label is None:
-            label = self.label
-        if actions is None:
-            actions = self.actions
-        return MageChoiceExpr(elements=elements, label=label, actions=actions, parent=self.parent)
+    def derive(self, **kwargs: Unpack[MageChoiceExprDeriveArgs]) -> 'MageChoiceExpr':
+        return super().derive(**kwargs)
+
+
+class MageSeqExprDeriveArgs(TypedDict, total=False):
+    elements: list[MageExpr]
+    label: str | None
+    actions: list['Action']
+    decorators: list['Decorator']
 
 
 class MageSeqExpr(MageExprBase):
 
-    def __init__(self,
+    elements: list[MageExpr]
+
+    def __init__(
+        self,
         elements: list[MageExpr],
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
+        decorators: list['Decorator'] | None = None
     ) -> None:
-        super().__init__(label, actions, parent)
+        super().__init__(label, actions, parent, decorators)
         self.elements = elements
         self.set_parents()
 
@@ -351,32 +381,36 @@ class MageSeqExpr(MageExprBase):
         for element in self.elements:
             element.parent = self
 
-    def derive(
-        self,
-        elements: list[MageExpr] | None = None,
-        label: str | None = None,
-        actions: list['Action'] | None = None,
-    ) -> 'MageSeqExpr':
-        if elements is None:
-            elements = self.elements
-        if label is None:
-            label = self.label
-        if actions is None:
-            actions = self.actions
-        return MageSeqExpr(elements=elements, label=label, actions=actions, parent=self.parent)
+    def derive(self, **kwargs: Unpack[MageSeqExprDeriveArgs]) -> 'MageSeqExpr':
+        return super().derive(**kwargs)
+
+
+class MageListExprDeriveArgs(TypedDict, total=False):
+    element: MageExpr
+    separator: MageExpr
+    min_count: int
+    label: str | None
+    actions: list['Action']
+    decorators: list['Decorator']
 
 
 class MageListExpr(MageExprBase):
 
-    def __init__(self,
+    element: MageExpr
+    separator: MageExpr
+    min_count: int
+
+    def __init__(
+        self,
         element: MageExpr,
         separator: MageExpr,
         min_count: int,
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
+        decorators: list['Decorator'] | None = None
     ) -> None:
-        super().__init__(label, actions, parent)
+        super().__init__(label, actions, parent, decorators)
         self.element = element
         self.separator = separator
         self.min_count = min_count
@@ -386,61 +420,57 @@ class MageListExpr(MageExprBase):
         self.element.parent = self
         self.separator.parent = self
 
-    def derive(
-        self,
-        element: MageExpr | None = None,
-        separator: MageExpr | None = None,
-        min_count: int | None = None,
-        label: str | None = None,
-        actions: list['Action'] | None = None,
-    ) -> 'MageListExpr':
-        if element is None:
-            element = self.element
-        if separator is None:
-            separator = self.separator
-        if min_count is None:
-            min_count = self.min_count
-        if label is None:
-            label = self.label
-        if actions is None:
-            actions = self.actions
-        return MageListExpr(element=element, separator=separator, min_count=min_count, label=label, actions=actions, parent=self.parent)
+    def derive(self, **kwargs: Unpack[MageListExprDeriveArgs]) -> 'MageListExpr':
+        return super().derive(**kwargs)
+
+
+class MageHideExprDeriveArgs(TypedDict, total=False):
+    expr: MageExpr
+    label: str | None
+    actions: list['Action']
+    decorators: list['Decorator']
 
 
 class MageHideExpr(MageExprBase):
 
-    def __init__(self,
+    expr: MageExpr
+
+    def __init__(
+        self,
         expr: MageExpr,
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
+        decorators: list['Decorator'] | None = None
     ) -> None:
-        super().__init__(label, actions, parent)
+        super().__init__(label, actions, parent, decorators)
         self.expr = expr
         self.set_parents()
 
     def set_parents(self) -> None:
         self.expr.parent = self
 
-    def derive(
-        self,
-        expr: MageExpr | None = None,
-        label: str | None = None,
-        actions: list['Action'] | None = None,
-    ) -> 'MageHideExpr':
-        if expr is None:
-            expr = self.expr
-        if label is None:
-            label = self.label
-        if actions is None:
-            actions = self.actions
-        return MageHideExpr(expr=expr, label=label, actions=actions, parent=self.parent)
+    def derive(self, **kwargs: Unpack[MageHideExprDeriveArgs]) -> 'MageHideExpr':
+        return super().derive(**kwargs)
 
 
-POSINF = sys.maxsize
+POSINF = sys.maxsize # FIXME if we ever persist this value there will be trouble
+
+
+class MageRepeatExprDeriveArgs(TypedDict, total=False):
+    expr: MageExpr
+    min: int
+    max: int
+    label: str | None
+    actions: list['Action']
+    decorators: list['Decorator']
 
 
 class MageRepeatExpr(MageExprBase):
+
+    expr: MageExpr
+    min: int
+    max: int
 
     def __init__(
         self,
@@ -460,35 +490,33 @@ class MageRepeatExpr(MageExprBase):
     def set_parents(self) -> None:
         self.expr.parent = self
 
-    def derive(
-        self,
-        expr: MageExpr | None = None,
-        min: int | None = None,
-        max: int | None = None,
-        label: str | None = None,
-        actions: list['Action'] | None = None,
-    ) -> 'MageRepeatExpr':
-        if expr is None:
-            expr = self.expr
-        if min is None:
-            min = self.min
-        if max is None:
-            max = self.max
-        if label is None:
-            label = self.label
-        if actions is None:
-            actions = self.actions
-        return MageRepeatExpr(expr=expr, min=min, max=max, label=label, actions=actions, parent=self.parent)
+    def derive(self, **kwargs: Unpack[MageRepeatExprDeriveArgs]) -> 'MageRepeatExpr':
+        return super().derive(**kwargs)
+
+
+class DecoratorDeriveArgs(TypedDict, total=False):
+    name: str
+    args: list[str | int]
 
 
 class Decorator(MageNodeBase):
 
-    def __init__(self, name: str, args: list[str | int] | None = None) -> None:
+    name: str
+    args: list[str | int]
+
+    def __init__(
+        self,
+        name: str,
+        args: list[str | int] | None = None
+    ) -> None:
         super().__init__()
         if args is None:
             args = []
         self.name = name
         self.args = args
+
+    def derive(self, **kwargs: Unpack[DecoratorDeriveArgs]) -> Self:
+        return super().derive(**kwargs)
 
 
 EXTERN        = 1
@@ -497,7 +525,25 @@ FORCE_TOKEN   = 4
 FORCE_KEYWORD = 8
 
 
+class MageRuleDeriveArgs(TypedDict, total=False):
+    expr: MageExpr | None
+    comment: str | None
+    decorators: list[Decorator]
+    flags: int
+    name: str
+    type_name: str
+    mode: int
+
 class MageRule(MageNodeBase):
+
+    name: str
+    expr: MageExpr | None
+    comment: str | None
+    decorators: list[Decorator]
+    flags: int
+    type_name: str
+    mode: int
+    parent: 'MageModule | MageGrammar | None'
 
     def __init__(
         self,
@@ -527,31 +573,8 @@ class MageRule(MageNodeBase):
         if self.expr is not None:
             self.expr.parent = self
 
-    def derive(
-        self,
-        comment: str | None = None,
-        decorators: list[Decorator] | None = None,
-        flags: int | None = None,
-        name: str | None = None,
-        type_name: str | None = None,
-        expr: MageExpr | None = None,
-        mode: int | None = None
-    ) -> 'MageRule':
-        if name is None:
-            name = self.name
-        if expr is None:
-            expr = self.expr
-        if comment is None:
-            comment = self.comment
-        if decorators is None:
-            decorators = self.decorators
-        if flags is None:
-            flags = self.flags
-        if type_name is None:
-            type_name = self.type_name
-        if mode is None:
-            mode = self.mode
-        return MageRule(name=name, expr=expr, comment=comment, decorators=decorators, flags=flags, type_name=type_name, mode=mode, parent=self.parent)
+    def derive(self, **kwargs: Unpack[MageRuleDeriveArgs]) -> 'MageRule':
+        return super().derive(**kwargs)
 
     @property
     def is_public(self) -> bool:
@@ -596,6 +619,8 @@ type MageModuleElement = MageRule | MageModule
 
 
 class MageModuleBase(MageNodeBase):
+
+    elements: list[MageModuleElement]
 
     def __init__(self, elements: 'list[MageModuleElement] | None' = None) -> None:
         super().__init__()
@@ -685,7 +710,17 @@ class MageModuleBase(MageNodeBase):
             if rule.is_keyword_def:
                 return rule
 
+
+class MageModuleDeriveArgs(TypedDict, total=False):
+    name: str
+    elements: list[MageModuleElement]
+    flags: int
+
+
 class MageModule(MageModuleBase):
+
+    name: str
+    parent: 'MageModule | MageGrammar | None'
 
     def __init__(
         self,
@@ -704,19 +739,12 @@ class MageModule(MageModuleBase):
         for element in self.elements:
             element.parent = self
 
-    def derive(
-        self,
-        name: str | None = None,
-        elements: list[MageModuleElement] | None = None,
-        flags: int | None = None,
-    ) -> 'MageModule':
-        if name is None:
-            name = self.name
-        if elements is None:
-            elements = self.elements
-        if flags is None:
-            flags = self.flags
-        return MageModule(name=name, elements=elements, parent=self.parent)
+    def derive(self, **kwargs: Unpack[MageModuleDeriveArgs]) -> 'MageModule':
+        return super().derive(**kwargs)
+
+
+class MageGrammarDeriveArgs(TypedDict, total=False):
+    elements: list[MageRule | MageModule]
 
 class MageGrammar(MageModuleBase):
 
@@ -732,10 +760,8 @@ class MageGrammar(MageModuleBase):
         for element in self.elements:
             element.parent = self
 
-    def derive(self, elements: list[MageModuleElement] | None = None) -> 'MageGrammar':
-        if elements is None:
-            elements = self.elements
-        return MageGrammar(elements)
+    def derive(self, **kwargs: Unpack[MageGrammarDeriveArgs]) -> 'MageGrammar':
+        return super().derive(**kwargs)
 
 
 type MageSyntax = MageExpr | MageRule | MageGrammar | MageModule
@@ -975,3 +1001,4 @@ def is_token(rule: MageRule, visited: set[MageRule] | None = None) -> bool:
         # expression can never be a token
         return False
     return is_static(rule.expr, visited) and not any(is_token(rule, visited) for rule in referenced(rule.expr))
+
