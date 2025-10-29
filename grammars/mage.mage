@@ -26,7 +26,7 @@ whitespace = [\n\r\t ]*
 # F2Bar
 # ```
 @keyword
-pub token ident
+pub token name
   = [a-z_]i [a-z0-9_]i*
 
 # An integral number.
@@ -154,7 +154,7 @@ pub lit_expr
   = string
 
 pub ref_expr
-  = name:ident
+  = name
 
 pub char_set_expr
   = '~'? '[' CharSet.elements ']' 'i'?
@@ -189,7 +189,7 @@ pub list_expr
 # Rules
 
 pub decorator
-  = '@' name:ident
+  = '@' name
 
 pub rule
   = decorator* 'pub'? 'extern'? 'token'? name:ident '=' expr
