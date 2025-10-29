@@ -70,20 +70,22 @@ def is_tokenizable(grammar: MageGrammar) -> bool:
 
     def has_nontoken(expr: MageExpr) -> bool:
         if isinstance(expr, MageCharSetExpr) or isinstance(expr, MageLitExpr):
-            return True
+            return False
         if isinstance(expr, MageSeqExpr) or isinstance(expr, MageChoiceExpr):
             return any(has_nontoken(element) for element in expr.elements)
         if isinstance(expr, MageRepeatExpr) or isinstance(expr, MageHideExpr) or isinstance(expr, MageLookaheadExpr):
             return has_nontoken(expr.expr)
         if isinstance(expr, MageListExpr):
-            return has_nontoken(expr.element)
+            return has_nontoken(expr.element) or has_nontoken(expr.separator)
         if isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
             if rule is None or rule.expr is None:
+                # We assume the worst and will report this as a nontoken
                 return True
             if not rule.is_public:
                 return has_nontoken(rule.expr)
-            return False
+            # Rule must be another token or a parse rule, which is invalid
+            return True
         assert_never(expr)
 
     return not any(has_nontoken(nonnull(rule.expr)) for rule in grammar.rules if grammar.is_parse_rule(rule))
