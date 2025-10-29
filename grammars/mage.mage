@@ -130,6 +130,12 @@ mod CharSet {
   pub elements = (!eof element)*
 }
 
+# Values
+
+pub value
+  = integer
+  | name
+
 # Expressions
 
 pub expr
@@ -189,7 +195,7 @@ pub list_expr
 # Rules
 
 pub decorator
-  = '@' name
+  = '@' name '{' args:(value % ',')  '}'
 
 pub rule
   = decorator* 'pub'? 'extern'? 'token'? name:ident '=' expr
