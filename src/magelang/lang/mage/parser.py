@@ -68,27 +68,54 @@ class Parser:
         return self._get_token()
 
     def _parse_prim_expr(self) -> MageExpr:
-        t1 = self._peek_token(1)
         label = None
+        decorators = []
+        while True:
+            t0 = self._peek_token()
+            if t0.type != TT_AT:
+                break
+            self._get_token()
+            name = self._expect_token(TT_IDENT)
+            args = []
+            t2 = self._peek_token()
+            if t2.type == TT_LBRACE:
+                self._get_token()
+                t3 = self._peek_token()
+                if t3.type != TT_RBRACE:
+                    while True:
+                        t3 = self._get_token()
+                        if t3.type not in [ TT_IDENT, TT_INT ]:
+                            raise ParseError(t3, [ TT_IDENT, TT_INT ])
+                        args.append(t3.value)
+                        t4 = self._get_token()
+                        if t4.type == TT_COMMA:
+                            self._get_token()
+                        elif t4.type == TT_RBRACE:
+                            break
+                        else:
+                            raise ParseError(t4, [ TT_COMMA, TT_RBRACE ])
+                        args.append(t3.value)
+            decorators.append(Decorator(cast(str, name.value), args))
+        t1 = self._peek_token(1)
         if t1.type == TT_COLON:
             label = self._get_ident()
             self._get_token()
-        t2 = self._peek_token()
-        if t2.type == TT_TILDE or t2.type == TT_CHARSET:
+        t0 = self._peek_token()
+        if t0.type == TT_TILDE or t0.type == TT_CHARSET:
             invert = False
-            while t2.type == TT_TILDE:
+            while t0.type == TT_TILDE:
                 self._get_token()
                 invert = not invert
-                t2 = self._peek_token()
+                t0 = self._peek_token()
             self._get_token()
-            elements, ci = cast(tuple[list, bool], t2.value)
+            elements, ci = cast(tuple[list, bool], t0.value)
             expr = MageCharSetExpr(elements=elements, ci=ci, invert=invert)
-        elif t2.type == TT_LPAREN:
+        elif t0.type == TT_LPAREN:
             self._get_token()
             expr = self.parse_expr()
             self._expect_token(TT_RPAREN)
-        elif _is_ident(t2):
-            name = token_to_string(t2)
+        elif _is_ident(t0):
+            name = token_to_string(t0)
             module_path = []
             self._get_token()
             while True:
@@ -101,14 +128,15 @@ class Parser:
                 module_path.append(name)
                 name = token_to_string(t4)
             expr = MageRefExpr(name=name, module_path=module_path)
-        elif t2.type == TT_STR:
+        elif t0.type == TT_STR:
             self._get_token()
-            assert(isinstance(t2.value, str))
-            expr = MageLitExpr(text=t2.value)
+            assert(isinstance(t0.value, str))
+            expr = MageLitExpr(text=t0.value)
         else:
-            raise ParseError(t2, [ TT_LBRACE, TT_LPAREN, TT_IDENT, TT_STR ])
+            raise ParseError(t0, [ TT_LBRACE, TT_LPAREN, TT_IDENT, TT_STR ])
         if label is not None:
             expr.label = label.value
+        expr.decorators.extend(decorators)
         return expr
 
     def _parse_maybe_list_expr(self) -> MageExpr:
@@ -187,13 +215,24 @@ class Parser:
         return expr
 
     def _lookahead_is_module_element(self) -> bool:
-        kw = self._peek_token_after_modifiers()
-        if kw.type in [ TT_MOD ]:
-            return True
-        t0 = self._peek_token(0)
-        t1 = self._peek_token(1)
-        t2 = self._peek_token(2)
-        return t0.type in [ TT_PUB, TT_EXTERN, TT_AT ] \
+        i = 0
+        while True:
+            t0 = self._peek_token(i)
+            if t0.type != TT_AT:
+                break
+            i += 2
+            t1 = self._peek_token(i)
+            if t1 == TT_LBRACE:
+                while True:
+                    i += 1
+                    t2 = self._peek_token()
+                    if t2.type == TT_RBRACE:
+                        i += 1
+                        break
+        t0 = self._peek_token(i)
+        t1 = self._peek_token(i+1)
+        t2 = self._peek_token(i+2)
+        return t0.type in [ TT_PUB, TT_EXTERN ] \
                or t1.type == TT_EQUAL \
                or t0.type == TT_TOKEN and t2.type == TT_EQUAL
 
