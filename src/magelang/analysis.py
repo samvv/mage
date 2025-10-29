@@ -1,9 +1,9 @@
 
 from dataclasses import dataclass
-from itertools import permutations
+import math
 
-from magelang.logging import warn
 from magelang.util import SeqSet, nonnull, unreachable
+from magelang.graph import DGraph, toposort
 from magelang.lang.mage.ast import *
 
 
@@ -382,3 +382,163 @@ def get_lexer_modes(grammar: MageGrammar) -> dict[str, int]:
         next_token_rules = SeqSet[MageRule]()
 
     return modes
+
+
+@lru_cache
+def reference_graph(grammar: MageGrammar) -> DGraph[MageRule, None]:
+
+    graph = DGraph[MageRule, None]()
+
+    def visit_rule(src: MageRule) -> None:
+        def visit(expr: MageExpr) -> None:
+            if isinstance(expr, MageRefExpr):
+                dst = lookup_ref(expr)
+                if dst is not None:
+                    graph.add_edge(src, dst, None)
+            else:
+                for_each_direct_child_expr(expr, visit)
+        if src.expr is not None:
+            visit(src.expr)
+
+    for rule in grammar.get_parse_rules():
+        visit_rule(rule)
+
+    return graph
+
+
+def get_recursive(grammar: MageGrammar) -> list[list[MageRule]]:
+    """
+    Get all the recursive rules in the grammar.
+
+    Rules that reference each other form a cycle. This function will return a
+    list of rules for each isolated cycle.
+    """
+    graph = reference_graph(grammar)
+    sccs = toposort(graph)
+    return [ scc for scc in sccs if len(scc) > 1 ]
+
+
+def get_roots(rules: list[MageRule], grammar: MageGrammar) -> Iterable[MageRule]:
+    """
+    Get the root recursive rules for the given set of rules, if any.
+
+    A root recursive rule is a rule that is referenced more than once by other
+    rules that form part of the same cycle.
+    """
+    # FIXME is the definition of a root correct?
+    graph = reference_graph(grammar)
+    for rule in rules:
+        n = sum(1 for v, _ in graph.incoming_edges(rule) if v in rules)
+        if n > 1:
+            yield rule
+
+
+NONE   = 0
+PREFIX = 1
+INFIXL = 2
+INFIXR = 4
+INFIX  = 6
+POSTFIX = 8
+
+
+def fixity(rule: MageRule, roots: list[MageRule], grammar: MageGrammar) -> int:
+    """
+    Get the fixity of a Mage expression.
+
+    The fixity is either:
+    - Prefix for rules that start with an operator (e.g. ++1, await foo)
+    - Infix for rules that have the first operator in the middle (e.g. 1 + 2, 5 << 2)
+    - Suffix for rules that have the first operator at the end (e.g. result?, k--)
+    """
+
+    if rule.expr is None:
+        return NONE
+
+    k = 0
+    indices = []
+    visited = set[MageRule]()
+
+    def visit(expr: MageExpr) -> None:
+        nonlocal k
+        if isinstance(expr, MageLitExpr) or isinstance(expr, MageCharSetExpr):
+            k += 1
+        elif isinstance(expr, MageRefExpr):
+            rule = lookup_ref(expr)
+            if rule in roots:
+                indices.append(k)
+                return
+            if rule is None or rule in visited or rule.expr is None:
+                # We assume the rule is not part of this cycle
+                return
+            visited.add(rule)
+            visit(rule.expr)
+        elif isinstance(expr, MageSeqExpr):
+            for child in expr.elements:
+                visit(child)
+        elif isinstance(expr, MageChoiceExpr):
+            start = k
+            end = math.inf
+            for child in expr.elements:
+                visit(child)
+                end = min(end, k)
+                k = start
+            k = end
+        elif isinstance(expr, MageLookaheadExpr):
+            pass
+        elif isinstance(expr, MageHideExpr):
+            visit(expr.expr)
+        elif isinstance(expr, MageRepeatExpr):
+            # FIXME presumably we could get the result of visit() and multiply with expr.min
+            for _ in range(expr.min):
+                visit(expr.expr)
+        else:
+            assert_never(expr)
+
+    visit(rule.expr)
+
+    n = len(indices)
+    if n == 0:
+        return NONE
+    if n == 1:
+        i = indices[0]
+        return POSTFIX if i == 0 else PREFIX
+    if n == 2:
+        i = indices[0]
+        j = indices[1]
+        return NONE if i == j else INFIX
+    # FIXME This mode (e.g. ternary operators) should also be supported
+    #       See for example Agda, which can have very complex operators
+    return NONE
+
+
+@dataclass
+class Grouping:
+    prefix: list[MageRule]
+    infix: list[MageRule]
+    postfix: list[MageRule]
+
+
+def group_by_fixity(
+    nonroots: list[MageRule],
+    roots: list[MageRule],
+    grammar: MageGrammar
+) -> Grouping:
+    """
+    Groups given rules by their fixity.
+
+    We assume the root recursive rules have already been filtered out of the input.
+    """
+    prefix = list[MageRule]()
+    infix = list[MageRule]()
+    postfix = list[MageRule]()
+    for rule in nonroots:
+        x = fixity(rule, roots, grammar)
+        if x == PREFIX:
+            prefix.append(rule)
+        elif x == INFIX:
+            infix.append(rule)
+        elif x == POSTFIX:
+            postfix.append(rule)
+        elif x != NONE:
+            unreachable()
+    return Grouping(prefix, infix, postfix)

@@ -1,5 +1,5 @@
 
-from magelang.analysis import get_lexer_modes, envelops, is_subset
+from magelang.analysis import INFIX, NONE, POSTFIX, PREFIX, fixity, get_lexer_modes, envelops, get_recursive, get_roots, is_subset
 from magelang.lang.mage.ast import *
 
 
@@ -97,3 +97,40 @@ def test_overlapping_tokens_str_repeat_charset():
     assert(modes['bar'] == modes['foo'])
     assert(modes['bar'] == modes['bla'])
     assert(modes['bar'] != modes['bax'])
+
+r1 = MageRule('expr', flags=PUBLIC, expr=MageChoiceExpr([
+    MageRefExpr('lit_expr'),
+    MageRefExpr('add_expr'),
+]))
+r2 = MageRule('lit_expr', flags=PUBLIC, expr=MageLitExpr('foobar'))
+r3 = MageRule('add_expr', flags=PUBLIC, expr=MageSeqExpr([
+    MageRefExpr('expr'),
+    MageLitExpr('+'),
+    MageRefExpr('expr'),
+]))
+r4 = MageRule('inc_expr', flags=PUBLIC, expr=MageSeqExpr([
+    MageRefExpr('expr'),
+    MageLitExpr('++'),
+]))
+r5 = MageRule('await_expr', flags=PUBLIC, expr=MageSeqExpr([
+    MageLitExpr('await'),
+    MageRefExpr('expr'),
+]))
+r6 = MageRule('seq_expr', flags=PUBLIC, expr=MageSeqExpr([
+    MageRefExpr('expr'),
+    MageRefExpr('expr'),
+]))
+g1 = MageGrammar([ r1, r2, r3, r4, r5, r6 ])
+
+def test_recursive():
+    rec = get_recursive(g1)
+    assert(len(rec) == 1)
+    roots = list(get_roots(rec[0], g1))
+    assert(len(roots) == 1)
+    assert(roots[0] == r1)
+    assert(fixity(r2, roots, g1) == NONE)
+    assert(fixity(r3, roots, g1) == INFIX)
+    assert(fixity(r4, roots, g1) == POSTFIX)
+    assert(fixity(r5, roots, g1) == PREFIX)
+    assert(fixity(r6, roots, g1) == NONE)
+
