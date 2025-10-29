@@ -1,7 +1,8 @@
 
 from intervaltree import Interval
-from magelang.lang.mage.ast import MageCharSetExpr, MageChoiceExpr, MageGrammar, MageLitExpr, MageRefExpr, MageRule, MageSeqExpr, intersect_interval
+from magelang.lang.mage.ast import MageCharSetExpr, MageChoiceExpr, MageGrammar, MageLitExpr, MageRefExpr, MageRule, MageSeqExpr, intersect_interval, make_list_expr, match_list_expr
 from magelang.analysis import intersects
+from magelang.util import nonnull
 
 def test_intersects_lit_lit():
     grammar = MageGrammar()
@@ -165,3 +166,12 @@ def test_charset_contains_range():
     assert(e2.contains_range('c', 'c'))
     assert(not e2.contains_range('c', 'e'))
 
+
+def test_create_and_match_list_expr():
+    e1 = MageLitExpr('a')
+    e2 = MageLitExpr('b')
+    e = make_list_expr(e1, e2, 0)
+    el, sep, k = nonnull(match_list_expr(e))
+    assert(el == e1)
+    assert(sep == e2)
+    assert(k == 0)

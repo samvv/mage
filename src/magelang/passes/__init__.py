@@ -13,6 +13,7 @@ from .mage_insert_skip import mage_insert_skip
 from .mage_reduce_list_expr import mage_reduce_list_expr
 from .mage_remove_hidden import mage_remove_hidden
 from .mage_simplify import mage_simplify
+from .mage_to_core import mage_to_core
 from .mage_to_python_emitter import mage_to_python_emitter
 from .mage_to_python_lexer import mage_to_python_lexer
 from .mage_to_python_lexer_tests import mage_to_python_lexer_tests

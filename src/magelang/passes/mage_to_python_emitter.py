@@ -5,7 +5,7 @@ from collections.abc import Generator
 from typing import assert_never, cast
 
 from magelang.analysis import intersects, can_be_empty
-from magelang.lang.mage.ast import MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageListExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, static_expr_to_str
+from magelang.lang.mage.ast import MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, static_expr_to_str
 from magelang.helpers import Field, get_fields, infer_type, is_unit_type
 from magelang.lang.python.cst import *
 from magelang.manager import declare_pass
@@ -165,33 +165,6 @@ def mage_to_python_emitter(
                 else:
                     yield from gen_emit_expr(element, target if tuple_len == 1 else PySubscriptExpr(target, [ PyConstExpr(tuple_index) ]), new_skip)
                     tuple_index += 1
-        elif isinstance(expr, MageListExpr):
-            if target is None:
-                if expr.min_count > 0:
-                    yield from gen_emit_expr(expr.element, target, skip)
-                    for _ in range(1, expr.min_count):
-                        yield from gen_emit_expr(expr.separator, target, skip)
-                        yield from gen_emit_expr(expr.element, target, skip)
-            else:
-                element_name = 'element'
-                separator_name = 'separator'
-                yield PyForStmt(
-                    pattern=PyTuplePattern(
-                        elements=[
-                            PyNamedPattern(element_name),
-                            PyNamedPattern(separator_name)
-                        ],
-                    ),
-                    expr=PyAttrExpr(target, 'elements'),
-                    body=[
-                        *gen_emit_expr(expr.element, PyNamedExpr(element_name), skip),
-                        *gen_emit_expr(expr.separator, PyNamedExpr(separator_name), skip),
-                    ]
-                )
-                yield PyIfStmt(first=PyIfCase(
-                    test=PyInfixExpr(PyAttrExpr(target, 'last'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')),
-                    body=list(gen_emit_expr(expr.element, PyAttrExpr(target, 'last'), skip))
-                ))
         else:
             assert_never(expr)
 

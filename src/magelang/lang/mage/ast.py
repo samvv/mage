@@ -1002,3 +1002,48 @@ def is_token(rule: MageRule, visited: set[MageRule] | None = None) -> bool:
         return False
     return is_static(rule.expr, visited) and not any(is_token(rule, visited) for rule in referenced(rule.expr))
 
+
+def make_list_expr(element: MageExpr, separator: MageExpr, min_count = 0) -> MageExpr:
+    out = MageSeqExpr([
+        element,
+        MageRepeatExpr(
+            min=max(0, min_count-1),
+            max=POSINF,
+            expr=MageSeqExpr([
+                separator,
+                element,
+            ])
+        )
+    ])
+    if min_count > 0:
+        return out
+    return MageChoiceExpr([ out, MageLitExpr('') ])
+
+
+def match_list_expr(expr: MageExpr) -> tuple[MageExpr, MageExpr, int] | None:
+    """
+    Try to detect a compiled list expression.
+
+    List expressions used to be part of the grammar but are now composed out of
+    other constructs.
+
+    This function assumes that the expression has been simplified before this
+    function was called. For example, `(a* | a) | ''` will not be detected,
+    while `a* | a | ''` will be.
+    """
+    min_count = 1
+    if isinstance(expr, MageChoiceExpr):
+        if len(expr.elements) != 2 or not isinstance(expr.elements[1], MageLitExpr) or expr.elements[1].text != '':
+            return
+        expr = expr.elements[0]
+        min_count = 0
+    if not (isinstance(expr, MageSeqExpr)
+            and len(expr.elements) == 2
+            and isinstance(expr.elements[1], MageRepeatExpr)
+            and isinstance(expr.elements[1].expr, MageSeqExpr)):
+        return
+    min_count += expr.elements[1].min
+    element = expr.elements[1].expr.elements[1]
+    separator = expr.elements[1].expr.elements[0]
+    return element, separator, min_count
+
