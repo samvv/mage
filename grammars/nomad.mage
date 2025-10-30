@@ -180,6 +180,9 @@ pub match_expr
 pub path_expr
   = name
 
+## {accept}
+## &foo
+## {/accept}
 pub ref_expr
   = '&' expr
 
