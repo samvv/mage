@@ -137,6 +137,7 @@ class MagedownAccepts(_MagedownBaseNode):
         close_brace_2 = _coerce_union_2_decl_close_brace_none_to_decl_close_brace(kwargs['close_brace_2']) if 'close_brace_2' in kwargs else self.close_brace_2
         return MagedownAccepts(open_brace=open_brace, accept_keyword=accept_keyword, close_brace=close_brace, text=text, open_brace_slash=open_brace_slash, accept_keyword_2=accept_keyword_2, close_brace_2=close_brace_2)
 
+    @property
     def parent(self) -> 'MagedownAcceptsParent':
         assert(self._parent is not None)
         return self._parent
@@ -169,6 +170,7 @@ class MagedownCodeBlock(_MagedownBaseNode):
         backtick_backtick_backtick_2 = _coerce_union_2_decl_backtick_backtick_backtick_none_to_decl_backtick_backtick_backtick(kwargs['backtick_backtick_backtick_2']) if 'backtick_backtick_backtick_2' in kwargs else self.backtick_backtick_backtick_2
         return MagedownCodeBlock(backtick_backtick_backtick=backtick_backtick_backtick, lang=lang, text=text, backtick_backtick_backtick_2=backtick_backtick_backtick_2)
 
+    @property
     def parent(self) -> 'MagedownCodeBlockParent':
         assert(self._parent is not None)
         return self._parent
@@ -192,6 +194,7 @@ class MagedownDocument(_MagedownBaseNode):
         elements = _coerce_union_2_list_union_3_decl_special_decl_text_extern_string_none_to_list_union_2_decl_special_decl_text(kwargs['elements']) if 'elements' in kwargs else self.elements
         return MagedownDocument(elements=elements)
 
+    @property
     def parent(self) -> 'MagedownDocumentParent':
         raise AssertionError('trying to access the parent node of a top-level node')
 
@@ -218,6 +221,7 @@ class MagedownHeading(_MagedownBaseNode):
         text = _coerce_extern_string_to_extern_string(kwargs['text']) if 'text' in kwargs else self.text
         return MagedownHeading(hashtags=hashtags, text=text)
 
+    @property
     def parent(self) -> 'MagedownHeadingParent':
         assert(self._parent is not None)
         return self._parent
@@ -246,6 +250,7 @@ class MagedownInlineCode(_MagedownBaseNode):
         backtick_2 = _coerce_union_2_decl_backtick_none_to_decl_backtick(kwargs['backtick_2']) if 'backtick_2' in kwargs else self.backtick_2
         return MagedownInlineCode(backtick=backtick, text=text, backtick_2=backtick_2)
 
+    @property
     def parent(self) -> 'MagedownInlineCodeParent':
         assert(self._parent is not None)
         return self._parent
@@ -286,6 +291,7 @@ class MagedownLink(_MagedownBaseNode):
         close_paren = _coerce_union_2_decl_close_paren_none_to_decl_close_paren(kwargs['close_paren']) if 'close_paren' in kwargs else self.close_paren
         return MagedownLink(open_bracket=open_bracket, text=text, close_bracket=close_bracket, open_paren=open_paren, href=href, close_paren=close_paren)
 
+    @property
     def parent(self) -> 'MagedownLinkParent':
         assert(self._parent is not None)
         return self._parent
@@ -310,6 +316,7 @@ class MagedownName(_MagedownBaseNode):
         field_1 = _coerce_extern_string_to_extern_string(kwargs['field_1']) if 'field_1' in kwargs else self.field_1
         return MagedownName(field=field, field_1=field_1)
 
+    @property
     def parent(self) -> 'MagedownNameParent':
         assert(self._parent is not None)
         return self._parent
@@ -338,6 +345,7 @@ class MagedownRef(_MagedownBaseNode):
         close_bracket_close_bracket = _coerce_union_2_decl_close_bracket_close_bracket_none_to_decl_close_bracket_close_bracket(kwargs['close_bracket_close_bracket']) if 'close_bracket_close_bracket' in kwargs else self.close_bracket_close_bracket
         return MagedownRef(open_bracket_open_bracket=open_bracket_open_bracket, name=name, close_bracket_close_bracket=close_bracket_close_bracket)
 
+    @property
     def parent(self) -> 'MagedownRefParent':
         assert(self._parent is not None)
         return self._parent
@@ -382,6 +390,7 @@ class MagedownRejects(_MagedownBaseNode):
         close_brace_2 = _coerce_union_2_decl_close_brace_none_to_decl_close_brace(kwargs['close_brace_2']) if 'close_brace_2' in kwargs else self.close_brace_2
         return MagedownRejects(open_brace=open_brace, reject_keyword=reject_keyword, close_brace=close_brace, text=text, open_brace_slash=open_brace_slash, reject_keyword_2=reject_keyword_2, close_brace_2=close_brace_2)
 
+    @property
     def parent(self) -> 'MagedownRejectsParent':
         assert(self._parent is not None)
         return self._parent
@@ -402,6 +411,7 @@ class MagedownText(_MagedownBaseNode):
         contents = _coerce_extern_string_to_extern_string(kwargs['contents']) if 'contents' in kwargs else self.contents
         return MagedownText(contents=contents)
 
+    @property
     def parent(self) -> 'MagedownTextParent':
         assert(self._parent is not None)
         return self._parent

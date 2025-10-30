@@ -38,6 +38,7 @@ class MagedownAccepts(_MagedownBaseNode):
         text = _coerce_extern_string_to_extern_string(kwargs['text']) if 'text' in kwargs else self.text
         return MagedownAccepts(text=text)
 
+    @property
     def parent(self) -> 'MagedownAcceptsParent':
         assert(self._parent is not None)
         return self._parent
@@ -62,6 +63,7 @@ class MagedownCodeBlock(_MagedownBaseNode):
         text = _coerce_extern_string_to_extern_string(kwargs['text']) if 'text' in kwargs else self.text
         return MagedownCodeBlock(lang=lang, text=text)
 
+    @property
     def parent(self) -> 'MagedownCodeBlockParent':
         assert(self._parent is not None)
         return self._parent
@@ -85,6 +87,7 @@ class MagedownDocument(_MagedownBaseNode):
         elements = _coerce_union_2_list_union_3_decl_special_decl_text_extern_string_none_to_list_union_2_decl_special_decl_text(kwargs['elements']) if 'elements' in kwargs else self.elements
         return MagedownDocument(elements=elements)
 
+    @property
     def parent(self) -> 'MagedownDocumentParent':
         raise AssertionError('trying to access the parent node of a top-level node')
 
@@ -108,6 +111,7 @@ class MagedownHeading(_MagedownBaseNode):
         text = _coerce_extern_string_to_extern_string(kwargs['text']) if 'text' in kwargs else self.text
         return MagedownHeading(hashtags=hashtags, text=text)
 
+    @property
     def parent(self) -> 'MagedownHeadingParent':
         assert(self._parent is not None)
         return self._parent
@@ -128,6 +132,7 @@ class MagedownInlineCode(_MagedownBaseNode):
         text = _coerce_extern_string_to_extern_string(kwargs['text']) if 'text' in kwargs else self.text
         return MagedownInlineCode(text=text)
 
+    @property
     def parent(self) -> 'MagedownInlineCodeParent':
         assert(self._parent is not None)
         return self._parent
@@ -152,6 +157,7 @@ class MagedownLink(_MagedownBaseNode):
         href = _coerce_extern_string_to_extern_string(kwargs['href']) if 'href' in kwargs else self.href
         return MagedownLink(text=text, href=href)
 
+    @property
     def parent(self) -> 'MagedownLinkParent':
         assert(self._parent is not None)
         return self._parent
@@ -176,6 +182,7 @@ class MagedownName(_MagedownBaseNode):
         field_1 = _coerce_extern_string_to_extern_string(kwargs['field_1']) if 'field_1' in kwargs else self.field_1
         return MagedownName(field=field, field_1=field_1)
 
+    @property
     def parent(self) -> 'MagedownNameParent':
         assert(self._parent is not None)
         return self._parent
@@ -196,6 +203,7 @@ class MagedownRef(_MagedownBaseNode):
         name = _coerce_decl_name_to_decl_name(kwargs['name']) if 'name' in kwargs else self.name
         return MagedownRef(name=name)
 
+    @property
     def parent(self) -> 'MagedownRefParent':
         assert(self._parent is not None)
         return self._parent
@@ -216,6 +224,7 @@ class MagedownRejects(_MagedownBaseNode):
         text = _coerce_extern_string_to_extern_string(kwargs['text']) if 'text' in kwargs else self.text
         return MagedownRejects(text=text)
 
+    @property
     def parent(self) -> 'MagedownRejectsParent':
         assert(self._parent is not None)
         return self._parent
@@ -236,6 +245,7 @@ class MagedownText(_MagedownBaseNode):
         contents = _coerce_extern_string_to_extern_string(kwargs['contents']) if 'contents' in kwargs else self.contents
         return MagedownText(contents=contents)
 
+    @property
     def parent(self) -> 'MagedownTextParent':
         assert(self._parent is not None)
         return self._parent
