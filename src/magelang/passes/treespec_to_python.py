@@ -279,7 +279,7 @@ def treespec_to_python(
                 get_parent_body.append(PyCallExpr(PyNamedExpr('assert'), args=[ PyInfixExpr(PyAttrExpr(PyNamedExpr('self'), '_parent'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')) ]))
                 get_parent_body.append(PyRetStmt(expr=PyAttrExpr(PyNamedExpr('self'), '_parent')))
             body.append(PyFuncDef(
-                #decorators=[ PyDecorator(PyNamedExpr('property')) ],
+                decorators=[ PyDecorator(PyNamedExpr('property')) ],
                 name='parent',
                 params=[ PyNamedParam(PyNamedPattern('self')) ],
                 return_type=PyConstExpr(parent_type_name),
