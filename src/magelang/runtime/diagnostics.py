@@ -167,6 +167,6 @@ class ConsoleDiagnostics(Diagnostics):
             tag = 'fatal'
         else:
             unreachable()
-        print(ANSI_BOLD + color + tag + ANSI_RESET + ': ' + diagnostic.message)
+        print(ANSI_BOLD + color + tag + ANSI_RESET + ': ' + diagnostic.message + '\n')
         if diagnostic.file is not None and diagnostic.span is not None:
             print_excerpt(diagnostic.file, diagnostic.span)
