@@ -52,8 +52,7 @@ pub token integer
   = '0b' bin_digit+
   | '0o' oct_digit+
   | '0x' hex_digit+
-  | '0'
-  | [1-9] [0-9]*
+  | [0-9]+
 
 escapee
   = [abefnrtv\\'"]
