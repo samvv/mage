@@ -139,6 +139,7 @@ def print_excerpt(text: TextFile | str, span: Span, lines_pre=1, lines_post=1, g
 
     print_guttered(end_line_offset, post_offset)
 
+    print(out)
 
 class Diagnostics(Protocol):
 
