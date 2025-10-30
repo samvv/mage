@@ -130,7 +130,7 @@ class MageLitExpr(MageExprBase):
     def set_parents(self) -> None:
         pass
 
-    def derive(self, **kwargs: MageLitExprDeriveArgs) -> 'MageLitExpr':
+    def derive(self, **kwargs: Unpack[MageLitExprDeriveArgs]) -> 'MageLitExpr':
         return super().derive(**kwargs)
 
 
@@ -165,7 +165,7 @@ class MageRefExpr(MageExprBase):
     def set_parents(self) -> None:
         pass
 
-    def derive(self, **kwargs: MageRefExprDeriveArgs) -> 'MageRefExpr':
+    def derive(self, **kwargs: Unpack[MageRefExprDeriveArgs]) -> 'MageRefExpr':
         return super().derive(**kwargs)
 
 
@@ -201,7 +201,7 @@ class MageLookaheadExpr(MageExprBase):
     def set_parents(self) -> None:
         self.expr.parent = self
 
-    def derive(self, **kwargs: MageLookaheadExprDeriveArgs) -> 'MageLookaheadExpr':
+    def derive(self, **kwargs: Unpack[MageLookaheadExprDeriveArgs]) -> 'MageLookaheadExpr':
         return super().derive(**kwargs)
 
 
@@ -260,7 +260,7 @@ class MageCharSetExpr(MageExprBase):
     def set_parents(self) -> None:
         pass
 
-    def derive(self, **kwargs: MageCharSetExprDeriveArgs) -> 'MageCharSetExpr':
+    def derive(self, **kwargs: Unpack[MageCharSetExprDeriveArgs]) -> 'MageCharSetExpr':
         return super().derive(**kwargs)
 
     def _add_to_tree(self, interval: Interval) -> None:
