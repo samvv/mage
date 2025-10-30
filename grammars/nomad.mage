@@ -1,6 +1,6 @@
-## The Revolv Programming Language
+## The Nomad Programming Language
 ##
-## This grammar defines a generic re-targettable language, to be used as an
+## This grammar defines a generic re-targetable language, to be used as an
 ## intermediatary language for code generation.
 
 # Should be part of standard library
