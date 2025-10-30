@@ -52,4 +52,14 @@ def mage_insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
             expr=MageSeqExpr([ MageCharSetExpr([ ('a', 'z') ], ci=True), MageRepeatExpr(MageCharSetExpr([ ('a', 'z'), ('0', '9') ], ci=True), min=0, max=POSINF) ]),
         ))
 
+
+    # We skip whitespace if the user didn't specify anything.
+    # This is on par with tree-sitter, where `extras` defaults to whitespace.
+    if grammar.skip_rule is None:
+        new_elements.append(MageRule(
+            decorators=[ Decorator('skip') ],
+            name='__skip',
+            expr=MageRepeatExpr(MageCharSetExpr([ '\n', '\t', '\r', ' ' ]), 0, POSINF),
+        ))
+
     return grammar.derive(elements=new_elements)
