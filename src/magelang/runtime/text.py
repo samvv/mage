@@ -79,17 +79,13 @@ class TextPos:
         self.column = column
 
 
-class Span(tuple[int, int]):
+class Span:
 
-    @property
-    def start_offset(self) -> int:
-        return self[0]
-
-    @property
-    def end_offset(self) -> int:
-        return self[1]
+    def __init__(self, start: int, end: int) -> None:
+        self.start = start
+        self.end = end
 
     def __len__(self) -> int:
-        return self.end_offset - self.start_offset
+        return self.end - self.start
 
 

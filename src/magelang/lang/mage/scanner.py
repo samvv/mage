@@ -3,6 +3,8 @@ import re
 from textwrap import dedent
 from typing import Any, NewType
 
+from magelang.runtime.text import Span, TextFile
+
 TokenType = NewType('TokenType', int)
 
 class TextPos:
@@ -17,7 +19,7 @@ class TextPos:
 
 class Token:
 
-    def __init__(self, ty: TokenType, span: tuple[TextPos, TextPos], value: Any | None = None) -> None:
+    def __init__(self, ty: TokenType, span: Span, value: Any | None = None) -> None:
         self.type = ty
         self.span = span
         self.value = value
@@ -159,17 +161,30 @@ def token_to_string(token: Token) -> str:
 
 class ScanError(RuntimeError):
 
-    def __init__(self, ch: str, position: TextPos) -> None:
-        super().__init__(f"{position.line}:{position.column}: unexpected character {repr(ch)} encountered")
+    def __init__(self, file: TextFile, ch: str, offset: int, message: str | None = None) -> None:
+        start_line = file.get_line(offset)
+        start_column = file.get_column(offset)
+        full_message = f"{file.filename}:{start_line}:{start_column}: "
+        if message is not None:
+            full_message += message
+        elif ch == EOF:
+            full_message += "unexpected end-of-file reached"
+        else:
+            full_message += "unexpected character {repr(ch)} encountered"
+        super().__init__(full_message)
+        self.file = file
         self.ch = ch
-        self.position = position
+        self.offset = offset
 
 class Scanner:
 
-    def __init__(self, text: str, text_offset=0, init_pos: TextPos | None = None, filename: str | None = None) -> None:
+    def __init__(self, file_or_text: str | TextFile, text_offset=0, init_pos: TextPos | None = None) -> None:
         if init_pos is None:
             init_pos = TextPos()
-        self.text = text
+        if isinstance(file_or_text, str):
+            file_or_text = TextFile(file_or_text)
+        self.file = file_or_text
+        self.text = file_or_text.text
         self._text_offset = text_offset
         self._last_comment_line = 0
         self.curr_pos = init_pos
@@ -178,7 +193,7 @@ class Scanner:
     def _get_char(self):
         if self._text_offset >= len(self.text):
             return EOF
-        ch = self.text[self._text_offset] 
+        ch = self.text[self._text_offset]
         self._text_offset += 1
         self.curr_pos.offset += 1
         if ch == '\n':
@@ -205,10 +220,9 @@ class Scanner:
         return text
 
     def _scan_hex_digit(self) -> int:
-        pos = self.curr_pos.clone()
         ch = self._get_char()
         if not _is_hex_digit(ch):
-            raise ScanError(ch, pos)
+            raise ScanError(self.file, ch, self._text_offset)
         return int(ch, 16)
 
     def _scan_escapable_char(self) -> str:
@@ -285,60 +299,60 @@ class Scanner:
         if doc_comment:
             assert(doc_comment_start_pos is not None)
             assert(doc_comment_end_pos is not None)
-            return Token(TT_COMMENT, (doc_comment_start_pos, doc_comment_end_pos), dedent(doc_comment))
+            return Token(TT_COMMENT, Span(doc_comment_start_pos.offset, doc_comment_end_pos.offset), dedent(doc_comment))
 
         if c0 == EOF:
-            return Token(TT_EOF, (self.curr_pos.clone(), self.curr_pos.clone()))
+            return Token(TT_EOF, Span(self._text_offset, self._text_offset))
 
         if c0 == '\'':
-            start_pos = self.curr_pos.clone()
+            start_offset = self._text_offset
             self._get_char()
             text = ''
             escaping = False
             while True:
-                pos1 = self.curr_pos.clone()
+                offset1 = self._text_offset
                 c1 = self._get_char()
                 if escaping:
                     if c1 in _ascii_escape_chars:
                         text += _ascii_escape_chars[c1]
                     else:
-                        raise ScanError(c1, pos1)
+                        raise ScanError(self.file, c1, offset1)
                     escaping = False
                 else:
                     if c1 == EOF:
-                        raise ScanError(EOF, pos1);
+                        raise ScanError(self.file, EOF, offset1);
                     elif c1 == '\\':
                         escaping = True
                     elif c1 == '\'':
                         break
                     else:
                         text += c1
-            end_pos = self.curr_pos.clone()
-            return Token(TT_STR, (start_pos, end_pos), text)
+            end_offset = self._text_offset
+            return Token(TT_STR, Span(start_offset, end_offset), text)
 
         if c0 in _simple_tokens:
-            start_pos = self.curr_pos.clone()
+            start_offset = self._text_offset
             self._get_char()
-            end_pos = self.curr_pos.clone()
-            return Token(_simple_tokens[c0], (start_pos, end_pos))
+            end_offset = self._text_offset
+            return Token(_simple_tokens[c0], Span(start_offset, end_offset))
 
         if c0 == '%':
-            start_pos = self.curr_pos.clone()
+            start_offset = self._text_offset
             self._get_char()
-            end_pos = self.curr_pos.clone()
-            return Token(TT_PERC, (start_pos, end_pos))
+            end_offset = self._text_offset
+            return Token(TT_PERC, Span(start_offset, end_offset))
 
         if is_operator_part(c0):
-            start_pos = self.curr_pos.clone()
+            start_offset = self._text_offset
             self._get_char()
             text = c0 + self._take_while(is_operator_part)
-            end_pos = self.curr_pos.clone()
+            end_offset = self._text_offset
             if text not in _operator_to_token_type:
-                raise ScanError(text, start_pos)
-            return Token(_operator_to_token_type[text], (start_pos, end_pos))
+                raise ScanError(self.file, text, start_offset)
+            return Token(_operator_to_token_type[text], Span(start_offset, end_offset))
 
         if c0 == '[':
-            start_pos = self.curr_pos.clone()
+            start_offset = self._text_offset
             self._get_char()
             elements = []
             while True:
@@ -347,12 +361,12 @@ class Scanner:
                     break
                 c1 = self._scan_escapable_char()
                 if c1 == EOF:
-                    raise ScanError(c1, self.curr_pos.clone())
+                    raise ScanError(self.file, c1, self._text_offset)
                 if self._peek_char() == '-':
                     self._get_char()
                     c2 = self._scan_escapable_char()
                     if c2 == EOF:
-                        raise ScanError(c2, self.curr_pos.clone())
+                        raise ScanError(self.file, c2, self._text_offset)
                     elements.append((c1, c2))
                 else:
                     elements.append(c1)
@@ -361,23 +375,23 @@ class Scanner:
             if c4 == 'i':
                 self._get_char()
                 ci = True
-            end_pos = self.curr_pos.clone()
-            return Token(TT_CHARSET, (start_pos, end_pos), (elements, ci))
+            end_offset = self._text_offset
+            return Token(TT_CHARSET, Span(start_offset, end_offset), (elements, ci))
 
         if c0.isdigit():
-            start_pos = self.curr_pos.clone()
+            start_offset = self._text_offset
             self._get_char()
             digits = c0 + self._take_while(lambda ch: ch.isdigit())
-            end_pos = self.curr_pos.clone()
-            return Token(TT_INT, (start_pos, end_pos), int(digits))
+            end_offset = self._text_offset
+            return Token(TT_INT, Span(start_offset, end_offset), int(digits))
 
         if c0.isalpha() or c0 == '_':
-            start_pos = self.curr_pos.clone()
+            start_offset = self._text_offset
             self._get_char()
             text = c0 + self._take_while(lambda ch: ch.isalnum() or ch == '_')
-            end_pos = self.curr_pos.clone()
+            end_offset = self._text_offset
             if text in _keyword_to_token_type:
-                return Token(_keyword_to_token_type[text], (start_pos, end_pos), None)
-            return Token(TT_IDENT, (start_pos, end_pos), text)
+                return Token(_keyword_to_token_type[text], Span(start_offset, end_offset), None)
+            return Token(TT_IDENT, Span(start_offset, end_offset), text)
 
-        raise ScanError(c0, self.curr_pos.clone())
+        raise ScanError(self.file, c0, self._text_offset)

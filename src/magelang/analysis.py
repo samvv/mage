@@ -76,7 +76,7 @@ def is_tokenizable(grammar: MageGrammar, diagnostics: Diagnostics) -> bool:
 
     def has_token_fragment(expr: MageExpr) -> bool:
         if isinstance(expr, MageCharSetExpr) or isinstance(expr, MageLitExpr):
-            diagnostics.add(Diagnostic(Severity.warn, grammar.file, expr.span, "this lexical expression inside a parse rule forces the grammar to merge parser and lexer"))
+            diagnostics.add(Diagnostic(Severity.warn, "this lexical expression inside a parse rule forces the grammar to merge parser and lexer", grammar.file, expr.span))
             return True
         elif isinstance(expr, MageSeqExpr) or isinstance(expr, MageChoiceExpr):
             return any(has_token_fragment(element) for element in expr.elements)
@@ -88,7 +88,7 @@ def is_tokenizable(grammar: MageGrammar, diagnostics: Diagnostics) -> bool:
             rule = grammar.lookup(expr.name)
             if rule is None:
                 # We assume the worst and will report this as a token fragment
-                diagnostics.add(Diagnostic(Severity.warn, grammar.file, expr.span, "due to this undefined rule we assume the parser and lexer need to be merged"))
+                diagnostics.add(Diagnostic(Severity.warn, "due to this undefined rule we assume the parser and lexer need to be merged", grammar.file, expr.span))
                 return True
             if rule.expr is None:
                 # FIXME Do we need to check rule.is_public here?

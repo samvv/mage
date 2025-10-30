@@ -1,5 +1,6 @@
 
 from collections import deque
+from collections.abc import Sequence
 from typing import cast
 
 from .ast import *
@@ -7,9 +8,10 @@ from .scanner import *
 
 class ParseError(RuntimeError):
 
-    def __init__(self, actual: Token, expected: list[TokenType]) -> None:
-        start_pos = actual.span[0]
-        super().__init__(f"{start_pos.line}:{start_pos.column}: got {token_type_descriptions[actual.type]} but expected something else")
+    def __init__(self, file: TextFile, actual: Token, expected: Sequence[TokenType]) -> None:
+        start_line = file.get_line(actual.span.start)
+        start_column = file.get_column(actual.span.start)
+        super().__init__(f"{file.filename}:{start_line}:{start_column}: got {token_type_descriptions[actual.type]} but expected something else")
         self.actual = actual
         self.expected = expected
 
@@ -59,16 +61,17 @@ class Parser:
     def _expect_token(self, expected: TokenType) -> Token:
         t0 = self._peek_token()
         if t0.type != expected:
-            raise ParseError(t0, [ expected ])
+            raise ParseError(self.file, t0, [ expected ])
         return self._get_token()
 
     def _get_ident(self) -> Token:
         token = self._peek_token();
         if not _is_ident(token):
-            raise ParseError(token, _tt_ident)
+            raise ParseError(self.file, token, _tt_ident)
         return self._get_token()
 
     def _parse_prim_expr(self) -> MageExpr:
+        start_offset = self._peek_token().span.start
         label = None
         decorators = []
         while True:
@@ -86,7 +89,7 @@ class Parser:
                     while True:
                         t3 = self._get_token()
                         if t3.type not in [ TT_IDENT, TT_INT ]:
-                            raise ParseError(t3, [ TT_IDENT, TT_INT ])
+                            raise ParseError(self.file, t3, [ TT_IDENT, TT_INT ])
                         args.append(t3.value)
                         t4 = self._get_token()
                         if t4.type == TT_COMMA:
@@ -94,7 +97,7 @@ class Parser:
                         elif t4.type == TT_RBRACE:
                             break
                         else:
-                            raise ParseError(t4, [ TT_COMMA, TT_RBRACE ])
+                            raise ParseError(self.file, t4, [ TT_COMMA, TT_RBRACE ])
                         args.append(t3.value)
             decorators.append(Decorator(cast(str, name.value), args))
         t1 = self._peek_token(1)
@@ -110,7 +113,7 @@ class Parser:
                 t0 = self._peek_token()
             self._get_token()
             elements, ci = cast(tuple[list, bool], t0.value)
-            expr = MageCharSetExpr(elements=elements, ci=ci, invert=invert)
+            expr = MageCharSetExpr(elements=elements, ci=ci, invert=invert, span=Span(start_offset, t0.span.end))
         elif t0.type == TT_LPAREN:
             self._get_token()
             expr = self.parse_expr()
@@ -119,6 +122,7 @@ class Parser:
             name = token_to_string(t0)
             module_path = []
             self._get_token()
+            end_offset = t0.span.end
             while True:
                 t3 = self._peek_token(0)
                 t4 = self._peek_token(1)
@@ -126,15 +130,16 @@ class Parser:
                     break
                 self._get_token()
                 self._get_token()
+                end_offset = t4.span.end
                 module_path.append(name)
                 name = token_to_string(t4)
-            expr = MageRefExpr(name=name, module_path=module_path)
+            expr = MageRefExpr(name=name, module_path=module_path, span=Span(start_offset, end_offset))
         elif t0.type == TT_STR:
             self._get_token()
             assert(isinstance(t0.value, str))
-            expr = MageLitExpr(text=t0.value)
+            expr = MageLitExpr(text=t0.value, span=t0.span)
         else:
-            raise ParseError(t0, [ TT_LBRACE, TT_LPAREN, TT_IDENT, TT_STR ])
+            raise ParseError(self.file, t0, [ TT_LBRACE, TT_LPAREN, TT_IDENT, TT_STR ])
         if label is not None:
             expr.label = label.value
         expr.decorators.extend(decorators)
@@ -153,32 +158,34 @@ class Parser:
                 self._get_token()
                 count += 1
             separator = self._parse_prim_expr()
-            return MageListExpr(element=element, separator=separator, min_count=count)
+            return MageListExpr(element=element, separator=separator, min_count=count, span=Span(t0.span.start, nonnull(separator.span).end))
         return element
 
     def _parse_expr_with_prefixes(self) -> MageExpr:
-        tokens = []
+        tokens = list[Token]()
         while True:
             t0 = self._peek_token()
             if not _is_prefix_operator(t0.type):
                 break
             self._get_token()
-            tokens.append(t0.type)
+            tokens.append(t0)
         expr = self._parse_maybe_list_expr()
-        for ty in reversed(tokens):
-            if ty == TT_EXCL:
-                expr = MageLookaheadExpr(expr=expr, is_negated=True)
-            elif ty == TT_EXCL:
-                expr = MageLookaheadExpr(expr=expr, is_negated=False)
-            elif ty == TT_SLASH:
-                expr = MageHideExpr(expr=expr)
+        for token in reversed(tokens):
+            span = Span(token.span.start, nonnull(expr.span).end)
+            if token.type == TT_EXCL:
+                expr = MageLookaheadExpr(expr=expr, is_negated=True, span=span)
+            elif token.type == TT_EXCL:
+                expr = MageLookaheadExpr(expr=expr, is_negated=False, span=span)
+            elif token.type == TT_SLASH:
+                expr = MageHideExpr(expr=expr, span=span)
             else:
-                raise RuntimeError(f'unexpected token type {token_type_descriptions[ty]}')
+                raise RuntimeError(f'unexpected token type {token_type_descriptions[token.type]}')
         return expr
 
     def _parse_expr_with_suffixes(self) -> MageExpr:
         t0 = self._peek_token(0)
         t1 = self._peek_token(1)
+        start_offset = t0.span.start
         label = None
         if _is_ident(t0) and t1.type == TT_COLON:
             label = t0.value
@@ -189,13 +196,13 @@ class Parser:
             t1 = self._peek_token()
             if t1.type == TT_PLUS:
                 self._get_token()
-                expr = MageRepeatExpr(min=1, max=POSINF, expr=expr)
+                expr = MageRepeatExpr(min=1, max=POSINF, expr=expr, span=Span(start_offset, t1.span.end))
             elif t1.type == TT_STAR:
                 self._get_token()
-                expr = MageRepeatExpr(min=0, max=POSINF, expr=expr)
+                expr = MageRepeatExpr(min=0, max=POSINF, expr=expr, span=Span(start_offset, t1.span.end))
             elif t1.type == TT_QUEST:
                 self._get_token()
-                expr = MageRepeatExpr(min=0, max=1, expr=expr)
+                expr = MageRepeatExpr(min=0, max=1, expr=expr, span=Span(start_offset, t1.span.end))
             elif t1.type == TT_LBRACE:
                 self._get_token()
                 min = cast(int, self._expect_token(TT_INT).value)
@@ -208,8 +215,8 @@ class Parser:
                     if t3.type == TT_INT:
                         self._get_token()
                         max = cast(int, t3.value)
-                self._expect_token(TT_RBRACE)
-                expr = MageRepeatExpr(min=min, max=max, expr=expr)
+                t4 = self._expect_token(TT_RBRACE)
+                expr = MageRepeatExpr(min=min, max=max, expr=expr, span=Span(start_offset, t4.span.end))
             else:
                 break
         expr.label = label
@@ -217,6 +224,8 @@ class Parser:
 
     def _lookahead_is_module_element(self) -> bool:
         i = 0
+
+        # Skip decorators
         while True:
             t0 = self._peek_token(i)
             if t0.type != TT_AT:
@@ -230,6 +239,8 @@ class Parser:
                     if t2.type == TT_RBRACE:
                         i += 1
                         break
+
+        # Determine whether we enounter a rule
         t0 = self._peek_token(i)
         t1 = self._peek_token(i+1)
         t2 = self._peek_token(i+2)
@@ -246,7 +257,7 @@ class Parser:
             elements.append(self._parse_expr_with_suffixes())
         if len(elements) == 1:
             return elements[0]
-        return MageSeqExpr(elements=elements)
+        return MageSeqExpr(elements=elements, span=Span(nonnull(elements[0].span).start, nonnull(elements[-1].span).end))
 
     def parse_expr(self) -> MageExpr:
         elements = [ self._parse_expr_sequence() ]
@@ -258,7 +269,7 @@ class Parser:
             elements.append(self._parse_expr_sequence())
         if len(elements) == 1:
             return elements[0]
-        return MageChoiceExpr(elements=elements)
+        return MageChoiceExpr(elements=elements, span=Span(nonnull(elements[0].span).start, nonnull(elements[-1].span).end))
 
     def _parse_comment(self) -> str | None:
         i = 0
@@ -272,10 +283,13 @@ class Parser:
             i += 1
         if comment is None:
             return None
-        return comment.value if comment.span[1].line == token.span[0].line-1 else None
+        comment_start_line = self.file.get_line(token.span.start)
+        comment_end_line = self.file.get_line(comment.span.end)
+        return comment.value if comment_end_line == comment_start_line-1 else None
 
     def parse_rule(self) -> MageRule:
         comment = self._parse_comment()
+        start_offset = self._peek_token().span.start
         decorators = []
         while True:
             t1 = self._peek_token()
@@ -296,18 +310,20 @@ class Parser:
             flags |= FORCE_TOKEN
             t1 = self._get_token()
         if not _is_ident(t1):
-            raise ParseError(t1, [ TT_IDENT ])
+            raise ParseError(self.file, t1, [ TT_IDENT ])
+        end_offset = t1.span.end
         assert(isinstance(t1.value, str))
         t3 = self._peek_token()
         type_name = string_rule_type
         if t3.type == TT_RARROW:
             self._get_token()
+            end_offset = t3.span.end
             type_name = token_to_string(self._get_ident())
         if flags & EXTERN:
-            return MageRule(name=t1.value, expr=None, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
+            return MageRule(name=t1.value, expr=None, comment=comment, decorators=decorators, flags=flags, type_name=type_name, span=Span(start_offset, end_offset))
         self._expect_token(TT_EQUAL)
         expr = self.parse_expr()
-        return MageRule(name=t1.value, expr=expr, comment=comment, decorators=decorators, flags=flags, type_name=type_name)
+        return MageRule(name=t1.value, expr=expr, comment=comment, decorators=decorators, flags=flags, type_name=type_name, span=Span(start_offset, nonnull(expr.span).end))
 
     def _peek_token_after_modifiers(self) -> Token:
         i = 0
@@ -327,8 +343,8 @@ class Parser:
         name = cast(str, self._expect_token(TT_IDENT).value)
         self._expect_token(TT_LBRACE)
         elements = self._parse_elements()
-        self._expect_token(TT_RBRACE)
-        return MageModule(name=name, elements=elements)
+        t4 = self._expect_token(TT_RBRACE)
+        return MageModule(name=name, elements=elements, span=Span(t0.span.start, t4.span.end))
 
     def parse_element(self) -> MageModuleElement:
         t0 = self._peek_token_after_modifiers()
@@ -347,5 +363,10 @@ class Parser:
         return elements
 
     def parse_grammar(self) -> MageGrammar:
-        return MageGrammar(self._parse_elements(), self.file)
+        return MageGrammar(
+            self._parse_elements(),
+            self.file,
+            span=Span(0, len(self.file.text))
+        )
+
 

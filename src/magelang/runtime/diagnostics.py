@@ -5,6 +5,7 @@ from enum import IntEnum
 import math
 from typing import Protocol
 
+from magelang.util import unreachable
 from magelang.runtime.text import Span, TextFile
 
 __all__ = [
@@ -30,9 +31,9 @@ class Severity(IntEnum):
 @dataclass
 class Diagnostic:
     severity: Severity
-    file: TextFile
-    span: Span
     message: str
+    file: TextFile | None = None
+    span: Span | None = None
 
 
 ANSI_BOLD        = '\u001b[1m'
@@ -68,12 +69,12 @@ def print_excerpt(text: TextFile | str, span: Span, lines_pre=1, lines_post=1, g
 
     out = ''
 
-    start_line = text.get_line(span[0])
-    end_line = text.get_line(span[1])
+    start_line = text.get_line(span.start)
+    end_line = text.get_line(span.end)
     start_line_offset = text.get_offset(start_line)
     end_line_offset = text.get_offset(end_line+1)
-    start_column = span[0] - start_line_offset + 1
-    end_column = span[1] - text.get_offset(end_line) + 1
+    start_column = span.start - start_line_offset + 1
+    end_column = span.end - text.get_offset(end_line) + 1
     pre_line = max(start_line-lines_pre, 1)
     pre_offset = text.get_offset(pre_line)
     post_offset = text.get_offset(end_line+lines_post+1)
@@ -167,5 +168,5 @@ class ConsoleDiagnostics(Diagnostics):
         else:
             unreachable()
         print(ANSI_BOLD + color + tag + ANSI_RESET + ': ' + diagnostic.message)
-        if diagnostic.span is not None:
+        if diagnostic.file is not None and diagnostic.span is not None:
             print_excerpt(diagnostic.file, diagnostic.span)
