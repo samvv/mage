@@ -65,11 +65,9 @@ def apply(ctx: Context, input: _T, pass_: Pass[_T, _R]) -> _R:
     def get_dependency(name: str, ty: type | None, default: Option[Any]) -> Any:
         if ty is Context:
             return ctx
-        if ty is None or ty is bool or ty is str or ty is float or ty is int:
-            if is_nothing(default) and not ctx.has_option(name):
-                panic(f"Option {name} has no default and is not provided.")
-            return ctx.get_option(name, to_maybe_none(default))
-        panic(f"Trying to inject an unknown type {ty} in {pass_}")
+        if is_nothing(default) and not ctx.has_option(name):
+            panic(f"Option {name} has no default and no value is provided.")
+        return ctx.get_option(name, to_maybe_none(default))
 
     def apply_inject(fn: Returns[_Y], *in_args, **in_kwargs) -> _Y:
 
