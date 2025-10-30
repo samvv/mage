@@ -23,8 +23,9 @@ def _is_ident(token: Token) -> bool:
 
 class Parser:
 
-    def __init__(self, scanner: Scanner) -> None:
+    def __init__(self, scanner: Scanner, file: TextFile) -> None:
         self.scanner = scanner
+        self.file = file
         self._token_buffer = deque()
 
     def _get_token_with_comment(self) -> Token:
@@ -346,5 +347,5 @@ class Parser:
         return elements
 
     def parse_grammar(self) -> MageGrammar:
-        return MageGrammar(self._parse_elements())
+        return MageGrammar(self._parse_elements(), self.file)
 

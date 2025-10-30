@@ -9,11 +9,12 @@ from typing import Self, TypedDict, Unpack
 from dataclasses import dataclass
 import sys
 from functools import lru_cache
-from typing import Any, Callable, Generator, Iterable, TypeGuard, TypeIs, TypeVar, assert_never, cast
+from typing import Any, Callable, Generator, Iterable, TypeGuard, TypeIs, assert_never, cast
 import typing
 from intervaltree import Interval, IntervalTree
 
 from magelang.logging import debug
+from magelang.runtime import Span, TextFile
 from magelang.util import nonnull
 
 from .constants import string_rule_type
@@ -23,6 +24,11 @@ ASCII_MAX = 0x7F
 
 
 class MageNodeBase:
+
+    span: Span | None
+
+    def __init__(self, span: Span | None = None) -> None:
+        self.span = span
 
     @property
     def grammar(self) -> 'MageGrammar':
@@ -76,8 +82,10 @@ class MageExprBase(MageNodeBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
-        decorators: list['Decorator'] | None = None
+        decorators: list['Decorator'] | None = None,
+        span: Span | None = None
     ) -> None:
+        super().__init__(span)
         if actions is None:
             actions = []
         if decorators is None:
@@ -100,6 +108,7 @@ class MageLitExprDeriveArgs(TypedDict, total=False):
     label: str | None
     actions: list['Action']
     decorators: list['Decorator']
+    span: Span | None
 
 
 class MageLitExpr(MageExprBase):
@@ -112,9 +121,10 @@ class MageLitExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
-        decorators: list['Decorator'] | None = None
+        decorators: list['Decorator'] | None = None,
+        span: Span | None = None,
     ) -> None:
-        super().__init__(label, actions, parent, decorators)
+        super().__init__(label, actions, parent, decorators, span)
         self.text = text
 
     def set_parents(self) -> None:
@@ -129,6 +139,8 @@ class MageRefExprDeriveArgs(TypedDict, total=False):
     label: str | None
     actions: list['Action']
     decorators: list['Decorator']
+    span: Span | None
+
 
 class MageRefExpr(MageExprBase):
 
@@ -141,9 +153,10 @@ class MageRefExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
-        decorators: list['Decorator'] | None = None
+        decorators: list['Decorator'] | None = None,
+        span: Span | None = None
     ) -> None:
-        super().__init__(label, actions, parent, decorators)
+        super().__init__(label, actions, parent, decorators, span)
         if module_path is None:
             module_path = []
         self.name = name
@@ -162,6 +175,7 @@ class MageLookaheadExprDeriveArgs(TypedDict, total=False):
     label: str | None
     actions: list['Action']
     decorators: list['Decorator']
+    span: Span | None
 
 
 class MageLookaheadExpr(MageExprBase):
@@ -176,9 +190,10 @@ class MageLookaheadExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
-        decorators: list['Decorator'] | None = None
+        decorators: list['Decorator'] | None = None,
+        span: Span | None = None
     ) -> None:
-        super().__init__(label, actions, parent, decorators)
+        super().__init__(label, actions, parent, decorators, span)
         self.expr = expr
         self.is_negated = is_negated
         self.set_parents()
@@ -208,6 +223,7 @@ class MageCharSetExprDeriveArgs(TypedDict, total=False):
     label: str | None
     actions: list['Action']
     decorators: list['Decorator']
+    span: Span | None
 
 
 class MageCharSetExpr(MageExprBase):
@@ -224,9 +240,10 @@ class MageCharSetExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
-        decorators: list['Decorator'] | None = None
+        decorators: list['Decorator'] | None = None,
+        span: Span | None = None
     ) -> None:
-        super().__init__(label, actions, parent, decorators)
+        super().__init__(label, actions, parent, decorators, span)
         self.ci = ci
         self.invert = invert
         self.elements = []
@@ -328,6 +345,7 @@ class MageChoiceExprDeriveArgs(TypedDict, total=False):
     label: str | None
     actions: list['Action']
     decorators: list['Decorator']
+    span: Span | None
 
 
 class MageChoiceExpr(MageExprBase):
@@ -340,9 +358,10 @@ class MageChoiceExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
-        decorators: list['Decorator'] | None = None
+        decorators: list['Decorator'] | None = None,
+        span: Span | None = None
     ) -> None:
-        super().__init__(label, actions, parent, decorators)
+        super().__init__(label, actions, parent, decorators, span)
         self.elements = elements
         self.set_parents()
 
@@ -359,6 +378,7 @@ class MageSeqExprDeriveArgs(TypedDict, total=False):
     label: str | None
     actions: list['Action']
     decorators: list['Decorator']
+    span: Span | None
 
 
 class MageSeqExpr(MageExprBase):
@@ -371,9 +391,10 @@ class MageSeqExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
-        decorators: list['Decorator'] | None = None
+        decorators: list['Decorator'] | None = None,
+        span: Span | None = None
     ) -> None:
-        super().__init__(label, actions, parent, decorators)
+        super().__init__(label, actions, parent, decorators, span)
         self.elements = elements
         self.set_parents()
 
@@ -392,6 +413,7 @@ class MageListExprDeriveArgs(TypedDict, total=False):
     label: str | None
     actions: list['Action']
     decorators: list['Decorator']
+    span: Span | None
 
 
 class MageListExpr(MageExprBase):
@@ -408,9 +430,10 @@ class MageListExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
-        decorators: list['Decorator'] | None = None
+        decorators: list['Decorator'] | None = None,
+        span: Span | None = None
     ) -> None:
-        super().__init__(label, actions, parent, decorators)
+        super().__init__(label, actions, parent, decorators, span)
         self.element = element
         self.separator = separator
         self.min_count = min_count
@@ -429,6 +452,7 @@ class MageHideExprDeriveArgs(TypedDict, total=False):
     label: str | None
     actions: list['Action']
     decorators: list['Decorator']
+    span: Span | None
 
 
 class MageHideExpr(MageExprBase):
@@ -441,9 +465,10 @@ class MageHideExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
-        decorators: list['Decorator'] | None = None
+        decorators: list['Decorator'] | None = None,
+        span: Span | None = None
     ) -> None:
-        super().__init__(label, actions, parent, decorators)
+        super().__init__(label, actions, parent, decorators, span)
         self.expr = expr
         self.set_parents()
 
@@ -464,6 +489,7 @@ class MageRepeatExprDeriveArgs(TypedDict, total=False):
     label: str | None
     actions: list['Action']
     decorators: list['Decorator']
+    span: Span | None
 
 
 class MageRepeatExpr(MageExprBase):
@@ -480,8 +506,10 @@ class MageRepeatExpr(MageExprBase):
         label: str | None = None,
         actions: list['Action'] | None = None,
         parent: 'MageExprParent | None' = None,
+        decorators: list['Decorator'] | None = None,
+        span: Span | None = None
     ) -> None:
-        super().__init__(label, actions, parent)
+        super().__init__(label, actions, parent, decorators, span)
         self.expr = expr
         self.min = min
         self.max = max
@@ -497,6 +525,7 @@ class MageRepeatExpr(MageExprBase):
 class DecoratorDeriveArgs(TypedDict, total=False):
     name: str
     args: list[str | int]
+    span: Span | None
 
 
 class Decorator(MageNodeBase):
@@ -507,9 +536,10 @@ class Decorator(MageNodeBase):
     def __init__(
         self,
         name: str,
-        args: list[str | int] | None = None
+        args: list[str | int] | None = None,
+        span: Span | None = None
     ) -> None:
-        super().__init__()
+        super().__init__(span)
         if args is None:
             args = []
         self.name = name
@@ -533,6 +563,8 @@ class MageRuleDeriveArgs(TypedDict, total=False):
     name: str
     type_name: str
     mode: int
+    span: Span | None
+
 
 class MageRule(MageNodeBase):
 
@@ -554,9 +586,10 @@ class MageRule(MageNodeBase):
         flags: int = 0,
         type_name: str = string_rule_type,
         mode: int = 0,
-        parent: 'MageModule | MageGrammar | None' = None
+        parent: 'MageModule | MageGrammar | None' = None,
+        span: Span | None = None
     ) -> None:
-        super().__init__()
+        super().__init__(span)
         if decorators is None:
             decorators = []
         self.comment = comment
@@ -622,8 +655,12 @@ class MageModuleBase(MageNodeBase):
 
     elements: list[MageModuleElement]
 
-    def __init__(self, elements: 'list[MageModuleElement] | None' = None) -> None:
-        super().__init__()
+    def __init__(
+        self,
+        elements: 'list[MageModuleElement] | None' = None,
+        span: Span | None = None
+    ) -> None:
+        super().__init__(span)
         if elements is None:
             elements = []
         self.elements = elements
@@ -715,6 +752,7 @@ class MageModuleDeriveArgs(TypedDict, total=False):
     name: str
     elements: list[MageModuleElement]
     flags: int
+    span: Span | None
 
 
 class MageModule(MageModuleBase):
@@ -727,9 +765,10 @@ class MageModule(MageModuleBase):
         name: str,
         elements: 'list[MageRule | MageModule]',
         flags: int = 0,
-        parent: 'MageModule | MageGrammar | None' = None
+        parent: 'MageModule | MageGrammar | None' = None,
+        span: Span | None = None
     ) -> None:
-        super().__init__(elements)
+        super().__init__(elements, span)
         self.name = name
         self.flags = flags
         self.parent = parent
@@ -745,14 +784,22 @@ class MageModule(MageModuleBase):
 
 class MageGrammarDeriveArgs(TypedDict, total=False):
     elements: list[MageRule | MageModule]
+    file: TextFile | None
+    span: Span | None
+
 
 class MageGrammar(MageModuleBase):
+
+    file: TextFile | None
 
     def __init__(
         self,
         elements: 'list[MageRule | MageModule] | None' = None,
+        file: TextFile | None = None,
+        span: Span | None = None
     ) -> None:
-        super().__init__(elements)
+        super().__init__(elements, span)
+        self.file = file
         self.parent = None
         self.set_parents()
 
@@ -821,9 +868,7 @@ def rewrite_each_child_expr(expr: MageExpr, proc: Callable[[MageExpr], MageExpr]
         return MageSeqExpr(elements=new_elements, actions=expr.actions, label=expr.label, parent=expr.parent)
     assert_never(expr)
 
-_T = TypeVar('_T', bound=MageGrammar | MageModule)
-
-def rewrite_each_rule(node: _T, proc: Callable[[MageRule], MageRule]) -> _T:
+def rewrite_each_rule[T: MageGrammar | MageModule](node: T, proc: Callable[[MageRule], MageRule]) -> T:
     new_elements = list[MageModuleElement]()
     for element in node.elements:
         if isinstance(element, MageRule):
@@ -832,7 +877,7 @@ def rewrite_each_rule(node: _T, proc: Callable[[MageRule], MageRule]) -> _T:
             new_elements.append(rewrite_each_rule(element, proc))
         else:
             assert_never(element)
-    return cast(_T, node.derive(elements=new_elements))
+    return cast(T, node.derive(elements=new_elements))
 
 def rewrite_each_expr(grammar: MageGrammar, proc: Callable[[MageExpr], MageExpr]) -> MageGrammar:
     def rewrite_rule(rule: MageRule) -> MageRule:
@@ -841,7 +886,7 @@ def rewrite_each_expr(grammar: MageGrammar, proc: Callable[[MageExpr], MageExpr]
         return rule.derive(expr=proc(rule.expr))
     return rewrite_each_rule(grammar, rewrite_rule)
 
-def rewrite_module(module: _T, proc: Callable[[MageModuleElement], MageModuleElement]) -> _T:
+def rewrite_module[T: MageGrammar | MageModule](module: T, proc: Callable[[MageModuleElement], MageModuleElement]) -> T:
     new_elements = []
     changed = False
     for element in module.elements:
@@ -851,7 +896,7 @@ def rewrite_module(module: _T, proc: Callable[[MageModuleElement], MageModuleEle
         new_elements.append(new_element)
     if not changed:
         return module
-    return cast(_T, module.derive(elements=new_elements))
+    return cast(T, module.derive(elements=new_elements))
 
 def for_each_direct_child_expr(node: MageExpr, proc: Callable[[MageExpr], None]) -> None:
     """
