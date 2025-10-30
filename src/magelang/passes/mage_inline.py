@@ -8,7 +8,9 @@ def mage_inline(grammar: MageGrammar) -> MageGrammar:
 
     def rewrite_expr(expr: MageExpr) -> MageExpr:
         if isinstance(expr, MageRefExpr):
-            rule = nonnull(lookup_ref(expr))
+            rule = lookup_ref(expr)
+            if rule is None:
+                return expr
             assert(isinstance(rule, MageRule))
             if rule is None or rule.is_public or rule.is_extern or rule.expr is None:
                 return expr
