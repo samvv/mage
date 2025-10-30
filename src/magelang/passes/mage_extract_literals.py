@@ -6,16 +6,18 @@ from magelang.eval import SUCCESS, accepts
 from magelang.lang.mage.ast import *
 from magelang.analysis import is_tokenizable
 from magelang.manager import declare_pass
+from magelang.runtime import Diagnostics
 
 T = TypeVar('T', bound=MageGrammar | MageModule)
 
 @declare_pass()
 def mage_extract_literals(
     grammar: MageGrammar,
+    diagnostics: Diagnostics,
     max_named_chars: int = 4,
 ) -> MageGrammar:
 
-    enable_tokens = is_tokenizable(grammar)
+    enable_tokens = is_tokenizable(grammar, diagnostics)
 
     def rewrite_module(node: T) -> T:
 

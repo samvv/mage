@@ -5,6 +5,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Literal
 from magelang.logging import error
+from magelang.runtime import ConsoleDiagnostics, Diagnostics
 from magelang.util import Files, load_py_file
 from .manager import *
 from .lang.mage import *
@@ -141,6 +142,10 @@ class GenerateConfig(TypedDict, total=False):
     The maximum amount of characters to give an explicit name before falling
     back to generating a special name.
     """
+    diagnostics: Diagnostics
+    """
+    The diagnostics reporter to use.
+    """
 
 def default_config(lang: TargetLanguage, is_debug: bool) -> GenerateConfig:
     return GenerateConfig(
@@ -161,6 +166,7 @@ def default_config(lang: TargetLanguage, is_debug: bool) -> GenerateConfig:
         enable_rewriter=True,
         enable_linecol=False,
         max_named_chars=4,
+        diagnostics=ConsoleDiagnostics(),
     )
 
 def generate_files(

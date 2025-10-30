@@ -6,6 +6,7 @@ from magelang.lang.mage.constants import string_rule_type, builtin_types
 from magelang.analysis import is_eof, is_tokenizable
 from magelang.lang.treespec.ast import ExternType, Type
 from magelang.manager import declare_pass
+from magelang.runtime import Diagnostics
 from magelang.util import NameGenerator
 
 # FIXME every expr may only peek or fork so that when there is an error, the stream can correctly be skipped
@@ -145,12 +146,13 @@ def _is_terminal(body: PyStmt | Sequence[PyStmt], in_loop: bool = True) -> bool:
 @declare_pass()
 def mage_to_python_parser(
     grammar: MageGrammar,
+    diagnostics: Diagnostics,
     prefix: str = '',
     emit_single_file: bool = False,
     silent: bool = False,
 ) -> PyModule:
 
-    enable_tokens = is_tokenizable(grammar)
+    enable_tokens = is_tokenizable(grammar, diagnostics)
     buffer_name = 'buffer'
     stream_type_name = 'ParseStream' if enable_tokens else 'CharStream'
 

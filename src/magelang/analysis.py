@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import math
 
+from magelang.runtime import Diagnostic, Diagnostics, Severity
 from magelang.util import SeqSet, nonnull, unreachable
 from magelang.graph import DGraph, toposort
 from magelang.lang.mage.ast import *
@@ -61,34 +62,45 @@ def is_eof(expr: MageExpr) -> bool:
     return isinstance(expr, MageCharSetExpr) and len(expr) == 0
 
 
-def is_tokenizable(grammar: MageGrammar) -> bool:
+@lru_cache
+def is_tokenizable(grammar: MageGrammar, diagnostics: Diagnostics) -> bool:
     """
     Check whether a grammar can be correctly tokenized.
+
+    Some grammars mix lexing rules within their parse rules. These grammars
+    have to be filtered out. An example of such a grammar can be found in the
+    MageDown grammar.
 
     When a rule is undefined, we assume the worst and this function will return `False`.
     """
 
-    def has_nontoken(expr: MageExpr) -> bool:
+    def has_token_fragment(expr: MageExpr) -> bool:
         if isinstance(expr, MageCharSetExpr) or isinstance(expr, MageLitExpr):
-            return False
-        if isinstance(expr, MageSeqExpr) or isinstance(expr, MageChoiceExpr):
-            return any(has_nontoken(element) for element in expr.elements)
-        if isinstance(expr, MageRepeatExpr) or isinstance(expr, MageHideExpr) or isinstance(expr, MageLookaheadExpr):
-            return has_nontoken(expr.expr)
-        if isinstance(expr, MageListExpr):
-            return has_nontoken(expr.element) or has_nontoken(expr.separator)
-        if isinstance(expr, MageRefExpr):
-            rule = grammar.lookup(expr.name)
-            if rule is None or rule.expr is None:
-                # We assume the worst and will report this as a nontoken
-                return True
-            if not rule.is_public:
-                return has_nontoken(rule.expr)
-            # Rule must be another token or a parse rule, which is invalid
+            diagnostics.add(Diagnostic(Severity.warn, grammar.file, expr.span, "this lexical expression inside a parse rule forces the grammar to merge parser and lexer"))
             return True
-        assert_never(expr)
+        elif isinstance(expr, MageSeqExpr) or isinstance(expr, MageChoiceExpr):
+            return any(has_token_fragment(element) for element in expr.elements)
+        elif isinstance(expr, MageRepeatExpr) or isinstance(expr, MageHideExpr) or isinstance(expr, MageLookaheadExpr):
+            return has_token_fragment(expr.expr)
+        elif isinstance(expr, MageListExpr):
+            return has_token_fragment(expr.element) or has_token_fragment(expr.separator)
+        elif isinstance(expr, MageRefExpr):
+            rule = grammar.lookup(expr.name)
+            if rule is None:
+                # We assume the worst and will report this as a token fragment
+                diagnostics.add(Diagnostic(Severity.warn, grammar.file, expr.span, "due to this undefined rule we assume the parser and lexer need to be merged"))
+                return True
+            if rule.expr is None:
+                # FIXME Do we need to check rule.is_public here?
+                return False
+            if not rule.is_public:
+                return has_token_fragment(rule.expr)
+            # When this is reached, rule must be another token or a parse rule
+            return False
+        else:
+            assert_never(expr)
 
-    return not any(has_nontoken(nonnull(rule.expr)) for rule in grammar.rules if grammar.is_parse_rule(rule))
+    return not any(rule.expr is not None and has_token_fragment(rule.expr) for rule in grammar.get_parse_rules())
 
 
 @lru_cache
