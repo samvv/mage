@@ -24,7 +24,7 @@ mage_prepare_grammar = pipeline(
     mage_hide_lookaheads,
     mage_inline,
     mage_extract_literals,
-    mage_to_core,
+    #mage_to_core,
 )
 python_optimise = pipeline(
     python_remove_pass_stmts,
