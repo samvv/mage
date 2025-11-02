@@ -618,15 +618,38 @@ class MageRule(MageNodeBase):
         return (self.flags & EXTERN) > 0
 
     @property
-    def is_token(self) -> bool:
-        return is_token(self)
+    def is_lex(self) -> bool:
+        """
+        Check if this rule is a lexing rule.
+
+        A lexing rule is any public rule that contains the `token` keyword.
+        """
+        return self.is_public and (self.flags & FORCE_TOKEN) > 0
 
     @property
-    def is_lexer_token(self) -> bool:
-        return (self.flags & FORCE_TOKEN) > 0
+    def is_parse(self) -> bool:
+        """
+        Check if this rule is a parse rule.
+
+        A parse rule is any public rule that misses the `token` keyword.
+        """
+        return self.is_public and (self.flags & FORCE_TOKEN) == 0
+
+    @property
+    def is_fragment(self) -> bool:
+        """
+        Check if this rule is merely a fragment.
+
+        Fragments are inlined into whatever rule references them, be it a parse
+        rule, a token rule or another fragment.
+        """
+        return not self.is_public
 
     @property
     def is_keyword(self) -> bool:
+        """
+        Check a virtual property that is used internally.
+        """
         return (self.flags & FORCE_KEYWORD) > 0
 
     def has_decorator(self, name: str) -> bool:
@@ -636,7 +659,7 @@ class MageRule(MageNodeBase):
         return False
 
     @property
-    def is_skip(self) -> bool:
+    def is_skip_def(self) -> bool:
         return self.has_decorator('skip')
 
     @property
@@ -682,31 +705,20 @@ class MageModuleBase(MageNodeBase):
     def rules(self) -> Iterable[MageRule]:
         return self._rules_by_name.values()
 
-    def is_fragment(self, rule: MageRule) -> bool:
-        return not rule.is_public
-
     @property
     @lru_cache
     def skip_rule(self) -> MageRule | None:
         for element in self.elements:
-            if isinstance(element, MageRule) and element.is_skip:
+            if isinstance(element, MageRule) and element.is_skip_def:
                 return element
 
     def is_token_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
-        return isinstance(element, MageRule) and element.is_token
+        return isinstance(element, MageRule) and element.is_public and element.is_lex
 
     def is_static_token_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
-        if not isinstance(element, MageRule) or element.is_extern:
-            return False
-        assert(element.expr is not None)
-        return is_static(element.expr)
-
-    def is_parse_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
-        if not isinstance(element, MageRule):
-            return False
-        if element.is_extern:
-            return not element.is_token
-        return element.is_public and not self.is_token_rule(element)
+        return self.is_token_rule(element) \
+            and not element.is_extern \
+            and is_static(nonnull(element.expr))
 
     def is_variant_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
         if not isinstance(element, MageRule) or element.is_extern or element.is_wrap:
@@ -737,7 +749,7 @@ class MageModuleBase(MageNodeBase):
 
     def get_parse_rules(self) -> Generator[MageRule, None, None]:
         for rule in self.rules:
-            if self.is_parse_rule(rule):
+            if rule.is_parse:
                 yield rule
 
     @property
@@ -1038,7 +1050,7 @@ def is_static(expr: MageExpr, visited: set[MageRule] | None = None) -> bool:
 def is_token(rule: MageRule, visited: set[MageRule] | None = None) -> bool:
     if visited is None:
         visited = set[MageRule]()
-    if rule.is_lexer_token:
+    if rule.is_lex:
         # A rule that was explicitly declared a token is always a token
         return True
     if rule.expr is None:

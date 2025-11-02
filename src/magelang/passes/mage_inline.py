@@ -22,7 +22,7 @@ def mage_inline(grammar: MageGrammar) -> MageGrammar:
         if isinstance(element, MageRule):
             if element.is_extern:
                 return element
-            if (element.is_public or element.is_skip) and element.expr is not None:
+            if (element.is_public or element.is_skip_def) and element.expr is not None:
                 new_expr = rewrite_expr(element.expr)
                 if new_expr is element.expr:
                     return element

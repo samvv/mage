@@ -283,7 +283,7 @@ def mage_to_python_parser(
                     yield from visit_field_internals(rule.expr, stream_name, target_name, accept, reject)
                     return
 
-                if grammar.is_parse_rule(rule):
+                if rule.is_parse:
                     method_name = get_parse_method_name(rule)
                     yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyNamedExpr(method_name), args=[ PyNamedExpr(stream_name) ]))
                     yield from gen_if_stmt(
@@ -578,10 +578,10 @@ def mage_to_python_parser(
 
         yield from visit_fields(nonnull(rule.expr), 'stream', return_struct, [ PyRetStmt() ])
 
-    for element in grammar.elements:
-        if not isinstance(element, MageRule) or not element.is_public:
+    for element in grammar.rules:
+        if not element.is_public:
             continue
-        if grammar.is_parse_rule(element) or (not enable_tokens and grammar.is_token_rule(element)):
+        if element.is_parse or (not enable_tokens and element.is_lex):
             stmts.append(PyFuncDef(
                 name=f'parse_{element.name}',
                 params=[ PyNamedParam(PyNamedPattern('stream'), annotation=PyNamedExpr(stream_type_name)) ],

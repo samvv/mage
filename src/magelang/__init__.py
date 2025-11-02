@@ -185,7 +185,7 @@ def generate_files(
         grammar = load_grammar(grammar)
 
     # FIXME enable_lexer is defined here but not propagated to Context
-    can_lexer_be_enabled = any(rule.is_lexer_token for rule in grammar.rules)
+    can_lexer_be_enabled = any(rule.is_lex for rule in grammar.rules)
     if nonnull(config.get('enable_lexer')) == YesNoAuto.AUTO:
         enable_lexer = can_lexer_be_enabled
     elif nonnull(config.get('enable_lexer')) == YesNoAuto.YES:
@@ -249,7 +249,7 @@ def generate_files(
 
     files = apply(ctx, grammar, pipeline(
         mage_prepare_grammar, # Inline rules etc
-        identity if skip_checks or silent else mage_check , # User error reporting
+        identity if skip_checks or silent else mage_check, # User error reporting
         mage_to_target # Actual compilation
     ))
 

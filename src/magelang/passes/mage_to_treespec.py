@@ -50,7 +50,7 @@ def mage_to_treespec(
     toplevel = []
 
     for rule in grammar.rules:
-        if rule.is_extern or grammar.is_fragment(rule) or rule.is_skip:
+        if rule.is_extern or rule.is_fragment or rule.is_skip_def:
             continue
         # only Rule(is_extern=True) can have an empty expression
         assert(rule.expr is not None)

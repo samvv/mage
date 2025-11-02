@@ -567,8 +567,8 @@ class mage_to_revolv_syntax_tree(PassBase):
 
             return visit(expr, None)
 
-        for rule in grammar.elements:
-            if grammar.is_token_rule(rule):
+        for rule in grammar.rules:
+            if rule.is_lex:
                 name_param_value = 'value'
                 name_field_value = 'value'
                 name_param_span = 'span'
@@ -601,7 +601,7 @@ class mage_to_revolv_syntax_tree(PassBase):
                     name=rename(rule.name),
                     variants=list(Variant(get_variant_name(element), infer_type(element)) for element in rule.expr.elements)
                 ))
-            elif grammar.is_parse_rule(rule):
+            elif rule.is_parse:
                 if rule.expr is None:
                     continue
                 specs = list(get_fields(rule.expr))

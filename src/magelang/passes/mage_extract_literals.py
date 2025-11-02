@@ -17,7 +17,9 @@ def mage_extract_literals(
     max_named_chars: int = 4,
 ) -> MageGrammar:
 
+    # FIXME this does not work
     enable_tokens = is_tokenizable(grammar, diagnostics)
+    print(f'{enable_tokens=}')
 
     def rewrite_module(node: T) -> T:
 
@@ -72,7 +74,7 @@ def mage_extract_literals(
 
         for element in node.elements:
             if isinstance(element, MageRule):
-                if node.is_parse_rule(element):
+                if element.is_parse:
                     assert(element.expr is not None)
                     new_rules.append(element.derive(expr=rewrite_expr(element.expr)))
                 else:

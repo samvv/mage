@@ -66,7 +66,7 @@ def emit(node: MageSyntax) -> str:
                 out.write('pub ')
             if node.is_extern:
                 out.write('extern ')
-            if node.is_lexer_token:
+            if node.is_lex:
                 out.write('token ')
             out.write(node.name)
             if node.type_name is not None:

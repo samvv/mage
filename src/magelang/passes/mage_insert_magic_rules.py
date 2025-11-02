@@ -30,7 +30,7 @@ def mage_insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
         ))
         syntax_rules.append(MageRefExpr(any_token_rule_name))
 
-    node_rules = list[MageExpr](MageRefExpr(rule.name) for rule in grammar.rules if grammar.is_parse_rule(rule) and not grammar.is_variant_rule(rule))
+    node_rules = list[MageExpr](MageRefExpr(rule.name) for rule in grammar.rules if rule.is_parse and not grammar.is_variant_rule(rule))
     if node_rules:
         new_elements.append(MageRule(
             name=any_node_rule_name,

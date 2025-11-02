@@ -65,11 +65,16 @@ def is_eof(expr: MageExpr) -> bool:
 @lru_cache
 def is_tokenizable(grammar: MageGrammar, diagnostics: Diagnostics) -> bool:
     """
+    Literals should have been extracted into their own token rules.
     Check whether a grammar can be correctly tokenized.
 
-    Some grammars mix lexing rules within their parse rules. These grammars
-    have to be filtered out. An example of such a grammar can be found in the
-    MageDown grammar.
+    This function assumes that the provided grammar has already been pre-processed.
+    Literals should have been extracted into their own token rules.
+
+    Some expressions mix lexing and parsing in such a way that they cannot be
+    cleanly seperated into separate tokens. Grammars containing such an
+    expression have to be filtered out. An example of such a grammar can be
+    found in the MageDown grammar.
 
     When a rule is undefined, we assume the worst and this function will return `False`.
     """
@@ -370,8 +375,8 @@ def get_lexer_modes(grammar: MageGrammar) -> dict[str, int]:
     modes = dict[str, int]()
 
     token_rules = SeqSet[MageRule]()
-    for rule in grammar.elements:
-        if grammar.is_token_rule(rule):
+    for rule in grammar.rules:
+        if rule.is_lex:
             token_rules.append(rule)
             modes[rule.name] = 0
 

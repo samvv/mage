@@ -174,9 +174,9 @@ def mage_to_python_emitter(
         PyNonlocalStmt([ out_name ]),
     ]
 
-    for rule in grammar.elements:
+    for rule in grammar.rules:
 
-        if grammar.is_token_rule(rule):
+        if rule.is_lex:
             if rule.expr is None:
                 # TODO cover this case
                 continue
@@ -194,7 +194,7 @@ def mage_to_python_emitter(
         elif grammar.is_variant_rule(rule):
            pass
 
-        elif grammar.is_parse_rule(rule):
+        elif rule.is_parse:
             assert(rule.expr is not None)
             if_body = []
             items = list(get_fields(rule.expr, include_hidden=include_hidden, grammar=grammar))
