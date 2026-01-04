@@ -18,6 +18,9 @@ Makefile
 build/
 dist/
 
+# managed py pyenv
+.python-version
+
 # do not track nightly builds as we dont use them
 /pkg/nightly/
 
