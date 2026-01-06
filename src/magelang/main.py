@@ -12,7 +12,7 @@ from magelang.runtime import CharStream
 from magelang.util import Files, Progress, load_py_file
 
 from .manager import Context, apply, compose, get_pass_by_name, identity
-from .logging import error, info
+from .logging import error, info, warn
 from .lang.mage.ast import *
 from .lang.mage.emitter import emit as mage_emit
 from .lang.mage.parser import Parser
