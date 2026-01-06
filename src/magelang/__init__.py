@@ -113,8 +113,8 @@ class GenerateConfig(TypedDict, total=False):
     """
     enable_lexer: YesNoAuto
     """
-    Set to `None` to automatically try to enable the lexer and fall back to
-    parsing without if the grammar does not support it.
+    Set to `YesNoAuto.AUTO` to automatically try to enable the lexer and fall
+    back to parsing without if the grammar does not support it.
     """
     enable_parser: bool
     """
