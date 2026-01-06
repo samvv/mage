@@ -31,9 +31,7 @@ python_optimise = pipeline(
 )
 
 def load_grammar(filename: Path | str) -> MageGrammar:
-    with open(filename, 'r') as f:
-        text = f.read()
-    file = TextFile(text, str(filename))
+    file = TextFile.load(filename)
     scanner = Scanner(file)
     parser = Parser(scanner, file)
     grammar = parser.parse_grammar()

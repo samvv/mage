@@ -94,11 +94,9 @@ def check(filename: Path | str, /) -> int:
     """
     Check the given grammar for common mistakes
     """
-    filename = Path(filename)
-    with open(filename, 'r') as f:
-        text = f.read()
-    scanner = Scanner(text, filename=str(filename))
-    parser = Parser(scanner)
+    file = TextFile.load(filename)
+    scanner = Scanner(file)
+    parser = Parser(scanner, file)
     grammar = parser.parse_grammar()
     opts = {}
     ctx = Context(opts)

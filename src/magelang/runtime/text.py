@@ -5,12 +5,21 @@ __all__ = [
 ]
 
 
+from pathlib import Path
+
+
 class TextFile:
 
-    def __init__(self, text, filename="#<anonymous>"):
+    def __init__(self, text: str, filename: str = "#<anonymous>"):
         self.filename = filename
         self.text = text
         self.lines = list()
+
+    @staticmethod
+    def load(filename: str | Path) -> TextFile:
+        with open(filename, 'r') as f:
+            text = f.read()
+        return TextFile(text, str(filename))
 
     def __iter__(self):
         return iter(self.text)
