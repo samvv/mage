@@ -63,7 +63,7 @@ class YesNoAuto(StrEnum):
         return self == YesNoAuto.YES
 
     @staticmethod
-    def from_bool(enable: bool) -> YesNoAuto:
+    def from_bool(enable: bool) -> 'YesNoAuto':
         return YesNoAuto.YES if enable else YesNoAuto.NO
 
 class GenerateConfig(TypedDict, total=False):

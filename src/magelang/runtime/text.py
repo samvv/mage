@@ -16,7 +16,7 @@ class TextFile:
         self.lines = list()
 
     @staticmethod
-    def load(filename: str | Path) -> TextFile:
+    def load(filename: str | Path) -> 'TextFile':
         with open(filename, 'r') as f:
             text = f.read()
         return TextFile(text, str(filename))
