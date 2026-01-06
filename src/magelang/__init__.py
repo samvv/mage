@@ -116,6 +116,13 @@ class GenerateConfig(TypedDict, total=False):
     Set to `YesNoAuto.AUTO` to automatically try to enable the lexer and fall
     back to parsing without if the grammar does not support it.
     """
+    enable_lexer_tests: bool
+    """
+    Generate additional tests specifically for the lexer.
+
+    This value may be set to `True` even when no lexer is being generated. In
+    this case, no tests will be generated.
+    """
     enable_parser: bool
     """
     Generate a parser based on the given grammar.
@@ -165,6 +172,7 @@ def default_config(lang: TargetLanguage, is_debug: bool) -> GenerateConfig:
         enable_ast=True,
         enable_asserts=is_debug,
         enable_lexer=YesNoAuto.AUTO,
+        enable_lexer_tests=is_debug,
         enable_parser=True,
         enable_emitter=True,
         enable_cst_parent_pointers=not _is_functional(lang),
@@ -205,6 +213,7 @@ def generate_files(
     skip_checks = nonnull(config.get('skip_checks'))
     silent = nonnull(config.get('silent'))
     enable_lexer = bool(nonnull(config.get('enable_lexer')))
+    enable_lexer_tests = nonnull(config.get('enable_lexer_tests'))
 
     if enable_lexer and not can_lexer_be_enabled:
         error('could not enable lexer because there are no tokens defined in the grammar')
@@ -229,7 +238,8 @@ def generate_files(
             files['emitter.py'] = mage_to_python_emitter
         if enable_lexer:
             files['lexer.py'] = pipeline(mage_flatten_grammars, mage_to_python_lexer)
-            files['test_lexer.py'] = mage_to_python_lexer_tests
+            if enable_lexer_tests:
+                files['test_lexer.py'] = mage_to_python_lexer_tests
         if enable_parser:
             files['parser.py'] = mage_to_python_parser
         mage_to_target = compose(
