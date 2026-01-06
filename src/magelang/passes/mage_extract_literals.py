@@ -4,7 +4,6 @@ from typing import TypeVar, cast
 
 from magelang.eval import SUCCESS, accepts
 from magelang.lang.mage.ast import *
-from magelang.analysis import is_tokenizable
 from magelang.manager import declare_pass
 from magelang.runtime import Diagnostics
 
@@ -13,13 +12,9 @@ T = TypeVar('T', bound=MageGrammar | MageModule)
 @declare_pass()
 def mage_extract_literals(
     grammar: MageGrammar,
-    diagnostics: Diagnostics,
     max_named_chars: int = 4,
+    enable_lexer: bool = False
 ) -> MageGrammar:
-
-    # FIXME this does not work
-    enable_tokens = is_tokenizable(grammar, diagnostics)
-    print(f'{enable_tokens=}')
 
     def rewrite_module(node: T) -> T:
 
@@ -87,7 +82,7 @@ def mage_extract_literals(
         for literal in reversed(sorted(literal_to_name.keys())):
             name = literal_to_name[literal]
             flags = PUBLIC
-            if enable_tokens:
+            if enable_lexer:
                 flags |= FORCE_TOKEN
             if name in keywords:
                 flags |= FORCE_KEYWORD

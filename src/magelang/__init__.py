@@ -4,9 +4,10 @@ import os
 from pathlib import Path
 from types import ModuleType
 from typing import Literal
-from magelang.logging import error
-from magelang.runtime import ConsoleDiagnostics, Diagnostics
-from magelang.util import Files, load_py_file
+
+from .logging import error
+from .runtime import ConsoleDiagnostics, Diagnostics
+from .util import Files, load_py_file
 from .manager import *
 from .lang.mage import *
 from .lang.python import *
@@ -56,6 +57,14 @@ class YesNoAuto(StrEnum):
     _true = YES
     _false = NO
     _default = AUTO
+
+    def __bool__(self) -> bool:
+        assert(self != YesNoAuto.AUTO)
+        return self == YesNoAuto.YES
+
+    @staticmethod
+    def from_bool(enable: bool) -> YesNoAuto:
+        return YesNoAuto.YES if enable else YesNoAuto.NO
 
 class GenerateConfig(TypedDict, total=False):
     engine: Engine
@@ -182,17 +191,10 @@ def generate_files(
     if not isinstance(grammar, MageGrammar):
         grammar = load_grammar(grammar)
 
-    # FIXME enable_lexer is defined here but not propagated to Context
-    can_lexer_be_enabled = any(rule.is_lex for rule in grammar.rules)
+    # TODO implement analysis step, checking how grammar can be tokenized
+    can_lexer_be_enabled = False # any(rule.is_lex for rule in grammar.rules)
     if nonnull(config.get('enable_lexer')) == YesNoAuto.AUTO:
-        enable_lexer = can_lexer_be_enabled
-    elif nonnull(config.get('enable_lexer')) == YesNoAuto.YES:
-        if not can_lexer_be_enabled:
-            error('could not enable lexer because there are no tokens defined in the grammar')
-            return
-        enable_lexer = True
-    else:
-        enable_lexer = False
+        config['enable_lexer'] = YesNoAuto.from_bool(can_lexer_be_enabled)
 
     engine = nonnull(config.get('engine'))
     enable_cst = nonnull(config.get('enable_cst'))
@@ -202,6 +204,11 @@ def generate_files(
     emit_single_file = nonnull(config.get('emit_single_file'))
     skip_checks = nonnull(config.get('skip_checks'))
     silent = nonnull(config.get('silent'))
+    enable_lexer = bool(nonnull(config.get('enable_lexer')))
+
+    if enable_lexer and not can_lexer_be_enabled:
+        error('could not enable lexer because there are no tokens defined in the grammar')
+        return
 
     ctx = Context(cast(dict[str, Any], config), silent=True)
 

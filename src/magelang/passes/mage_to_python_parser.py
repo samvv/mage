@@ -149,15 +149,12 @@ def mage_to_python_parser(
     diagnostics: Diagnostics,
     prefix: str = '',
     emit_single_file: bool = False,
+    enable_lexer: bool = False,
     silent: bool = False,
 ) -> PyModule:
 
-    enable_tokens = is_tokenizable(grammar, diagnostics)
     buffer_name = 'buffer'
-    stream_type_name = 'ParseStream' if enable_tokens else 'CharStream'
-
-    if not enable_tokens and not silent:
-        print('Warning: grammar could not be tokenized. We will fall back to a more generic algorithm.')
+    stream_type_name = 'ParseStream' if enable_lexer else 'CharStream'
 
     stmts = list[PyStmt]()
 
@@ -305,7 +302,7 @@ def mage_to_python_parser(
 
                 assert(grammar.is_token_rule(rule))
 
-                if enable_tokens:
+                if enable_lexer:
                     yield PyAssignStmt(PyNamedPattern(target_name), value=PyCallExpr(PyAttrExpr(PyNamedExpr(stream_name), 'peek')))
                     yield from gen_if_stmt(
                         PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr(target_name), PyNamedExpr(to_py_class_name(rule.name, prefix=prefix)) ]),
@@ -581,7 +578,7 @@ def mage_to_python_parser(
     for element in grammar.rules:
         if not element.is_public:
             continue
-        if element.is_parse or (not enable_tokens and element.is_lex):
+        if element.is_parse or (not enable_lexer and element.is_lex):
             stmts.append(PyFuncDef(
                 name=f'parse_{element.name}',
                 params=[ PyNamedParam(PyNamedPattern('stream'), annotation=PyNamedExpr(stream_type_name)) ],
