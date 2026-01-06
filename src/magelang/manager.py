@@ -111,6 +111,21 @@ def apply(ctx: Context, input: _T, pass_: Pass[_T, _R]) -> _R:
     return apply_inject(fn, input)
 
 def distribute(map: dict[_K, Pass[_T, _R]]) -> Pass[_T, dict[_K, _R]]:
+    """
+    Compose a dictionary of passes to a pass producing a dictionary with equal
+    keys and the values of the given passes.
+
+    ```
+    apply(
+        distribute({
+            one: lambda x: x + 1,
+            two: lambda x: x + 2,
+        }),
+        { one: 0, two: 0 }
+    )
+    # result is { one: 1, two: 2 }
+    ```
+    """
 
     def _wrapper(input: _T, ctx: Context) -> dict[_K, _R]:
         out = dict[_K, _R]()
@@ -121,7 +136,10 @@ def distribute(map: dict[_K, Pass[_T, _R]]) -> Pass[_T, dict[_K, _R]]:
     return _wrapper
 
 def merge(left: Pass[_T, dict[_K, _R]], right: Pass[_T, dict[_K, _R]]) -> Pass[_T, dict[_K, _R]]:
-
+    """
+    Compose two passes producing dictionaries to one pass producing a merged
+    dictionary.
+    """
     def _wrapper(input: _T, ctx: Context) -> dict[_K, _R]:
         out = dict[_K, _R]()
         for key, value in apply(ctx, input, left).items():
@@ -134,6 +152,9 @@ def merge(left: Pass[_T, dict[_K, _R]], right: Pass[_T, dict[_K, _R]]) -> Pass[_
 
 
 def each_value(pass_: Pass[_T, _R]) -> Pass[dict[_K, _T], dict[_K, _R]]:
+    """
+    Transform each value of an incoming dictionary with the given pass.
+    """
 
     def _wrapper(input: dict[_K, _T], ctx: Context) -> dict[_K, _R]:
         out = dict[_K, _R]()
@@ -144,6 +165,9 @@ def each_value(pass_: Pass[_T, _R]) -> Pass[dict[_K, _T], dict[_K, _R]]:
     return _wrapper
 
 def map_key(proc: Callable[[_K1], _K2]) -> Pass[dict[_K1, _T], dict[_K2, _T]]:
+    """
+    Transform each key of an incoming dictionary with the given pass.
+    """
 
     def _wrapper(input: dict[_K1, _T]) -> dict[_K2, _T]:
         out = dict[_K2, _T]()

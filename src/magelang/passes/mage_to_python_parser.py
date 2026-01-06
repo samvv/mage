@@ -152,6 +152,12 @@ def mage_to_python_parser(
     enable_lexer: bool = False,
     silent: bool = False,
 ) -> PyModule:
+    """
+    A pass that generates parser logic out of a Mage grammar.
+
+    Assumes:
+    - mage_inline
+    """
 
     buffer_name = 'buffer'
     stream_type_name = 'ParseStream' if enable_lexer else 'CharStream'

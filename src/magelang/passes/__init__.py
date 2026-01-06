@@ -18,6 +18,7 @@ from .mage_to_python_emitter import mage_to_python_emitter
 from .mage_to_python_lexer import mage_to_python_lexer
 from .mage_to_python_lexer_tests import mage_to_python_lexer_tests
 from .mage_to_python_parser import mage_to_python_parser
+from .mage_to_python_parser_tests import mage_to_python_parser_tests
 from .mage_to_revolv_syntax_tree import mage_to_revolv_syntax_tree
 from .mage_to_treespec import mage_to_treespec
 from .mage_unhide import mage_unhide

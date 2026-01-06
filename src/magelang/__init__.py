@@ -21,6 +21,7 @@ mage_check = pipeline(
     mage_check_neg_charset_intervals
 )
 mage_prepare_grammar = pipeline(
+    mage_insert_skip,
     mage_insert_magic_rules,
     mage_hide_lookaheads,
     mage_inline,
@@ -121,11 +122,18 @@ class GenerateConfig(TypedDict, total=False):
     Generate additional tests specifically for the lexer.
 
     This value may be set to `True` even when no lexer is being generated. In
-    this case, no tests will be generated.
+    that case, no tests will be generated.
     """
     enable_parser: bool
     """
     Generate a parser based on the given grammar.
+    """
+    enable_parser_tests: bool
+    """
+    Generate additional tests specifically for the parser.
+
+    This value may be set to `True` even when no parser is being generated. In
+    that case, no parser tests will be generated.
     """
     enable_emitter: bool
     """
@@ -174,6 +182,7 @@ def default_config(lang: TargetLanguage, is_debug: bool) -> GenerateConfig:
         enable_lexer=YesNoAuto.AUTO,
         enable_lexer_tests=is_debug,
         enable_parser=True,
+        enable_parser_tests=is_debug,
         enable_emitter=True,
         enable_cst_parent_pointers=not _is_functional(lang),
         enable_ast_parent_pointers=not _is_functional(lang),
@@ -199,6 +208,18 @@ def generate_files(
     if not isinstance(grammar, MageGrammar):
         grammar = load_grammar(grammar)
 
+    # TODO allow user to specify grammar name in grammar itself
+    lang_name = Path(nonnull(grammar.file).filename).stem
+
+    fname_init = f'{lang_name}/__init__.py'
+    fname_cst = f'{lang_name}/cst.py'
+    fname_ast = f'{lang_name}/ast.py'
+    fname_emitter = f'{lang_name}/emitter.py'
+    fname_lexer = f'{lang_name}/lexer.py'
+    fname_parser = f'{lang_name}/parser.py'
+    fname_test_lexer = f'{lang_name}/test_lexer.py'
+    fname_test_parser = f'{lang_name}/test_parser.py'
+
     # TODO implement analysis step, checking how grammar can be tokenized
     can_lexer_be_enabled = False # any(rule.is_lex for rule in grammar.rules)
     if nonnull(config.get('enable_lexer')) == YesNoAuto.AUTO:
@@ -209,6 +230,7 @@ def generate_files(
     enable_ast = nonnull(config.get('enable_ast'))
     enable_emitter = nonnull(config.get('enable_emitter'))
     enable_parser = nonnull(config.get('enable_parser'))
+    enable_parser_tests = nonnull(config.get('enable_parser_tests'))
     emit_single_file = nonnull(config.get('emit_single_file'))
     skip_checks = nonnull(config.get('skip_checks'))
     silent = nonnull(config.get('silent'))
@@ -230,18 +252,20 @@ def generate_files(
         trees = dict[str, Pass[Specs, PyModule]]()
         if enable_cst:
             # TODO add local `enable_cst_parent_pointers`
-            trees['cst.py'] = treespec_to_python
+            trees[fname_cst] = treespec_to_python
         if enable_ast:
             # TODO add local `enable_ast_parent_pointers`
-            trees['ast.py'] = pipeline(treespec_cst_to_ast, treespec_to_python)
+            trees[fname_ast] = pipeline(treespec_cst_to_ast, treespec_to_python)
         if enable_emitter:
-            files['emitter.py'] = mage_to_python_emitter
+            files[fname_emitter] = mage_to_python_emitter
         if enable_lexer:
-            files['lexer.py'] = pipeline(mage_flatten_grammars, mage_to_python_lexer)
+            files[fname_lexer] = pipeline(mage_flatten_grammars, mage_to_python_lexer)
             if enable_lexer_tests:
-                files['test_lexer.py'] = mage_to_python_lexer_tests
+                files[fname_test_lexer] = mage_to_python_lexer_tests
         if enable_parser:
-            files['parser.py'] = mage_to_python_parser
+            files[fname_parser] = mage_to_python_parser
+            if enable_parser_tests:
+                files[fname_test_parser] = mage_to_python_parser_tests
         mage_to_target = compose(
             merge(distribute(files), pipeline(mage_to_treespec, distribute(trees))),
             each_value(pipeline(python_optimise, python_to_text)),
@@ -267,6 +291,8 @@ def generate_files(
         identity if skip_checks or silent else mage_check, # User error reporting
         mage_to_target # Actual compilation
     ))
+
+    files[fname_init] = ''
 
     if not emit_single_file:
         return files

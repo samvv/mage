@@ -2,8 +2,8 @@
 from functools import cache
 from typing import Generator, Iterator, Iterable, Sequence
 
-import marko.inline
-
+from magelang.lang.magedown.cst import MagedownAccepts, MagedownDocument, MagedownRejects
+from magelang.runtime.lex import CharStream
 from magelang.lang.python.emitter import emit
 from magelang.lang.treespec import *
 from magelang.lang.mage.ast import *
@@ -97,9 +97,14 @@ def get_field_name(expr: MageExpr) -> str | None:
         return None
     return None
 
-def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = False) -> Generator[tuple[MageExpr, Field | None]]:
+def get_fields(
+    expr: MageExpr,
+    grammar: MageGrammar,
+    include_hidden: bool = False
+) -> Generator[tuple[MageExpr, Field | None]]:
     """
-    Split an expression into all possible fields, also returning the expressions that go in between.
+    Split an expression into all possible fields, also returning the
+    expressions that go in between the fields.
     """
 
     generator = NameGenerator()
@@ -111,6 +116,10 @@ def get_fields(expr: MageExpr, grammar: MageGrammar, include_hidden: bool = Fals
     def visit(expr: MageExpr, rule_name: str | None) -> Generator[tuple[MageExpr, Field | None]]:
 
         if isinstance(expr, MageLookaheadExpr):
+            return
+
+        if isinstance(expr, MageLitExpr):
+            yield expr, None
             return
 
         elif isinstance(expr, MageRefExpr):
@@ -333,15 +342,6 @@ def treespec_type_to_deep_py_test(ty: Type, target: PyExpr, *, prefix: str, spec
         return PyNamedExpr('True')
     assert_never(ty)
 
-
-def get_marko_element_text(el: Any) -> str:
-    if isinstance(el, marko.inline.RawText):
-        out = ''
-        for child in el.children:
-            out += child
-        return out
-    else:
-        raise NotImplementedError()
 
 def is_py_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences: bool = True) -> bool:
     visited = set()
@@ -883,4 +883,32 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
         assert_never(ty)
 
     return gen_coerce_fn(field_type, False)
+
+@dataclass(frozen=True)
+class Test:
+    rule: MageRule
+    text: str
+    should_fail: bool
+
+
+def _parse_doc(text: str) -> MagedownDocument:
+    stream = CharStream(text)
+    from magelang.lang.magedown.parser import parse_document
+    doc = parse_document(stream)
+    if doc is None:
+        raise RuntimeError(f"failed to parse Magedown document")
+    return doc
+
+
+def collect_tests(grammar: MageGrammar) -> list[Test]:
+    tests = []
+    for rule in grammar.rules:
+        if rule.comment is not None:
+            doc = _parse_doc(rule.comment)
+            for element in doc.elements:
+                if isinstance(element, MagedownAccepts):
+                    tests.append(Test(rule, element.text.strip(), False))
+                elif isinstance(element, MagedownRejects):
+                    tests.append(Test(rule, element.text.strip(), True))
+    return tests
 

@@ -1,6 +1,6 @@
 
 from collections.abc import Sequence
-from typing import Self
+from typing import Self, cast
 
 
 class Stream[T]:
@@ -23,6 +23,7 @@ class Stream[T]:
         return self._buffer[i]
 
     def fork(self) -> Self:
+        # Ugly hack to ensure derived classes fork to their derived class
         return cast(Self, Stream(self._buffer, self.sentry, self._offset))
 
     # def _peek(self, mode: int, offset = 0) -> BaseToken:
@@ -41,3 +42,7 @@ class Stream[T]:
 
     def join_to(self, other: 'Stream[T]') -> None:
         self._offset = other._offset
+
+    def at_eof(self) -> bool:
+        return self._offset == len(self._buffer)
+

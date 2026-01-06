@@ -5,21 +5,20 @@ from typing import Unpack
 
 from magelang import GenerateConfig, TargetLanguage, generate_files, load_grammar, mage_check, write_files
 from magelang.constants import SEED_FILENAME_PREFIX
-from magelang.lang.magedown.cst import MagedownDocument, MagedownNode, MagedownAccepts, MagedownRejects
+from magelang.eval import NO_MATCH, RECMAX, Error, evaluate
+from magelang.fuzz import fuzz_all, fuzz_grammar, generate_and_load_parser, random_grammar
+from magelang.helpers import collect_tests
+from magelang.lang.mage.ast import *
+from magelang.lang.mage.emitter import emit as mage_emit
+from magelang.lang.mage.parser import Parser
+from magelang.lang.mage.scanner import Scanner
+from magelang.lang.magedown.cst import MagedownNode
 from magelang.lang.python.cst import PyModule
+from magelang.lang.python.emitter import emit as py_emit
 from magelang.lang.revolv.ast import Program
-from magelang.runtime import CharStream
+from magelang.logging import error, info, warn
+from magelang.manager import Context, apply, compose, get_pass_by_name, identity
 from magelang.util import Files, Progress, load_py_file
-
-from .manager import Context, apply, compose, get_pass_by_name, identity
-from .logging import error, info, warn
-from .lang.mage.ast import *
-from .lang.mage.emitter import emit as mage_emit
-from .lang.mage.parser import Parser
-from .lang.mage.scanner import Scanner
-from .lang.python.emitter import emit as py_emit
-from .fuzz import fuzz_all, fuzz_grammar, generate_and_load_parser, random_grammar
-from .eval import NO_MATCH, RECMAX, Error, evaluate
 
 
 def _grammar_from_file_or_seed(filename: str) -> MageGrammar:
@@ -103,21 +102,7 @@ def check(filename: Path | str, /) -> int:
     apply(ctx, grammar, mage_check)
     return 0
 
-@dataclass(frozen=True)
-class _Test:
-    rule: MageRule
-    text: str
-    should_fail: bool
-
 from tempfile import TemporaryDirectory
-
-def _parse_doc(text: str) -> MagedownDocument:
-    stream = CharStream(text)
-    from magelang.lang.magedown.parser import parse_document
-    doc = parse_document(stream)
-    if doc is None:
-        raise RuntimeError(f"failed to parse Magedown document")
-    return doc
 
 def magedown_emit(element: MagedownNode | str) -> str:
     if isinstance(element, str):
@@ -141,22 +126,19 @@ def magedown_emit(element: MagedownNode | str) -> str:
 #                 buffer += magedown_emit(child)
 #             yield buffer
 
-def _collect_tests(grammar: MageGrammar) -> list[_Test]:
-    tests = []
-    for rule in grammar.rules:
-        if rule.comment is not None:
-            doc = _parse_doc(rule.comment)
-            for element in doc.elements:
-                if isinstance(element, MagedownAccepts):
-                    tests.append(_Test(rule, element.text.strip(), False))
-                elif isinstance(element, MagedownRejects):
-                    tests.append(_Test(rule, element.text.strip(), True))
-    return tests
-
 def _test_external(filename: str) -> tuple[int, int]:
     import pytest
     with TemporaryDirectory(prefix='mage-test-') as test_dir:
-        generate('python', filename, enable_parser=True, enable_emitter=False, enable_ast=False, out_dir=Path(test_dir))
+        generate(
+            'python',
+            filename,
+            enable_parser=True,
+            enable_emitter=False,
+            enable_ast=False,
+            enable_lexer_tests=True,
+            enable_parser_tests=True,
+            out_dir=Path(test_dir)
+        )
         if pytest.main([ test_dir ]) == 0:
             return 1, 0
         else:
@@ -164,7 +146,7 @@ def _test_external(filename: str) -> tuple[int, int]:
 
 def _test_internal(filename: Path | str) -> tuple[int, int]:
     grammar = load_grammar(filename)
-    tests = _collect_tests(grammar)
+    tests = collect_tests(grammar)
     succeeded = set()
     failed = set()
     for test in tests:
