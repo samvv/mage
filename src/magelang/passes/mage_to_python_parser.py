@@ -156,7 +156,7 @@ def mage_to_python_parser(
     A pass that generates parser logic out of a Mage grammar.
 
     Assumes:
-    - mage_inline
+    - mage_inline: all rules are public
     """
 
     buffer_name = 'buffer'
