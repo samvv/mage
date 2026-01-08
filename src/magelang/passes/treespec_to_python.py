@@ -122,6 +122,8 @@ def treespec_to_python(
         if not isinstance(spec, TokenSpec):
             continue
 
+        this_class_name = to_py_class_name(spec.name, prefix)
+
         body: list[PyStmt] = []
 
         if spec.is_static:
@@ -150,8 +152,14 @@ def treespec_to_python(
 
             body.append(PyFuncDef(name='__init__', params=init_params, body=init_body))
 
-        stmts.append(PyClassDef(name=to_py_class_name(spec.name, prefix), bases=[ PyClassBaseArg(base_token_class_name) ], body=body))
+        stmts.append(PyClassDef(name=this_class_name, bases=[ PyClassBaseArg(base_token_class_name) ], body=body))
 
+        stmts.append(PyFuncDef(
+            name=f'is_{spec.name}',
+            params=[ PyNamedParam(PyNamedPattern('value'), annotation=PyNamedExpr('Any')) ],
+            return_type=PySubscriptExpr(PyNamedExpr('TypeIs'), [ PyNamedExpr(this_class_name) ]),
+            body=[ PyRetStmt(expr=PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr('value'), PyNamedExpr(this_class_name) ])) ]
+        ))
     # Generate node classes
 
     for spec in specs.elements:
@@ -287,6 +295,13 @@ def treespec_to_python(
             ))
 
         stmts.append(PyClassDef(name=this_class_name, bases=[ PyClassBaseArg(base_node_class_name) ], body=body))
+
+        stmts.append(PyFuncDef(
+            name=f'is_{spec.name}',
+            params=[ PyNamedParam(PyNamedPattern('value'), annotation=PyNamedExpr('Any')) ],
+            return_type=PySubscriptExpr(PyNamedExpr('TypeIs'), [ PyNamedExpr(this_class_name) ]),
+            body=[ PyRetStmt(expr=PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr('value'), PyNamedExpr(this_class_name) ])) ]
+        ))
 
     # Generate constant enumerations
 
