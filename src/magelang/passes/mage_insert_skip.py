@@ -1,5 +1,5 @@
 
-from magelang.lang.mage.ast import MageExpr, MageGrammar, MageRefExpr, MageRule, MageSeqExpr, rewrite_each_child_expr, rewrite_each_rule
+from magelang.lang.mage.ast import MageExpr, MageGrammar, MageHideExpr, MageRefExpr, MageRule, MageSeqExpr, rewrite_each_child_expr, rewrite_each_rule
 from magelang.manager import declare_pass
 
 @declare_pass()
@@ -26,7 +26,7 @@ def mage_insert_skip(grammar: MageGrammar) -> MageGrammar:
                     element = next(iterator)
                 except StopIteration:
                     break
-                new_elements.append(MageRefExpr(skip_name))
+                new_elements.append(MageHideExpr(MageRefExpr(skip_name)))
                 new_elements.append(recurse(element))
             return expr.derive(elements=new_elements)
 
