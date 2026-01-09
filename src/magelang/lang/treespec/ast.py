@@ -3,8 +3,9 @@
 from collections.abc import Sequence
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, TypedDict, Unpack
+from typing import Any, Callable, TypeGuard, TypedDict, Unpack
 
+from magelang.lang.mage.ast import string_rule_type
 from magelang.util import panic
 
 type Type = ExternType | SpecType | NeverType | TupleType | ListType | PunctType | UnionType | NoneType | AnyType
@@ -38,6 +39,9 @@ def _derive(obj, kwargs):
         if not name.startswith('_'):
             new_kwargs[name] = kwargs[name] if name in kwargs else _clone_field(getattr(obj, name))
     return obj.__class__(**new_kwargs)
+
+def is_string_type(ty: Type) -> bool:
+    return isinstance(ty, ExternType) and ty.name == string_rule_type
 
 class NodeBase:
     pass
