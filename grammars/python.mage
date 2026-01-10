@@ -15,16 +15,17 @@ eol = '\r\n' | '\n'
 
 eolf = eol | eof
 
+@noskip
 line_comment
   = '#' (!eolf any_char)*
+
+@skip
+__ = ([\n\r\t ] | line_comment)*
 
 eos
   = __ ';'
   | _ line_comment? eol
   | __ eof
-
-@skip
-__ = ([\n\r\t ] | line_comment)*
 
 _ = [\t ]*
 
