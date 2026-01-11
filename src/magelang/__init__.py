@@ -211,14 +211,14 @@ def generate_files(
     # TODO allow user to specify grammar name in grammar itself
     lang_name = Path(nonnull(grammar.file).filename).stem
 
-    fname_init = f'{lang_name}/__init__.py'
-    fname_cst = f'{lang_name}/cst.py'
-    fname_ast = f'{lang_name}/ast.py'
-    fname_emitter = f'{lang_name}/emitter.py'
-    fname_lexer = f'{lang_name}/lexer.py'
-    fname_parser = f'{lang_name}/parser.py'
-    fname_test_lexer = f'{lang_name}/test_lexer.py'
-    fname_test_parser = f'{lang_name}/test_parser.py'
+    fname_init = f'__init__.py'
+    fname_cst = f'cst.py'
+    fname_ast = f'ast.py'
+    fname_emitter = f'emitter.py'
+    fname_lexer = f'lexer.py'
+    fname_parser = f'parser.py'
+    fname_test_lexer = f'test_lexer.py'
+    fname_test_parser = f'test_parser.py'
 
     # TODO implement analysis step, checking how grammar can be tokenized
     can_lexer_be_enabled = False # any(rule.is_lex for rule in grammar.rules)
