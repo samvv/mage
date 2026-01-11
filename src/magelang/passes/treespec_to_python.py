@@ -155,7 +155,7 @@ def treespec_to_python(
         stmts.append(PyClassDef(name=this_class_name, bases=[ PyClassBaseArg(base_token_class_name) ], body=body))
 
         stmts.append(PyFuncDef(
-            name=f'is_{spec.name}',
+            name=f'is_{namespaced(spec.name, prefix)}',
             params=[ PyNamedParam(PyNamedPattern('value'), annotation=PyNamedExpr('Any')) ],
             return_type=PySubscriptExpr(PyNamedExpr('TypeIs'), [ PyNamedExpr(this_class_name) ]),
             body=[ PyRetStmt(expr=PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr('value'), PyNamedExpr(this_class_name) ])) ]
@@ -297,7 +297,7 @@ def treespec_to_python(
         stmts.append(PyClassDef(name=this_class_name, bases=[ PyClassBaseArg(base_node_class_name) ], body=body))
 
         stmts.append(PyFuncDef(
-            name=f'is_{spec.name}',
+            name=f'is_{namespaced(spec.name, prefix)}',
             params=[ PyNamedParam(PyNamedPattern('value'), annotation=PyNamedExpr('Any')) ],
             return_type=PySubscriptExpr(PyNamedExpr('TypeIs'), [ PyNamedExpr(this_class_name) ]),
             body=[ PyRetStmt(expr=PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr('value'), PyNamedExpr(this_class_name) ])) ]
