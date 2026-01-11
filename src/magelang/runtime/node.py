@@ -64,7 +64,7 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
         return construct_default(ty)
 
     # map coercion over a tuple type
-    if value.__class__ is tuple and ty is tuple:
+    if type(value) is tuple and ty is tuple:
         args = typing.get_args(ty)
         required = [ (i, arg) for i, arg in enumerate(args) if not is_optional(arg) and not is_default_constructible(arg) ]
         new_elements = []
@@ -78,7 +78,7 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
         return tuple(new_elements)
 
     # map coercion over a punctuated type
-    if value.__class__ is Punctuated and ty is Punctuated:
+    if type(value) is Punctuated and ty is Punctuated:
         args = typing.get_args(ty)
         el_ty = _get(args, 0, Any)
         sep_ty = _get(args, 1, Any)
@@ -93,7 +93,7 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
         return out
 
     # map coercion over a list
-    if value.__class__ is list and ty is list:
+    if type(value) is list and ty is list:
         args = typing.get_args(ty)
         el_ty = _get(args, 0, Any)
         return [ coerce(element, el_ty, True) for element in value ]
