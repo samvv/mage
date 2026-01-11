@@ -1,5 +1,5 @@
 
-from magelang.lang.mage.ast import MageExpr, MageGrammar, MageHideExpr, MageRefExpr, MageRule, MageSeqExpr, rewrite_each_child_expr, rewrite_each_rule
+from magelang.lang.mage.ast import *
 from magelang.manager import declare_pass
 
 @declare_pass()
@@ -12,6 +12,13 @@ def mage_insert_skip(grammar: MageGrammar) -> MageGrammar:
 
         def recurse(expr: MageExpr) -> MageExpr:
             return rewrite_each_child_expr(expr, rewrite_expr)
+
+        if isinstance(expr, MageListExpr):
+            return expr.derive(separator=MageSeqExpr([
+                MageHideExpr(MageRefExpr(skip_name)),
+                expr.separator,
+                MageHideExpr(MageRefExpr(skip_name)),
+            ]))
 
         if isinstance(expr, MageSeqExpr):
             new_elements = []
