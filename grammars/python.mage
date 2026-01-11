@@ -11,8 +11,10 @@ pub extern token dedent
 
 # Helper utilities
 
+@noskip
 eol = '\r\n' | '\n'
 
+@noskip
 eolf = eol | eof
 
 @noskip
@@ -22,11 +24,13 @@ line_comment
 @skip
 __ = ([\n\r\t ] | line_comment)*
 
+@noskip
 eos
   = __ ';'
   | _ line_comment? eol
   | __ eof
 
+@noskip
 _ = [\t ]*
 
 # First tokens
