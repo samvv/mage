@@ -10,13 +10,10 @@ def mage_insert_skip(grammar: MageGrammar) -> MageGrammar:
 
     def rewrite_expr(expr: MageExpr) -> MageExpr:
 
-        def recurse(expr: MageExpr) -> MageExpr:
-            return rewrite_each_child_expr(expr, rewrite_expr)
-
         if isinstance(expr, MageListExpr):
             return expr.derive(separator=MageSeqExpr([
                 MageHideExpr(MageRefExpr(skip_name)),
-                expr.separator,
+                rewrite_expr(expr.separator),
                 MageHideExpr(MageRefExpr(skip_name)),
             ]))
 
@@ -27,14 +24,14 @@ def mage_insert_skip(grammar: MageGrammar) -> MageGrammar:
                 element = next(iterator)
             except StopIteration:
                 return expr
-            new_elements.append(recurse(element))
+            new_elements.append(rewrite_expr(element))
             while True:
                 try:
                     element = next(iterator)
                 except StopIteration:
                     break
                 new_elements.append(MageHideExpr(MageRefExpr(skip_name)))
-                new_elements.append(recurse(element))
+                new_elements.append(rewrite_expr(element))
             return expr.derive(elements=new_elements)
 
         return rewrite_each_child_expr(expr, rewrite_expr)
