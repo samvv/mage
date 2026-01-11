@@ -80,9 +80,7 @@ def mage_extract_literals(
 
         for literal in reversed(sorted(literal_to_name.keys())):
             name = literal_to_name[literal]
-            flags = PUBLIC
-            if enable_lexer:
-                flags |= FORCE_TOKEN
+            flags = PUBLIC | FORCE_TOKEN
             if name in keywords:
                 flags |= FORCE_KEYWORD
             new_literal_rules.append(MageRule(flags=flags, name=name, expr=MageLitExpr(literal), type_name=string_rule_type))
