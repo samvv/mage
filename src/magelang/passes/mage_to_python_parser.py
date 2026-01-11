@@ -584,6 +584,9 @@ def mage_to_python_parser(
     for element in grammar.rules:
         if not element.is_public:
             continue
+        if element.expr is None:
+            # TODO implement reaching out to external parser
+            continue
         if element.is_parse or (not enable_lexer and element.is_lex):
             stmts.append(PyFuncDef(
                 name=f'parse_{element.name}',
