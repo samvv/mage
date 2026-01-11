@@ -5,7 +5,6 @@ from typing import TypeVar, cast
 from magelang.eval import SUCCESS, accepts
 from magelang.lang.mage.ast import *
 from magelang.manager import declare_pass
-from magelang.runtime import Diagnostics
 
 T = TypeVar('T', bound=MageGrammar | MageModule)
 
