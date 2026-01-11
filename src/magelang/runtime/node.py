@@ -60,7 +60,6 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
 
     # if `value` is None and the type is not explicitly None, we attempt to
     # construct a default value
-    print(value, ty, is_default_constructible(ty))
     if value is None and not forbid_default and is_default_constructible(ty):
         return construct_default(ty)
 
