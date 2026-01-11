@@ -33,7 +33,7 @@ def mage_insert_skip(grammar: MageGrammar) -> MageGrammar:
         return rewrite_each_child_expr(expr, rewrite_expr)
 
     def rewrite_rule(rule: MageRule) -> MageRule:
-        if rule.expr is None:
+        if rule.expr is None or rule.is_noskip:
             return rule
         return rule.derive(expr=rewrite_expr(rule.expr))
 

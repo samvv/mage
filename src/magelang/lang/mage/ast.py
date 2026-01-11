@@ -659,6 +659,10 @@ class MageRule(MageNodeBase):
         return False
 
     @property
+    def is_noskip(self) -> bool:
+        return self.has_decorator('noskip')
+
+    @property
     def is_skip_def(self) -> bool:
         return self.has_decorator('skip')
 
