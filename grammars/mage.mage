@@ -122,14 +122,6 @@ single_char
 pub token string
   = '\'' (!'\'' single_char)* '\''
 
-mod CharSet {
-  pub token eof = ']'
-  pub token range = single_char '-' single_char
-  pub token char = single_char
-  pub element = range | char
-  pub elements = (!eof element)*
-}
-
 # Values
 
 pub value
@@ -162,8 +154,17 @@ pub lit_expr
 pub ref_expr
   = name
 
+pub token char_set_range
+  = single_char '-' single_char
+
+pub token char_set_char
+  = single_char
+
+pub char_set_element
+  = char_set_range | char_set_char
+
 pub char_set_expr
-  = '~'? '[' CharSet.elements ']' 'i'?
+  = '~'? '[' elements:(!']' char_set_element)* ']' 'i'?
 
 pub seq_expr
   = elements:expr{2,}
