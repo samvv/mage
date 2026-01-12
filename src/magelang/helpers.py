@@ -415,69 +415,26 @@ def make_py_default_constructor(ty: Type, *, specs: Specs, prefix: str) -> PyExp
                 return make_py_default_constructor(ty, specs=specs, prefix=prefix)
     raise RuntimeError(f'unexpected {ty}')
 
-def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str, PyFuncDef]) -> tuple[Type, PyExpr]:
+def get_coercions(field_type: Type, *, specs: Specs) -> Type:
 
-    param_name = 'value'
     visited = set[str]()
 
     @cache
-    def gen_coerce_fn(ty: Type, forbid_default: bool) -> tuple[Type, PyExpr]:
+    def gen_coerce_type(ty: Type, forbid_default: bool) -> Type:
+        types = list(gen_coercions(ty, forbid_default))
+        return normalize_type(UnionType(types))
 
-        cases: list[PyCondCase] = []
-        types = list[Type]()
-        for coerce_ty, coerce_body in gen_coerce_body(ty, forbid_default):
-            cases.append((treespec_type_to_shallow_py_test(coerce_ty, PyNamedExpr(param_name), prefix=prefix, specs=specs), coerce_body))
-            types.append(coerce_ty)
-
-        coerced_type = normalize_type(UnionType(types))
-
-        id = f'{mangle_type(coerced_type)}_to_{mangle_type(ty)}'
-        coerce_fn_name = f'_coerce_{id}'
-
-        if id not in defs:
-            py_param_type = treespec_type_to_py_type(coerced_type, prefix=prefix, immutable=True)
-            py_return_type = treespec_type_to_py_type(ty, prefix=prefix)
-            defs[id] = PyFuncDef(
-                decorators=[ PyNamedExpr('no_type_check') ],
-                name=coerce_fn_name,
-                params=[ PyNamedParam(PyNamedPattern(param_name), annotation=quote_py_type(py_param_type)) ],
-                return_type=quote_py_type(py_return_type),
-                # For very simple fields, there's no need to do any checks. We
-                # assume the type checker catches whatever error the user makes.
-                body=cases[0][1] if len(cases) == 1 else make_py_cond([
-                    *cases,
-                    (
-                        None,
-                        [
-                            PyRaiseStmt(
-                                expr=PyCallExpr(
-                                    operator=PyNamedExpr('ValueError'),
-                                    # TODO inerpolate with `in_name`
-                                    args=[ PyConstExpr(f"the coercion from {emit(py_param_type)} to {emit(py_return_type)} failed") ]
-                                )
-                            )
-                        ]
-                    )
-                ])
-            )
-
-        return coerced_type, PyNamedExpr(coerce_fn_name)
-
-    def gen_coerce_call(ty: Type, value: PyExpr, forbid_none: bool) -> tuple[Type, PyExpr]:
-        coerce_ty, coerce_fn = gen_coerce_fn(ty, forbid_none)
-        return coerce_ty, PyCallExpr(coerce_fn, args=[ value ])
-
-    def gen_coerce_body(ty: Type, forbid_default: bool) -> Generator[tuple[Type, list[PyStmt]]]:
+    def gen_coercions(ty: Type, forbid_default: bool) -> Iterable[Type]:
 
         if isinstance(ty, AnyType):
-            yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
+            yield ty
             return
 
         if isinstance(ty, NeverType):
             return
 
         if isinstance(ty, ExternType):
-            yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
+            yield ty
             return
 
         if isinstance(ty, UnionType):
@@ -489,24 +446,24 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
                     forbid_default = True
 
             rejected = set()
-            out = []
+            out = list[Type]()
             for element_type in types:
-                for coerced_type, coerced_stmts in gen_coerce_body(element_type, True):
-                    for i, (ty, _) in enumerate(out):
+                for coerced_type in gen_coercions(element_type, True):
+                    for i, ty in enumerate(out):
                         if do_types_shallow_overlap(ty, coerced_type):
                             rejected.add(i)
                             continue
-                    out.append((coerced_type, coerced_stmts))
+                    out.append((coerced_type))
 
-            for i, (ty, stmts) in enumerate(out):
+            for i, ty in enumerate(out):
                 if i in rejected:
                     continue
-                yield ty, stmts
+                yield ty
 
             return
 
         if isinstance(ty, NoneType):
-            yield NoneType(), [ PyRetStmt(expr=PyNamedExpr('None')) ]
+            yield NoneType()
             return
 
         # Now that we've handled union types and empty types, we can
@@ -515,31 +472,27 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
         # itself. We continue processing the other types after this
         # operation.
         if not forbid_default and is_py_default_constructible(ty, specs=specs):
-            yield NoneType(), [ PyRetStmt(expr=make_py_default_constructor(ty, specs=specs, prefix=prefix)) ]
+            yield NoneType()
 
         if isinstance(ty, SpecType):
 
             spec = lookup_spec(specs, ty.name)
 
             if spec is None:
-                yield AnyType(), [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
+                yield AnyType()
                 return
 
             if isinstance(spec, ConstEnumSpec):
                 # FIXME do we enable the following coercion by default?
-                yield ExternType(integer_rule_type), [
-                    PyRetStmt(expr=PyCallExpr(PyNamedExpr(to_py_class_name(spec.name, prefix)), args=[ PyNamedExpr(param_name) ]))
-                ]
-                yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
+                yield ExternType(integer_rule_type)
+                yield ty
                 return
 
             if isinstance(spec, TypeSpec) or isinstance(spec, EnumSpec):
-                yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
+                yield ty
                 return
 
             if isinstance(spec, NodeSpec):
-
-                this_class_name = to_py_class_name(spec.name, prefix)
 
                 optional_fields: list[Field] = []
                 required_fields: list[Field] = []
@@ -557,24 +510,15 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
                 if len(required_fields) == 0:
 
                     if not forbid_default:
-                        yield NoneType(), [
-                            PyRetStmt(expr=PyCallExpr(PyNamedExpr(this_class_name)))
-                        ]
+                        yield NoneType()
 
                 elif len(required_fields) == 1 and not is_cyclic:
 
                     required_type = required_fields[0].ty
+                    coerce_type = gen_coerce_type(required_type, forbid_default)
+                    yield coerce_type
 
-                    coerce_type, coerce_expr = gen_coerce_call(required_type, PyNamedExpr(param_name), forbid_default)
-
-                    yield coerce_type, [
-                        PyRetStmt(expr=PyCallExpr(
-                            operator=PyNamedExpr(this_class_name),
-                            args=[ coerce_expr ]
-                        )),
-                    ]
-
-                yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
+                yield ty
 
                 return
 
@@ -584,17 +528,9 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
                 # then we might be able to coerce the token based on the data
                 # that it wraps.
                 if not spec.is_static:
+                    yield ExternType(spec.field_type)
 
-                    yield ExternType(spec.field_type), [
-                        PyRetStmt(
-                            expr=PyCallExpr(
-                                operator=PyNamedExpr(to_py_class_name(spec.name, prefix)),
-                                args=[ PyNamedExpr(param_name) ]
-                            )
-                        )
-                    ]
-
-                yield ty, [ PyRetStmt(expr=PyNamedExpr(param_name)) ]
+                yield ty
 
                 return
 
@@ -604,225 +540,27 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
 
             assert(is_py_default_constructible(ty.separator_type, specs=specs))
 
-            new_elements_name = f'new_{param_name}'
+            if is_static_type(ty.element_type, specs=specs) and is_static_type(ty.separator_type, specs=specs):
+                yield ExternType(integer_rule_type)
 
-            # if is_static_type(ty.element_type, specs=specs):
-            #     yield ExternType(integer_rule_type), [
-            #         PyAssignStmt(PyNamedPattern(new_elements_name), value=PyCallExpr(PyNamedExpr('Punctuated'))),
-            #         PyIfStmt(PyIfCase(
-            #             test=PyInfixExpr(PyNamedExpr(param_name), PyGreaterThan(), PyConstExpr(0)),
-            #             body=[
-            #             PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyInfixExpr(PyNamedExpr(param_name), PyHyphen(), PyConstExpr(1)) ]), body=[
-            #                 PyExprStmt(PyCallExpr(
-            #                     PyAttrExpr(PyNamedExpr(new_elements_name), 'append'),
-            #                     args=[
-            #                         make_py_default_constructor(ty.element_type, specs=specs, prefix=prefix),
-            #                         make_py_default_constructor(ty.separator_type, specs=specs, prefix=prefix),
-            #                     ])
-            #                ),
-            #             ]),
-            #             PyExprStmt(PyCallExpr(
-            #                 PyAttrExpr(PyNamedExpr(new_elements_name), 'append_final'),
-            #                 args=[
-            #                     make_py_default_constructor(ty.element_type, specs=specs, prefix=prefix),
-            #                 ])
-            #            ),
-            #         ])),
-            #         PyRetStmt(expr=PyNamedExpr(new_elements_name)),
-            #     ]
+            value_type = gen_coerce_type(ty.element_type, True)
+            separator_type = gen_coerce_type(ty.separator_type, True)
 
-            first_element_name = f'first_element'
-            second_element_name = f'second_element'
-            element_name = f'element'
-            elements_iter_name = f'iterator'
-            value_name = f'element_value'
-            new_value_name = f'new_element_value'
-            separator_name = f'element_separator'
-            new_separator_name = f'new_element_separator'
-
-            value_type, value_expr = gen_coerce_call(ty.element_type, PyNamedExpr(value_name), True)
-
-            separator_type, separator_expr = gen_coerce_call(ty.separator_type, PyNamedExpr(separator_name), True)
-
-            coerced_ty = UnionType([
+            yield UnionType([
                 ListType(value_type, ty.required),
                 ListType(TupleType(list([ value_type, make_optional_type(separator_type) ])), ty.required),
                 PunctType(value_type, separator_type, ty.required),
             ])
-
-            def gen_unwrap(last = False) -> list[PyStmt]:
-                tuple_then: list[PyStmt] = [
-                    PyAssignStmt(
-                        pattern=PyNamedPattern(value_name),
-                        value=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(literal=0) ]),
-                    ),
-                ]
-                plain_then: list[PyStmt] = [
-                    PyAssignStmt(
-                        pattern=PyNamedPattern(value_name),
-                        value=PyNamedExpr(first_element_name),
-                    ),
-                ]
-                if last:
-                    tuple_then.append(
-                        PyExprStmt(
-                            PyCallExpr(
-                                operator=PyNamedExpr('assert'),
-                                args=[ make_py_is_none(PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(1) ])) ]
-                            )
-                        )
-                    )
-                else:
-                    tuple_then.append(
-                        PyAssignStmt(
-                            pattern=PyNamedPattern(separator_name),
-                            value=PySubscriptExpr(expr=PyNamedExpr(first_element_name), slices=[ PyConstExpr(literal=1) ])
-                        )
-                    )
-                    tuple_then.append(
-                        PyExprStmt(PyCallExpr(
-                            operator=PyNamedExpr('assert'),
-                            args=[ PyInfixExpr(PyNamedExpr(separator_name), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')) ]
-                        ))
-                    )
-                    plain_then.append(
-                        PyAssignStmt(
-                            pattern=PyNamedPattern(separator_name),
-                            value=make_py_default_constructor(ty.separator_type, specs=specs, prefix=prefix),
-                        )
-                    )
-                return make_py_cond([
-                    (
-                        # FIXME does not handle nested tuples
-                        make_py_isinstance(PyNamedExpr(first_element_name), PyNamedExpr('tuple')),
-                        tuple_then
-                    ),
-                    (
-                        None,
-                        plain_then
-                    )
-                ])
-
-            yield coerced_ty, [
-                PyAssignStmt(
-                    pattern=PyNamedPattern(new_elements_name),
-                    value=PyCallExpr(operator=PyNamedExpr('Punctuated'))
-                ),
-                PyAssignStmt(
-                    pattern=PyNamedPattern(elements_iter_name),
-                    value=PyCallExpr(operator=PyNamedExpr('iter'), args=[ PyNamedExpr(param_name) ]),
-                ),
-                PyTryStmt(
-                    body=[
-                        PyAssignStmt(
-                            pattern=PyNamedPattern(first_element_name),
-                            value=PyCallExpr(operator=PyNamedExpr('next'), args=[ PyNamedExpr(elements_iter_name) ])
-                        ),
-                        PyWhileStmt(
-                            expr=PyNamedExpr('True'),
-                            body=[
-                                PyTryStmt(
-                                    body=[
-                                        PyAssignStmt(
-                                            pattern=PyNamedPattern(second_element_name),
-                                            value=PyCallExpr(operator=PyNamedExpr('next'), args=[ PyNamedExpr(elements_iter_name) ])
-                                        ),
-                                        *gen_unwrap(),
-                                        PyAssignStmt(PyNamedPattern(new_value_name), value=value_expr),
-                                        PyAssignStmt(PyNamedPattern(new_separator_name), value=separator_expr),
-                                        PyExprStmt(
-                                            expr=PyCallExpr(
-                                                operator=PyAttrExpr(PyNamedExpr(new_elements_name), 'append'),
-                                                args=[
-                                                    PyNamedExpr(new_value_name),
-                                                    PyNamedExpr(new_separator_name)
-                                                ]
-                                            )
-                                        ),
-                                        PyAssignStmt(
-                                            pattern=PyNamedPattern(first_element_name),
-                                            value=PyNamedExpr(second_element_name),
-                                        ),
-                                    ],
-                                    handlers=[
-                                        PyExceptHandler(
-                                            expr=PyNamedExpr('StopIteration'),
-                                            body=[
-                                                *gen_unwrap(last=True),
-                                                PyAssignStmt(PyNamedPattern(new_value_name), value=value_expr),
-                                                PyExprStmt(
-                                                    expr=PyCallExpr(
-                                                        operator=PyAttrExpr(PyNamedExpr(new_elements_name), 'append_final'),
-                                                        args=[ PyNamedExpr(new_value_name) ]
-                                                    )
-                                                ),
-                                                PyBreakStmt(),
-                                            ]
-                                        )
-                                    ]
-                                )
-                            ]
-                        )
-                    ],
-                    handlers=[
-                        PyExceptHandler(
-                            expr=PyNamedExpr('StopIteration'),
-                            body=[ PyPassStmt() ]
-                        )
-                    ]
-                ),
-                PyRetStmt(expr=PyNamedExpr(new_elements_name))
-            ]
-
             return
 
         if isinstance(ty, ListType):
 
-            # Generates:
-            #
-            # out_name = list()
-            # for element in in_name:
-            #     ...
-            #     out_name.append(new_element_name)
-
-            new_elements_name = f'new_elements'
-
             if is_static_type(ty.element_type, specs=specs):
-                yield ExternType(integer_rule_type), [
-                    PyAssignStmt(PyNamedPattern(new_elements_name), value=PyCallExpr(PyNamedExpr('list'))),
-                    PyForStmt(PyNamedPattern('_'), PyCallExpr(PyNamedExpr('range'), args=[ PyConstExpr(0), PyNamedExpr(param_name) ]), body= [
-                        PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(new_elements_name), 'append'), args=[ make_py_default_constructor(ty.element_type, specs=specs, prefix=prefix) ])),
-                    ]),
-                    PyRetStmt(expr=PyNamedExpr(new_elements_name)),
-                ]
+                yield ExternType(integer_rule_type)
 
-            element_name = f'{param_name}_element'
+            element_type = gen_coerce_type(ty.element_type, True)
 
-            element_type, element_expr = gen_coerce_call(ty.element_type, PyNamedExpr(element_name), True)
-
-            yield ListType(element_type, ty.required), [
-                PyAssignStmt(
-                    pattern=PyNamedPattern(new_elements_name),
-                    value=PyCallExpr(operator=PyNamedExpr('list'))
-                ),
-                PyForStmt(
-                    pattern=PyNamedPattern(element_name),
-                    expr=PyNamedExpr(param_name),
-                    body=[
-                        PyExprStmt(
-                            expr=PyCallExpr(
-                                operator=PyAttrExpr(
-                                    expr=PyNamedExpr(new_elements_name),
-                                    name='append'
-                                ),
-                                args=[ element_expr ]
-                            )
-                        )
-                    ]
-                ),
-                PyRetStmt(expr=PyNamedExpr(new_elements_name))
-            ]
-
+            yield ListType(element_type, ty.required)
             return
 
         if isinstance(ty, TupleType):
@@ -835,54 +573,23 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
 
             if len(required) == 1:
                 main_type = required[0]
-                coerced_type, coerce_expr = gen_coerce_call(main_type, PyNamedExpr(param_name), True)
-                elements = []
-                for el_ty in ty.element_types:
-                    if el_ty == main_type:
-                        element = coerce_expr
-                    elif is_optional_type(el_ty):
-                        element = PyNamedExpr('None')
-                    else:
-                        element = make_py_default_constructor(el_ty, specs=specs, prefix=prefix)
-                    elements.append(element)
-                yield coerced_type, [
-                    PyRetStmt(expr=PyTupleExpr(
-                        elements=elements,
-                    )),
-                ]
+                yield gen_coerce_type(main_type, True)
 
-            new_elements: list[PyExpr] = []
             new_element_types = list[Type]()
 
-            # Generates:
-            #
-            # return (_coerce_foo(value[0]), _coerce_bar(value[1]), ...)
-
             for i, element_type in enumerate(ty.element_types):
-
-                element_name = f'{param_name}_{i}'
-
-                new_element_type, new_element_expr = gen_coerce_call(
+                new_element_type = gen_coerce_type(
                     element_type,
-                    PySubscriptExpr(
-                        expr=PyNamedExpr(param_name),
-                        slices=[ PyConstExpr(literal=i) ]
-                    ),
                     False
                 )
-
-                new_elements.append(new_element_expr)
                 new_element_types.append(new_element_type)
 
-            yield TupleType(new_element_types), [
-                PyRetStmt(expr=PyTupleExpr(elements=new_elements)),
-            ]
-
+            yield TupleType(new_element_types)
             return
 
         assert_never(ty)
 
-    return gen_coerce_fn(field_type, False)
+    return gen_coerce_type(field_type, False)
 
 @dataclass(frozen=True)
 class Test:

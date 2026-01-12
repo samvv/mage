@@ -21,13 +21,11 @@ mage_check = pipeline(
     mage_check_neg_charset_intervals
 )
 mage_prepare_grammar = pipeline(
-    mage_insert_magic_rules,
     mage_insert_skip,
     mage_hide_lookaheads,
-    mage_inline,
     mage_extract_literals,
-    #mage_to_core,
 )
+
 python_optimise = pipeline(
     python_remove_pass_stmts,
 )
@@ -213,7 +211,9 @@ def generate_files(
 
     fname_init = f'__init__.py'
     fname_cst = f'cst.py'
+    fname_cst_defs = f'cst.pyi'
     fname_ast = f'ast.py'
+    fname_ast_defs = 'ast.pyi'
     fname_emitter = f'emitter.py'
     fname_lexer = f'lexer.py'
     fname_parser = f'parser.py'
@@ -253,21 +253,23 @@ def generate_files(
         if enable_cst:
             # TODO add local `enable_cst_parent_pointers`
             trees[fname_cst] = treespec_to_python
+            trees[fname_cst_defs] = treespec_to_python_interfaces
         if enable_ast:
             # TODO add local `enable_ast_parent_pointers`
             trees[fname_ast] = pipeline(treespec_cst_to_ast, treespec_to_python)
+            trees[fname_ast_defs] = pipeline(treespec_cst_to_ast, treespec_to_python_interfaces)
         if enable_emitter:
             files[fname_emitter] = mage_to_python_emitter
         if enable_lexer:
-            files[fname_lexer] = pipeline(mage_flatten_grammars, mage_to_python_lexer)
+            files[fname_lexer] = pipeline(mage_inline, mage_prepare_grammar, mage_flatten_grammars, mage_to_python_lexer)
             if enable_lexer_tests:
                 files[fname_test_lexer] = mage_to_python_lexer_tests
         if enable_parser:
-            files[fname_parser] = mage_to_python_parser
+            files[fname_parser] = pipeline(mage_inline, mage_prepare_grammar, mage_to_python_parser)
             if enable_parser_tests:
-                files[fname_test_parser] = mage_to_python_parser_tests
+                files[fname_test_parser] = pipeline(mage_to_python_parser_tests)
         mage_to_target = compose(
-            merge(distribute(files), pipeline(mage_to_treespec, distribute(trees))),
+            merge(distribute(files), pipeline(mage_inline, mage_prepare_grammar, mage_to_treespec, distribute(trees))),
             each_value(pipeline(python_optimise, python_to_text)),
         )
     elif engine == Engine.NEW:
@@ -287,7 +289,7 @@ def generate_files(
         panic("Unrecognised engine requested")
 
     files = apply(ctx, grammar, pipeline(
-        mage_prepare_grammar, # Inline rules etc
+        mage_insert_magic_rules,
         identity if skip_checks or silent else mage_check, # User error reporting
         mage_to_target # Actual compilation
     ))

@@ -3,8 +3,8 @@ from typing import Iterable, assert_never
 
 from magelang.manager import declare_pass
 from magelang.passes.mage_insert_magic_rules import any_node_rule_name, any_token_rule_name, any_syntax_rule_name
-from magelang.helpers import make_py_cond, make_py_or, make_py_union, treespec_type_to_deep_py_test, make_py_coercions, treespec_type_to_py_type, treespec_type_to_shallow_py_test, namespaced, extern_type_to_py_type, to_py_class_name, quote_py_type, make_py_isinstance, PyCondCase, lookup_spec
-from magelang.lang.treespec.helpers import contains_type, expand_variant_types, is_self_referential, is_optional_type, is_type_assignable, resolve_type_references, spec_to_type
+from magelang.helpers import make_py_cond, make_py_or, make_py_union, quote_py_type, treespec_type_to_deep_py_test, treespec_type_to_py_type, treespec_type_to_shallow_py_test, namespaced, extern_type_to_py_type, to_py_class_name, make_py_isinstance, PyCondCase, lookup_spec
+from magelang.lang.treespec.helpers import contains_type, expand_variant_types, is_self_referential, is_type_assignable, resolve_type_references, spec_to_type
 from magelang.lang.mage.ast import *
 from magelang.lang.treespec.ast import *
 from magelang.lang.python.cst import *
@@ -27,52 +27,9 @@ def treespec_to_python(
     def get_base_class_name(name: str) -> str:
         return '_' + to_py_class_name('base_' + name, prefix=prefix)
 
-    base_syntax_class_name = get_base_class_name(any_syntax_rule_name)
+    # base_syntax_class_name = get_base_class_name(any_syntax_rule_name)
     base_node_class_name =  get_base_class_name(any_node_rule_name)
     base_token_class_name = get_base_class_name(any_token_rule_name)
-
-    parent_nodes = dict[str, set[str]]()
-
-    def get_parent_type(name: str) -> Type:
-        if name not in parent_nodes:
-            return NeverType()
-        return UnionType(list(SpecType(name) for name in sorted(parent_nodes[name])))
-
-    def add_to_parent_nodes(name: str, ty: Type) -> None:
-        ty = resolve_type_references(ty, specs=specs)
-        if isinstance(ty, SpecType):
-            spec = lookup_spec(specs, ty.name)
-            assert(not isinstance(spec, TypeSpec))
-            if spec is None or isinstance(spec, ConstEnumSpec):
-                return
-            if isinstance(spec, EnumSpec):
-                for member in spec.members:
-                    add_to_parent_nodes(name, member.ty)
-                return
-            if isinstance(spec, NodeSpec) or isinstance(spec, TokenSpec):
-                if spec.name not in parent_nodes:
-                    parent_nodes[ty.name] = set()
-                parent_nodes[spec.name].add(name)
-                return
-            assert_never(spec)
-        elif isinstance(ty, TupleType):
-            for element in ty.element_types:
-                add_to_parent_nodes(name, element)
-        elif isinstance(ty, ListType) or isinstance(ty, PunctType):
-            add_to_parent_nodes(name, ty.element_type)
-        elif isinstance(ty, UnionType):
-            for element in ty.types:
-                add_to_parent_nodes(name, element)
-        elif isinstance(ty, NoneType) or isinstance(ty, ExternType) or isinstance(ty, NeverType) or isinstance(ty, AnyType):
-            pass
-        else:
-            assert_never(ty)
-
-    for spec in specs.elements:
-        if not isinstance(spec, NodeSpec):
-            continue
-        for field in spec.fields:
-            add_to_parent_nodes(spec.name, field.ty)
 
     stmts: list[PyStmt] = [
         PyImportFromStmt(PyAbsolutePath('enum'), aliases=[
@@ -91,30 +48,30 @@ def treespec_to_python(
             'no_type_check',
         ]),
         PyImportFromStmt(PyAbsolutePath(PyQualName(modules=[ 'magelang' ], name='runtime')), aliases=[
-            'BaseSyntax',
+            'BaseNode',
+            'BaseToken',
             'Punctuated',
             'ImmutablePunct',
             'Span',
         ]),
-        PyClassDef(base_syntax_class_name, bases=[ PyClassBaseArg('BaseSyntax') ], body=[
+        # PyClassDef(base_syntax_class_name, bases=[ PyClassBaseArg('BaseSyntax') ], body=[
+        #     PyPassStmt(),
+        # ]),
+        PyClassDef(base_node_class_name, bases=[ PyClassBaseArg('BaseNode') ], body=[
             PyPassStmt(),
         ]),
-        PyClassDef(base_node_class_name, bases=[ PyClassBaseArg(base_syntax_class_name) ], body=[
+        PyClassDef(base_token_class_name, bases=[ PyClassBaseArg('BaseToken') ], body=[
             PyPassStmt(),
-        ]),
-        PyClassDef(base_token_class_name, bases=[ PyClassBaseArg(base_syntax_class_name) ], body=[
-            PyFuncDef(
-                name='__init__',
-                params=[ PyNamedParam(PyNamedPattern('self')), PyNamedParam(PyNamedPattern('span'), annotation=make_py_optional(PyNamedExpr('Span')), default=PyNamedExpr('None')) ],
-                body=[
-                    PyExprStmt(PyCallExpr(PyAttrExpr(PyCallExpr(PyNamedExpr('super')), '__init__'))),
-                    PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), 'span'), value=PyNamedExpr('span')),
-                ]
-            ),
+            # PyFuncDef(
+            #     name='__init__',
+            #     params=[ PyNamedParam(PyNamedPattern('self')), PyNamedParam(PyNamedPattern('span'), annotation=make_py_optional(PyNamedExpr('Span')), default=PyNamedExpr('None')) ],
+            #     body=[
+            #         PyExprStmt(PyCallExpr(PyAttrExpr(PyCallExpr(PyNamedExpr('super')), '__init__'))),
+            #         PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), 'span'), value=PyNamedExpr('span')),
+            #     ]
+            # ),
         ]),
     ]
-
-    defs = {}
 
     # Generate token classes
 
@@ -133,25 +90,26 @@ def treespec_to_python(
 
         else:
 
-            init_body: list[PyStmt] = []
+            body.append(PyAssignStmt(PyNamedPattern('value'), annotation=extern_type_to_py_type(spec.field_type)))
+#             init_body: list[PyStmt] = []
 
-            init_body.append(PyExprStmt(expr=PyCallExpr(operator=PyAttrExpr(expr=PyCallExpr(operator=PyNamedExpr('super')), name='__init__'), args=[ (PyKeywordArg(name='span', expr=PyNamedExpr('span')), None) ])))
+#             init_body.append(PyExprStmt(expr=PyCallExpr(operator=PyAttrExpr(expr=PyCallExpr(operator=PyNamedExpr('super')), name='__init__'), args=[ (PyKeywordArg(name='span', expr=PyNamedExpr('span')), None) ])))
 
-            init_params: list[PyParam] = []
+#             init_params: list[PyParam] = []
 
-            # self
-            init_params.append(PyNamedParam(pattern=PyNamedPattern('self')))
+#             # self
+#             init_params.append(PyNamedParam(pattern=PyNamedPattern('self')))
 
-            # value: Type
-            init_params.append(PyNamedParam(pattern=PyNamedPattern('value'), annotation=extern_type_to_py_type(spec.field_type)))
+#             # value: Type
+#             init_params.append(PyNamedParam(pattern=PyNamedPattern('value'), annotation=extern_type_to_py_type(spec.field_type)))
 
-            # span: Span | None = None
-            init_params.append(PyNamedParam(pattern=PyNamedPattern('span'), annotation=make_py_union([ PyNamedExpr('Span'), PyNamedExpr('None') ]), default=PyNamedExpr('None')))
+#             # span: Span | None = None
+#             init_params.append(PyNamedParam(pattern=PyNamedPattern('span'), annotation=make_py_union([ PyNamedExpr('Span'), PyNamedExpr('None') ]), default=PyNamedExpr('None')))
 
-            # self.value = value
-            init_body.append(PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern('self'), name='value'), value=PyNamedExpr('value')))
+#             # self.value = value
+#             init_body.append(PyAssignStmt(pattern=PyAttrPattern(pattern=PyNamedPattern('self'), name='value'), value=PyNamedExpr('value')))
 
-            body.append(PyFuncDef(name='__init__', params=init_params, body=init_body))
+            # body.append(PyFuncDef(name='__init__', params=init_params, body=init_body))
 
         stmts.append(PyClassDef(name=this_class_name, bases=[ PyClassBaseArg(base_token_class_name) ], body=body))
 
@@ -161,6 +119,7 @@ def treespec_to_python(
             return_type=PySubscriptExpr(PyNamedExpr('TypeIs'), [ PyNamedExpr(this_class_name) ]),
             body=[ PyRetStmt(expr=PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr('value'), PyNamedExpr(this_class_name) ])) ]
         ))
+
     # Generate node classes
 
     for spec in specs.elements:
@@ -169,162 +128,22 @@ def treespec_to_python(
             continue
 
         this_class_name = to_py_class_name(spec.name, prefix)
-        derive_kwargs_class_name = to_py_class_name(spec.name + '_derive_kwargs', prefix)
 
-        body: list[PyStmt] = []
+        class_body: list[PyStmt] = []
 
         init_params: list[PyParam] = []
         init_body: list[PyStmt] = []
 
-        derive_kwargs_body = []
-        derive_body = []
-        derive_args = []
-
-        # derive_overload_params: list[PyParam] = [
-        #     PyNamedParam(PyNamedPattern('self')),
-        #     PyKwSepParam(),
-        # ]
-
-        required_params: list[PyParam] = []
-        optional_params: list[PyParam] = []
-
         for field in spec.fields:
+            class_body.append(PyAssignStmt(PyNamedPattern(field.name), annotation=quote_py_type(treespec_type_to_py_type(field.ty, prefix=prefix))))
 
-            type_with_coercions, coerce_fn = make_py_coercions(field.ty, defs=defs, specs=specs, prefix=prefix)
-            init_body.append(PyAssignStmt(
-                pattern=PyAttrPattern(
-                    pattern=PyNamedPattern('self'),
-                    name=field.name
-                ),
-                annotation=treespec_type_to_py_type(field.ty, prefix),
-                value=PyCallExpr(coerce_fn, args=[ PyNamedExpr(field.name) ]),
-            ))
-
-            param_type = type_with_coercions
-
-            param_type_str = emit(treespec_type_to_py_type(param_type, prefix=prefix, immutable=True))
-
-            if is_optional_type(param_type):
-                optional_params.append(PyNamedParam(
-                    pattern=PyNamedPattern(field.name),
-                    annotation=PyConstExpr(literal=param_type_str),
-                    default=PyNamedExpr('None')
-                ))
-            else:
-                required_params.append(PyNamedParam(
-                    pattern=PyNamedPattern(field.name),
-                    annotation=PyConstExpr(param_type_str),
-                ))
-
-            if isinstance(field.ty, PunctType) or isinstance(field.ty, ListType):
-                body.append(PyFuncDef(
-                    name=f'count_{field.name}',
-                    params=[ PyNamedParam(PyNamedPattern('self')) ],
-                    return_type=PyNamedExpr('int'),
-                    body=[
-                        PyRetStmt(expr=PyCallExpr(PyNamedExpr('len'), args=[ PyAttrExpr(PyNamedExpr('self'), field.name) ])),
-                    ]
-                ))
-
-            derive_kwargs_body.append(PyAssignStmt(
-                pattern=PyNamedPattern(field.name),
-                annotation=quote_py_type(treespec_type_to_py_type(param_type, prefix=prefix, immutable=True)),
-            ))
-            derive_args.append(PyKeywordArg(field.name, PyNamedExpr(field.name)))
-            derive_body.append(PyAssignStmt(
-                PyNamedPattern(field.name),
-                value=PyIfExpr(
-                    PyCallExpr(coerce_fn, args=[ PySubscriptExpr(PyNamedExpr('kwargs'), [ PyConstExpr(field.name) ]) ]),
-                    PyInfixExpr(PyConstExpr(field.name), PyInKeyword(), PyNamedExpr('kwargs')),
-                    PyAttrExpr(PyNamedExpr('self'), field.name)
-                )
-            ))
-
-        if not spec.fields:
-            init_body.append(PyPassStmt())
-            derive_kwargs_body.append(PyPassStmt())
-
-        init_params.extend(required_params)
-        if optional_params:
-            init_params.append(PyKwSepParam())
-            init_params.extend(optional_params)
-
-        body.append(PyFuncDef(
-            name='__init__',
-            params=[ PyNamedParam(pattern=PyNamedPattern('self')), *init_params ],
-            return_type=PyNamedExpr('None'),
-            body=init_body
-        ))
-
-        stmts.append(PyClassDef(
-            name=derive_kwargs_class_name,
-            bases=[ PyClassBaseArg('TypedDict'), PyKeywordBaseArg('total', PyNamedExpr('False')) ],
-            body=derive_kwargs_body
-        ))
-
-        derive_body.append(PyRetStmt(expr=PyCallExpr(PyNamedExpr(this_class_name), args=derive_args)))
-
-        derive_decorators = []
-        if not enable_asserts:
-            derive_decorators.append(PyDecorator(PyNamedExpr('no_type_check')))
-        body.append(PyFuncDef(
-             decorators=derive_decorators,
-             name='derive',
-             params=[ PyNamedParam(PyNamedPattern('self')), PyRestKeywordParam('kwargs', annotation=PySubscriptExpr(PyNamedExpr('Unpack'), [ PyNamedExpr(derive_kwargs_class_name) ])) ],
-             return_type=PyConstExpr(this_class_name),
-             body=derive_body,
-         ))
-
-        parent_type_name = f'{to_py_class_name(spec.name, prefix)}Parent'
-        # body.append(PyAssignStmt(PyNamedPattern('parent'), annotation=PyConstExpr(parent_type_name)))
-        parent_type = get_parent_type(spec.name)
-        # stmts.append(PyTypeAliasStmt(parent_type_name, gen_py_type(parent_type, prefix)))
-        get_parent_body = []
-        if isinstance(parent_type, NeverType):
-            get_parent_body.append(PyRaiseStmt(PyCallExpr(PyNamedExpr('AssertionError'), args=[ PyConstExpr('trying to access the parent node of a top-level node') ])))
-        else:
-            get_parent_body.append(PyCallExpr(PyNamedExpr('assert'), args=[ PyInfixExpr(PyAttrExpr(PyNamedExpr('self'), '_parent'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')) ]))
-            get_parent_body.append(PyRetStmt(expr=PyAttrExpr(PyNamedExpr('self'), '_parent')))
-        body.append(PyFuncDef(
-            decorators=[ PyDecorator(PyNamedExpr('property')) ],
-            name='parent',
-            params=[ PyNamedParam(PyNamedPattern('self')) ],
-            return_type=PyConstExpr(parent_type_name),
-            body=get_parent_body,
-        ))
-
-        stmts.append(PyClassDef(name=this_class_name, bases=[ PyClassBaseArg(base_node_class_name) ], body=body))
+        stmts.append(PyClassDef(name=this_class_name, bases=[ PyClassBaseArg(base_node_class_name) ], body=class_body))
 
         stmts.append(PyFuncDef(
             name=f'is_{namespaced(spec.name, prefix)}',
             params=[ PyNamedParam(PyNamedPattern('value'), annotation=PyNamedExpr('Any')) ],
             return_type=PySubscriptExpr(PyNamedExpr('TypeIs'), [ PyNamedExpr(this_class_name) ]),
             body=[ PyRetStmt(expr=PyCallExpr(PyNamedExpr('isinstance'), args=[ PyNamedExpr('value'), PyNamedExpr(this_class_name) ])) ]
-        ))
-
-    # Generate constant enumerations
-
-    for spec in specs.elements:
-
-        if not isinstance(spec, ConstEnumSpec):
-            continue
-
-        stmts.append(PyClassDef(
-            name=to_py_class_name(spec.name, prefix=prefix),
-            bases=[ PyClassBaseArg('IntEnum') ],
-            body=list(PyAssignStmt(PyNamedPattern(name), value=PyConstExpr(i)) for name, i in spec.members)
-        ))
-
-    # Generate type aliases
-
-    for spec in specs.elements:
-
-        if not isinstance(spec, TypeSpec):
-            continue
-
-        stmts.append(PyTypeAliasStmt(
-            name=to_py_class_name(spec.name, prefix=prefix),
-            expr=treespec_type_to_py_type(spec.ty, prefix=prefix),
         ))
 
     # Generate variant classes and base classes
@@ -341,18 +160,8 @@ def treespec_to_python(
         pred_params: Sequence[PyParam] = [
             PyNamedParam(pattern=PyNamedPattern('value'), annotation=PyNamedExpr('Any'))
         ]
-
-        # if is_cyclic(spec.name, specs=specs):
-        #     base_class_name = get_base_class_name(spec.name)
-        #     if spec.name not in [ any_node_rule_name, any_token_rule_name, any_syntax_rule_name ]:
-        #         stmts.append(PyClassDef(
-        #             name=base_class_name,
-        #             bases=[ PyClassBaseArg(base_node_class_name) ],
-        #             body=[ PyPassStmt() ]
-        #         ))
-        #     pred_expr = build_isinstance(PyNamedExpr('value'), PyNamedExpr(base_class_name))
-        # else:
         pred_expr = make_py_or(treespec_type_to_deep_py_test(member.ty, PyNamedExpr('value'), prefix=prefix, specs=specs) for member in spec.members)
+
 
         stmts.append(PyFuncDef(
             name=f'is_{namespaced(spec.name, prefix)}',
@@ -361,18 +170,18 @@ def treespec_to_python(
             body=[ PyRetStmt(expr=pred_expr) ],
         ))
 
-    # Generate type aliases for parent fields
+    # Generate constant enumerations
 
     for spec in specs.elements:
-        if not isinstance(spec, NodeSpec):
+
+        if not isinstance(spec, ConstEnumSpec):
             continue
-        parent_type = get_parent_type(spec.name)
-        parent_type_name = f'{to_py_class_name(spec.name, prefix)}Parent'
-        stmts.append(PyTypeAliasStmt(parent_type_name, treespec_type_to_py_type(parent_type, prefix)))
 
-    # Add coercers and other generated helpers
-
-    stmts.extend(defs.values())
+        stmts.append(PyClassDef(
+            name=to_py_class_name(spec.name, prefix=prefix),
+            bases=[ PyClassBaseArg('IntEnum') ],
+            body=list(PyAssignStmt(PyNamedPattern(name), value=PyConstExpr(i)) for name, i in spec.members)
+        ))
 
     # Generate visitors
 

@@ -31,3 +31,4 @@ from .revolv_to_rust import revolv_to_rust
 from .rust_to_text import rust_to_text
 from .treespec_cst_to_ast import treespec_cst_to_ast
 from .treespec_to_python import treespec_to_python
+from .treespec_to_python_interfaces import treespec_to_python_interfaces

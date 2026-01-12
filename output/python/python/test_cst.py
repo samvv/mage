@@ -1,5 +1,6 @@
 
-from typing import cast
+from typing import cast, Any
+from collections.abc import Sequence
 from .cst import *
 
 def preorder(expr: PyExpr) -> list[PyExpr]:
