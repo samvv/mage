@@ -49,14 +49,17 @@ pub token name
 pub token integer -> Integer
   = [0-9]+
 
+@noskip
 hex_digit
   = [0-9a-f]i
 
+@noskip
 escape_sequence
   = 'u' '{' hex_digit{4} '}'
   | 'x' hex_digit{2}
   | escaped_ascii_char
 
+@noskip
 escaped_ascii_char
   = 'a'
   | 'b'
@@ -98,6 +101,7 @@ escaped_ascii_char
 ## {accept}
 ## \x0A
 ## {/accept}
+@noskip
 single_char
   = '\\' escape_sequence
   | any_char
