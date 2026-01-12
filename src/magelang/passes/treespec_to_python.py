@@ -21,7 +21,6 @@ def make_py_return(expr: PyExpr) -> PyStmt:
 def treespec_to_python(
     specs: Specs,
     prefix: str = '',
-    gen_parent_pointers: bool = True,
     enable_asserts: bool = False,
 ) -> PyModule:
 
@@ -69,12 +68,11 @@ def treespec_to_python(
         else:
             assert_never(ty)
 
-    if gen_parent_pointers:
-        for spec in specs.elements:
-            if not isinstance(spec, NodeSpec):
-                continue
-            for field in spec.fields:
-                add_to_parent_nodes(spec.name, field.ty)
+    for spec in specs.elements:
+        if not isinstance(spec, NodeSpec):
+            continue
+        for field in spec.fields:
+            add_to_parent_nodes(spec.name, field.ty)
 
     stmts: list[PyStmt] = [
         PyImportFromStmt(PyAbsolutePath('enum'), aliases=[
@@ -277,25 +275,23 @@ def treespec_to_python(
              body=derive_body,
          ))
 
-        if gen_parent_pointers:
-            parent_type_name = f'{to_py_class_name(spec.name, prefix)}Parent'
-            # body.append(PyAssignStmt(PyNamedPattern('parent'), annotation=PyConstExpr(parent_type_name)))
-            parent_type = get_parent_type(spec.name)
-            parent_type_name = f'{to_py_class_name(spec.name, prefix)}Parent'
-            # stmts.append(PyTypeAliasStmt(parent_type_name, gen_py_type(parent_type, prefix)))
-            get_parent_body = []
-            if isinstance(parent_type, NeverType):
-                get_parent_body.append(PyRaiseStmt(PyCallExpr(PyNamedExpr('AssertionError'), args=[ PyConstExpr('trying to access the parent node of a top-level node') ])))
-            else:
-                get_parent_body.append(PyCallExpr(PyNamedExpr('assert'), args=[ PyInfixExpr(PyAttrExpr(PyNamedExpr('self'), '_parent'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')) ]))
-                get_parent_body.append(PyRetStmt(expr=PyAttrExpr(PyNamedExpr('self'), '_parent')))
-            body.append(PyFuncDef(
-                decorators=[ PyDecorator(PyNamedExpr('property')) ],
-                name='parent',
-                params=[ PyNamedParam(PyNamedPattern('self')) ],
-                return_type=PyConstExpr(parent_type_name),
-                body=get_parent_body,
-            ))
+        parent_type_name = f'{to_py_class_name(spec.name, prefix)}Parent'
+        # body.append(PyAssignStmt(PyNamedPattern('parent'), annotation=PyConstExpr(parent_type_name)))
+        parent_type = get_parent_type(spec.name)
+        # stmts.append(PyTypeAliasStmt(parent_type_name, gen_py_type(parent_type, prefix)))
+        get_parent_body = []
+        if isinstance(parent_type, NeverType):
+            get_parent_body.append(PyRaiseStmt(PyCallExpr(PyNamedExpr('AssertionError'), args=[ PyConstExpr('trying to access the parent node of a top-level node') ])))
+        else:
+            get_parent_body.append(PyCallExpr(PyNamedExpr('assert'), args=[ PyInfixExpr(PyAttrExpr(PyNamedExpr('self'), '_parent'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')) ]))
+            get_parent_body.append(PyRetStmt(expr=PyAttrExpr(PyNamedExpr('self'), '_parent')))
+        body.append(PyFuncDef(
+            decorators=[ PyDecorator(PyNamedExpr('property')) ],
+            name='parent',
+            params=[ PyNamedParam(PyNamedPattern('self')) ],
+            return_type=PyConstExpr(parent_type_name),
+            body=get_parent_body,
+        ))
 
         stmts.append(PyClassDef(name=this_class_name, bases=[ PyClassBaseArg(base_node_class_name) ], body=body))
 
@@ -367,13 +363,12 @@ def treespec_to_python(
 
     # Generate type aliases for parent fields
 
-    if gen_parent_pointers:
-        for spec in specs.elements:
-            if not isinstance(spec, NodeSpec):
-                continue
-            parent_type = get_parent_type(spec.name)
-            parent_type_name = f'{to_py_class_name(spec.name, prefix)}Parent'
-            stmts.append(PyTypeAliasStmt(parent_type_name, treespec_type_to_py_type(parent_type, prefix)))
+    for spec in specs.elements:
+        if not isinstance(spec, NodeSpec):
+            continue
+        parent_type = get_parent_type(spec.name)
+        parent_type_name = f'{to_py_class_name(spec.name, prefix)}Parent'
+        stmts.append(PyTypeAliasStmt(parent_type_name, treespec_type_to_py_type(parent_type, prefix)))
 
     # Add coercers and other generated helpers
 
