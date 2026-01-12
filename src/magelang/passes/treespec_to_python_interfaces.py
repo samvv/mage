@@ -173,6 +173,9 @@ def treespec_to_python_interfaces(
         optional_params: list[PyParam] = []
 
         for field in spec.fields:
+            body.append(PyAssignStmt(PyNamedPattern(field.name), annotation=quote_py_type(treespec_type_to_py_type(field.ty, prefix=prefix))))
+
+        for field in spec.fields:
 
             type_with_coercions = get_coercions(field.ty, specs=specs)
 
