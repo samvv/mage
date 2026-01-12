@@ -53,6 +53,7 @@ def mage_to_python_emitter(
 
     def gen_write_token(target: PyExpr) -> Iterable[PyStmt]:
         yield gen_write(PyCallExpr(PyNamedExpr(emit_token_fn_name), args=[ target ]))
+        yield PyAssignStmt(PyNamedPattern('prev_token'), value=target)
 
     def gen_write(expr: PyExpr) -> PyStmt:
         return PyAugAssignStmt(PyNamedPattern(out_name), PyPlus(), expr)
@@ -67,7 +68,7 @@ def mage_to_python_emitter(
         if isinstance(expr, MageRefExpr):
             hook_name = f'gen_{expr.name}'
             hook_names.add(hook_name)
-            yield gen_write(PyCallExpr(PyNamedExpr(hook_name), args=[ PyNamedExpr('ctx'), prev_target if prev_target is not None else PyNamedExpr('None') ]))
+            yield gen_write(PyCallExpr(PyNamedExpr(hook_name), args=[ PyNamedExpr('ctx'), PyNamedExpr('prev_token') ]))
         elif isinstance(expr, MageRepeatExpr):
             # We only generate the minimum amount of tokens so that our grammar is correct.
             # Any excessive tokens are not produced by this logic
@@ -181,7 +182,7 @@ def mage_to_python_emitter(
     emit_token_body = []
 
     visit_node_body: list[PyStmt] = [
-        PyNonlocalStmt([ out_name, 'prev_node', 'next_node' ]),
+        PyNonlocalStmt([ out_name, 'prev_token' ]),
         PyAssignStmt(PyNamedPattern('ctx'), value=PyCallExpr(PyNamedExpr('create_context'))),
     ]
 
@@ -213,7 +214,6 @@ def mage_to_python_emitter(
                     if_body.extend(gen_emit_stmt(expr, PyAttrExpr(PyNamedExpr(param_name), field.name)))
                 else:
                     if_body.extend(gen_hook_stmt(expr))
-            if_body.append(PyAssignStmt(PyNamedPattern('prev_node'), value=PyNamedExpr(param_name)))
             if_body.append(PyRetStmt())
             visit_node_body.append(PyIfStmt(first=PyIfCase(
                 test=make_py_isinstance(PyNamedExpr(param_name), PyNamedExpr(to_py_class_name(rule.name, prefix))),
@@ -251,8 +251,7 @@ def mage_to_python_emitter(
             params=[ PyNamedParam(PyNamedPattern(param_name)) ],
             body=[
                 PyAssignStmt(PyNamedPattern(out_name), value=PyConstExpr('')),
-                PyAssignStmt(PyNamedPattern('prev_node'), value=PyNamedExpr('None')),
-                PyAssignStmt(PyNamedPattern('next_node'), value=PyNamedExpr('None')),
+                PyAssignStmt(PyNamedPattern('prev_token'), value=PyNamedExpr('None')),
                 PyFuncDef(
                     name=visit_fn_name,
                     params=[ PyNamedParam(PyNamedPattern(param_name)) ],
