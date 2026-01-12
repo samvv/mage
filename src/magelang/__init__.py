@@ -259,7 +259,7 @@ def generate_files(
             trees[fname_ast] = pipeline(treespec_cst_to_ast, treespec_to_python)
             trees[fname_ast_defs] = pipeline(treespec_cst_to_ast, treespec_to_python_interfaces)
         if enable_emitter:
-            files[fname_emitter] = mage_to_python_emitter
+            files[fname_emitter] = pipeline(mage_prepare_grammar, mage_to_python_emitter)
         if enable_lexer:
             files[fname_lexer] = pipeline(mage_inline, mage_prepare_grammar, mage_flatten_grammars, mage_to_python_lexer)
             if enable_lexer_tests:
