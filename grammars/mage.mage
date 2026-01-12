@@ -14,38 +14,38 @@ whitespace = [\n\r\t ]*
 
 # A name in the language.
 #
-# ```
+# {accept}
 # foobar
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # FooBar
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # F2Bar
-# ```
+# {/accept}
 @keyword
 pub token name
   = [a-z_]i [a-z0-9_]i*
 
 # An integral number.
 #
-# ```
+# {accept}
 # 1
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # 5
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # 45
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # 0
-# ```
+# {/accept}
 pub token integer -> Integer
   = [0-9]+
 
@@ -71,54 +71,54 @@ escaped_ascii_char
 
 # A single character in a character set expression.
 #
-# ```
+# {accept}
 # $
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # a
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # z
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # _
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # 0
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # 9
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # \x0A
-# ```
+# {/accept}
 single_char
   = '\\' escape_sequence
   | any_char
 
 # A string literal.
 #
-# ```
+# {accept}
 # 'foo'
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # 'Hello, world!'
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # '$'
-# ```
+# {/accept}
 #
-# ```
+# {accept}
 # '++'
-# ```
+# {/accept}
 pub token string
   = '\'' (!'\'' single_char)* '\''
 
