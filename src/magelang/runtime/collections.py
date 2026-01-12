@@ -124,6 +124,9 @@ class Punctuated[El, Sep](ImmutablePunct[El, Sep]):
     def last_delimiter(self) -> Sep | None:
         return self._storage[-1][1] if self else None
 
+    def _expand(self) -> Iterable[tuple[int, tuple[El, Sep | None]]]:
+        return enumerate(self._storage)
+
 
 ImmutablePunct.register(Punctuated) # type: ignore
 
