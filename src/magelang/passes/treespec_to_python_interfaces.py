@@ -129,16 +129,20 @@ def treespec_to_python_interfaces(
 
             init_body: list[PyStmt] = []
 
+            py_type = extern_type_to_py_type(spec.field_type)
+
             init_params: list[PyParam] = [
                 # self
                 PyNamedParam(pattern=PyNamedPattern('self')),
                 # value: Type
-                PyNamedParam(pattern=PyNamedPattern('value'), annotation=extern_type_to_py_type(spec.field_type)),
+                PyNamedParam(pattern=PyNamedPattern('value'), annotation=py_type),
                 # span: Span | None = None
                 PyNamedParam(pattern=PyNamedPattern('span'), annotation=make_py_union([ PyNamedExpr('Span'), PyNamedExpr('None') ]), default=PyNamedExpr('None')),
             ]
 
             init_body.append(PyExprStmt(PyEllipsisExpr()))
+
+            class_body.append(PyAssignStmt(PyNamedPattern('value'), annotation=py_type))
 
             class_body.append(PyFuncDef(name='__init__', params=init_params, body=init_body))
 
