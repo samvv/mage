@@ -4,7 +4,7 @@ from types import UnionType, NoneType
 import typing
 from typing import Any, Literal, Self, TypeAliasType
 import inspect
-from copy import copy
+from functools import cached_property
 
 from magelang.runtime.collections import Punctuated
 from magelang.runtime.text import Span
@@ -114,16 +114,8 @@ def increment_key(value: Any, key: Any, expand=expand) -> Any | None:
                 value = resolve(value, element)
                 values.append(value)
 
-            # if we still can go deeper we should try that first
-            result = first(expand(value))
-            if result is not None:
-                element, _child = result
-                new_key = copy(key)
-                new_key.append(element)
-                return new_key
-
             # go up until we find a key that we can increment
-            for i in reversed(range(0, len(key))):
+            for i in reversed(range(len(key))):
                 element = key[i]
                 new_element = increment_key(values[i], element)
                 if new_element is not None:
@@ -388,11 +380,11 @@ class BaseSyntax:
     def has_parent(self) -> bool:
         return self.parent is not None
 
-    @property
+    @cached_property
     def parent_path(self) -> list[int | str]:
         assert(self.parent is not None)
         for name, value in self.parent.get_fields().items():
-            for path, node in preorder_with_paths(value, expand=_expand_no_basenode, path=[ name ]):
+            for path, node in preorder_with_paths(value, expand=_expand_no_syntax, path=[ name ]):
                 if node is self:
                     return path
         raise RuntimeError(f"node {self} not found in its parent")
@@ -409,9 +401,14 @@ class BaseSyntax:
         path.reverse()
         return path
 
+    def set_parents(self) -> None:
+        for child in self.get_child_nodes():
+            child.parent = self
+            child.set_parents()
+
     def get_child_nodes(self) -> Iterable['BaseSyntax']:
         for field_value in self.get_fields().values():
-            for child in preorder(field_value, expand=_expand_no_basenode):
+            for child in preorder(field_value, expand=_expand_no_syntax):
                 if isinstance(child, BaseSyntax):
                     yield child
 
@@ -425,20 +422,6 @@ class BaseSyntax:
         return last(self.get_child_nodes())
 
     @property
-    def prev_token(self) -> 'BaseToken | None':
-        prev = self.prev_sibling
-        while prev is not None and not isinstance(prev, BaseToken):
-            prev = prev.last_child
-        return prev
-
-    @property
-    def next_token(self) -> 'BaseToken | None':
-        next = self.next_sibling
-        while next is not None and not isinstance(next, BaseToken):
-            next = next.first_child
-        return next
-
-    @property
     def prev_sibling(self) -> 'BaseSyntax | None':
         """
         Return the previous node that has the same parent as this node.
@@ -447,12 +430,12 @@ class BaseSyntax:
             return self._prev_sibling
         path = self.parent_path
         while True:
-            path = decrement_key(self.parent, path, expand=_expand_no_basenode)
+            path = decrement_key(self.parent, path, expand=_expand_no_syntax)
             # `path` may be `None`, but also `[]`
             if not path:
                 return None
             value = resolve(self.parent, path)
-            if isinstance(value, BaseNode):
+            if isinstance(value, BaseSyntax):
                 node = value
                 # while node.last_child:
                 #     node = node.last_child
@@ -461,11 +444,6 @@ class BaseSyntax:
         if node is not None:
             node._next_sibling = self
         return node
-
-    def set_parents(self) -> None:
-        for child in self.get_child_nodes():
-            child.parent = self
-            child.set_parents()
 
     @property
     def next_sibling(self) -> 'BaseSyntax | None':
@@ -479,14 +457,14 @@ class BaseSyntax:
         while True:
             if node is None:
                 return None
-            path = increment_key(node, path, expand=_expand_no_basenode)
+            path = increment_key(node, path, expand=_expand_no_syntax)
             if path is None:
                 return None
                 # path = node.path
                 # node = node.parent
             else:
                 value = resolve(node, path)
-                if isinstance(value, BaseNode):
+                if isinstance(value, BaseSyntax):
                     node = value
                     break
         self._next_sibling = node
@@ -494,7 +472,7 @@ class BaseSyntax:
             node._prev_sibling = self
         return node
 
-def _expand_no_basenode(value):
+def _expand_no_syntax(value):
     if not isinstance(value, BaseSyntax):
         yield from expand(value)
 
@@ -502,4 +480,28 @@ class BaseNode(BaseSyntax):
     pass
 
 class BaseToken(BaseSyntax):
+
     span: Span | None = None
+
+    @cached_property
+    def next_token(self) -> 'BaseToken | None':
+        curr = self.parent
+        if curr is None:
+            return
+        path = self.parent_path
+        while curr is not None:
+            path = increment_key(curr, path, expand=_expand_no_syntax)
+            if path:
+                value = resolve(curr, path)
+                while True:
+                    if not value:
+                        break
+                    if isinstance(value, BaseToken):
+                        return value
+                    key, value = next(iter(expand(value)))
+                    path.append(key)
+                continue
+            if curr.parent is None:
+                return
+            path = curr.parent_path
+            curr = curr.parent
