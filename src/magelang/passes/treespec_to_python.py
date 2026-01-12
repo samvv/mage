@@ -108,7 +108,10 @@ def treespec_to_python(
             PyFuncDef(
                 name='__init__',
                 params=[ PyNamedParam(PyNamedPattern('self')), PyNamedParam(PyNamedPattern('span'), annotation=make_py_optional(PyNamedExpr('Span')), default=PyNamedExpr('None')) ],
-                body=[ PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), 'span'), value=PyNamedExpr('span')) ]
+                body=[
+                    PyExprStmt(PyCallExpr(PyAttrExpr(PyCallExpr(PyNamedExpr('super')), '__init__'))),
+                    PyAssignStmt(PyAttrPattern(PyNamedPattern('self'), 'span'), value=PyNamedExpr('span')),
+                ]
             ),
         ]),
     ]
