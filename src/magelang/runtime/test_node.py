@@ -1,5 +1,5 @@
 
-from .node import BaseNode, BaseToken
+from .node import BaseNode, BaseSyntax, BaseToken
 
 def test_construct_kwargs():
 
@@ -104,3 +104,28 @@ def test_coerce_list_elements():
     assert(len(f.l) == 2)
     assert(isinstance(f.l[0], tuple))
     assert(isinstance(f.l[1], tuple))
+
+def test_set_parents():
+
+    class Bar1(BaseToken):
+        pass
+
+    class Bar2(BaseToken):
+        pass
+
+    class Foo(BaseNode):
+        left: Bar1
+        right: Bar2
+
+    class Bax(BaseNode):
+        value: Foo
+        tup: tuple[Bar1, Bar2]
+
+    root = Bax(Foo(Bar1(), Bar2()), (Bar1(), Bar2()))
+    root.set_parents()
+    assert(root.parent is None)
+    assert(root.value.parent is root)
+    assert(root.value.left.parent is root.value)
+    assert(root.value.right.parent is root.value)
+    assert(root.tup[0].parent is root)
+    assert(root.tup[1].parent is root)

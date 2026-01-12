@@ -214,8 +214,10 @@ def preorder(root: Any, expand: ExpandFn = expand) -> Iterable[Any]:
         for _key, value in reversed(list(expand(node))):
             stack.append(value)
 
-def preorder_with_paths(root: Any, expand: ExpandFn = expand) -> Iterable[Any]:
-    stack = [ ([], root) ]
+def preorder_with_paths(root: Any, expand: ExpandFn = expand, path: list[Any] | None = None) -> Iterable[Any]:
+    if path is None:
+        path = []
+    stack = [ (path, root) ]
     while stack:
         path, node = stack.pop()
         yield path, node
@@ -346,7 +348,7 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
 class BaseSyntax:
 
     def __init__(self, *args, **kwargs) -> None:
-        self.parent = None
+        self.parent: BaseSyntax | None = None
         self._prev_sibling: BaseSyntax | Literal[False] | None = False
         self._next_sibling: BaseSyntax | Literal[False] | None = False
         hints = typing.get_type_hints(self.__class__)
@@ -367,10 +369,18 @@ class BaseSyntax:
         return self.__class__(**fields)
 
     def get_fields(self) -> dict[str, Any]:
+        # TODO probably can be made faster
         d = {}
         for name in typing.get_type_hints(type(self)):
             d[name] = getattr(self, name)
         return d
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def keys(self) -> Iterable[str]:
+        # TODO probably can be made faster
+        return self.get_fields().keys()
 
     def _expand(self) -> Iterable[tuple[str, Any]]:
         return self.get_fields().items()
@@ -381,9 +391,10 @@ class BaseSyntax:
     @property
     def parent_path(self) -> list[int | str]:
         assert(self.parent is not None)
-        for path, node in preorder_with_paths(self.parent, expand=_expand_no_basenode):
-            if node is self:
-                return path
+        for name, value in self.parent.get_fields().items():
+            for path, node in preorder_with_paths(value, expand=_expand_no_basenode, path=[ name ]):
+                if node is self:
+                    return path
         raise RuntimeError(f"node {self} not found in its parent")
 
     def get_full_path(self):
@@ -484,7 +495,7 @@ class BaseSyntax:
         return node
 
 def _expand_no_basenode(value):
-    if not isinstance(value, BaseNode):
+    if not isinstance(value, BaseSyntax):
         yield from expand(value)
 
 class BaseNode(BaseSyntax):
