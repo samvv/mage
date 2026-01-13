@@ -170,7 +170,7 @@ class ScanError(RuntimeError):
         elif ch == EOF:
             full_message += "unexpected end-of-file reached"
         else:
-            full_message += "unexpected character {repr(ch)} encountered"
+            full_message += f"unexpected character {repr(ch)} encountered"
         super().__init__(full_message)
         self.file = file
         self.ch = ch
