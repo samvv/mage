@@ -388,7 +388,6 @@ pub class_base_arg
 pub keyword_base_arg
   = name:ident '=' expr
 
-# TODO add keyworded bases
 pub class_def
   = decorator* 'class' name:ident bases:('(' (base_arg % ',') ')')? ':' body
 
