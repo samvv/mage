@@ -278,9 +278,31 @@ def mage_to_python_parser(
 
                 rule = lookup_ref(expr)
 
-                if rule is None or rule.expr is None:
+                if rule is None:
                     yield from accept
                     return # TODO figure out what fallback logic to yield
+
+                if rule.expr is None:
+                    if rule.name == 'indent':
+                        yield PyIfStmt(
+                            first=PyIfCase(
+                                test=PyInfixExpr(PyAttrExpr(PyNamedExpr(stream_name), 'column'), PyLessThanEquals(), PyNamedExpr('last_indent')),
+                                body=list(reject),
+                            ),
+                            last=list(accept)
+                        )
+                        return
+                    if rule.name == 'dedent':
+                        yield PyIfStmt(
+                            first=PyIfCase(
+                                test=PyInfixExpr(PyAttrExpr(PyNamedExpr(stream_name), 'column'), PyGreaterThanEquals(), PyNamedExpr('last_indent')),
+                                body=list(reject),
+                            ),
+                            last=list(accept)
+                        )
+                        return
+                    # raise RuntimeError(f"unrecognised special rule {rule.name}")
+                    return
 
                 if not rule.is_public:
                     yield from visit_field_internals(rule.expr, stream_name, target_name, accept, reject)
