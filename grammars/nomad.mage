@@ -183,6 +183,10 @@ pub path_expr
 ## {accept}
 ## &foo
 ## {/accept}
+##
+## {accept}
+## & /* comment */ bar
+## {/accept}
 pub ref_expr
   = '&' expr
 
