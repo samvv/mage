@@ -1,5 +1,4 @@
 from pathlib import Path
-from warnings import warn
 import pytest
 
 from magelang.eval import RECMAX, Error, evaluate
