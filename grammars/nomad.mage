@@ -61,7 +61,7 @@ pub token name
 ## {reject}
 ## foo
 ## {/reject}
-pub boolean
+pub token boolean
   = 'true'
   | 'false'
 
