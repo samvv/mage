@@ -5,7 +5,13 @@ any_byte = [\x00-\xFF]
 any_char = [\x00-\x7F]
 
 pub extern token eof
+
+## A special token that 'folds' multiple lines separated by a backslash.
+##
+## See https://github.com/python/cpython/blob/510ab7d6e1284dd2ac453b780fa19b5627bca0e1/Parser/lexer/lexer.c#L806C5-L829C6
 pub extern token newline
+
+# These two should be builtin
 pub extern token indent
 pub extern token dedent
 
