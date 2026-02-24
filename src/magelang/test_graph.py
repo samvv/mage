@@ -17,12 +17,9 @@ def test_toposort_simple_cycle():
 
     assert(len(sccs) == 5)
 
-    for scc in sccs:
-        scc.sort()
-
     def index(x: str) -> int:
         for i, scc in enumerate(sccs):
-            if scc[0] == x:
+            if x in scc:
                 return i
         raise RuntimeError(f"'{x}' not found")
 
