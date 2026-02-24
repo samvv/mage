@@ -1,6 +1,7 @@
 
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from typing import Generator, Iterator
 
 from magelang.util import nonnull
@@ -62,11 +63,19 @@ class DGraph[V, L]:
     def count_vertices(self) -> int:
         return len(self._vertices)
 
+    @property
+    def edges(self) -> Iterable[tuple[V, V, L]]:
+        for v, (w, l) in self._src_to_dst.items():
+            yield v, w, l
+
     def count_edges(self) -> int:
         return self._edge_count
 
     def get_vertices(self) -> Iterator[V]:
         return iter(self._vertices)
+
+    def has_edge(self, a: V, b: V, l: L) -> bool:
+        return a in self._src_to_dst and (b, l) in self._src_to_dst[a]
 
     def outgoing_edges(self, src: V) -> Iterator[tuple[V, L]]:
         return iter(self._src_to_dst[src])
@@ -88,12 +97,13 @@ class DGraph[V, L]:
         self._vertices.clear()
         self._edge_count = 0
 
+@dataclass
 class ToposortVertexData:
     index: int | None = None
     lowlink: int | None = None
     on_stack: bool = False
 
-def toposort[V, L](graph: DGraph[V, L]) -> Iterator[list[V]]:
+def toposort[V, L](graph: DGraph[V, L]) -> Iterator[set[V]]:
 
     mapping = dict[V, ToposortVertexData]()
     index = 0
@@ -107,7 +117,7 @@ def toposort[V, L](graph: DGraph[V, L]) -> Iterator[list[V]]:
         mapping[v] = to_insert
         return to_insert
 
-    def strongconnect(v: V) -> Generator[list[V]]:
+    def strongconnect(v: V) -> Generator[set[V]]:
 
         nonlocal index
 
@@ -127,12 +137,12 @@ def toposort[V, L](graph: DGraph[V, L]) -> Iterator[list[V]]:
                 v_data.lowlink = min(v_data.lowlink, w_data.index)
 
         if v_data.lowlink == v_data.index:
-            scc = list[V]()
+            scc = set[V]()
             while True:
                 w = stack.pop()
                 w_data = get_data(w)
                 w_data.on_stack = False
-                scc.append(w)
+                scc.add(w)
                 if w == v:
                     break
             yield scc
