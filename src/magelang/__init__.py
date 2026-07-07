@@ -281,7 +281,7 @@ def generate_files(
             panic(f"Unrecognised language '{lang}'")
         mage_to_target = pipeline(
             distribute({
-                'cst.rev': mage_to_revolv_syntax_tree,
+                'cst.rev': MageToRevolvSyntaxTree(),
             }),
             revolv_to_target
         )
