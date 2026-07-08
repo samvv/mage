@@ -403,7 +403,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             if expr.max == POSINF:
                 repeat_label = generate_name(prefix='repeat_inf')
                 done_label = generate_name(prefix='repeat_end')
-                yield Catch(done_label)
+                yield Catch(target=done_label)
                 yield Noop(label=repeat_label)
                 yield from compile_expr(expr.expr, hidden)
                 yield Jump(target=repeat_label)
