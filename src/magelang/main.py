@@ -36,11 +36,10 @@ def eval(filename: str, value: str, /, *, generate: bool = False, rule: str | No
     cache_dir = Path.home() / '.cache' / 'magelang'
     grammar = _grammar_from_file_or_seed(filename)
     if rule is None:
-        rules = list(grammar.rules)
-        if not rules:
+        if grammar.start_rule is None:
             error("Grammar has no rules")
             return 1
-        rule = rules[-1].name
+        rule = grammar.start_rule.name
     dest_dir = cache_dir / 'last-eval'
     # hash = hash_grammar(grammar)
     # dest_dir = cache_dir / f'{hash:010d}'

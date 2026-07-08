@@ -819,6 +819,12 @@ class MageGrammar(MageModuleBase):
         self.parent = None
         self.set_parents()
 
+    @property
+    def start_rule(self) -> MageRule | None:
+        for element in reversed(self.elements):
+            if isinstance(element, MageRule):
+                return element
+
     def set_parents(self) -> None:
         for element in self.elements:
             element.parent = self
