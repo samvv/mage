@@ -273,7 +273,8 @@ def execute(m: Machine, start: int, text: str) -> Any:
         elif isinstance(op, Halt):
             assert(not handlers)
             assert(len(stack) == 1)
-            assert(i == len(text))
+            if i < len(text):
+                raise ParseError()
             return stack[-1]
         elif isinstance(op, Fail):
             fail()
