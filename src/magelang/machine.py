@@ -13,6 +13,7 @@ type Op = (
     | Catch
     | Commit
     | Dec
+    | Dup
     | Fail
     | Halt
     | Inc
@@ -20,6 +21,7 @@ type Op = (
     | JumpNZ
     | JumpZ
     | Noop
+    | Pop
     | Push
     | Ret
     | Sat
@@ -80,6 +82,14 @@ class Push(OpBase):
     comment: str | None = None
 
 @dataclass
+class Pop(OpBase):
+    """
+    Pop the topmost value from the stack.
+    """
+    label: str | None = None
+    comment: str | None = None
+
+@dataclass
 class Sat(OpBase):
     """
     Check whether the character satisfies the given range.
@@ -129,6 +139,14 @@ class Catch(OpBase):
     The machine will unwind the stack and jump to the given label on failure.
     """
     target: str | int
+    label: str | None = None
+    comment: str | None = None
+
+@dataclass
+class Dup(OpBase):
+    """
+    Duplicate the topmost value on the stack.
+    """
     label: str | None = None
     comment: str | None = None
 
@@ -263,6 +281,9 @@ def execute_machine(m: Machine, text: str, start: int = 0, stack: list[Any] | No
         elif isinstance(op, Push):
             stack.append(op.value)
             frame.op_index += 1
+        elif isinstance(op, Pop):
+            stack.pop()
+            frame.op_index += 1
         elif isinstance(op, Build):
             fields = list[tuple[str, Any]]()
             for name in reversed(op.field_names):
@@ -326,6 +347,9 @@ def execute_machine(m: Machine, text: str, start: int = 0, stack: list[Any] | No
         elif isinstance(op, Call):
             frames.append(Frame(m.defs[op.name]))
             # TODO what about the return value?
+        elif isinstance(op, Dup):
+            stack.append(stack[-1])
+            frame.op_index += 1
         else:
             assert_never(op)
 
