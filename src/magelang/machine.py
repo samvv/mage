@@ -411,9 +411,8 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                 yield Catch(done_label)
                 yield Noop(label=repeat_label)
                 yield from compile_expr(expr.expr, hidden)
-                yield Jump(repeat_label)
-                yield Commit()
-                yield Noop(done_label)
+                yield Jump(target=repeat_label)
+                yield Noop(label=done_label)
             else:
                 yield from compile_repeat(expr.max - expr.min, expr, hidden)
             return
