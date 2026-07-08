@@ -47,14 +47,14 @@ def test_jumpz():
     assert(stack[-1] == 42)
     m = Machine([
         Push(1),
-        JumpZ(+2),
-        Halt(),
+        JumpZ(+3),
         Push(42),
+        Halt(),
         Halt(),
     ])
     stack = []
     execute_machine(m, '', stack=stack)
-    assert(stack[-1] == 1)
+    assert(stack[-1] == 42)
 
 def test_jumpnz():
     m = Machine([
@@ -69,14 +69,14 @@ def test_jumpnz():
     assert(stack[-1] == 42)
     m = Machine([
         Push(0),
-        JumpNZ(+2),
+        JumpNZ(+3),
+        Push(42),
         Halt(),
-        Push(2),
         Halt(),
     ])
     stack = []
     execute_machine(m, '', stack=stack)
-    assert(stack[-1] == 0)
+    assert(stack[-1] == 42)
 
 def test_compile_lit():
     m = mage_to_machine(MageGrammar([
