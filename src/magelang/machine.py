@@ -191,20 +191,18 @@ class Machine:
     defs: dict[str, int]
 
     def dump(self) -> None:
-        out = IndentWriter(sys.stderr)
-        out.indent()
-        for op in self.ops:
+        out = ''
+        for i, op in enumerate(self.ops):
             if op.label is not None:
-                out.dedent()
-                out.write(op.label + ':\n')
-                out.indent()
-            out.write(str(op))
+                out += f'[{i}] ' + op.label + ':\n'
+            out += f'[{i}]    ' + str(op)
             if op.comment:
-                out.write(' # ' + op.comment)
-            out.write('\n')
-        out.dedent()
+                out += ' # ' + op.comment
+            out += '\n'
         for name, offset in self.defs.items():
-            out.write(f'def {name} = {offset}\n')
+            out += f'def {name} = {offset}\n'
+        print(out)
+
 
 @dataclass
 class Frame:
