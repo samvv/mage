@@ -281,12 +281,9 @@ def execute(m: Machine, text: str) -> Any:
         elif isinstance(op, Ret):
             value = stack[-1]
             frames.pop()
-            if not frames: # FIXME remove me
-                assert(not handlers)
-                assert(len(stack) == 1)
-                assert(i == len(text))
-                return value
-            frames[-1].stack.append(value)
+            frame = frames[-1]
+            stack = frame.stack
+            stack.append(value)
             frame.op_index += 1
         elif isinstance(op, Tell):
             stack.append(i)
