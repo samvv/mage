@@ -23,12 +23,14 @@ def test_jump():
         Push(2),
         Halt(),
     ])
-    stack = execute_machine(m, '')
+    stack = []
+    execute_machine(m, '', stack=stack)
     assert(stack[-1] == 1)
 
 def test_push():
     m = Machine([ Push(42), Push(33), Halt() ])
-    stack = execute_machine(m, '')
+    stack = []
+    execute_machine(m, '', stack=stack)
     assert(stack[-1] == 33)
     assert(stack[-2] == 42)
 
@@ -40,7 +42,8 @@ def test_jumpz():
         Push(42),
         Halt(),
     ])
-    stack = execute_machine(m, '')
+    stack = []
+    execute_machine(m, '', stack=stack)
     assert(stack[-1] == 42)
     m = Machine([
         Push(1),
@@ -49,7 +52,8 @@ def test_jumpz():
         Push(42),
         Halt(),
     ])
-    stack = execute_machine(m, '')
+    stack = []
+    execute_machine(m, '', stack=stack)
     assert(stack[-1] == 1)
 
 def test_jumpnz():
@@ -60,7 +64,8 @@ def test_jumpnz():
         Push(42),
         Halt(),
     ])
-    stack = execute_machine(m, '')
+    stack = []
+    execute_machine(m, '', stack=stack)
     assert(stack[-1] == 42)
     m = Machine([
         Push(0),
@@ -69,7 +74,8 @@ def test_jumpnz():
         Push(2),
         Halt(),
     ])
-    stack = execute_machine(m, '')
+    stack = []
+    execute_machine(m, '', stack=stack)
     assert(stack[-1] == 0)
 
 def test_compile_lit():

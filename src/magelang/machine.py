@@ -295,10 +295,9 @@ def execute_machine(m: Machine, text: str, start: int = 0, stack: list[Any] | No
             frame.op_index += 1
         elif isinstance(op, Halt):
             assert(not handlers)
-            assert(len(stack) == 1)
             if i < len(text):
                 raise ParseError()
-            return stack[-1]
+            break
         elif isinstance(op, Fail):
             fail()
         elif isinstance(op, Commit):
@@ -361,7 +360,10 @@ def call_machine_method(m: Machine, name: str, text: str) -> Any:
     start = len(m.ops)
     m.ops.append(Call(name))
     m.ops.append(Halt())
-    return execute_machine(m, text, start=start)
+    stack = []
+    execute_machine(m, text, start=start, stack=stack)
+    assert(len(stack) == 1)
+    return stack[-1]
 
 
 def link_machine(m: Machine) -> None:
