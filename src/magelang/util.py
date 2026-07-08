@@ -164,9 +164,10 @@ class IndentWriter:
 
 class NameGenerator:
 
-    def __init__(self, namespace: str | None = None, default_prefix: str | None= 'tmp') -> None:
+    def __init__(self, namespace: str | None = None, default_prefix: str | None= 'tmp', hide_first: bool = False) -> None:
         self._counts: dict[str, int] = {}
         self.namespace = namespace
+        self._hide_first = hide_first
         self._default_prefix = default_prefix
 
     def __call__(self, prefix: str | None = None, hide: bool = False) -> str:
@@ -186,7 +187,7 @@ class NameGenerator:
         assert(len(name) > 0)
         count = self._counts.get(name, 0)
         self._counts[name] = count + 1
-        if count > 0:
+        if count > 0 or not self._hide_first:
             name += '_' + str(count)
         return name
 
