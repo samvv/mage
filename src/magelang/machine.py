@@ -196,7 +196,6 @@ def execute(m: Machine, text: str) -> Any:
             ch = text[i]
             l, h = op.rng
             if l >= ch and h <= ch:
-                print('accept', ch)
                 i += 1
                 if op.add:
                     stack[-1] += ch
@@ -209,7 +208,9 @@ def execute(m: Machine, text: str) -> Any:
         elif isinstance(op, Build):
             fields = dict[str, Any]()
             for name in reversed(op.field_names):
-                fields[name] = stack.pop()
+                high = stack.pop()
+                low = stack.pop()
+                fields[name] = (low, high)
             stack.append(DynamicNode(op.name, fields))
             frame.op_index += 1
         elif isinstance(op, Halt):
@@ -339,10 +340,11 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                 if field is not None and is_string_type(field.ty):
                     # FIXME
                     ops.append(Push(''))
+                ops.append(Tell())
                 ops.extend(compile_expr(expr, field is None))
+                ops.append(Tell())
                 if field is not None:
                     field_names.append(field.name)
-                    ops.append(Push(field.name, comment=f'field name'))
             ops.append(Build(rule.name, field_names))
             ops.append(Ret())
             defs[rule.name] = i
