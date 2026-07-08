@@ -353,3 +353,12 @@ class Progress:
         self.replace_last_line(message)
         self.out.write('\n')
 
+class DynamicNode:
+
+    def __init__(self, name: str, fields: dict[str, Any]) -> None:
+        self.name = name
+        self.fields = fields
+
+    def __repr__(self) -> str:
+        return f'{self.name}({', '.join(f'{k}={repr(v)}' for k, v in self.fields.items())})'
+

@@ -17,8 +17,9 @@ from magelang.lang.python.cst import PyModule
 from magelang.lang.python.emitter import emit as py_emit
 from magelang.lang.revolv.ast import Program
 from magelang.logging import error, info, warn
+from magelang.machine import execute, link_machine, mage_to_machine
 from magelang.manager import Context, apply, compose, get_pass_by_name, identity
-from magelang.util import Files, Progress, load_py_file
+from magelang.util import DynamicNode, Files, Progress, load_py_file
 
 
 def _grammar_from_file_or_seed(filename: str) -> MageGrammar:
@@ -31,7 +32,7 @@ def _grammar_from_file_or_seed(filename: str) -> MageGrammar:
     return load_grammar(filename)
 
 
-def eval(filename: str, value: str, /, *, generate: bool = False, rule: str | None = None) -> int:
+def eval(filename: str, value: str, /, *, generate: bool = False, rule: str | None = None, machine: bool = False) -> int:
     cache_dir = Path.home() / '.cache' / 'magelang'
     grammar = _grammar_from_file_or_seed(filename)
     if rule is None:
@@ -49,6 +50,11 @@ def eval(filename: str, value: str, /, *, generate: bool = False, rule: str | No
         parse = getattr(parser, f'parse_{rule}')
         print(parse(value))
         return 0
+    elif machine:
+        m = mage_to_machine(grammar)
+        m.dump()
+        link_machine(m)
+        result = execute(m, value)
     else:
         entry = grammar.lookup(rule)
         if entry is None:
@@ -61,8 +67,8 @@ def eval(filename: str, value: str, /, *, generate: bool = False, rule: str | No
         if result == RECMAX:
             error("Maximum recursion depth exceeded. Your grammar probably contains loops that consume nothing.")
             return 1
-        print(result)
-        return 0
+    print(result)
+    return 0
 
 
 def generate(

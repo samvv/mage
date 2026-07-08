@@ -1,12 +1,11 @@
 
-from typing import NewType, assert_never
+from typing import assert_never
 
 from magelang.analysis import is_eof
 from magelang.constants import DEFAULT_MAX_REPEATS
-from magelang.helpers import get_field_name, get_fields
+from magelang.helpers import get_fields
 from magelang.lang.mage.ast import *
-from magelang.runtime import Punctuated
-from magelang.util import NameGenerator
+from magelang.util import DynamicNode
 
 EOF = '\uFFFF'
 
@@ -24,12 +23,6 @@ class Error:
 SUCCESS   = Error(0)
 NO_MATCH  = Error(1)
 RECMAX    = Error(2)
-
-class DynamicNode:
-
-    def __init__(self, name: str, fields: 'dict[str, Any]') -> None:
-        self.name = name
-        self.fields = fields
 
 def evaluate(
     rule: MageRule,
