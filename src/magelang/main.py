@@ -48,8 +48,7 @@ def eval(filename: str, value: str, /, *, generate: bool = False, rule: str | No
     if generate:
         parser = generate_and_load_parser(grammar, dest_dir=dest_dir)
         parse = getattr(parser, f'parse_{rule}')
-        print(parse(value))
-        return 0
+        result = parse(value)
     elif machine:
         m = mage_to_machine(grammar)
         m.dump()
