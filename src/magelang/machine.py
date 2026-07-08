@@ -347,8 +347,8 @@ def link_machine(m: Machine) -> None:
 
 def mage_to_machine(grammar: MageGrammar) -> Machine:
 
-    defs = {}
-    ops = []
+    defs = dict[str, int]()
+    ops = list[Op]()
 
     generate_name = NameGenerator()
 
