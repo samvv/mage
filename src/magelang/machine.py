@@ -339,18 +339,12 @@ def call_machine_method(m: Machine, name: str, text: str) -> Any:
 def link_machine(m: Machine) -> None:
     """
     Converts jumps to named labels of a machine to relative offsets.
-
-    As a side-effect, this transformation removes Noop ops from the machine,
-    since these were mainly used to store label offsets.
     """
     labels = dict[str, int]()
     i = 0
-    while i < len(m.ops):
-        op = m.ops[i]
+    for i, op in enumerate(m.ops):
         if op.label is not None:
             labels[op.label] = i
-        if isinstance(op, Noop):
-            del m.ops[i]
         else:
             i += 1
     for i, op in enumerate(m.ops):
