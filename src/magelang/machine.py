@@ -244,8 +244,6 @@ def execute(m: Machine, start: int, text: str) -> Any:
         stack = frame.stack
         op = m.ops[frame.op_index]
 
-        print(f'[{frame.op_index}] {op}')
-
         if isinstance(op, Sat):
             if i >= len(text):
                 fail()

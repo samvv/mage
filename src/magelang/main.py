@@ -51,7 +51,6 @@ def eval(filename: str, value: str, /, *, generate: bool = False, rule: str | No
     elif machine:
         m = mage_to_machine(grammar)
         link_machine(m)
-        m.dump()
         result = call_machine_method(m, rule,  value)
     else:
         entry = grammar.lookup(rule)
