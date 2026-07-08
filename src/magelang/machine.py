@@ -239,118 +239,125 @@ class ParseError(RuntimeError):
     pass
 
 
-def execute_machine(m: Machine, text: str, start: int = 0, stack: list[Any] | None = None) -> None:
+class Executor:
 
-    if stack is None:
-        stack = []
+    def __init__(self, start = 0, stack: list[Any] | None = None) -> None:
+        if stack is None:
+            stack = []
+        self.offset = 0
+        self.frames: list[Frame] = [ Frame(start, stack) ]
+        self.handlers = list[tuple[int, int]]()
 
-    i = 0
-    frames = list[Frame]()
-    handlers = list[tuple[int, int]]()
+    @property
+    def frame(self) -> Frame:
+        return self.frames[-1]
 
-    def fail():
-        if not handlers:
+    @property
+    def stack(self) -> list[Any]:
+        return self.frame.stack
+
+    def fail(self):
+        if not self.handlers:
             raise ParseError()
-        i, target = handlers[-1]
-        while len(frames) > i:
-            frames.pop()
-        handlers.pop()
-        frames[-1].op_index = target
+        frame_offset, target = self.handlers[-1]
+        while len(self.frames) > frame_offset:
+            self.frames.pop()
+        self.handlers.pop()
+        self.frames[-1].op_index = target
 
-    frames.append(Frame(start, stack))
+    def execute(self, m: Machine, text: str) -> None:
 
-    while True:
+        while True:
 
-        frame = frames[-1]
-        stack = frame.stack
-        op = m.ops[frame.op_index]
+            op = m.ops[self.frame.op_index]
 
-        if isinstance(op, Sat):
-            if i >= len(text):
-                fail()
-                continue
-            ch = text[i]
-            l, h = op.rng
-            if l >= ch and h <= ch:
-                i += 1
-                if op.add:
-                    stack[-1] += ch
+            if isinstance(op, Sat):
+                if self.offset >= len(text):
+                    self.fail()
+                    continue
+                ch = text[self.offset]
+                l, h = op.rng
+                if l >= ch and h <= ch:
+                    self.offset += 1
+                    self.frame.op_index += 1
+                else:
+                    self.fail()
+            elif isinstance(op, Push):
+                self.stack.append(op.value)
+                self.frame.op_index += 1
+            elif isinstance(op, Pop):
+                self.stack.pop()
+                self.frame.op_index += 1
+            elif isinstance(op, Build):
+                fields = list[tuple[str, Any]]()
+                for name in reversed(op.field_names):
+                    high = self.stack.pop()
+                    low = self.stack.pop()
+                    fields.append((name, (low, high)))
+                fields.reverse()
+                self.stack.append(DynamicNode(op.name, fields))
+                self.frame.op_index += 1
+            elif isinstance(op, Halt):
+                assert(not self.handlers)
+                if self.offset < len(text):
+                    raise ParseError()
+                break
+            elif isinstance(op, Fail):
+                self.fail()
+            elif isinstance(op, Commit):
+                self.handlers.pop()
+                self.frame.op_index += 1
+            elif isinstance(op, Catch):
+                assert(isinstance(op.target, int))
+                self.handlers.append((len(self.frames), self.frame.op_index + op.target))
+                self.frame.op_index += 1
+            elif isinstance(op, Ret):
+                value = self.stack[-1]
+                self.frames.pop()
+                self.stack.append(value)
+                self.frame.op_index += 1
+            elif isinstance(op, Tell):
+                self.stack.append(self.offset)
+                self.frame.op_index += 1
+            elif isinstance(op, Seek):
+                self.offset = self.stack.pop()
+                self.frame.op_index += 1
+            elif isinstance(op, Jump):
+                assert(isinstance(op.target, int))
+                self.frame.op_index += op.target
+            elif isinstance(op, JumpZ):
+                assert(isinstance(op.target, int))
+                if self.stack.pop() == 0:
+                    self.frame.op_index += op.target
+                else:
+                    self.frame.op_index += 1
+            elif isinstance(op, JumpNZ):
+                assert(isinstance(op.target, int))
+                if self.stack.pop() != 0:
+                    self.frame.op_index += op.target
+                else:
+                    self.frame.op_index += 1
+            elif isinstance(op, Noop):
+                self.frame.op_index += 1
+            elif isinstance(op, Inc):
+                self.stack[-1] += 1
+                self.frame.op_index += 1
+            elif isinstance(op, Dec):
+                self.stack[-1] -= 1
+                self.frame.op_index += 1
+            elif isinstance(op, Call):
+                self.frames.append(Frame(m.defs[op.name]))
+                # TODO what about the return value?
+            elif isinstance(op, Dup):
+                self.stack.append(self.stack[-1])
+                self.frame.op_index += 1
             else:
-                fail()
-            frame.op_index += 1
-        elif isinstance(op, Push):
-            stack.append(op.value)
-            frame.op_index += 1
-        elif isinstance(op, Pop):
-            stack.pop()
-            frame.op_index += 1
-        elif isinstance(op, Build):
-            fields = list[tuple[str, Any]]()
-            for name in reversed(op.field_names):
-                high = stack.pop()
-                low = stack.pop()
-                fields.append((name, (low, high)))
-            fields.reverse()
-            stack.append(DynamicNode(op.name, fields))
-            frame.op_index += 1
-        elif isinstance(op, Halt):
-            assert(not handlers)
-            if i < len(text):
-                raise ParseError()
-            break
-        elif isinstance(op, Fail):
-            fail()
-        elif isinstance(op, Commit):
-            handlers.pop()
-            frame.op_index += 1
-        elif isinstance(op, Catch):
-            assert(isinstance(op.target, int))
-            handlers.append((len(frames), frame.op_index + op.target))
-            frame.op_index += 1
-        elif isinstance(op, Ret):
-            value = stack[-1]
-            frames.pop()
-            frame = frames[-1]
-            stack = frame.stack
-            stack.append(value)
-            frame.op_index += 1
-        elif isinstance(op, Tell):
-            stack.append(i)
-            frame.op_index += 1
-        elif isinstance(op, Seek):
-            i = stack.pop()
-            frame.op_index += 1
-        elif isinstance(op, Jump):
-            assert(isinstance(op.target, int))
-            frame.op_index += op.target
-        elif isinstance(op, JumpZ):
-            assert(isinstance(op.target, int))
-            if stack.pop() == 0:
-                frame.op_index += op.target
-            else:
-                frame.op_index += 1
-        elif isinstance(op, JumpNZ):
-            assert(isinstance(op.target, int))
-            if stack.pop() != 0:
-                frame.op_index += op.target
-            else:
-                frame.op_index += 1
-        elif isinstance(op, Noop):
-            frame.op_index += 1
-        elif isinstance(op, Inc):
-            stack[-1] += 1
-            frame.op_index += 1
-        elif isinstance(op, Dec):
-            stack[-1] -= 1
-            frame.op_index += 1
-        elif isinstance(op, Call):
-            frames.append(Frame(m.defs[op.name]))
-            # TODO what about the return value?
-        elif isinstance(op, Dup):
-            stack.append(stack[-1])
-            frame.op_index += 1
-        else:
-            assert_never(op)
+                assert_never(op)
+
+
+def execute_machine(m: Machine, text: str, start = 0, stack = None) -> None:
+    e = Executor(start, stack)
+    e.execute(m, text)
 
 
 def call_machine_method(m: Machine, name: str, text: str) -> Any:
