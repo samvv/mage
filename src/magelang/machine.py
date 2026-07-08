@@ -239,7 +239,7 @@ class ParseError(RuntimeError):
     pass
 
 
-def execute_machine(m: Machine, text: str, start: int = 0, stack: list[Any] | None = None) -> Any:
+def execute_machine(m: Machine, text: str, start: int = 0, stack: list[Any] | None = None) -> None:
 
     if stack is None:
         stack = []
@@ -351,8 +351,6 @@ def execute_machine(m: Machine, text: str, start: int = 0, stack: list[Any] | No
             frame.op_index += 1
         else:
             assert_never(op)
-
-    raise RuntimeError("end of instructions reached without return")
 
 
 def call_machine_method(m: Machine, name: str, text: str) -> Any:
