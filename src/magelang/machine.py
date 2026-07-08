@@ -396,7 +396,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             yield Seek(label=success_label)
             return
         if isinstance(expr, MageHideExpr):
-            yield from compile_expr(expr.expr, hidden)
+            yield from compile_expr(expr.expr, True)
             return
         if isinstance(expr, MageSeqExpr):
             for element in expr.elements:
