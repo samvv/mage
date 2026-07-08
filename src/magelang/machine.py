@@ -190,11 +190,23 @@ class Machine:
     defs: dict[str, int]
 
     def dump(self) -> None:
+        out = IndentWriter(sys.stderr)
+        out.indent()
         for op in self.ops:
-            print(op)
-        print('-------------')
+            if op.label is not None:
+                out.dedent()
+                out.write(op.label + ':\n')
+                out.indent()
+            out.write(to_snake_case(op.__class__.__name__))
+            for name in typing.get_type_hints(op.__class__).keys():
+                if name != 'comment' and name != 'label':
+                    out.write(f' {getattr(op, name)}')
+            if op.comment:
+                out.write(' # ' + op.comment)
+            out.write('\n')
+        out.dedent()
         for name, offset in self.defs.items():
-            print(f'def {name} = {offset}')
+            out.write(f'def {name} = {offset}\n')
 
 @dataclass
 class Frame:
