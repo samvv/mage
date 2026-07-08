@@ -1,4 +1,5 @@
 from collections.abc import Iterable, Sequence
+from copy import deepcopy
 from dataclasses import dataclass, field
 
 from magelang.lang.treespec.ast import is_string_type
@@ -202,6 +203,12 @@ class Machine:
         for name, offset in self.defs.items():
             out += f'def {name} = {offset}\n'
         print(out)
+
+    def clone(self) -> Machine:
+        return Machine(
+            deepcopy(self.ops),
+            deepcopy(self.defs),
+        )
 
 
 @dataclass
