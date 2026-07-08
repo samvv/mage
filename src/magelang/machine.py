@@ -189,7 +189,7 @@ class Dec(OpBase):
 @dataclass
 class Machine:
     ops: list[Op]
-    defs: dict[str, int]
+    defs: dict[str, int] = field(default_factory=dict)
 
     def dump(self) -> None:
         out = ''
