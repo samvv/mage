@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from magelang.lang.treespec.ast import is_string_type
 from magelang.helpers import get_fields
 from magelang.lang.mage.ast import *
-from magelang.util import DynamicNode, NameGenerator, todo
+from magelang.util import DynamicNode, IndentWriter, NameGenerator, to_snake_case, todo
 
 type Op = (
     Build
