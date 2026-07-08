@@ -27,7 +27,13 @@ type Op = (
 )
 
 class OpBase:
-    pass
+
+    def __str__(self) -> str:
+        out = to_snake_case(self.__class__.__name__)
+        for name in typing.get_type_hints(self.__class__).keys():
+            if name != 'comment' and name != 'label':
+                out += f' {getattr(self, name)}'
+        return out
 
 @dataclass
 class Ret(OpBase):
@@ -197,10 +203,7 @@ class Machine:
                 out.dedent()
                 out.write(op.label + ':\n')
                 out.indent()
-            out.write(to_snake_case(op.__class__.__name__))
-            for name in typing.get_type_hints(op.__class__).keys():
-                if name != 'comment' and name != 'label':
-                    out.write(f' {getattr(op, name)}')
+            out.write(str(op))
             if op.comment:
                 out.write(' # ' + op.comment)
             out.write('\n')
