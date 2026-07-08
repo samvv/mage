@@ -264,11 +264,12 @@ def execute_machine(m: Machine, text: str, start: int = 0, stack: list[Any] | No
             stack.append(op.value)
             frame.op_index += 1
         elif isinstance(op, Build):
-            fields = dict[str, Any]()
+            fields = list[tuple[str, Any]]()
             for name in reversed(op.field_names):
                 high = stack.pop()
                 low = stack.pop()
-                fields[name] = (low, high)
+                fields.append((name, (low, high)))
+            fields.reverse()
             stack.append(DynamicNode(op.name, fields))
             frame.op_index += 1
         elif isinstance(op, Halt):

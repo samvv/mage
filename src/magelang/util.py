@@ -355,10 +355,27 @@ class Progress:
 
 class DynamicNode:
 
-    def __init__(self, name: str, fields: dict[str, Any]) -> None:
+    def __init__(self, name: str, fields: Sequence[tuple[str, Any]]) -> None:
         self.name = name
         self.fields = fields
+        self._mapping = {}
+        for name, value in fields:
+            self._mapping[name] = value
+
+    def get_field(self, key: str) -> Any:
+        return self._mapping[key]
+
+    def offsets(self) -> Iterable[tuple[int, int]]:
+        l = []
+        def visit(x):
+            if isinstance(x, DynamicNode):
+                for _, value in x.fields:
+                    visit(value)
+            else:
+                l.append(x)
+        visit(self)
+        return l
 
     def __repr__(self) -> str:
-        return f'{self.name}({', '.join(f'{k}={repr(v)}' for k, v in self.fields.items())})'
+        return f'{self.name}({', '.join(f'{k}={repr(v)}' for k, v in self.fields)})'
 

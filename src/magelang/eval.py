@@ -159,7 +159,7 @@ def evaluate(
     if rule.expr is None:
         return NO_MATCH
 
-    fields = dict[str, Any]()
+    fields = list[tuple[str, Any]]()
     for expr, field in get_fields(rule.expr, grammar=grammar):
         try:
             result = visit(expr)
@@ -168,7 +168,7 @@ def evaluate(
         if result is None:
             return NO_MATCH
         if field is not None:
-            fields[field.name] = result
+            fields.append((field.name, result))
 
     if offset < len(text):
         return NO_MATCH
