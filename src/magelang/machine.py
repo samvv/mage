@@ -221,7 +221,10 @@ class ParseError(RuntimeError):
     pass
 
 
-def execute(m: Machine, start: int, text: str) -> Any:
+def execute(m: Machine, text: str, start: int = 0, stack: list[Any] | None = None) -> Any:
+
+    if stack is None:
+        stack = []
 
     i = 0
     frames = list[Frame]()
@@ -236,7 +239,7 @@ def execute(m: Machine, start: int, text: str) -> Any:
         handlers.pop()
         frames[-1].op_index = target
 
-    frames.append(Frame(start))
+    frames.append(Frame(start, stack))
 
     while True:
 
@@ -328,10 +331,10 @@ def execute(m: Machine, start: int, text: str) -> Any:
 
 def call_machine_method(m: Machine, name: str, text: str) -> Any:
     m = m.clone()
-    k = len(m.ops)
+    start = len(m.ops)
     m.ops.append(Call(name))
     m.ops.append(Halt())
-    return execute(m, k, text)
+    return execute(m, text, start=start)
 
 
 def link_machine(m: Machine) -> None:
