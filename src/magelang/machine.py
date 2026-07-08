@@ -12,19 +12,19 @@ type Op = (
     | Call
     | Catch
     | Commit
+    | Dec
     | Fail
     | Halt
+    | Inc
     | Jump
-    | JumpZ
     | JumpNZ
+    | JumpZ
     | Noop
     | Push
     | Ret
     | Sat
     | Seek
     | Tell
-    | Dec
-    | Inc
 )
 
 class OpBase:
