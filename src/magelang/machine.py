@@ -14,12 +14,16 @@ type Op = (
     | Fail
     | Halt
     | Jump
+    | JumpZ
+    | JumpNZ
     | Noop
     | Push
     | Ret
     | Sat
     | Seek
     | Tell
+    | Dec
+    | Inc
 )
 
 class OpBase:
@@ -93,6 +97,24 @@ class Jump(OpBase):
     comment: str | None = None
 
 @dataclass
+class JumpZ(OpBase):
+    """
+    Jump to a given named label or offset if the top of the stack is zero-valued.
+    """
+    target: str | int
+    label: str | None = None
+    comment: str | None = None
+
+@dataclass
+class JumpNZ(OpBase):
+    """
+    Jump to a given named label or offset if the top of the stack is nonzero-valued.
+    """
+    target: str | int
+    label: str | None = None
+    comment: str | None = None
+
+@dataclass
 class Catch(OpBase):
     """
     Push a target label on the handler stack to handle failure.
@@ -139,11 +161,28 @@ class Call(OpBase):
 @dataclass
 class Noop(OpBase):
     label: str | None = None
+    comment: str | None = None
 
     def __str__(self) -> str:
         if self.label is None:
             return super().__str__()
         return f'{self.label}:'
+
+@dataclass
+class Inc(OpBase):
+    """
+    Increment the top of the stack by 1.
+    """
+    label: str | None = None
+    comment: str | None = None
+
+@dataclass
+class Dec(OpBase):
+    """
+    Decrement the top of the stack by 1.
+    """
+    label: str | None = None
+    comment: str | None = None
 
 @dataclass
 class Machine:
@@ -189,6 +228,8 @@ def execute(m: Machine, text: str) -> Any:
         stack = frame.stack
         op = m.ops[frame.op_index]
 
+        print(op)
+
         if isinstance(op, Sat):
             if i >= len(text):
                 fail()
@@ -214,6 +255,9 @@ def execute(m: Machine, text: str) -> Any:
             stack.append(DynamicNode(op.name, fields))
             frame.op_index += 1
         elif isinstance(op, Halt):
+            assert(not handlers)
+            assert(len(stack) == 1)
+            assert(i == len(text))
             return stack[-1]
         elif isinstance(op, Fail):
             fail()
@@ -240,7 +284,23 @@ def execute(m: Machine, text: str) -> Any:
         elif isinstance(op, Jump):
             assert(isinstance(op.target, int))
             frame.op_index += op.target
+        elif isinstance(op, JumpZ):
+            assert(isinstance(op.target, int))
+            if stack[-1] == 0:
+                frame.op_index += op.target
+            frame.op_index += 1
+        elif isinstance(op, JumpNZ):
+            assert(isinstance(op.target, int))
+            if stack[-1] != 0:
+                frame.op_index += op.target
+            frame.op_index += 1
         elif isinstance(op, Noop):
+            frame.op_index += 1
+        elif isinstance(op, Inc):
+            stack[-1] += 1
+            frame.op_index += 1
+        elif isinstance(op, Dec):
+            stack[-1] -= 1
             frame.op_index += 1
         elif isinstance(op, Call):
             frames.append(Frame(m.defs[op.name]))
@@ -269,7 +329,7 @@ def link_machine(m: Machine) -> None:
         else:
             i += 1
     for i, op in enumerate(m.ops):
-        if isinstance(op, Jump) or isinstance(op, Catch):
+        if isinstance(op, Jump) or isinstance(op, JumpZ) or isinstance(op, JumpNZ) or isinstance(op, Catch):
             op.target = labels[cast(str, op.target)] - i
 
 
@@ -279,6 +339,14 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
     ops = []
 
     generate_name = NameGenerator()
+
+    def compile_repeat(count: int, expr: MageExpr, hidden: bool) -> Iterable[Op]:
+        min_to_max_name = generate_name(prefix='repeat_main')
+        yield Push(count)
+        yield Noop(label=min_to_max_name)
+        yield from compile_expr(expr, hidden)
+        yield Dec()
+        yield JumpNZ(min_to_max_name)
 
     def compile_expr(expr: MageExpr, hidden: bool = False) -> Iterable[Op]:
         if isinstance(expr, MageRefExpr):
@@ -320,13 +388,19 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                 yield from compile_expr(element, hidden)
             return
         if isinstance(expr, MageRepeatExpr):
-            label_name = generate_name(prefix='repeat')
-            done_label = generate_name(prefix='repeat_end')
-            yield Catch(done_label)
-            yield Noop(label=label_name)
-            yield from compile_expr(expr.expr, hidden)
-            yield Jump(label_name)
-            yield Noop(label=done_label)
+            if expr.min > 0:
+                yield from compile_repeat(expr.min, expr.expr, hidden)
+            if expr.max == POSINF:
+                repeat_label = generate_name(prefix='repeat_inf')
+                done_label = generate_name(prefix='repeat_end')
+                yield Catch(done_label)
+                yield Noop(label=repeat_label)
+                yield from compile_expr(expr.expr, hidden)
+                yield Jump(repeat_label)
+                yield Commit()
+                yield Noop(done_label)
+            else:
+                yield from compile_repeat(expr.max - expr.min, expr, hidden)
             return
         if isinstance(expr, MageListExpr):
             todo()
