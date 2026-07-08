@@ -284,6 +284,9 @@ def execute(m: Machine, text: str) -> Any:
             value = stack[-1]
             frames.pop()
             if not frames: # FIXME remove me
+                assert(not handlers)
+                assert(len(stack) == 1)
+                assert(i == len(text))
                 return value
             frames[-1].stack.append(value)
             frame.op_index += 1
