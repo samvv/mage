@@ -215,7 +215,7 @@ class Machine:
 class Frame:
     op_index: int = 0
     stack: list[Any] = field(default_factory=list)
-    # fields: dict[str, Any] = field(default_factory=dict)
+
 
 class ParseError(RuntimeError):
     pass
