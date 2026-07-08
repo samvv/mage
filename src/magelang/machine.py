@@ -221,7 +221,7 @@ class ParseError(RuntimeError):
     pass
 
 
-def execute(m: Machine, text: str, start: int = 0, stack: list[Any] | None = None) -> Any:
+def execute_machine(m: Machine, text: str, start: int = 0, stack: list[Any] | None = None) -> Any:
 
     if stack is None:
         stack = []
@@ -334,7 +334,7 @@ def call_machine_method(m: Machine, name: str, text: str) -> Any:
     start = len(m.ops)
     m.ops.append(Call(name))
     m.ops.append(Halt())
-    return execute(m, text, start=start)
+    return execute_machine(m, text, start=start)
 
 
 def link_machine(m: Machine) -> None:
