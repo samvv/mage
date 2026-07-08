@@ -306,12 +306,14 @@ def execute_machine(m: Machine, text: str, start: int = 0, stack: list[Any] | No
             assert(isinstance(op.target, int))
             if stack[-1] == 0:
                 frame.op_index += op.target
-            frame.op_index += 1
+            else:
+                frame.op_index += 1
         elif isinstance(op, JumpNZ):
             assert(isinstance(op.target, int))
             if stack[-1] != 0:
                 frame.op_index += op.target
-            frame.op_index += 1
+            else:
+                frame.op_index += 1
         elif isinstance(op, Noop):
             frame.op_index += 1
         elif isinstance(op, Inc):
