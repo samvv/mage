@@ -17,9 +17,9 @@ from magelang.lang.python.cst import PyModule
 from magelang.lang.python.emitter import emit as py_emit
 from magelang.lang.revolv.ast import Program
 from magelang.logging import error, info, warn
-from magelang.machine import execute, link_machine, mage_to_machine
+from magelang.machine import call_machine_method, link_machine, mage_to_machine
 from magelang.manager import Context, apply, compose, get_pass_by_name, identity
-from magelang.util import DynamicNode, Files, Progress, load_py_file
+from magelang.util import Files, Progress, load_py_file
 
 
 def _grammar_from_file_or_seed(filename: str) -> MageGrammar:
@@ -50,9 +50,9 @@ def eval(filename: str, value: str, /, *, generate: bool = False, rule: str | No
         result = parse(value)
     elif machine:
         m = mage_to_machine(grammar)
-        m.dump()
         link_machine(m)
-        result = execute(m, value)
+        m.dump()
+        result = call_machine_method(m, rule,  value)
     else:
         entry = grammar.lookup(rule)
         if entry is None:

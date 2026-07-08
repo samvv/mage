@@ -220,7 +220,8 @@ class Frame:
 class ParseError(RuntimeError):
     pass
 
-def execute(m: Machine, text: str) -> Any:
+
+def execute(m: Machine, start: int, text: str) -> Any:
 
     i = 0
     frames = list[Frame]()
@@ -235,7 +236,7 @@ def execute(m: Machine, text: str) -> Any:
         handlers.pop()
         frames[-1].op_index = target
 
-    frames.append(Frame())
+    frames.append(Frame(start))
 
     while True:
 
@@ -243,7 +244,7 @@ def execute(m: Machine, text: str) -> Any:
         stack = frame.stack
         op = m.ops[frame.op_index]
 
-        print(op)
+        print(f'[{frame.op_index}] {op}')
 
         if isinstance(op, Sat):
             if i >= len(text):
@@ -324,6 +325,14 @@ def execute(m: Machine, text: str) -> Any:
             assert_never(op)
 
     raise RuntimeError("end of instructions reached without return")
+
+
+def call_machine_method(m: Machine, name: str, text: str) -> Any:
+    m = m.clone()
+    k = len(m.ops)
+    m.ops.append(Call(name))
+    m.ops.append(Halt())
+    return execute(m, k, text)
 
 
 def link_machine(m: Machine) -> None:
