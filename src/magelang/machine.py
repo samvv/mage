@@ -169,11 +169,6 @@ class Noop(OpBase):
     label: str | None = None
     comment: str | None = None
 
-    def __str__(self) -> str:
-        if self.label is None:
-            return super().__str__()
-        return f'{self.label}:'
-
 @dataclass
 class Inc(OpBase):
     """
