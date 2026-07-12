@@ -228,7 +228,8 @@ class Dec(OpBase):
 @dataclass
 class FuncDef:
     name: str
-    arity: int
+    in_arity: int
+    out_arity: int
     ops: Sequence[Op]
 
 @dataclass
@@ -353,12 +354,13 @@ class Execution:
                 self.handlers.append((len(self.frames), self.frame.op_index + op.target))
                 self.frame.op_index += 1
             elif isinstance(op, Ret):
-                value = self.stack[-1]
+                keep = self.frame
                 self.frames.pop()
                 if not self.frames:
                     self._check_post()
                     break
-                self.stack.append(value)
+                for _ in range(keep.func.out_arity):
+                    self.stack.append(keep.stack.pop())
                 self.frame.op_index += 1
             elif isinstance(op, Tell):
                 self.stack.append(self.offset)
@@ -392,7 +394,7 @@ class Execution:
             elif isinstance(op, Call):
                 func = self.m.funcs[op.name]
                 new_stack = list[Any]()
-                for _ in range(func.arity):
+                for _ in range(func.in_arity):
                     new_stack.append(self.stack.pop())
                 self.frames.append(Frame(func))
                 # op_index is incremented when returning
@@ -461,6 +463,7 @@ class FuncBuilder:
         self.mb = mb
         self.name = name
         self.args = list[str]()
+        self.retval_count = 0
         self.ops = list[Op]()
         self._finished = False
         self._pending_labels = list[str]()
@@ -469,6 +472,9 @@ class FuncBuilder:
     def arg(self, name: str) -> None:
         assert(name not in self.args)
         self.args.append(name)
+
+    def retval(self, name: str) -> None:
+        self.retval_count += 1
 
     def generate_label(self, name: str) -> str:
         assert(not self._finished)
@@ -494,6 +500,12 @@ class FuncBuilder:
             self.append(op)
 
     def finish(self) -> None:
+        assert(not self._finished)
         assert(not self._pending_labels)
         self._finished = True
-        self.mb.funcs[self.name] = FuncDef(self.name, len(self.args), self.ops)
+        self.mb.funcs[self.name] = FuncDef(
+            self.name,
+            len(self.args),
+            self.retval_count,
+            self.ops
+        )
