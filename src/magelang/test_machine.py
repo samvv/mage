@@ -2,7 +2,7 @@
 import pytest
 
 from magelang.lang.mage.ast import *
-from magelang.machine import Jump, JumpNZ, JumpZ, Noop, ParseError, Push, call_machine_method, execute_machine, mage_to_machine, Machine, Inc, Halt, Dec
+from magelang.machine import Jump, JumpNZ, JumpZ, Noop, ParseError, Push, call_machine_function, execute_machine, mage_to_machine, Machine, Inc, Halt, Dec
 
 def test_inc():
     m = Machine([ Inc(), Halt() ]);
@@ -83,14 +83,14 @@ def test_compile_lit():
         MageRule('one', MageLitExpr('foobar')),
     ]))
     with pytest.raises(ParseError):
-        call_machine_method(m, 'one', 'blabla')
+        call_machine_function(m, 'one', 'blabla')
     with pytest.raises(ParseError):
-        call_machine_method(m, 'one', 'fooba')
+        call_machine_function(m, 'one', 'fooba')
     with pytest.raises(ParseError):
-        call_machine_method(m, 'one', 'oobar')
+        call_machine_function(m, 'one', 'oobar')
     # with pytest.raises(ParseError):
     #     execute(m, 'one', 'foobaralaza')
-    root = call_machine_method(m, 'one', 'foobar')
+    root = call_machine_function(m, 'one', 'foobar')
     assert(root.name == 'one')
     assert(len(root.fields) == 1)
     assert(root.fields[0][1] == (0,6))
@@ -101,12 +101,12 @@ def test_compile_ref():
         MageRule('two', MageRefExpr('one')),
     ]))
     with pytest.raises(ParseError):
-        call_machine_method(m, 'two', 'blabla')
+        call_machine_function(m, 'two', 'blabla')
     with pytest.raises(ParseError):
-        call_machine_method(m, 'two', 'fooba')
+        call_machine_function(m, 'two', 'fooba')
     with pytest.raises(ParseError):
-        call_machine_method(m, 'two', 'oobar')
-    root = call_machine_method(m, 'two', 'foobar')
+        call_machine_function(m, 'two', 'oobar')
+    root = call_machine_function(m, 'two', 'foobar')
     assert(root.name == 'two')
     assert(len(root.fields) == 1)
     assert(root.fields[0][1] == (0,6))
@@ -119,14 +119,14 @@ def test_compile_seq():
         ])),
     ]))
     with pytest.raises(ParseError):
-        call_machine_method(m, 'one', 'cc')
+        call_machine_function(m, 'one', 'cc')
     with pytest.raises(ParseError):
-        call_machine_method(m, 'one', 'aa')
+        call_machine_function(m, 'one', 'aa')
     with pytest.raises(ParseError):
-        call_machine_method(m, 'one', 'bb')
+        call_machine_function(m, 'one', 'bb')
     # with pytest.raises(ParseError):
     #     execute(m, 'one', 'abab')
-    root = call_machine_method(m, 'one', 'ab')
+    root = call_machine_function(m, 'one', 'ab')
     assert(root.name == 'one')
     assert(len(root.fields) == 2)
     assert(root.fields[0][1] == (0,1))
@@ -140,8 +140,8 @@ def test_compile_neg_lookahead():
         ]))
     ]))
     with pytest.raises(ParseError):
-        call_machine_method(m, 'one', 'abcdef')
-    root = call_machine_method(m, 'one', 'def')
+        call_machine_function(m, 'one', 'abcdef')
+    root = call_machine_function(m, 'one', 'def')
     assert(root.name == 'one')
     assert(len(root.fields) == 1)
     assert(root.fields[0][1] == (0,3))
@@ -153,10 +153,10 @@ def test_compile_pos_lookahead():
             MageLitExpr('abcdef')
         ]))
     ]))
-    root = call_machine_method(m, 'one', 'abcdef')
+    root = call_machine_function(m, 'one', 'abcdef')
     assert(root.name == 'one')
     with pytest.raises(ParseError):
-        call_machine_method(m, 'one', 'def')
+        call_machine_function(m, 'one', 'def')
     assert(root.name == 'one')
     assert(len(root.fields) == 1)
     assert(root.fields[0][1] == (0,6))
