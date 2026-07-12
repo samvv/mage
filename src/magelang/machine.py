@@ -414,6 +414,8 @@ class Execution:
             elif isinstance(op, Lt):
                 left = self.stack.pop()
                 right = self.stack.pop()
+                assert(isinstance(left, int))
+                assert(isinstance(right, int))
                 self.stack.append(left < right)
                 self.frame.op_index += 1
             elif isinstance(op, BuildToken):
