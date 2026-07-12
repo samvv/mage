@@ -2,6 +2,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from magelang.lang.mage.ast import *
+from magelang.logging import trace
 from magelang.runtime.diagnostics import count_digits
 from magelang.util import DynamicNode, NameGenerator, to_snake_case
 
@@ -58,6 +59,7 @@ class Fail(OpBase):
     """
     Immediately execute the next failure handler on the handler stack.
     """
+    message: str | None = None
     label: str | None = None
     comment: str | None = None
 
@@ -225,6 +227,7 @@ class Dec(OpBase):
 
 @dataclass
 class FuncDef:
+    name: str
     arity: int
     ops: Sequence[Op]
 
@@ -287,13 +290,13 @@ class Execution:
     def stack(self) -> list[Any]:
         return self.frame.stack
 
-    def fail(self):
+    def fail(self, message: str | None):
         if not self.handlers:
-            raise ParseError()
-        frame_offset, target = self.handlers[-1]
+            raise ParseError(message)
+        frame_offset, target = self.handlers.pop()
+        trace(f'unwinding {len(self.frames) - frame_offset} frames')
         while len(self.frames) > frame_offset:
             self.frames.pop()
-        self.handlers.pop()
         self.frames[-1].op_index = target
 
     def _check_post(self) -> None:
@@ -307,17 +310,21 @@ class Execution:
 
             op = self.frame.func.ops[self.frame.op_index]
 
+            debug(f'[{self.frame.func.name}:{self.frame.op_index}] {op}')
+
             if isinstance(op, Sat):
                 if self.offset >= len(self.text):
-                    self.fail()
+                    self.fail(f'expected {repr(op.rng)} but got end-of-file')
                     continue
                 ch = self.text[self.offset]
                 l, h = op.rng
-                if l >= ch and h <= ch:
+                if l <= ch and ch <= h:
+                    trace(f'satisfy succeeded: {repr(ch)} in {repr(op.rng)}')
                     self.offset += 1
                     self.frame.op_index += 1
                 else:
-                    self.fail()
+                    trace(f'satisfy failed: {repr(ch)} not in {repr(op.rng)}')
+                    self.fail(f'expected {repr(op.rng)} but got {repr(ch)}')
             elif isinstance(op, Push):
                 self.stack.append(op.value)
                 self.frame.op_index += 1
@@ -337,7 +344,7 @@ class Execution:
                 self._check_post()
                 break
             elif isinstance(op, Fail):
-                self.fail()
+                self.fail(op.message)
             elif isinstance(op, Commit):
                 self.handlers.pop()
                 self.frame.op_index += 1
@@ -489,4 +496,4 @@ class FuncBuilder:
     def finish(self) -> None:
         assert(not self._pending_labels)
         self._finished = True
-        self.mb.funcs[self.name] = FuncDef(len(self.args), self.ops)
+        self.mb.funcs[self.name] = FuncDef(self.name, len(self.args), self.ops)

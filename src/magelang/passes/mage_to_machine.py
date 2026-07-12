@@ -1,14 +1,11 @@
 
 from collections.abc import Sequence, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import assert_never
-from warnings import warn
 
-from magelang.graph import DGraph, toposort, graph_roots
+from magelang.graph import DGraph, graph_reachable, toposort, graph_roots
 from magelang.lang.mage.ast import POSINF
 from magelang.machine import (
-    FuncBuilder,
-    FuncDef,
     Machine,
     MachineBuilder,
     Op,
@@ -62,10 +59,15 @@ SUFFIX = 3
 @dataclass
 class Pratt:
     name: str
-    infix: Sequence[MageRule]
-    prefix: Sequence[MageRule]
-    suffix: Sequence[MageRule]
-    atoms: Sequence[MageRule]
+    infix: list[MageRule]
+    prefix: list[MageRule]
+    suffix: list[MageRule]
+    atoms: list[MageRule] = field(default_factory=list)
+
+    def all(self) -> Iterable[MageRule]:
+        yield from self.infix
+        yield from self.prefix
+        yield from self.suffix
 
 def split_pratt(grammar: MageGrammar) -> tuple[list[MageModuleElement], list[Pratt]]:
 
@@ -100,18 +102,17 @@ def split_pratt(grammar: MageGrammar) -> tuple[list[MageModuleElement], list[Pra
 
     sccs = list(toposort(g))
 
-    rest = []
-    pratts = []
+    rest   = list[MageModuleElement]()
+    pratts = list[Pratt]()
 
     for scc in sccs:
         if len(scc) == 1: # optimisation
             rest.append(next(iter(scc)))
             continue
-        infix  = []
-        prefix = []
-        suffix = []
-        atoms = []
-        candidates = []
+        infix      = list[MageRule]()
+        prefix     = list[MageRule]()
+        suffix     = list[MageRule]()
+        candidates = list[MageRule]()
         for rule in scc:
             if isinstance(rule.expr, MageChoiceExpr):
                 candidates.append(rule)
@@ -132,17 +133,25 @@ def split_pratt(grammar: MageGrammar) -> tuple[list[MageModuleElement], list[Pra
                     prefix.append(rule)
                 else:
                     unreachable()
-        # TODO add the atoms, wich will be in another SCC
         # We require at least two Pratt expressions. When less, there is no
         # need at all for a Pratt parser.
         if len(candidates) > 0 and len(infix) + len(prefix) + len(suffix) >= 2:
             roots = list(get_roots(candidates))
             assert(len(roots) == 1)
-            pratts.append(Pratt(nonnull(roots[0]).name, infix, prefix, suffix, atoms))
+            pratts.append(Pratt(nonnull(roots[0]).name, infix, prefix, suffix))
         else:
             rest.extend(scc)
 
+    for rule in rest:
+        if isinstance(rule, MageRule):
+            for pratt in pratts:
+                for pratt_rule in pratt.all():
+                    if graph_reachable(g, pratt_rule, rule):
+                        pratt.atoms.append(rule)
+                        break
+
     return rest, pratts
+
 
 @declare_pass()
 def mage_to_machine(grammar: MageGrammar) -> Machine:
@@ -166,6 +175,10 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         yield JumpNZ(target=repeat_label_name)
         yield Pop()
 
+    def compile_rule(rule: MageRule) -> Iterable[Op]:
+        assert(rule.expr is not None)
+        return compile_expr(rule.expr)
+
     def compile_expr(expr: MageExpr, hidden: bool = False) -> Iterable[Op]:
         if isinstance(expr, MageRefExpr):
             yield Call(expr.name)
@@ -175,13 +188,20 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                 yield Sat((ch, ch))
             return
         if isinstance(expr, MageCharSetExpr):
+            success = generate_label_name('charset_success')
             for rng in expr.elements:
                 if isinstance(rng, str):
                     l = rng
                     h = rng
                 else:
                     l, h = rng
+                next = generate_label_name('charset_next')
+                yield Catch(target=next)
                 yield Sat((l, h))
+                yield Jump(target=success)
+                yield Noop(label=next)
+            yield Fail(f"doesn't satisfy {' | '.join(repr(el) for el in expr.elements)}")
+            yield Commit(label=success)
             return
         if isinstance(expr, MageChoiceExpr):
             n = len(expr.elements)
@@ -263,9 +283,10 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         expr_bp.arg('min_prec')
 
         fail_parse_prefix = expr_bp.generate_label('fail_parse_prefix')
-        fail_parse_postfix = expr_bp.generate_label('fail_parse_postfix')
         loop_start = expr_bp.generate_label('loop_start')
-        loop_fail = expr_bp.generate_label('loop_fail')
+        start_parse_postfix = expr_bp.generate_label('start_parse_postfix')
+        start_parse_infix = expr_bp.generate_label('start_parse_infix')
+        loop_end = expr_bp.generate_label('loop_end')
 
         expr_bp.append(Catch(target=fail_parse_prefix))
         # parse_prefix will push a binding power on the stack if successful
@@ -284,34 +305,40 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         expr_bp.append(Tell())
 
         # Special case for EOF
-        expr_bp.append(Catch(target=loop_fail))
+        expr_bp.append(Catch(target=start_parse_postfix))
         expr_bp.append(Sat((EOF, EOF)))
-        expr_bp.append(Commit())
+        expr_bp.append(Jump(target=loop_end))
 
         # Attempt to parse a postfix expression
-        expr_bp.append(Catch(target=fail_parse_postfix))
+        expr_bp.label(start_parse_postfix)
+        expr_bp.append(Catch(target=start_parse_infix))
         expr_bp.append(Call(name=parse_postfix_name))
         expr_bp.append(Commit())
         expr_bp.append(Lt())
-        expr_bp.append(JumpNZ(target=loop_fail))
+        expr_bp.append(JumpNZ(target=loop_end))
         # TODO assign LHS as a combination of operator + expr
         expr_bp.append(Jump(target=loop_start))
 
         # Attempt to parse an infix expression
-        expr_bp.label(fail_parse_postfix)
+        expr_bp.label(start_parse_infix)
         expr_bp.append(Catch(target=loop_start))
         expr_bp.append(Call(name=parse_infix_name))
         expr_bp.append(Lt())
-        expr_bp.append(JumpNZ(target=loop_fail))
+        expr_bp.append(JumpNZ(target=loop_end))
         expr_bp.append(Call(name=parse_with_bp_name)) # should be called with r_bp from parse_infix
         # TODO assign LHS as a combination of expr + operator + expr
         expr_bp.append(Jump(target=loop_start))
 
         # We only get here if neither a prefix nor a postfix expression was parsed
-        expr_bp.label(loop_fail)
+        expr_bp.label(loop_end)
         expr_bp.append(Seek())
 
         expr_bp.finish()
+
+        # Generate parse_atom
+        atom = builder.func(parse_atom_name)
+        atom.extend(compile_expr(MageChoiceExpr(list(MageRefExpr(rule.name) for rule in pratt.atoms))))
+        atom.finish()
 
         # Generate parse_prefix_operator
         prefix = builder.func(parse_prefix_name)
@@ -322,7 +349,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             prefix.extend(compile_expr(rule.expr.elements[0]))
             prefix.append(Ret())
             prefix.label(next_op)
-        prefix.append(Fail())
+        prefix.append(Fail('expected a prefix operator'))
         prefix.finish()
 
         # Generate parse_postfix_operator
@@ -334,7 +361,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             postfix.extend(compile_expr(rule.expr.elements[0]))
             postfix.append(Ret())
             postfix.label(next_op)
-        postfix.append(Fail())
+        postfix.append(Fail('expected a postfix operator'))
         postfix.finish()
 
         main = builder.func(pratt.name)
