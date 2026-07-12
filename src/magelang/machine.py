@@ -436,12 +436,26 @@ def link_machine(m: Machine) -> None:
                 op.target = labels[cast(str, op.target)] - i
 
 
+class MachineBuilder:
+
+    def __init__(self) -> None:
+        self.funcs = dict[str, FuncDef]()
+
+    def func(self, name: str) -> FuncBuilder:
+        return FuncBuilder(self, name)
+
+    def finish(self) -> Machine:
+        return Machine(self.funcs)
+
+
 class FuncBuilder:
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, mb: MachineBuilder, name: str) -> None:
+        self.mb = mb
         self.name = name
         self.args = list[str]()
         self.ops = list[Op]()
+        self._finished = False
         self._pending_labels = list[str]()
         self._label_generator = NameGenerator(hide_first=True)
 
@@ -450,12 +464,15 @@ class FuncBuilder:
         self.args.append(name)
 
     def generate_label(self, name: str) -> str:
+        assert(not self._finished)
         return self._label_generator(name)
 
     def label(self, name: str) -> None:
+        assert(not self._finished)
         self._pending_labels.append(name)
 
     def append(self, op: Op) -> None:
+        assert(not self._finished)
         for name in self._pending_labels:
             if op.label is None:
                 op.label = name
@@ -464,6 +481,12 @@ class FuncBuilder:
             self._pending_labels.clear()
         self.ops.append(op)
 
-    def finish(self) -> FuncDef:
+    def extend(self, iter: Iterable[Op]) -> None:
+        assert(not self._finished)
+        for op in iter:
+            self.append(op)
+
+    def finish(self) -> None:
         assert(not self._pending_labels)
-        return FuncDef(len(self.args), self.ops)
+        self._finished = True
+        self.mb.funcs[self.name] = FuncDef(len(self.args), self.ops)
