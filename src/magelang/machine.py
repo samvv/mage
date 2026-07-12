@@ -313,7 +313,7 @@ class Execution:
     def _check_post(self) -> None:
         assert(not self.handlers)
         if self.offset < len(self.text):
-            raise ParseError()
+            raise ParseError('did not reach end-of-file after parsing')
 
     def execute(self) -> None:
 
