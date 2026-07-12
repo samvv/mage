@@ -313,7 +313,12 @@ class Execution:
     def _check_post(self) -> None:
         assert(not self.handlers)
         if self.offset < len(self.text):
-            raise ParseError('did not reach end-of-file after parsing')
+            width = 7
+            if len(self.text) - self.offset <= width:
+                remaining = self.text[self.offset:]
+            else:
+                remaining = self.text[self.offset:self.offset+width] + '...'
+            raise ParseError(f"did not reach end-of-file after parsing (remaining {repr(remaining)})")
 
     def execute(self) -> None:
 
