@@ -1,11 +1,12 @@
 from collections.abc import Iterable, Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field
+from os import wait
 
-from magelang.lang.treespec.ast import is_string_type
+from magelang.graph import DGraph, graph_roots, toposort
 from magelang.helpers import get_fields
 from magelang.lang.mage.ast import *
-from magelang.util import DynamicNode, IndentWriter, NameGenerator, to_snake_case, todo
+from magelang.util import DynamicNode, NameGenerator, to_snake_case, todo
 
 type Op = (
     Build
@@ -97,10 +98,6 @@ class Sat(OpBase):
     Advance the stream if the character matches, fail otherwise.
     """
     rng: tuple[str, str]
-    add: bool
-    """
-    Whether to append the scanned character to the top of the stack.
-    """
     label: str | None = None
     comment: str | None = None
 
@@ -386,94 +383,3 @@ def link_machine(m: Machine) -> None:
         if isinstance(op, Jump) or isinstance(op, JumpZ) or isinstance(op, JumpNZ) or isinstance(op, Catch):
             op.target = labels[cast(str, op.target)] - i
 
-
-def mage_to_machine(grammar: MageGrammar) -> Machine:
-
-    defs = dict[str, int]()
-    ops = list[Op]()
-
-    generate_name = NameGenerator()
-
-    def compile_repeat(count: int, expr: MageExpr, hidden: bool) -> Iterable[Op]:
-        min_to_max_name = generate_name(prefix='repeat_main')
-        yield Push(count)
-        yield Noop(label=min_to_max_name)
-        yield from compile_expr(expr, hidden)
-        yield Dec()
-        yield JumpNZ(min_to_max_name)
-
-    def compile_expr(expr: MageExpr, hidden: bool = False) -> Iterable[Op]:
-        if isinstance(expr, MageRefExpr):
-            yield Call(expr.name)
-            return
-        if isinstance(expr, MageLitExpr):
-            for ch in expr.text:
-                yield Sat((ch, ch), False)
-            return
-        if isinstance(expr, MageCharSetExpr):
-            for l, h in expr.elements:
-                yield Sat((l, h), not hidden)
-            return
-        if isinstance(expr, MageChoiceExpr):
-            names = list(generate_name(f'choice_{i}') for i in range(len(expr.elements)))
-            for i, element in enumerate(expr.elements[:-1]):
-                yield Catch(names[i+1], label=names[i])
-                yield from compile_expr(element, hidden)
-                yield Commit()
-            yield from compile_expr(expr.elements[-1], hidden)
-            return
-        if isinstance(expr, MageLookaheadExpr):
-            success_label = generate_name('look_success')
-            yield Tell()
-            if expr.is_negated:
-                yield Catch(success_label)
-                yield from compile_expr(expr.expr, True)
-                yield Commit()
-                yield Fail()
-            else:
-                yield from compile_expr(expr.expr, True)
-            yield Seek(label=success_label)
-            return
-        if isinstance(expr, MageHideExpr):
-            yield from compile_expr(expr.expr, True)
-            return
-        if isinstance(expr, MageSeqExpr):
-            for element in expr.elements:
-                yield from compile_expr(element, hidden)
-            return
-        if isinstance(expr, MageRepeatExpr):
-            if expr.min > 0:
-                yield from compile_repeat(expr.min, expr.expr, hidden)
-            if expr.max == POSINF:
-                repeat_label = generate_name(prefix='repeat_inf')
-                done_label = generate_name(prefix='repeat_end')
-                yield Catch(target=done_label)
-                yield Noop(label=repeat_label)
-                yield from compile_expr(expr.expr, hidden)
-                yield Jump(target=repeat_label)
-                yield Noop(label=done_label)
-            else:
-                yield from compile_repeat(expr.max - expr.min, expr, hidden)
-            return
-        if isinstance(expr, MageListExpr):
-            todo()
-        assert_never(expr)
-
-    for rule in grammar.rules:
-        if rule.expr is not None:
-            i = len(ops)
-            field_names = list[str]()
-            for expr, field in get_fields(rule.expr, grammar, include_hidden=True):
-                if field is not None and is_string_type(field.ty):
-                    # FIXME
-                    ops.append(Push(''))
-                ops.append(Tell())
-                ops.extend(compile_expr(expr, field is None))
-                ops.append(Tell())
-                if field is not None:
-                    field_names.append(field.name)
-            ops.append(Build(rule.name, field_names))
-            ops.append(Ret())
-            defs[rule.name] = i
-
-    return Machine(ops, defs)
