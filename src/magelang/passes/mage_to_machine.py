@@ -7,6 +7,9 @@ from magelang.graph import DGraph, graph_reachable, toposort, graph_roots
 from magelang.lang.mage.ast import POSINF
 from magelang.machine import (
     BuildToken,
+    Dump,
+    Flip,
+    Load,
     Machine,
     MachineBuilder,
     Op,
@@ -320,23 +323,36 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         expr_bp.append(Catch(target=start_parse_infix))
         expr_bp.append(Call(name=parse_postfix_name))
         expr_bp.append(Commit())
+        expr_bp.append(Dup()) # copy the parse_postfix result
+        expr_bp.append(Load(3)) # load min_prec
+        expr_bp.append(Flip()) # prepare for Lt
         expr_bp.append(Lt())
+        expr_bp.append(Dump())
         expr_bp.append(JumpNZ(target=loop_end))
         # TODO assign LHS as a combination of operator + expr
         expr_bp.append(Jump(target=loop_start))
 
         # Attempt to parse an infix expression
         expr_bp.label(start_parse_infix)
+        expr_bp.append(Dump())
         expr_bp.append(Catch(target=loop_end))
         expr_bp.append(Call(name=parse_infix_name))
+        expr_bp.append(Commit())
+        expr_bp.append(Load(3)) # load min_prec
+        expr_bp.append(Dup()) # copy the parse_infix precedence result
+        expr_bp.append(Flip()) # prepare for Lt
         expr_bp.append(Lt())
         expr_bp.append(JumpNZ(target=loop_end))
         expr_bp.append(Call(name=parse_with_bp_name)) # should be called with r_bp from parse_infix
         # TODO assign LHS as a combination of expr + operator + expr
+        expr_bp.append(Load(2)) # load lhs
+        expr_bp.append(Flip())
+        expr_bp.append(Build(pratt.name, ['lhs', 'rhs']))
         expr_bp.append(Jump(target=loop_start))
 
         # We only get here if neither a prefix nor a postfix expression was parsed
         expr_bp.label(loop_end)
+        # expr_bp.append(Flip())
         expr_bp.append(Seek())
         expr_bp.append(Ret())
 
@@ -367,7 +383,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         # Generate parse_postfix_operator
         postfix = builder.func(parse_postfix_name)
         postfix.retval('precedence')
-        for rule in pratt.prefix:
+        for rule in pratt.suffix:
             assert(isinstance(rule.expr, MageSeqExpr))
             next_op = generate_label_name('failure')
             postfix.append(Catch(target=next_op))
@@ -381,7 +397,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
 
         # Generate parse_infix_operator
         infix = builder.func(parse_infix_name)
-        postfix.retval('precedence')
+        infix.retval('precedence')
         for rule in pratt.infix:
             assert(isinstance(rule.expr, MageSeqExpr))
             next_op = generate_label_name('failure')
@@ -392,7 +408,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             infix.append(Push(0)) # FIXME
             infix.append(Ret())
             infix.label(next_op)
-        infix.append(Fail('expected a postfix operator'))
+        infix.append(Fail('expected an infix operator'))
         infix.finish()
 
         main = builder.func(pratt.name)
