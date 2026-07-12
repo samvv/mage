@@ -160,3 +160,10 @@ def toposort[V, L](graph: DGraph[V, L]) -> Iterator[set[V]]:
     for v in graph.get_vertices():
         if v not in mapping:
             yield from strongconnect(v)
+
+def graph_roots[V, L](g: DGraph[V, L]) -> Iterable[V]:
+    mapping = { v: 0 for v in g.vertices }
+    for v in g.vertices:
+        incoming = list(g.incoming_vertices(v))
+        mapping[v] += len(incoming)
+    return (v for v, count in mapping.items() if count == 0)
