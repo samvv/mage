@@ -167,3 +167,17 @@ def graph_roots[V, L](g: DGraph[V, L]) -> Iterable[V]:
         incoming = list(g.incoming_vertices(v))
         mapping[v] += len(incoming)
     return (v for v, count in mapping.items() if count == 0)
+
+def graph_reachable[V, L](g: DGraph[V, L], src: V, dst: V) -> bool:
+    visited = set[V]()
+    stack = [ src ]
+    while stack:
+        v = stack.pop()
+        if v in visited:
+            continue
+        visited.add(v)
+        if v == dst:
+            return True
+        for w in g.outgoing_vertices(v):
+            stack.append(w)
+    return False
