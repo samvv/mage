@@ -7,6 +7,7 @@ from warnings import warn
 from magelang.graph import DGraph, toposort, graph_roots
 from magelang.lang.mage.ast import POSINF
 from magelang.machine import (
+    FuncDef,
     Machine,
     Op,
     Build,
@@ -143,7 +144,7 @@ def split_pratt(grammar: MageGrammar) -> tuple[list[MageModuleElement], list[Pra
 @declare_pass()
 def mage_to_machine(grammar: MageGrammar) -> Machine:
 
-    defs = dict[str, int]()
+    funcs = dict[str, FuncDef]()
     ops = list[Op]()
 
     generate_label_name = NameGenerator()
@@ -246,7 +247,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                     ops.extend(compile_expr(expr, True))
             ops.append(Build(rule.name, field_names))
             ops.append(Ret())
-            defs[rule.name] = i
+            funcs[rule.name] = FuncDef(i, 0)
 
     for pratt in pratts:
         parse_expr_name = generate_function_name('expr')
@@ -255,7 +256,8 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         parse_postfix_name = generate_function_name('postfix_operator')
         parse_infix_name = generate_function_name('infix_operator')
         i = len(ops)
-        defs[pratt.name] = i
+        # parse_expr_bp accepts min_prec as single argument
+        funcs[pratt.name] = FuncDef(i, 1)
         after_prefix_label_name = generate_label_name('parsed_prefix')
         ops.append(Call(name=parse_prefix_name))
         ops.append(JumpNZ(target=after_prefix_label_name))
@@ -271,4 +273,4 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             ops.append(JumpZ(target=success_label_name))
         ops.append(Ret(label=success_label_name))
 
-    return Machine(ops, defs)
+    return Machine(ops, funcs)

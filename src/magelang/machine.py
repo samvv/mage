@@ -202,9 +202,14 @@ class Dec(OpBase):
     comment: str | None = None
 
 @dataclass
+class FuncDef:
+    offset: int
+    arity: int
+
+@dataclass
 class Machine:
     ops: list[Op]
-    funcs: dict[str, int] = field(default_factory=dict)
+    funcs: dict[str, FuncDef] = field(default_factory=dict)
 
     def dump(self) -> None:
         out = ''
@@ -343,8 +348,12 @@ class Executor:
                 self.stack[-1] -= 1
                 self.frame.op_index += 1
             elif isinstance(op, Call):
-                self.frames.append(Frame(m.funcs[op.name]))
-                # TODO what about the return value?
+                func = m.funcs[op.name]
+                new_frame = Frame(func.offset)
+                for _ in range(func.arity):
+                    new_frame.stack.append(self.stack.pop())
+                self.frames.append(new_frame)
+                # op_index is incremented when returning
             elif isinstance(op, Dup):
                 self.stack.append(self.stack[-1])
                 self.frame.op_index += 1
