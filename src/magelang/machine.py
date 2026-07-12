@@ -204,7 +204,7 @@ class Dec(OpBase):
 @dataclass
 class Machine:
     ops: list[Op]
-    defs: dict[str, int] = field(default_factory=dict)
+    funcs: dict[str, int] = field(default_factory=dict)
 
     def dump(self) -> None:
         out = ''
@@ -215,14 +215,14 @@ class Machine:
             if op.comment:
                 out += ' # ' + op.comment
             out += '\n'
-        for name, offset in self.defs.items():
+        for name, offset in self.funcs.items():
             out += f'def {name} = {offset}\n'
         print(out)
 
     def clone(self) -> Machine:
         return Machine(
             deepcopy(self.ops),
-            deepcopy(self.defs),
+            deepcopy(self.funcs),
         )
 
 
@@ -343,7 +343,7 @@ class Executor:
                 self.stack[-1] -= 1
                 self.frame.op_index += 1
             elif isinstance(op, Call):
-                self.frames.append(Frame(m.defs[op.name]))
+                self.frames.append(Frame(m.funcs[op.name]))
                 # TODO what about the return value?
             elif isinstance(op, Dup):
                 self.stack.append(self.stack[-1])
