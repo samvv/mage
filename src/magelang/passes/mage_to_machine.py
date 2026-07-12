@@ -6,6 +6,7 @@ from typing import assert_never
 from magelang.graph import DGraph, graph_reachable, toposort, graph_roots
 from magelang.lang.mage.ast import POSINF
 from magelang.machine import (
+    BuildToken,
     Machine,
     MachineBuilder,
     Op,
@@ -143,7 +144,7 @@ def split_pratt(grammar: MageGrammar) -> tuple[list[MageModuleElement], list[Pra
             rest.extend(scc)
 
     for rule in rest:
-        if isinstance(rule, MageRule):
+        if isinstance(rule, MageRule) and rule.is_parse:
             for pratt in pratts:
                 for pratt_rule in pratt.all():
                     if graph_reachable(g, pratt_rule, rule):
@@ -163,23 +164,19 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
 
     elements, pratts = split_pratt(grammar)
 
-    def compile_repeat(count: int, expr: MageExpr, hidden: bool) -> Iterable[Op]:
+    def compile_repeat(count: int, expr: MageExpr, hidden: bool, in_token: bool) -> Iterable[Op]:
         if count == 0:
             return
         repeat_label_name = generate_label_name(prefix='repeat_main')
         yield Push(count)
         yield Noop(label=repeat_label_name)
-        yield from compile_expr(expr, hidden)
+        yield from compile_expr(expr, hidden, in_token)
         yield Dec()
         yield Dup()
         yield JumpNZ(target=repeat_label_name)
         yield Pop()
 
-    def compile_rule(rule: MageRule) -> Iterable[Op]:
-        assert(rule.expr is not None)
-        return compile_expr(rule.expr)
-
-    def compile_expr(expr: MageExpr, hidden: bool = False) -> Iterable[Op]:
+    def compile_expr(expr: MageExpr, hidden: bool = False, in_token: bool = False) -> Iterable[Op]:
         if isinstance(expr, MageRefExpr):
             yield Call(expr.name)
             return
@@ -209,7 +206,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             label_names = list(generate_label_name(f'choice_{i}') for i in range(n+1))
             for i, element in enumerate(expr.elements):
                 yield Catch(target=label_names[i+1], label=label_names[i])
-                yield from compile_expr(element, hidden)
+                yield from compile_expr(element, hidden, in_token)
                 yield Jump(target=success_label_name)
             yield Fail(label=label_names[n])
             yield Commit(label=success_label_name)
@@ -219,55 +216,62 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             yield Tell()
             if expr.is_negated:
                 yield Catch(success_label_name)
-                yield from compile_expr(expr.expr, True)
+                yield from compile_expr(expr.expr, True, in_token)
                 yield Commit()
                 yield Fail()
             else:
                 # FIXME
-                yield from compile_expr(expr.expr, True)
+                yield from compile_expr(expr.expr, True, in_token)
             yield Seek(label=success_label_name)
             return
         if isinstance(expr, MageHideExpr):
-            yield from compile_expr(expr.expr, True)
+            yield from compile_expr(expr.expr, True, in_token)
             return
         if isinstance(expr, MageSeqExpr):
             for element in expr.elements:
-                yield from compile_expr(element, hidden)
+                yield from compile_expr(element, hidden, in_token)
             return
         if isinstance(expr, MageRepeatExpr):
             if expr.min > 0:
-                yield from compile_repeat(expr.min, expr.expr, hidden)
+                yield from compile_repeat(expr.min, expr.expr, hidden, in_token)
             if expr.max == POSINF:
                 repeat_label_name = generate_label_name(prefix='repeat_inf')
                 done_label_name = generate_label_name(prefix='repeat_end')
                 yield Catch(target=done_label_name)
                 yield Noop(label=repeat_label_name)
-                yield from compile_expr(expr.expr, hidden)
+                yield from compile_expr(expr.expr, hidden, in_token)
                 yield Jump(target=repeat_label_name)
                 yield Noop(label=done_label_name)
             else:
-                yield from compile_repeat(expr.max - expr.min, expr.expr, hidden)
+                yield from compile_repeat(expr.max - expr.min, expr.expr, hidden, in_token)
             return
         if isinstance(expr, MageListExpr):
             todo()
         assert_never(expr)
 
     for rule in elements:
-        assert(isinstance(rule, MageRule))
-        if rule.expr is not None:
-            func = builder.func(rule.name)
-            field_names = list[str]()
+        if not isinstance(rule, MageRule) or rule.expr is None:
+            continue
+        func = builder.func(rule.name)
+        func.retval('node')
+        field_names = list[str]()
+        if rule.is_lex:
+            func.append(Tell())
+            func.extend(compile_expr(rule.expr, in_token=True))
+            func.append(Tell())
+            func.append(BuildToken(rule.name))
+        else:
             for expr, field in get_fields(rule.expr, grammar, include_hidden=True):
                 if field is not None:
                     func.append(Tell())
-                    func.extend(compile_expr(expr, field is None))
+                    func.extend(compile_expr(expr, False))
                     func.append(Tell())
                     field_names.append(field.name)
                 else:
                     func.extend(compile_expr(expr, True))
             func.append(Build(rule.name, field_names))
-            func.append(Ret())
-            func.finish()
+        func.append(Ret())
+        func.finish()
 
     for pratt in pratts:
 
@@ -281,6 +285,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         expr_bp = builder.func(parse_with_bp_name)
 
         expr_bp.arg('min_prec')
+        expr_bp.retval('node')
 
         fail_parse_prefix = expr_bp.generate_label('fail_parse_prefix')
         loop_start = expr_bp.generate_label('loop_start')
@@ -307,6 +312,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         # Special case for EOF
         expr_bp.append(Catch(target=start_parse_postfix))
         expr_bp.append(Sat((EOF, EOF)))
+        expr_bp.append(Commit())
         expr_bp.append(Jump(target=loop_end))
 
         # Attempt to parse a postfix expression
@@ -321,7 +327,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
 
         # Attempt to parse an infix expression
         expr_bp.label(start_parse_infix)
-        expr_bp.append(Catch(target=loop_start))
+        expr_bp.append(Catch(target=loop_end))
         expr_bp.append(Call(name=parse_infix_name))
         expr_bp.append(Lt())
         expr_bp.append(JumpNZ(target=loop_end))
@@ -332,21 +338,27 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         # We only get here if neither a prefix nor a postfix expression was parsed
         expr_bp.label(loop_end)
         expr_bp.append(Seek())
+        expr_bp.append(Ret())
 
         expr_bp.finish()
 
         # Generate parse_atom
         atom = builder.func(parse_atom_name)
+        atom.retval('node')
         atom.extend(compile_expr(MageChoiceExpr(list(MageRefExpr(rule.name) for rule in pratt.atoms))))
+        atom.append(Ret())
         atom.finish()
 
         # Generate parse_prefix_operator
         prefix = builder.func(parse_prefix_name)
+        prefix.retval('precedence')
         for rule in pratt.prefix:
             assert(isinstance(rule.expr, MageSeqExpr))
             next_op = prefix.generate_label('failure')
             prefix.append(Catch(target=next_op))
             prefix.extend(compile_expr(rule.expr.elements[0]))
+            prefix.append(Commit())
+            prefix.append(Push(0)) # FIXME
             prefix.append(Ret())
             prefix.label(next_op)
         prefix.append(Fail('expected a prefix operator'))
@@ -354,17 +366,37 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
 
         # Generate parse_postfix_operator
         postfix = builder.func(parse_postfix_name)
+        postfix.retval('precedence')
         for rule in pratt.prefix:
             assert(isinstance(rule.expr, MageSeqExpr))
             next_op = generate_label_name('failure')
             postfix.append(Catch(target=next_op))
-            postfix.extend(compile_expr(rule.expr.elements[0]))
+            postfix.extend(compile_expr(rule.expr.elements[-1]))
+            postfix.append(Commit())
+            postfix.append(Push(0)) # FIXME
             postfix.append(Ret())
             postfix.label(next_op)
         postfix.append(Fail('expected a postfix operator'))
         postfix.finish()
 
+        # Generate parse_infix_operator
+        infix = builder.func(parse_infix_name)
+        postfix.retval('precedence')
+        for rule in pratt.infix:
+            assert(isinstance(rule.expr, MageSeqExpr))
+            next_op = generate_label_name('failure')
+            infix.append(Catch(target=next_op))
+            for expr in rule.expr.elements[1:-1]:
+                infix.extend(compile_expr(expr))
+            infix.append(Commit())
+            infix.append(Push(0)) # FIXME
+            infix.append(Ret())
+            infix.label(next_op)
+        infix.append(Fail('expected a postfix operator'))
+        infix.finish()
+
         main = builder.func(pratt.name)
+        main.retval('node')
         main.append(Push(0))
         main.append(Call(name=parse_with_bp_name))
         main.append(Ret())
