@@ -68,6 +68,10 @@ class DGraph[V, L]:
         for v, (w, l) in self._src_to_dst.items():
             yield v, w, l
 
+    @property
+    def vertices(self) -> Iterable[V]:
+        return iter(self._vertices)
+
     def count_edges(self) -> int:
         return self._edge_count
 
@@ -80,8 +84,14 @@ class DGraph[V, L]:
     def outgoing_edges(self, src: V) -> Iterator[tuple[V, L]]:
         return iter(self._src_to_dst[src])
 
+    def has_outgoing_edges(self, src: V) -> bool:
+        return not not self._src_to_dst[src]
+
     def incoming_edges(self, dst: V) -> Iterator[tuple[V, L]]:
         return iter(self._dst_to_src[dst])
+
+    def has_incoming_edges(self, src: V) -> bool:
+        return not not self._dst_to_src[src]
 
     def outgoing_vertices(self, src: V) -> Iterator[V]:
         for v, _ in self.outgoing_edges(src):
