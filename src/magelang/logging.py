@@ -1,6 +1,9 @@
 
 import sys
 
+def trace(message: str) -> None:
+    sys.stderr.write(f'{message}\n')
+
 def debug(message: str) -> None:
     sys.stderr.write(f'{message}\n')
 
