@@ -4,10 +4,11 @@ from dataclasses import dataclass, field
 from magelang.lang.mage.ast import *
 from magelang.logging import trace
 from magelang.runtime.diagnostics import count_digits
-from magelang.util import DynamicNode, NameGenerator, to_snake_case
+from magelang.util import DynamicNode, DynamicToken, NameGenerator, to_snake_case
 
 type Op = (
     Build
+    | BuildToken
     | Call
     | Catch
     | Commit
@@ -70,6 +71,15 @@ class Build(OpBase):
     """
     name: str
     field_names: Sequence[str]
+    label: str | None = None
+    comment: str | None = None
+
+@dataclass
+class BuildToken(OpBase):
+    """
+    Build a token from the offsets that are on the stack.
+    """
+    name: str
     label: str | None = None
     comment: str | None = None
 
@@ -405,6 +415,11 @@ class Execution:
                 left = self.stack.pop()
                 right = self.stack.pop()
                 self.stack.append(left < right)
+                self.frame.op_index += 1
+            elif isinstance(op, BuildToken):
+                end = self.stack.pop()
+                start = self.stack.pop()
+                self.stack.append(DynamicToken(op.name, start, end))
                 self.frame.op_index += 1
             else:
                 assert_never(op)
