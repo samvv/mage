@@ -674,6 +674,8 @@ class MageRule(MageNodeBase):
     def is_keyword_def(self) -> bool:
         return self.has_decorator('keyword')
 
+    def __repr__(self) -> str:
+        return f'MageRule({self.name})'
 
 type MageModuleElement = MageRule | MageModule
 
