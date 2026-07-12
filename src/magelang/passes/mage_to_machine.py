@@ -2,11 +2,11 @@
 from collections.abc import Sequence, Iterable
 from dataclasses import dataclass
 from typing import assert_never
-from warnings import warn
 
 from magelang.graph import DGraph, toposort, graph_roots
 from magelang.lang.mage.ast import POSINF
 from magelang.machine import (
+    FuncBuilder,
     FuncDef,
     Machine,
     Op,
@@ -20,6 +20,7 @@ from magelang.machine import (
     Jump,
     JumpNZ,
     JumpZ,
+    Lt,
     Noop,
     Pop,
     Push,
@@ -30,7 +31,7 @@ from magelang.machine import (
 )
 from magelang.helpers import get_fields
 from magelang.manager import declare_pass
-from magelang.util import NameGenerator, todo, nonnull
+from magelang.util import NameGenerator, todo, nonnull, unreachable
 from magelang import (
     MageRule,
     MageGrammar,
@@ -48,6 +49,8 @@ from magelang import (
     for_each_direct_child_expr,
     lookup_ref
 )
+
+EOF = '\uFFFF'
 
 NONE   = 0
 PREFIX = 1
@@ -74,13 +77,11 @@ def split_pratt(grammar: MageGrammar) -> tuple[list[MageModuleElement], list[Pra
             dst = lookup_ref(expr)
             if dst is None:
                 return
-            print(src.name, '->', dst.name)
             g.add_edge(src, dst, None)
             return
         for_each_direct_child_expr(expr, lambda child: populate(g, child, src))
 
     def get_roots(rules: Sequence[MageRule]) -> Iterable[MageRule]:
-        print('--------------')
         g = DGraph[MageRule, None]()
         for rule in rules:
             if rule.expr is not None:
@@ -128,12 +129,12 @@ def split_pratt(grammar: MageGrammar) -> tuple[list[MageModuleElement], list[Pra
                 elif has_right:
                     prefix.append(rule)
                 else:
-                    atoms.append(rule)
+                    unreachable()
+        # TODO add the atoms, wich will be in another SCC
         # We require at least two Pratt expressions. When less, there is no
         # need at all for a Pratt parser.
         if len(candidates) > 0 and len(infix) + len(prefix) + len(suffix) >= 2:
             roots = list(get_roots(candidates))
-            print(roots)
             assert(len(roots) == 1)
             pratts.append(Pratt(nonnull(roots[0]).name, infix, prefix, suffix, atoms))
         else:
@@ -145,14 +146,11 @@ def split_pratt(grammar: MageGrammar) -> tuple[list[MageModuleElement], list[Pra
 def mage_to_machine(grammar: MageGrammar) -> Machine:
 
     funcs = dict[str, FuncDef]()
-    ops = list[Op]()
 
     generate_label_name = NameGenerator()
-    generate_function_name = NameGenerator()
+    generate_function_name = NameGenerator(hide_first=True)
 
     elements, pratts = split_pratt(grammar)
-
-    print(pratts)
 
     def compile_repeat(count: int, expr: MageExpr, hidden: bool) -> Iterable[Op]:
         if count == 0:
@@ -235,7 +233,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
     for rule in elements:
         assert(isinstance(rule, MageRule))
         if rule.expr is not None:
-            i = len(ops)
+            ops = list[Op]()
             field_names = list[str]()
             for expr, field in get_fields(rule.expr, grammar, include_hidden=True):
                 if field is not None:
@@ -247,30 +245,102 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                     ops.extend(compile_expr(expr, True))
             ops.append(Build(rule.name, field_names))
             ops.append(Ret())
-            funcs[rule.name] = FuncDef(i, 0)
+            funcs[rule.name] = FuncDef(0, ops)
 
     for pratt in pratts:
-        parse_expr_name = generate_function_name('expr')
-        parse_atom_name = generate_function_name('atom')
-        parse_prefix_name = generate_function_name('prefix_operator')
-        parse_postfix_name = generate_function_name('postfix_operator')
-        parse_infix_name = generate_function_name('infix_operator')
-        i = len(ops)
-        # parse_expr_bp accepts min_prec as single argument
-        funcs[pratt.name] = FuncDef(i, 1)
-        after_prefix_label_name = generate_label_name('parsed_prefix')
-        ops.append(Call(name=parse_prefix_name))
-        ops.append(JumpNZ(target=after_prefix_label_name))
-        ops.append(Call(name=parse_atom_name))
-        # parse_expr will be called with the precedence from parse_atom
-        ops.append(Call(name=parse_expr_name))
 
-        # Generate parse_postfix_operator
-        success_label_name = generate_label_name('prefix_success')
+        parse_with_bp = generate_function_name(f'{pratt.name}_with_bp')
+        parse_atom = generate_function_name(f'{pratt.name}_atom')
+        parse_prefix = generate_function_name(f'{pratt.name}_prefix_operator')
+        parse_postfix = generate_function_name(f'{pratt.name}_postfix_operator')
+        parse_infix = generate_function_name(f'{pratt.name}_infix_operator')
+
+        # Generate parse_expr_bp
+        expr_bp = FuncBuilder(parse_with_bp)
+
+        expr_bp.arg('min_prec')
+
+        fail_parse_prefix = expr_bp.generate_label('fail_parse_prefix')
+        fail_parse_postfix = expr_bp.generate_label('fail_parse_postfix')
+        loop_start = expr_bp.generate_label('loop_start')
+        loop_fail = expr_bp.generate_label('loop_fail')
+
+        expr_bp.append(Catch(target=fail_parse_prefix))
+        # parse_prefix will push a binding power on the stack if successful
+        expr_bp.append(Call(name=parse_prefix))
+        expr_bp.append(Commit())
+        # parse_expr will be called with the precedence from parse_prefix_name
+        expr_bp.append(Call(name=parse_with_bp))
+        expr_bp.append(Jump(target=loop_start))
+
+        # Alternative branch where parsing the prefix failed
+        expr_bp.label(fail_parse_prefix)
+        expr_bp.append(Call(name=parse_atom))
+
+        # Start of the main loop
+        expr_bp.label(loop_start)
+        expr_bp.append(Tell())
+
+        # Special case for EOF
+        expr_bp.append(Catch(target=loop_fail))
+        expr_bp.append(Sat((EOF, EOF)))
+        expr_bp.append(Commit())
+
+        # Attempt to parse a postfix expression
+        expr_bp.append(Catch(target=fail_parse_postfix))
+        expr_bp.append(Call(name=parse_postfix))
+        expr_bp.append(Commit())
+        expr_bp.append(Lt())
+        expr_bp.append(JumpNZ(target=loop_fail))
+        # TODO assign LHS as a combination of operator + expr
+        expr_bp.append(Jump(target=loop_start))
+
+        # Attempt to parse an infix expression
+        expr_bp.label(fail_parse_postfix)
+        expr_bp.append(Catch(target=loop_start))
+        expr_bp.append(Call(name=parse_infix))
+        expr_bp.append(Lt())
+        expr_bp.append(JumpNZ(target=loop_fail))
+        expr_bp.append(Call(name=parse_with_bp)) # should be called with r_bp from parse_infix
+        # TODO assign LHS as a combination of expr + operator + expr
+        expr_bp.append(Jump(target=loop_start))
+
+        # We only get here if neither a prefix nor a postfix expression was parsed
+        expr_bp.label(loop_fail)
+        expr_bp.append(Seek())
+
+        funcs[parse_with_bp] = expr_bp.finish()
+
+        # Generate parse_prefix_operator
+        prefix_ops = list[Op]()
         for rule in pratt.prefix:
             assert(isinstance(rule.expr, MageSeqExpr))
-            ops.extend(compile_expr(rule.expr.elements[0]))
-            ops.append(JumpZ(target=success_label_name))
-        ops.append(Ret(label=success_label_name))
+            failure = generate_label_name('failure')
+            prefix_ops.append(Catch(target=failure))
+            prefix_ops.extend(compile_expr(rule.expr.elements[0]))
+            prefix_ops.append(Ret())
+            prefix_ops.append(Noop(label=failure))
+        prefix_ops.append(Push(None))
+        prefix_ops.append(Ret())
+        funcs[parse_prefix] = FuncDef(0, prefix_ops)
 
-    return Machine(ops, funcs)
+        # Generate parse_postfix_operator
+        postfix_ops = list[Op]()
+        for rule in pratt.prefix:
+            assert(isinstance(rule.expr, MageSeqExpr))
+            failure = generate_label_name('failure')
+            postfix_ops.append(Catch(target=failure))
+            postfix_ops.extend(compile_expr(rule.expr.elements[0]))
+            postfix_ops.append(Ret())
+            postfix_ops.append(Noop(label=failure))
+        postfix_ops.append(Push(None))
+        postfix_ops.append(Ret())
+        funcs[parse_postfix] = FuncDef(0, postfix_ops)
+
+        funcs[pratt.name] = FuncDef(0, [
+            Push(0),
+            Call(name=parse_with_bp),
+            Ret(),
+        ])
+
+    return Machine(funcs)

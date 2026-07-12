@@ -1,9 +1,9 @@
 from collections.abc import Sequence
-from copy import deepcopy
 from dataclasses import dataclass, field
 
 from magelang.lang.mage.ast import *
-from magelang.util import DynamicNode, to_snake_case
+from magelang.runtime.diagnostics import count_digits
+from magelang.util import DynamicNode, NameGenerator, to_snake_case
 
 type Op = (
     Build
@@ -18,6 +18,7 @@ type Op = (
     | Jump
     | JumpNZ
     | JumpZ
+    | Lt
     | Noop
     | Pop
     | Push
@@ -111,6 +112,8 @@ class Jump(OpBase):
 class JumpZ(OpBase):
     """
     Jump to a given named label or offset if the top of the stack is zero-valued.
+
+    The topmost value on the stack will be consumed.
     """
     target: str | int
     label: str | None = None
@@ -120,10 +123,25 @@ class JumpZ(OpBase):
 class JumpNZ(OpBase):
     """
     Jump to a given named label or offset if the top of the stack is nonzero-valued.
+
+    The topmost value on the stack will be consumed.
     """
     target: str | int
     label: str | None = None
     comment: str | None = None
+
+@dataclass
+class Lt(OpBase):
+    """
+    Determine if the first value on the stack is less than the second value.
+
+    The first and second values on the stack will be consumed.
+
+    When true, add 1 to the stack. When false, append 0.
+    """
+    label: str | None = None
+    comment: str | None = None
+
 
 @dataclass
 class Catch(OpBase):
@@ -179,6 +197,13 @@ class Call(OpBase):
 
 @dataclass
 class Noop(OpBase):
+    """
+    Do not perform anything.
+
+    The program counter will simply be incremented to the next instruction.
+
+    This instruction is useful for adding comments and labels.
+    """
     label: str | None = None
     comment: str | None = None
 
@@ -200,36 +225,34 @@ class Dec(OpBase):
 
 @dataclass
 class FuncDef:
-    offset: int
     arity: int
+    ops: Sequence[Op]
 
 @dataclass
 class Machine:
-    ops: list[Op]
     funcs: dict[str, FuncDef] = field(default_factory=dict)
 
     def dump(self) -> None:
         out = ''
-        for i, op in enumerate(self.ops):
-            if op.label is not None:
-                out += f'[{i}] ' + op.label + ':\n'
-            out += f'[{i}]    ' + str(op)
-            if op.comment:
-                out += ' # ' + op.comment
-            out += '\n'
-        for name, offset in self.funcs.items():
-            out += f'def {name} = {offset}\n'
+        n = 0
+        for func in self.funcs.values():
+            n = max(n, count_digits(len(func.ops)))
+        for name, func in self.funcs.items():
+            out += f'def {name}:\n'
+            for i, op in enumerate(func.ops):
+                spacing = ' ' * (n - count_digits(i))
+                if op.label is not None:
+                    out += f'[{i}{spacing}] ' + op.label + ':\n'
+                out += f'[{i}{spacing}]    ' + str(op)
+                if op.comment:
+                    out += ' # ' + op.comment
+                out += '\n'
         print(out)
-
-    def clone(self) -> Machine:
-        return Machine(
-            deepcopy(self.ops),
-            deepcopy(self.funcs),
-        )
 
 
 @dataclass
 class Frame:
+    func: FuncDef
     op_index: int = 0
     stack: list[Any] = field(default_factory=list)
 
@@ -238,13 +261,22 @@ class ParseError(RuntimeError):
     pass
 
 
-class Executor:
+class Execution:
 
-    def __init__(self, start = 0, stack: list[Any] | None = None) -> None:
+    def __init__(
+        self,
+        machine: Machine,
+        text: str,
+        entrypoint: str = 'main',
+        start_offset = 0,
+        stack: list[Any] | None = None
+    ) -> None:
         if stack is None:
             stack = []
+        self.m = machine
+        self.text = text
         self.offset = 0
-        self.frames: list[Frame] = [ Frame(start, stack) ]
+        self.frames: list[Frame] = [ Frame(machine.funcs[entrypoint], start_offset, stack) ]
         self.handlers = list[tuple[int, int]]()
 
     @property
@@ -264,17 +296,22 @@ class Executor:
         self.handlers.pop()
         self.frames[-1].op_index = target
 
-    def execute(self, m: Machine, text: str) -> None:
+    def _check_post(self) -> None:
+        assert(not self.handlers)
+        if self.offset < len(self.text):
+            raise ParseError()
+
+    def execute(self) -> None:
 
         while True:
 
-            op = m.ops[self.frame.op_index]
+            op = self.frame.func.ops[self.frame.op_index]
 
             if isinstance(op, Sat):
-                if self.offset >= len(text):
+                if self.offset >= len(self.text):
                     self.fail()
                     continue
-                ch = text[self.offset]
+                ch = self.text[self.offset]
                 l, h = op.rng
                 if l >= ch and h <= ch:
                     self.offset += 1
@@ -297,9 +334,7 @@ class Executor:
                 self.stack.append(DynamicNode(op.name, fields))
                 self.frame.op_index += 1
             elif isinstance(op, Halt):
-                assert(not self.handlers)
-                if self.offset < len(text):
-                    raise ParseError()
+                self._check_post()
                 break
             elif isinstance(op, Fail):
                 self.fail()
@@ -313,6 +348,9 @@ class Executor:
             elif isinstance(op, Ret):
                 value = self.stack[-1]
                 self.frames.pop()
+                if not self.frames:
+                    self._check_post()
+                    break
                 self.stack.append(value)
                 self.frame.op_index += 1
             elif isinstance(op, Tell):
@@ -345,31 +383,38 @@ class Executor:
                 self.stack[-1] -= 1
                 self.frame.op_index += 1
             elif isinstance(op, Call):
-                func = m.funcs[op.name]
-                new_frame = Frame(func.offset)
+                func = self.m.funcs[op.name]
+                new_stack = list[Any]()
                 for _ in range(func.arity):
-                    new_frame.stack.append(self.stack.pop())
-                self.frames.append(new_frame)
+                    new_stack.append(self.stack.pop())
+                self.frames.append(Frame(func))
                 # op_index is incremented when returning
             elif isinstance(op, Dup):
                 self.stack.append(self.stack[-1])
+                self.frame.op_index += 1
+            elif isinstance(op, Lt):
+                left = self.stack.pop()
+                right = self.stack.pop()
+                self.stack.append(left < right)
                 self.frame.op_index += 1
             else:
                 assert_never(op)
 
 
-def execute_machine(m: Machine, text: str, start = 0, stack = None) -> None:
-    e = Executor(start, stack)
-    e.execute(m, text)
+def execute_machine(
+    machine: Machine,
+    text: str,
+    entrypoint = 'main',
+    start = 0,
+    stack: list[Any] | None = None
+) -> None:
+    e = Execution(machine, text, entrypoint, start, stack)
+    e.execute()
 
 
-def call_machine_method(m: Machine, name: str, text: str) -> Any:
-    m = m.clone()
-    start = len(m.ops)
-    m.ops.append(Call(name))
-    m.ops.append(Halt())
+def call_machine_function(m: Machine, name: str, text: str) -> Any:
     stack = []
-    execute_machine(m, text, start=start, stack=stack)
+    execute_machine(m, text, entrypoint=name, stack=stack)
     assert(len(stack) == 1)
     return stack[-1]
 
@@ -379,13 +424,46 @@ def link_machine(m: Machine) -> None:
     Converts jumps to named labels of a machine to relative offsets.
     """
     labels = dict[str, int]()
-    i = 0
-    for i, op in enumerate(m.ops):
-        if op.label is not None:
-            labels[op.label] = i
-        else:
-            i += 1
-    for i, op in enumerate(m.ops):
-        if isinstance(op, Jump) or isinstance(op, JumpZ) or isinstance(op, JumpNZ) or isinstance(op, Catch):
-            op.target = labels[cast(str, op.target)] - i
+    for func in m.funcs.values():
+        i = 0
+        for i, op in enumerate(func.ops):
+            if op.label is not None:
+                labels[op.label] = i
+            else:
+                i += 1
+        for i, op in enumerate(func.ops):
+            if isinstance(op, Jump) or isinstance(op, JumpZ) or isinstance(op, JumpNZ) or isinstance(op, Catch):
+                op.target = labels[cast(str, op.target)] - i
 
+
+class FuncBuilder:
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.args = list[str]()
+        self.ops = list[Op]()
+        self._pending_labels = list[str]()
+        self._label_generator = NameGenerator(hide_first=True)
+
+    def arg(self, name: str) -> None:
+        assert(name not in self.args)
+        self.args.append(name)
+
+    def generate_label(self, name: str) -> str:
+        return self._label_generator(name)
+
+    def label(self, name: str) -> None:
+        self._pending_labels.append(name)
+
+    def append(self, op: Op) -> None:
+        for name in self._pending_labels:
+            if op.label is None:
+                op.label = name
+            else:
+                self.ops.append(Noop(label=name))
+            self._pending_labels.clear()
+        self.ops.append(op)
+
+    def finish(self) -> FuncDef:
+        assert(not self._pending_labels)
+        return FuncDef(len(self.args), self.ops)
