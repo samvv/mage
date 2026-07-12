@@ -372,6 +372,9 @@ class DynamicNode:
             if isinstance(x, DynamicNode):
                 for _, value in x.fields:
                     visit(value)
+            elif isinstance(x, DynamicToken):
+                l.append(x.start)
+                l.append(x.end)
             else:
                 l.append(x)
         visit(self)
@@ -380,3 +383,12 @@ class DynamicNode:
     def __repr__(self) -> str:
         return f'{self.name}({', '.join(f'{k}={repr(v)}' for k, v in self.fields)})'
 
+class DynamicToken:
+
+    def __init__(self, name: str, start: int, end: int) -> None:
+        self.name = name
+        self.start = start
+        self.end = end
+
+    def __repr__(self) -> str:
+        return f'{self.name}[{self.start}, {self.end}]'
