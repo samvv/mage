@@ -1,12 +1,9 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field
-from os import wait
 
-from magelang.graph import DGraph, graph_roots, toposort
-from magelang.helpers import get_fields
 from magelang.lang.mage.ast import *
-from magelang.util import DynamicNode, NameGenerator, to_snake_case, todo
+from magelang.util import DynamicNode, to_snake_case
 
 type Op = (
     Build
