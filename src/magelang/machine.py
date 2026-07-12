@@ -6,6 +6,8 @@ from magelang.logging import trace
 from magelang.runtime.diagnostics import count_digits
 from magelang.util import DynamicNode, DynamicToken, NameGenerator, to_snake_case
 
+EOF = '\uFFFF'
+
 type Op = (
     Build
     | BuildToken
@@ -13,13 +15,16 @@ type Op = (
     | Catch
     | Commit
     | Dec
+    | Dump
     | Dup
     | Fail
+    | Flip
     | Halt
     | Inc
     | Jump
     | JumpNZ
     | JumpZ
+    | Load
     | Lt
     | Noop
     | Pop
@@ -40,9 +45,19 @@ class OpBase:
         return out
 
 @dataclass
+class Flip(OpBase):
+    """
+    Swap the topmost element on the stack with the one below it.
+    """
+    label: str | None = None
+    comment: str | None = None
+
+@dataclass
 class Ret(OpBase):
     """
-    Return the topmost value on the stack to the calling function.
+    Return the topmost values on the stack to the calling function.
+
+    The amount of values returned depends on the function's signature.
     """
     label: str | None = None
     comment: str | None = None
@@ -236,6 +251,24 @@ class Dec(OpBase):
     comment: str | None = None
 
 @dataclass
+class Load(OpBase):
+    """
+    Push the variable at the given index onto the top of the stack.
+    """
+    index: int
+    label: str | None = None
+    comment: str | None = None
+
+
+@dataclass
+class Dump(OpBase):
+    """
+    Dump the contents of the stack.
+    """
+    label: str | None = None
+    comment: str | None = None
+
+@dataclass
 class FuncDef:
     name: str
     in_arity: int
@@ -329,10 +362,7 @@ class Execution:
             debug(f'[{self.frame.func.name}:{self.frame.op_index}] {op}')
 
             if isinstance(op, Sat):
-                if self.offset >= len(self.text):
-                    self.fail(f'expected {repr(op.rng)} but got end-of-file')
-                    continue
-                ch = self.text[self.offset]
+                ch = self.text[self.offset] if self.offset < len(self.text) else EOF
                 l, h = op.rng
                 if l <= ch and ch <= h:
                     trace(f'satisfy succeeded: {repr(ch)} in {repr(op.rng)}')
@@ -350,9 +380,8 @@ class Execution:
             elif isinstance(op, Build):
                 fields = list[tuple[str, Any]]()
                 for name in reversed(op.field_names):
-                    high = self.stack.pop()
-                    low = self.stack.pop()
-                    fields.append((name, (low, high)))
+                    value = self.stack.pop()
+                    fields.append((name, value))
                 fields.reverse()
                 self.stack.append(DynamicNode(op.name, fields))
                 self.frame.op_index += 1
@@ -374,11 +403,17 @@ class Execution:
                 if not self.frames:
                     self._check_post()
                     break
+                print('return', keep.func.out_arity)
                 for _ in range(keep.func.out_arity):
                     self.stack.append(keep.stack.pop())
                 self.frame.op_index += 1
             elif isinstance(op, Tell):
                 self.stack.append(self.offset)
+                self.frame.op_index += 1
+            elif isinstance(op, Flip):
+                keep = self.stack[-1]
+                self.stack[-1] = self.stack[-2]
+                self.stack[-2] = keep
                 self.frame.op_index += 1
             elif isinstance(op, Seek):
                 self.offset = self.stack.pop()
@@ -411,7 +446,7 @@ class Execution:
                 new_stack = list[Any]()
                 for _ in range(func.in_arity):
                     new_stack.append(self.stack.pop())
-                self.frames.append(Frame(func))
+                self.frames.append(Frame(func, stack=new_stack))
                 # op_index is incremented when returning
             elif isinstance(op, Dup):
                 self.stack.append(self.stack[-1])
@@ -427,6 +462,12 @@ class Execution:
                 end = self.stack.pop()
                 start = self.stack.pop()
                 self.stack.append(DynamicToken(op.name, start, end))
+                self.frame.op_index += 1
+            elif isinstance(op, Dump):
+                print('STACK', self.stack)
+                self.frame.op_index += 1
+            elif isinstance(op, Load):
+                self.stack.append(self.stack[-(op.index+1)])
                 self.frame.op_index += 1
             else:
                 assert_never(op)
