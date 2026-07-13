@@ -114,7 +114,7 @@ class MageExprBase(MageNodeBase):
             if decorator.name == 'prec':
                 assert(isinstance(decorator.args[0], int))
                 out = (decorator.args[0], ASSOC_LEFT)
-            elif decorator.name == 'prec_left':
+            elif decorator.name == 'prec_right':
                 assert(isinstance(decorator.args[0], int))
                 out = (decorator.args[0], ASSOC_RIGHT)
         return out
