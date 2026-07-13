@@ -23,7 +23,6 @@ from magelang.machine import (
     Jump,
     JumpNZ,
     Lt,
-    Noop,
     Pop,
     Push,
     Ret,
@@ -173,7 +172,6 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         repeat_label_name = generate_label_name(prefix='repeat_main')
         builder.append(Push(count))
         builder.label(repeat_label_name)
-        builder.append(Noop())
         compile_expr(builder, expr, hidden, in_token)
         builder.append(Dec())
         builder.append(Dup())
@@ -301,7 +299,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             builder.label(first_fail)
             if expr.min_count > 0:
                 builder.append(Fail())
-            builder.append(Noop(label=finish_label_name))
+            builder.label(finish_label_name)
             return
 
         assert_never(expr)
