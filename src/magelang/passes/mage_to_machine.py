@@ -266,9 +266,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         else:
             for expr, field in get_fields(rule.expr, grammar, include_hidden=True):
                 if field is not None:
-                    func.append(Tell())
                     func.extend(compile_expr(expr, False))
-                    func.append(Tell())
                     field_names.append(field.name)
                 else:
                     func.extend(compile_expr(expr, True))
