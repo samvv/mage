@@ -19,6 +19,7 @@ type Op = (
     | Dup
     | Fail
     | Flip
+    | Get
     | Halt
     | Inc
     | Jump
@@ -32,6 +33,7 @@ type Op = (
     | Ret
     | Sat
     | Seek
+    | Set
     | Tell
 )
 
@@ -43,6 +45,26 @@ class OpBase:
             if name != 'comment' and name != 'label':
                 out += f' {getattr(self, name)}'
         return out
+
+@dataclass
+class Get(OpBase):
+    """
+    Get a local variable from the current frame and push it on top of the stack.
+    """
+    name: str
+    label: str | None = None
+    comment: str | None = None
+
+@dataclass
+class Set(OpBase):
+    """
+    Set a local variable with the contents of the topmost element on the stack.
+
+    The topmost element will be popped off the stack.
+    """
+    name: str
+    label: str | None = None
+    comment: str | None = None
 
 @dataclass
 class Flip(OpBase):
@@ -302,6 +324,7 @@ class Frame:
     func: FuncDef
     op_index: int = 0
     stack: list[Any] = field(default_factory=list)
+    locals: dict[str, Any] = field(default_factory=dict)
 
 
 class ParseError(RuntimeError):
@@ -465,9 +488,16 @@ class Execution:
                 self.frame.op_index += 1
             elif isinstance(op, Dump):
                 print('STACK', self.stack)
+                print('LOCALS', self.frame.locals)
                 self.frame.op_index += 1
             elif isinstance(op, Load):
                 self.stack.append(self.stack[-(op.index+1)])
+                self.frame.op_index += 1
+            elif isinstance(op, Get):
+                self.stack.append(self.frame.locals[op.name])
+                self.frame.op_index += 1
+            elif isinstance(op, Set):
+                self.frame.locals[op.name] = self.stack.pop()
                 self.frame.op_index += 1
             else:
                 assert_never(op)
