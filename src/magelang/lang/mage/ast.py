@@ -5,7 +5,7 @@ Also defines some visitors over Mage expressions and other useful procedures to
 make handling the AST a bit easier.
 """
 
-from typing import Self, TypedDict, Unpack
+from typing import NewType, Self, TypedDict, Unpack
 from dataclasses import dataclass
 import sys
 from functools import lru_cache
@@ -21,6 +21,11 @@ from .constants import string_rule_type
 
 ASCII_MIN = 0x00
 ASCII_MAX = 0x7F
+
+
+Assoc = NewType('Assoc', int)
+ASSOC_LEFT = Assoc(1)
+ASSOC_RIGHT = Assoc(2)
 
 
 class MageNodeBase:
@@ -101,6 +106,18 @@ class MageExprBase(MageNodeBase):
         for action in self.actions:
             if isinstance(action, ReturnAction):
                 return action.rule
+
+    @property
+    def precedence(self) -> tuple[int, Assoc] | None:
+        out = None
+        for decorator in self.decorators:
+            if decorator.name == 'prec':
+                assert(isinstance(decorator.args[0], int))
+                out = (decorator.args[0], ASSOC_LEFT)
+            elif decorator.name == 'prec_left':
+                assert(isinstance(decorator.args[0], int))
+                out = (decorator.args[0], ASSOC_RIGHT)
+        return out
 
 
 class MageLitExprDeriveArgs(TypedDict, total=False):
@@ -203,10 +220,6 @@ class MageLookaheadExpr(MageExprBase):
 
     def derive(self, **kwargs: Unpack[MageLookaheadExprDeriveArgs]) -> 'MageLookaheadExpr':
         return super().derive(**kwargs)
-
-
-ASSOC_LEFT = 1
-ASSOC_RIGHT = 2
 
 
 type CharSetElement = str | tuple[str, str]
