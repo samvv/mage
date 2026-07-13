@@ -217,17 +217,26 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             yield Commit(label=success_label_name)
             return
         if isinstance(expr, MageLookaheadExpr):
-            success_label_name = generate_label_name('lookahead_success')
-            yield Tell()
+            failure_label_name = generate_label_name('lookahead_failed')
+            finish_label_name = generate_label_name('lookahead_end')
             if expr.is_negated:
-                yield Catch(success_label_name)
+                yield Tell()
+                yield Catch(target=failure_label_name)
                 yield from compile_expr(expr.expr, True, in_token)
                 yield Commit()
+                yield Seek()
                 yield Fail()
+                yield Seek(label=failure_label_name)
             else:
-                # FIXME
+                yield Tell()
+                yield Catch(target=failure_label_name)
                 yield from compile_expr(expr.expr, True, in_token)
-            yield Seek(label=success_label_name)
+                yield Commit()
+                yield Seek()
+                yield Jump(target=finish_label_name)
+                yield Seek(label=failure_label_name)
+                yield Fail()
+                yield Noop(label=finish_label_name)
             return
         if isinstance(expr, MageHideExpr):
             yield from compile_expr(expr.expr, True, in_token)
@@ -252,7 +261,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             return
         if isinstance(expr, MageListExpr):
             first_fail = generate_label_name('list_first_fail')
-            finish = generate_label_name('finish')
+            finish_label_name = generate_label_name('finish')
             min_loop_start = generate_label_name('min_loop_start')
             loop_start = generate_label_name('loop_start')
             yield Catch(target=first_fail)
@@ -261,7 +270,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             if expr.min_count > 0:
                 yield Push(expr.min_count)
                 yield Set('i')
-                yield Catch(target=finish, label=min_loop_start)
+                yield Catch(target=finish_label_name, label=min_loop_start)
                 yield from compile_expr(expr.separator, hidden, in_token)
                 yield Commit()
                 yield from compile_expr(expr.element, hidden, in_token)
@@ -269,7 +278,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                 yield Dec()
                 yield JumpNZ(target=min_loop_start)
             yield Noop(label=loop_start)
-            yield Catch(target=finish)
+            yield Catch(target=finish_label_name)
             yield from compile_expr(expr.separator, hidden, in_token)
             yield Commit()
             yield from compile_expr(expr.element, hidden, in_token)
@@ -277,7 +286,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             yield Noop(label=first_fail)
             if expr.min_count > 0:
                 yield Fail()
-            yield Noop(label=finish)
+            yield Noop(label=finish_label_name)
             return
         assert_never(expr)
 
