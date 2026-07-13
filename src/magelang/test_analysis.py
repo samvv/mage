@@ -89,7 +89,7 @@ def test_overlapping_tokens_str_str():
 
 def test_overlapping_tokens_str_repeat_charset():
     r1 = MageRule('foo', flags=PUBLIC | FORCE_TOKEN, expr=MageLitExpr('@@@'))
-    r2 = MageRule('bax', flags=PUBLIC | FORCE_TOKEN, expr=MageRepeatExpr(MageCharSetExpr([ ('a', 'z') ]), 0, POSINF))
+    r2 = MageRule('bax', flags=PUBLIC | FORCE_TOKEN, expr=MageRepeatExpr(MageCharSetExpr([ ('a', 'z') ]), 0, MAGE_REPEAT_INFINITY))
     r3 = MageRule('bar', flags=PUBLIC | FORCE_TOKEN, expr=MageLitExpr('bar'))
     r4 = MageRule('bla', flags=PUBLIC | FORCE_TOKEN, expr=MageLitExpr('a'))
     modes = get_lexer_modes(MageGrammar([ r1, r2, r3, r4 ]))

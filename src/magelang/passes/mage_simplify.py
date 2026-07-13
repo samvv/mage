@@ -154,7 +154,7 @@ def mage_simplify(grammar: MageGrammar) -> MageGrammar:
                     return new_element
                 return new_separator
             if is_empty(new_separator):
-                return MageRepeatExpr(new_element, expr.min_count, POSINF)
+                return MageRepeatExpr(new_element, expr.min_count, MAGE_REPEAT_INFINITY)
             return expr.derive(element=new_element, separator=new_separator)
 
         assert_never(expr)

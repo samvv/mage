@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import assert_never
 
 from magelang.graph import DGraph, graph_reachable, toposort, graph_roots
-from magelang.lang.mage.ast import POSINF
+from magelang.lang.mage.ast import MAGE_REPEAT_INFINITY
 from magelang.machine import (
     BuildToken,
     Dump,
@@ -237,7 +237,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         if isinstance(expr, MageRepeatExpr):
             if expr.min > 0:
                 yield from compile_repeat(expr.min, expr.expr, hidden, in_token)
-            if expr.max == POSINF:
+            if expr.max == MAGE_REPEAT_INFINITY:
                 repeat_label_name = generate_label_name(prefix='repeat_inf')
                 done_label_name = generate_label_name(prefix='repeat_end')
                 yield Catch(target=done_label_name)
@@ -389,7 +389,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             postfix.append(Catch(target=next_op))
             postfix.extend(compile_expr(rule.expr.elements[-1]))
             postfix.append(Commit())
-            postfix.append(Push(0)) # FIXME
+            postfix.append(Push(rule.expr.precedence))
             postfix.append(Ret())
             postfix.label(next_op)
         postfix.append(Fail('expected a postfix operator'))

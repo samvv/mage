@@ -114,7 +114,7 @@ def evaluate(
                 if result is None:
                     return
                 elements.append(result)
-            if expr.max == POSINF:
+            if expr.max == MAGE_REPEAT_INFINITY:
                 i = 0
                 while True:
                     if i == max_repeats:

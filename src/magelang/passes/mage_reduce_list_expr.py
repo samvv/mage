@@ -17,7 +17,7 @@ def mage_reduce_list_expr(grammar: MageGrammar) -> MageGrammar:
                                 expr.element,
                             ]),
                             0,
-                            POSINF,
+                            MAGE_REPEAT_INFINITY,
                         )
                     ])
                 ])
@@ -29,7 +29,7 @@ def mage_reduce_list_expr(grammar: MageGrammar) -> MageGrammar:
                         expr.element,
                     ]),
                     expr.min_count-1,
-                    POSINF,
+                    MAGE_REPEAT_INFINITY,
                 )
             ])
         return rewrite_each_child_expr(expr, rewrite_expr)

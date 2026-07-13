@@ -422,7 +422,7 @@ def mage_to_python_parser(
 
                 min_to_max = []
                 if expr.max > expr.min:
-                    if expr.max == POSINF:
+                    if expr.max == MAGE_REPEAT_INFINITY:
                         new_stream_name = generate_name('stream')
                         min_to_max.append(PyWhileStmt(
                             PyConstExpr(True),

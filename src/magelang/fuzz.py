@@ -7,7 +7,7 @@ import time
 from magelang import generate_and_load_parser
 from magelang.analysis import is_eof
 from magelang.constants import DEFAULT_FUZZ_DIR
-from magelang.lang.mage.ast import ASCII_MAX, ASCII_MIN, POSINF, PUBLIC, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageListExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, set_parents
+from magelang.lang.mage.ast import ASCII_MAX, ASCII_MIN, MAGE_REPEAT_INFINITY, PUBLIC, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageHideExpr, MageListExpr, MageLitExpr, MageLookaheadExpr, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr, set_parents
 from magelang.eval import RECMAX, SUCCESS, accepts
 from magelang.runtime import EOF, CharStream, ParseStream
 from magelang.util import Progress, unreachable
@@ -92,7 +92,7 @@ def random_expr(
             min = random.randrange(max_repeat_min)
             d = random.randrange(max_repeat_min_max+1)
             if d == max_repeat_min_max:
-                max = POSINF
+                max = MAGE_REPEAT_INFINITY
             else:
                 max = min + d
             expr = generate()
@@ -211,7 +211,7 @@ def random_sentence(
         if isinstance(expr, MageChoiceExpr):
             return visit(random.choice(expr.elements))
         if isinstance(expr, MageRepeatExpr):
-            if expr.max == POSINF:
+            if expr.max == MAGE_REPEAT_INFINITY:
                 n = expr.min + random.randrange(max_inf_repeat)
             elif expr.min == expr.max:
                 n = expr.min

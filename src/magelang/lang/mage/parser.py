@@ -196,10 +196,10 @@ class Parser:
             t1 = self._peek_token()
             if t1.type == TT_PLUS:
                 self._get_token()
-                expr = MageRepeatExpr(min=1, max=POSINF, expr=expr, span=Span(start_offset, t1.span.end))
+                expr = MageRepeatExpr(min=1, max=MAGE_REPEAT_INFINITY, expr=expr, span=Span(start_offset, t1.span.end))
             elif t1.type == TT_STAR:
                 self._get_token()
-                expr = MageRepeatExpr(min=0, max=POSINF, expr=expr, span=Span(start_offset, t1.span.end))
+                expr = MageRepeatExpr(min=0, max=MAGE_REPEAT_INFINITY, expr=expr, span=Span(start_offset, t1.span.end))
             elif t1.type == TT_QUEST:
                 self._get_token()
                 expr = MageRepeatExpr(min=0, max=1, expr=expr, span=Span(start_offset, t1.span.end))
@@ -209,7 +209,7 @@ class Parser:
                 t2 = self._peek_token()
                 max = min
                 if t2.type == TT_COMMA:
-                    max = POSINF
+                    max = MAGE_REPEAT_INFINITY
                     self._get_token()
                     t3 = self._peek_token()
                     if t3.type == TT_INT:

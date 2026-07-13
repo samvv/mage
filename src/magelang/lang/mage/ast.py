@@ -479,7 +479,7 @@ class MageHideExpr(MageExprBase):
         return super().derive(**kwargs)
 
 
-POSINF = sys.maxsize # FIXME if we ever persist this value there will be trouble
+MAGE_REPEAT_INFINITY = sys.maxsize # FIXME if we ever persist this value there will be trouble
 
 
 class MageRepeatExprDeriveArgs(TypedDict, total=False):
@@ -1077,7 +1077,7 @@ def make_list_expr(element: MageExpr, separator: MageExpr, min_count = 0) -> Mag
         element,
         MageRepeatExpr(
             min=max(0, min_count-1),
-            max=POSINF,
+            max=MAGE_REPEAT_INFINITY,
             expr=MageSeqExpr([
                 separator,
                 element,

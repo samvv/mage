@@ -221,7 +221,7 @@ def mage_to_python_lexer(
 
             max_body = []
             assert(expr.max > 0)
-            if expr.max == POSINF:
+            if expr.max == MAGE_REPEAT_INFINITY:
                 max_body.append(PyWhileStmt(expr=PyNamedExpr('True'), body=[
                     *lex_visit(expr.expr, contin),
                     PyBreakStmt(),

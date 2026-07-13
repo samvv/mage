@@ -1,5 +1,5 @@
 
-from magelang.lang.mage.ast import POSINF, PUBLIC, Decorator, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr
+from magelang.lang.mage.ast import MAGE_REPEAT_INFINITY, PUBLIC, Decorator, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr
 from magelang.manager import declare_pass
 
 any_syntax_rule_name = 'syntax'
@@ -49,7 +49,7 @@ def mage_insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
         new_elements.append(MageRule(
             decorators=[ Decorator('keyword') ],
             name='__keyword',
-            expr=MageSeqExpr([ MageCharSetExpr([ ('a', 'z') ], ci=True), MageRepeatExpr(MageCharSetExpr([ ('a', 'z'), ('0', '9') ], ci=True), min=0, max=POSINF) ]),
+            expr=MageSeqExpr([ MageCharSetExpr([ ('a', 'z') ], ci=True), MageRepeatExpr(MageCharSetExpr([ ('a', 'z'), ('0', '9') ], ci=True), min=0, max=MAGE_REPEAT_INFINITY) ]),
         ))
 
 
@@ -59,7 +59,7 @@ def mage_insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
         new_elements.append(MageRule(
             decorators=[ Decorator('skip') ],
             name='__skip',
-            expr=MageRepeatExpr(MageCharSetExpr([ '\n', '\t', '\r', ' ' ]), 0, POSINF),
+            expr=MageRepeatExpr(MageCharSetExpr([ '\n', '\t', '\r', ' ' ]), 0, MAGE_REPEAT_INFINITY),
         ))
 
     return grammar.derive(elements=new_elements)

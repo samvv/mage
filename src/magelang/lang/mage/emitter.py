@@ -157,7 +157,7 @@ def emit(node: MageSyntax) -> str:
                 if wide:
                     out.write(')')
                 out.write('?')
-            elif node.min == 0 and node.max == POSINF:
+            elif node.min == 0 and node.max == MAGE_REPEAT_INFINITY:
                 wide = is_wide(node.expr)
                 if wide:
                     out.write('(')
@@ -165,7 +165,7 @@ def emit(node: MageSyntax) -> str:
                 if wide:
                     out.write(')')
                 out.write('*')
-            elif node.min == 1 and node.max == POSINF:
+            elif node.min == 1 and node.max == MAGE_REPEAT_INFINITY:
                 wide = is_wide(node.expr)
                 if wide:
                     out.write('(')
@@ -182,7 +182,7 @@ def emit(node: MageSyntax) -> str:
                 out.write(str(node.min))
                 if node.max == node.min:
                     pass
-                elif node.max == POSINF:
+                elif node.max == MAGE_REPEAT_INFINITY:
                     out.write(',')
                 else:
                     out.write(',')
