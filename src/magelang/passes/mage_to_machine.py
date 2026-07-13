@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import assert_never
 
 from magelang.graph import DGraph, graph_reachable, toposort, graph_roots
-from magelang.lang.mage.ast import MAGE_REPEAT_INFINITY
+from magelang.lang.mage.ast import ASSOC_LEFT, ASSOC_RIGHT, MAGE_REPEAT_INFINITY
 from magelang.machine import (
     BuildToken,
     Dump,
@@ -368,11 +368,13 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         prefix.retval('precedence')
         for rule in pratt.prefix:
             assert(isinstance(rule.expr, MageSeqExpr))
+            assert(len(rule.expr.elements) == 2)
             next_op = prefix.generate_label('failure')
+            op = rule.expr.elements[0]
             prefix.append(Catch(target=next_op))
-            prefix.extend(compile_expr(rule.expr.elements[0]))
+            prefix.extend(compile_expr(op))
             prefix.append(Commit())
-            prefix.append(Push(0)) # FIXME
+            prefix.append(Push(nonnull(op.precedence)[0]))
             prefix.append(Ret())
             prefix.label(next_op)
         prefix.append(Fail('expected a prefix operator'))
@@ -383,11 +385,13 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         postfix.retval('precedence')
         for rule in pratt.suffix:
             assert(isinstance(rule.expr, MageSeqExpr))
+            assert(len(rule.expr.elements) == 2)
             next_op = generate_label_name('failure')
+            op = rule.expr.elements[1]
             postfix.append(Catch(target=next_op))
-            postfix.extend(compile_expr(rule.expr.elements[-1]))
+            postfix.extend(compile_expr(op))
             postfix.append(Commit())
-            postfix.append(Push(rule.expr.precedence))
+            postfix.append(Push(nonnull(op.precedence)[0]))
             postfix.append(Ret())
             postfix.label(next_op)
         postfix.append(Fail('expected a postfix operator'))
@@ -398,12 +402,15 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         infix.retval('precedence')
         for rule in pratt.infix:
             assert(isinstance(rule.expr, MageSeqExpr))
+            assert(len(rule.expr.elements) == 3)
             next_op = generate_label_name('failure')
             infix.append(Catch(target=next_op))
-            for expr in rule.expr.elements[1:-1]:
-                infix.extend(compile_expr(expr))
+            op = rule.expr.elements[1]
+            infix.extend(compile_expr(op))
             infix.append(Commit())
-            infix.append(Push(0)) # FIXME
+            prec, assoc = nonnull(op.precedence)
+            infix.append(Push(prec if assoc == ASSOC_LEFT else prec+1))
+            infix.append(Push(prec))
             infix.append(Ret())
             infix.label(next_op)
         infix.append(Fail('expected an infix operator'))
