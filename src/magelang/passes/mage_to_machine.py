@@ -249,7 +249,32 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                 yield from compile_repeat(expr.max - expr.min, expr.expr, hidden, in_token)
             return
         if isinstance(expr, MageListExpr):
-            todo()
+            first_fail = generate_label_name('list_first_fail')
+            finish = generate_label_name('finish')
+            min_loop_start = generate_label_name('min_loop_start')
+            loop_start = generate_label_name('loop_start')
+            yield Catch(target=first_fail)
+            yield from compile_expr(expr.element, hidden, in_token)
+            yield Commit()
+            if expr.min_count > 0:
+                yield Push(expr.min_count)
+                yield Catch(target=finish, label=min_loop_start)
+                yield from compile_expr(expr.separator, hidden, in_token)
+                yield Commit()
+                yield from compile_expr(expr.element, hidden, in_token)
+                yield Dec()
+                yield JumpNZ(target=min_loop_start)
+            yield Noop(label=loop_start)
+            yield Catch(target=finish)
+            yield from compile_expr(expr.separator, hidden, in_token)
+            yield Commit()
+            yield from compile_expr(expr.element, hidden, in_token)
+            yield Jump(target=loop_start)
+            yield Noop(label=first_fail)
+            if expr.min_count > 0:
+                yield Fail()
+            yield Noop(label=finish)
+            return
         assert_never(expr)
 
     for rule in elements:
