@@ -4,16 +4,15 @@ from dataclasses import dataclass, field
 from typing import assert_never
 
 from magelang.graph import DGraph, graph_reachable, toposort, graph_roots
-from magelang.lang.mage.ast import ASSOC_LEFT, ASSOC_RIGHT, MAGE_REPEAT_INFINITY
+from magelang.lang.mage.ast import ASSOC_RIGHT, MAGE_REPEAT_INFINITY
 from magelang.machine import (
     BuildToken,
     Dump,
     Flip,
+    FuncBuilder,
     Get,
-    Load,
     Machine,
     MachineBuilder,
-    Op,
     Build,
     Call,
     Catch,
@@ -23,7 +22,6 @@ from magelang.machine import (
     Fail,
     Jump,
     JumpNZ,
-    JumpZ,
     Lt,
     Noop,
     Pop,
@@ -36,7 +34,7 @@ from magelang.machine import (
 )
 from magelang.helpers import get_fields
 from magelang.manager import declare_pass
-from magelang.util import NameGenerator, todo, nonnull, unreachable
+from magelang.util import NameGenerator, nonnull, unreachable
 from magelang import (
     MageRule,
     MageGrammar,
