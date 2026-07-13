@@ -256,7 +256,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         if not isinstance(rule, MageRule) or rule.expr is None:
             continue
         func = builder.func(rule.name)
-        func.retval('node')
+        func.retval('node_or_token')
         field_names = list[str]()
         if rule.is_lex:
             func.append(Tell())
