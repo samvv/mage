@@ -181,13 +181,16 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         builder.append(Pop())
 
     def compile_expr(builder: FuncBuilder, expr: MageExpr, hidden: bool = False, in_token: bool = False) -> None:
+
         if isinstance(expr, MageRefExpr):
             builder.append(Call(expr.name))
             return
+
         if isinstance(expr, MageLitExpr):
             for ch in expr.text:
                 builder.append(Sat((ch, ch)))
             return
+
         if isinstance(expr, MageCharSetExpr):
             success = generate_label_name('charset_success')
             for rng in expr.elements:
@@ -205,6 +208,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             builder.label(success)
             builder.append(Commit())
             return
+
         if isinstance(expr, MageChoiceExpr):
             n = len(expr.elements)
             success_label_name = generate_label_name('choice_success')
@@ -219,6 +223,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             builder.label(success_label_name)
             builder.append(Commit())
             return
+
         if isinstance(expr, MageLookaheadExpr):
             failure_label_name = generate_label_name('lookahead_failed')
             finish_label_name = generate_label_name('lookahead_end')
@@ -243,13 +248,16 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                 builder.append(Fail())
                 builder.label(finish_label_name)
             return
+
         if isinstance(expr, MageHideExpr):
             compile_expr(builder, expr.expr, True, in_token)
             return
+
         if isinstance(expr, MageSeqExpr):
             for element in expr.elements:
                 compile_expr(builder, element, hidden, in_token)
             return
+
         if isinstance(expr, MageRepeatExpr):
             if expr.min > 0:
                 compile_repeat(builder, expr.min, expr.expr, hidden, in_token)
@@ -264,6 +272,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             else:
                 compile_repeat(builder, expr.max - expr.min, expr.expr, hidden, in_token)
             return
+
         if isinstance(expr, MageListExpr):
             first_fail = generate_label_name('list_first_fail')
             finish_label_name = generate_label_name('finish')
@@ -294,6 +303,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                 builder.append(Fail())
             builder.append(Noop(label=finish_label_name))
             return
+
         assert_never(expr)
 
     for rule in elements:
