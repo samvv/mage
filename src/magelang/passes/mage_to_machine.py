@@ -9,6 +9,7 @@ from magelang.machine import (
     BuildToken,
     Dump,
     Flip,
+    Get,
     Load,
     Machine,
     MachineBuilder,
@@ -30,6 +31,7 @@ from magelang.machine import (
     Ret,
     Sat,
     Seek,
+    Set,
     Tell,
 )
 from magelang.helpers import get_fields
@@ -258,10 +260,12 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             yield Commit()
             if expr.min_count > 0:
                 yield Push(expr.min_count)
+                yield Set('i')
                 yield Catch(target=finish, label=min_loop_start)
                 yield from compile_expr(expr.separator, hidden, in_token)
                 yield Commit()
                 yield from compile_expr(expr.element, hidden, in_token)
+                yield Get('i')
                 yield Dec()
                 yield JumpNZ(target=min_loop_start)
             yield Noop(label=loop_start)
@@ -319,17 +323,22 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         start_parse_infix = expr_bp.generate_label('start_parse_infix')
         loop_end = expr_bp.generate_label('loop_end')
 
+        expr_bp.append(Set('min_prec')) # store the first argument in a local
+
         expr_bp.append(Catch(target=fail_parse_prefix))
         # parse_prefix will push a binding power on the stack if successful
         expr_bp.append(Call(name=parse_prefix_name))
         expr_bp.append(Commit())
         # parse_expr will be called with the precedence from parse_prefix_name
         expr_bp.append(Call(name=parse_with_bp_name))
+        expr_bp.append(Build(f'{pratt.name}_prefix', ['expr']))
+        expr_bp.append(Set('lhs'))
         expr_bp.append(Jump(target=loop_start))
 
         # Alternative branch where parsing the prefix failed
         expr_bp.label(fail_parse_prefix)
         expr_bp.append(Call(name=parse_atom_name))
+        expr_bp.append(Set('lhs'))
 
         # Start of the main loop
         expr_bp.label(loop_start)
@@ -344,39 +353,44 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         # Attempt to parse a postfix expression
         expr_bp.label(start_parse_postfix)
         expr_bp.append(Catch(target=start_parse_infix))
-        expr_bp.append(Call(name=parse_postfix_name))
+        expr_bp.append(Call(name=parse_postfix_name)) # returns kind, l_bp in that order
         expr_bp.append(Commit())
-        expr_bp.append(Dup()) # copy the parse_postfix result
-        expr_bp.append(Load(3)) # load min_prec
-        expr_bp.append(Flip()) # prepare for Lt
-        expr_bp.append(Lt())
+        expr_bp.append(Flip())
+        expr_bp.append(Set('kind'))
+        expr_bp.append(Get('min_prec')) # load min_prec
+        expr_bp.append(Flip()) # we don't have Gt
         expr_bp.append(Dump())
+        expr_bp.append(Lt()) # l_bp < min_prec
         expr_bp.append(JumpNZ(target=loop_end))
-        # TODO assign LHS as a combination of operator + expr
+        expr_bp.append(Get('lhs'))
+        expr_bp.append(Build(f'{pratt.name}_postfix', ['expr']))
+        expr_bp.append(Set('lhs'))
         expr_bp.append(Jump(target=loop_start))
 
         # Attempt to parse an infix expression
         expr_bp.label(start_parse_infix)
-        expr_bp.append(Dump())
         expr_bp.append(Catch(target=loop_end))
-        expr_bp.append(Call(name=parse_infix_name))
+        expr_bp.append(Call(name=parse_infix_name)) # returns kind, l_bp, r_bp in that order
         expr_bp.append(Commit())
-        expr_bp.append(Load(3)) # load min_prec
-        expr_bp.append(Dup()) # copy the parse_infix precedence result
-        expr_bp.append(Flip()) # prepare for Lt
-        expr_bp.append(Lt())
-        expr_bp.append(JumpNZ(target=loop_end))
-        expr_bp.append(Call(name=parse_with_bp_name)) # should be called with r_bp from parse_infix
-        # TODO assign LHS as a combination of expr + operator + expr
-        expr_bp.append(Load(2)) # load lhs
+        expr_bp.append(Set('r_bp'))
         expr_bp.append(Flip())
-        expr_bp.append(Build(pratt.name, ['lhs', 'rhs']))
+        expr_bp.append(Set('kind'))
+        expr_bp.append(Get('min_prec'))
+        expr_bp.append(Flip()) # we don't have Gt
+        expr_bp.append(Lt()) # l_bp < min_prec
+        expr_bp.append(JumpNZ(target=loop_end))
+        expr_bp.append(Get('r_bp'))
+        expr_bp.append(Call(name=parse_with_bp_name)) # should be called with r_bp from parse_infix
+        expr_bp.append(Get('lhs'))
+        # expr_bp.append(Flip())
+        expr_bp.append(Build(f'{pratt.name}_infix', ['lhs', 'rhs']))
+        expr_bp.append(Set('lhs'))
         expr_bp.append(Jump(target=loop_start))
 
-        # We only get here if neither a prefix nor a postfix expression was parsed
+        # We only get here if neither an infix nor a postfix expression was parsed
         expr_bp.label(loop_end)
-        # expr_bp.append(Flip())
         expr_bp.append(Seek())
+        expr_bp.append(Get('lhs'))
         expr_bp.append(Ret())
 
         expr_bp.finish()
@@ -391,6 +405,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         # Generate parse_prefix_operator
         prefix = builder.func(parse_prefix_name)
         prefix.retval('precedence')
+        prefix.retval('kind')
         for rule in pratt.prefix:
             assert(isinstance(rule.expr, MageSeqExpr))
             assert(len(rule.expr.elements) == 2)
@@ -400,6 +415,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             prefix.extend(compile_expr(op))
             prefix.append(Commit())
             prefix.append(Push(nonnull(op.precedence)[0]))
+            prefix.append(Push(rule.name))
             prefix.append(Ret())
             prefix.label(next_op)
         prefix.append(Fail('expected a prefix operator'))
@@ -408,6 +424,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         # Generate parse_postfix_operator
         postfix = builder.func(parse_postfix_name)
         postfix.retval('precedence')
+        postfix.retval('kind')
         for rule in pratt.suffix:
             assert(isinstance(rule.expr, MageSeqExpr))
             assert(len(rule.expr.elements) == 2)
@@ -417,6 +434,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             postfix.extend(compile_expr(op))
             postfix.append(Commit())
             postfix.append(Push(nonnull(op.precedence)[0]))
+            postfix.append(Push(rule.name))
             postfix.append(Ret())
             postfix.label(next_op)
         postfix.append(Fail('expected a postfix operator'))
@@ -424,7 +442,9 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
 
         # Generate parse_infix_operator
         infix = builder.func(parse_infix_name)
-        infix.retval('precedence')
+        infix.retval('r_bp')
+        infix.retval('l_bp')
+        infix.retval('kind')
         for rule in pratt.infix:
             assert(isinstance(rule.expr, MageSeqExpr))
             assert(len(rule.expr.elements) == 3)
@@ -434,8 +454,9 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             infix.extend(compile_expr(op))
             infix.append(Commit())
             prec, assoc = nonnull(op.precedence)
-            infix.append(Push(prec if assoc == ASSOC_LEFT else prec+1))
+            infix.append(Push(prec+1 if assoc == ASSOC_RIGHT else prec))
             infix.append(Push(prec))
+            infix.append(Push(rule.name))
             infix.append(Ret())
             infix.label(next_op)
         infix.append(Fail('expected an infix operator'))
