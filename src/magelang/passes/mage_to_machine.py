@@ -169,25 +169,26 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
 
     elements, pratts = split_pratt(grammar)
 
-    def compile_repeat(count: int, expr: MageExpr, hidden: bool, in_token: bool) -> Iterable[Op]:
+    def compile_repeat(builder: FuncBuilder, count: int, expr: MageExpr, hidden: bool, in_token: bool) -> None:
         if count == 0:
             return
         repeat_label_name = generate_label_name(prefix='repeat_main')
-        yield Push(count)
-        yield Noop(label=repeat_label_name)
-        yield from compile_expr(expr, hidden, in_token)
-        yield Dec()
-        yield Dup()
-        yield JumpNZ(target=repeat_label_name)
-        yield Pop()
+        builder.append(Push(count))
+        builder.label(repeat_label_name)
+        builder.append(Noop())
+        compile_expr(builder, expr, hidden, in_token)
+        builder.append(Dec())
+        builder.append(Dup())
+        builder.append(JumpNZ(target=repeat_label_name))
+        builder.append(Pop())
 
-    def compile_expr(expr: MageExpr, hidden: bool = False, in_token: bool = False) -> Iterable[Op]:
+    def compile_expr(builder: FuncBuilder, expr: MageExpr, hidden: bool = False, in_token: bool = False) -> None:
         if isinstance(expr, MageRefExpr):
-            yield Call(expr.name)
+            builder.append(Call(expr.name))
             return
         if isinstance(expr, MageLitExpr):
             for ch in expr.text:
-                yield Sat((ch, ch))
+                builder.append(Sat((ch, ch)))
             return
         if isinstance(expr, MageCharSetExpr):
             success = generate_label_name('charset_success')
@@ -198,95 +199,96 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                 else:
                     l, h = rng
                 next = generate_label_name('charset_next')
-                yield Catch(target=next)
-                yield Sat((l, h))
-                yield Jump(target=success)
-                yield Noop(label=next)
-            yield Fail(f"doesn't satisfy {' | '.join(repr(el) for el in expr.elements)}")
-            yield Commit(label=success)
+                builder.append(Catch(target=next))
+                builder.append(Sat((l, h)))
+                builder.append(Jump(target=success))
+                builder.append(Noop(label=next))
+            builder.append(Fail(f"doesn't satisfy {expr.label or ' | '.join(repr(el) for el in expr.elements)}"))
+            builder.label(success)
+            builder.append(Commit())
             return
         if isinstance(expr, MageChoiceExpr):
             n = len(expr.elements)
             success_label_name = generate_label_name('choice_success')
             label_names = list(generate_label_name(f'choice_{i}') for i in range(n+1))
             for i, element in enumerate(expr.elements):
-                yield Catch(target=label_names[i+1], label=label_names[i])
-                yield from compile_expr(element, hidden, in_token)
-                yield Jump(target=success_label_name)
-            yield Fail(label=label_names[n])
-            yield Commit(label=success_label_name)
+                builder.append(Catch(target=label_names[i+1], label=label_names[i]))
+                compile_expr(builder, element, hidden, in_token)
+                builder.append(Jump(target=success_label_name))
+            builder.append(Fail(label=label_names[n]))
+            builder.append(Commit(label=success_label_name))
             return
         if isinstance(expr, MageLookaheadExpr):
             failure_label_name = generate_label_name('lookahead_failed')
             finish_label_name = generate_label_name('lookahead_end')
             if expr.is_negated:
-                yield Tell()
-                yield Catch(target=failure_label_name)
-                yield from compile_expr(expr.expr, True, in_token)
-                yield Commit()
-                yield Seek()
-                yield Fail()
-                yield Seek(label=failure_label_name)
+                builder.append(Tell())
+                builder.append(Catch(target=failure_label_name))
+                compile_expr(builder, expr.expr, True, in_token)
+                builder.append(Commit())
+                builder.append(Seek())
+                builder.append(Fail())
+                builder.append(Seek(label=failure_label_name))
             else:
-                yield Tell()
-                yield Catch(target=failure_label_name)
-                yield from compile_expr(expr.expr, True, in_token)
-                yield Commit()
-                yield Seek()
-                yield Jump(target=finish_label_name)
-                yield Seek(label=failure_label_name)
-                yield Fail()
-                yield Noop(label=finish_label_name)
+                builder.append(Tell())
+                builder.append(Catch(target=failure_label_name))
+                compile_expr(builder, expr.expr, True, in_token)
+                builder.append(Commit())
+                builder.append(Seek())
+                builder.append(Jump(target=finish_label_name))
+                builder.append(Seek(label=failure_label_name))
+                builder.append(Fail())
+                builder.append(Noop(label=finish_label_name))
             return
         if isinstance(expr, MageHideExpr):
-            yield from compile_expr(expr.expr, True, in_token)
+            compile_expr(builder, expr.expr, True, in_token)
             return
         if isinstance(expr, MageSeqExpr):
             for element in expr.elements:
-                yield from compile_expr(element, hidden, in_token)
+                compile_expr(builder, element, hidden, in_token)
             return
         if isinstance(expr, MageRepeatExpr):
             if expr.min > 0:
-                yield from compile_repeat(expr.min, expr.expr, hidden, in_token)
+                compile_repeat(builder, expr.min, expr.expr, hidden, in_token)
             if expr.max == MAGE_REPEAT_INFINITY:
                 repeat_label_name = generate_label_name(prefix='repeat_inf')
                 done_label_name = generate_label_name(prefix='repeat_end')
-                yield Catch(target=done_label_name)
-                yield Noop(label=repeat_label_name)
-                yield from compile_expr(expr.expr, hidden, in_token)
-                yield Jump(target=repeat_label_name)
-                yield Noop(label=done_label_name)
+                builder.append(Catch(target=done_label_name))
+                builder.append(Noop(label=repeat_label_name))
+                compile_expr(builder, expr.expr, hidden, in_token)
+                builder.append(Jump(target=repeat_label_name))
+                builder.append(Noop(label=done_label_name))
             else:
-                yield from compile_repeat(expr.max - expr.min, expr.expr, hidden, in_token)
+                compile_repeat(builder, expr.max - expr.min, expr.expr, hidden, in_token)
             return
         if isinstance(expr, MageListExpr):
             first_fail = generate_label_name('list_first_fail')
             finish_label_name = generate_label_name('finish')
             min_loop_start = generate_label_name('min_loop_start')
             loop_start = generate_label_name('loop_start')
-            yield Catch(target=first_fail)
-            yield from compile_expr(expr.element, hidden, in_token)
-            yield Commit()
+            builder.append(Catch(target=first_fail))
+            compile_expr(builder, expr.element, hidden, in_token)
+            builder.append(Commit())
             if expr.min_count > 0:
-                yield Push(expr.min_count)
-                yield Set('i')
-                yield Catch(target=finish_label_name, label=min_loop_start)
-                yield from compile_expr(expr.separator, hidden, in_token)
-                yield Commit()
-                yield from compile_expr(expr.element, hidden, in_token)
-                yield Get('i')
-                yield Dec()
-                yield JumpNZ(target=min_loop_start)
-            yield Noop(label=loop_start)
-            yield Catch(target=finish_label_name)
-            yield from compile_expr(expr.separator, hidden, in_token)
-            yield Commit()
-            yield from compile_expr(expr.element, hidden, in_token)
-            yield Jump(target=loop_start)
-            yield Noop(label=first_fail)
+                builder.append(Push(expr.min_count))
+                builder.append(Set('i'))
+                builder.append(Catch(target=finish_label_name, label=min_loop_start))
+                compile_expr(builder, expr.separator, hidden, in_token)
+                builder.append(Commit())
+                compile_expr(builder, expr.element, hidden, in_token)
+                builder.append(Get('i'))
+                builder.append(Dec())
+                builder.append(JumpNZ(target=min_loop_start))
+            builder.append(Noop(label=loop_start))
+            builder.append(Catch(target=finish_label_name))
+            compile_expr(builder, expr.separator, hidden, in_token)
+            builder.append(Commit())
+            compile_expr(builder, expr.element, hidden, in_token)
+            builder.append(Jump(target=loop_start))
+            builder.append(Noop(label=first_fail))
             if expr.min_count > 0:
-                yield Fail()
-            yield Noop(label=finish_label_name)
+                builder.append(Fail())
+            builder.append(Noop(label=finish_label_name))
             return
         assert_never(expr)
 
@@ -298,16 +300,16 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         field_names = list[str]()
         if rule.is_lex:
             func.append(Tell())
-            func.extend(compile_expr(rule.expr, in_token=True))
+            compile_expr(func, rule.expr, in_token=True)
             func.append(Tell())
             func.append(BuildToken(rule.name))
         else:
             for expr, field in get_fields(rule.expr, grammar, include_hidden=True):
                 if field is not None:
-                    func.extend(compile_expr(expr, False))
+                    compile_expr(func, expr, False)
                     field_names.append(field.name)
                 else:
-                    func.extend(compile_expr(expr, True))
+                    compile_expr(func, expr, True)
             func.append(Build(rule.name, field_names))
         func.append(Ret())
         func.finish()
@@ -407,7 +409,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         # Generate parse_atom
         atom = builder.func(parse_atom_name)
         atom.retval('node')
-        atom.extend(compile_expr(MageChoiceExpr(list(MageRefExpr(rule.name) for rule in pratt.atoms))))
+        compile_expr(atom, MageChoiceExpr(list(MageRefExpr(rule.name) for rule in pratt.atoms)))
         atom.append(Ret())
         atom.finish()
 
@@ -421,7 +423,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             next_op = prefix.generate_label('failure')
             op = rule.expr.elements[0]
             prefix.append(Catch(target=next_op))
-            prefix.extend(compile_expr(op))
+            compile_expr(prefix, op)
             prefix.append(Commit())
             prefix.append(Push(nonnull(op.precedence)[0]))
             prefix.append(Push(rule.name))
@@ -440,7 +442,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             next_op = generate_label_name('failure')
             op = rule.expr.elements[1]
             postfix.append(Catch(target=next_op))
-            postfix.extend(compile_expr(op))
+            compile_expr(postfix, op)
             postfix.append(Commit())
             postfix.append(Push(nonnull(op.precedence)[0]))
             postfix.append(Push(rule.name))
@@ -460,7 +462,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             next_op = generate_label_name('failure')
             infix.append(Catch(target=next_op))
             op = rule.expr.elements[1]
-            infix.extend(compile_expr(op))
+            compile_expr(infix, op)
             infix.append(Commit())
             prec, assoc = nonnull(op.precedence)
             infix.append(Push(prec+1 if assoc == ASSOC_RIGHT else prec))
