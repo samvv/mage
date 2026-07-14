@@ -584,7 +584,7 @@ class FuncBuilder:
                 op.label = name
             else:
                 self.ops.append(Noop(label=name))
-            self._pending_labels.clear()
+        self._pending_labels.clear()
         self.ops.append(op)
 
     def extend(self, iter: Iterable[Op]) -> None:
