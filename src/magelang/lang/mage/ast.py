@@ -864,23 +864,23 @@ def rewrite_each_child_expr(expr: MageExpr, proc: Callable[[MageExpr], MageExpr]
         new_expr = proc(expr.expr)
         if new_expr is expr.expr:
             return expr
-        return MageRepeatExpr(min=expr.min, max=expr.max, expr=new_expr, actions=expr.actions, label=expr.label, parent=expr.parent)
+        return expr.derive(expr=new_expr)
     if isinstance(expr, MageLookaheadExpr):
         new_expr = proc(expr.expr)
         if new_expr is expr.expr:
             return expr
-        return MageLookaheadExpr(expr=new_expr, is_negated=expr.is_negated, actions=expr.actions, label=expr.label, parent=expr.parent)
+        return expr.derive(expr=new_expr)
     if isinstance(expr, MageHideExpr):
         new_expr = proc(expr.expr)
         if new_expr is expr.expr:
             return expr
-        return MageHideExpr(expr=new_expr, actions=expr.actions, label=expr.label, parent=expr.parent)
+        return expr.derive(expr=new_expr)
     if isinstance(expr, MageListExpr):
         new_element = proc(expr.element)
         new_separator = proc(expr.separator)
         if new_element is expr.element and new_separator is expr.separator:
             return expr
-        return MageListExpr(element=new_element, separator=new_separator, min_count=expr.min_count, actions=expr.actions, label=expr.label, parent=expr.parent)
+        return expr.derive(element=new_element, separator=new_separator)
     if isinstance(expr, MageChoiceExpr):
         new_elements = []
         changed = False
@@ -891,7 +891,7 @@ def rewrite_each_child_expr(expr: MageExpr, proc: Callable[[MageExpr], MageExpr]
             new_elements.append(new_element)
         if not changed:
             return expr
-        return MageChoiceExpr(elements=new_elements, actions=expr.actions, label=expr.label, parent=expr.parent)
+        return expr.derive(elements=new_elements)
     if isinstance(expr, MageSeqExpr):
         new_elements = []
         changed = False
@@ -902,7 +902,7 @@ def rewrite_each_child_expr(expr: MageExpr, proc: Callable[[MageExpr], MageExpr]
             new_elements.append(new_element)
         if not changed:
             return expr
-        return MageSeqExpr(elements=new_elements, actions=expr.actions, label=expr.label, parent=expr.parent)
+        return expr.derive(elements=new_elements)
     assert_never(expr)
 
 def rewrite_each_rule[T: MageGrammar | MageModule](node: T, proc: Callable[[MageRule], MageRule]) -> T:
