@@ -139,8 +139,7 @@ standard for Unicode grammars.
 
 Optionally, the elements may be preceded by a single caret (`^`), to indicate
 that the parser should take the complement of the given character set. Should a
-real caret be desired, the user may simply escape the sequence with a
-backslash.
+real caret be desired, the user may simply escape the caret with a backslash.
 
 **Example Usage**
 ```mage
