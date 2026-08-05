@@ -55,7 +55,7 @@ hex_digit
 
 @noskip
 escape_sequence
-  = 'u' '{' hex_digit{4} '}'
+  = 'u' hex_digit{4}
   | 'x' hex_digit{2}
   | escaped_ascii_char
 
@@ -71,6 +71,9 @@ escaped_ascii_char
   | '\\'
   | '\''
   | '"'
+  | '['
+  | ']'
+
 
 ## A single character in a character set expression.
 ##
@@ -125,12 +128,16 @@ single_char
 ## {/accept}
 pub token string
   = '\'' (!'\'' single_char)* '\''
+  | '\"' (!'\"' single_char)* '\"'
 
-# Values
+# Decorators
 
 pub value
   = integer
   | name
+
+pub decorator
+  = '@' name args:('{' (value % ',')  '}')?
 
 # Expressions
 
@@ -140,7 +147,7 @@ pub expr
   | list_expr
   | lit_expr
   | label_expr
-  | lookahead_expr
+  | positive_lookahead_expr
   | many_expr
   | negative_lookahead_expr
   | opt_expr
@@ -148,15 +155,20 @@ pub expr
   | repeat_expr
   | seq_expr
   | some_expr
+  | try_expr
+  | nest_expr
 
 pub label_expr
-  = name ':' expr
+  = decorator* name ':' expr
 
 pub lit_expr
-  = string
+  = decorator* string
 
 pub ref_expr
-  = name
+  = decorator* name
+
+pub nest_expr
+  = decorator* '(' expr ')'
 
 pub token char_set_range
   = single_char '-' single_char
@@ -168,7 +180,7 @@ pub char_set_element
   = char_set_range | char_set_char
 
 pub char_set_expr
-  = '~'? '[' elements:(!']' char_set_element)* ']' 'i'?
+  = decorator* '[' '^'? elements:(!']' char_set_element)* ']' 'i'?
 
 pub seq_expr
   = elements:expr{2,}
@@ -176,31 +188,35 @@ pub seq_expr
 pub choice_expr
   = elements:(expr %%% '|')
 
+count_specifier
+  = '{' min:integer? ',' max:integer? '}'
+  | '{' count:integer '}'
+
 pub repeat_expr
-  = expr '{' min:integer max:(',' integer?)? '}'
+  = decorator* expr count_specifier
 
 pub some_expr
-  = expr '+'
+  = decorator* expr '+'
 
 pub many_expr
-  = expr '*'
+  = decorator* expr '*'
 
 pub opt_expr
-  = expr '?'
+  = decorator* expr '?'
 
-pub lookahead_expr
-  = '&' expr
+pub positive_lookahead_expr
+  = decorator* '&' expr
 
 pub negative_lookahead_expr
-  = '!' expr
+  = decorator* '!' expr
 
 pub list_expr
-  = element:expr '%'+ separator:expr
+  = decorator* element:expr '%'+ separator:expr
+
+pub try_expr
+  = decorator* 'try' expr
 
 # Rules
-
-pub decorator
-  = '@' name '{' args:(value % ',')  '}'
 
 pub rule
   = decorator* 'pub'? 'extern'? 'token'? name:ident '=' expr
