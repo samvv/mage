@@ -20,9 +20,10 @@ class Error:
     def __hash__(self) -> int:
         return hash(self.code)
 
-SUCCESS   = Error(0)
-NO_MATCH  = Error(1)
-RECMAX    = Error(2)
+SUCCESS        = Error(0)
+NO_MATCH       = Error(1)
+RECMAX         = Error(2)
+RULE_NOT_FOUND = Error(3)
 
 def evaluate(
     rule: MageRule,
