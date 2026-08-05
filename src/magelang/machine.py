@@ -11,6 +11,7 @@ EOF = '\uFFFF'
 type Op = (
     Build
     | BuildToken
+    | BuildTuple
     | Call
     | Catch
     | Commit
@@ -117,6 +118,17 @@ class BuildToken(OpBase):
     Build a token from the offsets that are on the stack.
     """
     name: str
+    label: str | None = None
+    comment: str | None = None
+
+@dataclass
+class BuildTuple(OpBase):
+    """
+    Build a tuple of a fixed size by popping that amount of elements from the stack.
+
+    The resulting tuple will be pushed on the top of the stack.
+    """
+    len: int
     label: str | None = None
     comment: str | None = None
 
@@ -498,6 +510,12 @@ class Execution:
                 self.frame.op_index += 1
             elif isinstance(op, Set):
                 self.frame.locals[op.name] = self.stack.pop()
+                self.frame.op_index += 1
+            elif isinstance(op, BuildTuple):
+                els = []
+                for _ in range(op.len):
+                    els.append(self.stack.pop())
+                self.stack.append(tuple(els))
                 self.frame.op_index += 1
             else:
                 assert_never(op)
