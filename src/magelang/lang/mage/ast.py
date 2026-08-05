@@ -690,35 +690,54 @@ class MageRule(MageNodeBase):
     def __repr__(self) -> str:
         return f'MageRule({self.name})'
 
-type MageModuleElement = MageRule | MageModule
+
+type MageGrammarElement = MageRule
 
 
-class MageModuleBase(MageNodeBase):
+class MageGrammarDeriveArgs(TypedDict, total=False):
+    elements: list[MageGrammarElement]
+    file: TextFile | None
+    span: Span | None
 
-    elements: list[MageModuleElement]
+
+class MageGrammar(MageNodeBase):
+
+    elements: list[MageGrammarElement]
+
+    file: TextFile | None
 
     def __init__(
         self,
-        elements: 'list[MageModuleElement] | None' = None,
+        elements: 'list[MageGrammarElement] | None' = None,
+        file: TextFile | None = None,
         span: Span | None = None
     ) -> None:
-        super().__init__(span)
         if elements is None:
             elements = []
+        super().__init__(span)
         self.elements = elements
+        self.file = file
+        self.parent = None
         self._rules_by_name = dict[str, 'MageRule']()
-        self._modules_by_name = dict[str, 'MageModule']()
         for element in elements:
+            self._rules_by_name[element.name] = element
+        self.set_parents()
+
+    @property
+    def start_rule(self) -> MageRule | None:
+        for element in reversed(self.elements):
             if isinstance(element, MageRule):
-                self._rules_by_name[element.name] = element
-            elif isinstance(element, MageModule):
-                self._modules_by_name[element.name] = element
+                return element
+
+    def set_parents(self) -> None:
+        for element in self.elements:
+            element.parent = self
+
+    def derive(self, **kwargs: Unpack[MageGrammarDeriveArgs]) -> 'MageGrammar':
+        return super().derive(**kwargs)
 
     def lookup(self, name: str) -> 'MageRule | None':
         return self._rules_by_name.get(name)
-
-    def lookup_module(self, name: str) -> 'MageModule | None':
-        return self._modules_by_name.get(name)
 
     @property
     def rules(self) -> Iterable[MageRule]:
@@ -731,22 +750,22 @@ class MageModuleBase(MageNodeBase):
             if isinstance(element, MageRule) and element.is_skip_def:
                 return element
 
-    def is_token_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
+    def is_token_rule(self, element: MageGrammarElement) -> TypeGuard[MageRule]:
         return isinstance(element, MageRule) and element.is_public and element.is_lex
 
-    def is_static_token_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
+    def is_static_token_rule(self, element: MageGrammarElement) -> TypeGuard[MageRule]:
         return self.is_token_rule(element) \
             and not element.is_extern \
             and is_static(nonnull(element.expr))
 
-    def is_variant_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
+    def is_variant_rule(self, element: MageGrammarElement) -> TypeGuard[MageRule]:
         if not isinstance(element, MageRule) or element.is_extern or element.is_wrap:
             return False
         # only Rule(is_extern=True) can not hold an expression
         assert(element.expr is not None)
         return isinstance(element.expr, MageChoiceExpr)
 
-    def is_token_variant_rule(self, element: MageModuleElement) -> TypeGuard[MageRule]:
+    def is_token_variant_rule(self, element: MageGrammarElement) -> TypeGuard[MageRule]:
         if not isinstance(element, MageRule) or element.is_extern or element.is_wrap:
             return False
         # only Rule(is_extern=True) can not hold an expression
@@ -779,76 +798,7 @@ class MageModuleBase(MageNodeBase):
                 return rule
 
 
-class MageModuleDeriveArgs(TypedDict, total=False):
-    name: str
-    elements: list[MageModuleElement]
-    flags: int
-    span: Span | None
-
-
-class MageModule(MageModuleBase):
-
-    name: str
-    parent: 'MageModule | MageGrammar | None'
-
-    def __init__(
-        self,
-        name: str,
-        elements: 'list[MageRule | MageModule]',
-        flags: int = 0,
-        parent: 'MageModule | MageGrammar | None' = None,
-        span: Span | None = None
-    ) -> None:
-        super().__init__(elements, span)
-        self.name = name
-        self.flags = flags
-        self.parent = parent
-        self.set_parents()
-
-    def set_parents(self) -> None:
-        for element in self.elements:
-            element.parent = self
-
-    def derive(self, **kwargs: Unpack[MageModuleDeriveArgs]) -> 'MageModule':
-        return super().derive(**kwargs)
-
-
-class MageGrammarDeriveArgs(TypedDict, total=False):
-    elements: list[MageRule | MageModule]
-    file: TextFile | None
-    span: Span | None
-
-
-class MageGrammar(MageModuleBase):
-
-    file: TextFile | None
-
-    def __init__(
-        self,
-        elements: 'list[MageRule | MageModule] | None' = None,
-        file: TextFile | None = None,
-        span: Span | None = None
-    ) -> None:
-        super().__init__(elements, span)
-        self.file = file
-        self.parent = None
-        self.set_parents()
-
-    @property
-    def start_rule(self) -> MageRule | None:
-        for element in reversed(self.elements):
-            if isinstance(element, MageRule):
-                return element
-
-    def set_parents(self) -> None:
-        for element in self.elements:
-            element.parent = self
-
-    def derive(self, **kwargs: Unpack[MageGrammarDeriveArgs]) -> 'MageGrammar':
-        return super().derive(**kwargs)
-
-
-type MageSyntax = MageExpr | MageRule | MageGrammar | MageModule
+type MageSyntax = MageExpr | MageRule | MageGrammar
 
 def is_mage_syntax(value: Any) -> TypeIs[MageSyntax]:
     return isinstance(value, MageNodeBase)
@@ -905,16 +855,14 @@ def rewrite_each_child_expr(expr: MageExpr, proc: Callable[[MageExpr], MageExpr]
         return expr.derive(elements=new_elements)
     assert_never(expr)
 
-def rewrite_each_rule[T: MageGrammar | MageModule](node: T, proc: Callable[[MageRule], MageRule]) -> T:
-    new_elements = list[MageModuleElement]()
+def rewrite_each_rule(node: MageGrammar, proc: Callable[[MageRule], MageRule]) -> MageGrammar:
+    new_elements = list[MageGrammarElement]()
     for element in node.elements:
         if isinstance(element, MageRule):
             new_elements.append(proc(element))
-        elif isinstance(element, MageModule):
-            new_elements.append(rewrite_each_rule(element, proc))
         else:
-            assert_never(element)
-    return cast(T, node.derive(elements=new_elements))
+            new_elements.append(element)
+    return node.derive(elements=new_elements)
 
 def rewrite_each_expr(grammar: MageGrammar, proc: Callable[[MageExpr], MageExpr]) -> MageGrammar:
     def rewrite_rule(rule: MageRule) -> MageRule:
@@ -923,17 +871,17 @@ def rewrite_each_expr(grammar: MageGrammar, proc: Callable[[MageExpr], MageExpr]
         return rule.derive(expr=proc(rule.expr))
     return rewrite_each_rule(grammar, rewrite_rule)
 
-def rewrite_module[T: MageGrammar | MageModule](module: T, proc: Callable[[MageModuleElement], MageModuleElement]) -> T:
+def rewrite_grammar(grammar: MageGrammar, proc: Callable[[MageGrammarElement], MageGrammarElement]) -> MageGrammar:
     new_elements = []
     changed = False
-    for element in module.elements:
+    for element in grammar.elements:
         new_element = proc(element)
         if new_element is not element:
             changed = True
         new_elements.append(new_element)
     if not changed:
-        return module
-    return cast(T, module.derive(elements=new_elements))
+        return grammar
+    return grammar.derive(elements=new_elements)
 
 def for_each_direct_child_expr(node: MageExpr, proc: Callable[[MageExpr], None]) -> None:
     """
@@ -960,20 +908,16 @@ def for_each_expr(node: MageExpr, proc: Callable[[MageExpr], None]) -> None:
     proc(node)
     for_each_direct_child_expr(node, proc)
 
-def for_each_rule(node: MageGrammar | MageModule, proc: Callable[[MageRule], None]) -> None:
-    for element in node.elements:
+def for_each_rule(grammar: MageGrammar, proc: Callable[[MageRule], None]) -> None:
+    for element in grammar.elements:
         if isinstance(element, MageRule):
             proc(element)
-        elif isinstance(element, MageModule):
-            for_each_rule(element, proc)
-        else:
-            assert_never(element)
 
 def is_expr(node: MageSyntax) -> TypeIs[MageExpr]:
     return isinstance(node, MageExprBase)
 
 def for_each_direct_child_node(node: MageSyntax, proc: Callable[[MageSyntax], None]) -> None:
-    if isinstance(node, MageGrammar) or isinstance(node, MageModule):
+    if isinstance(node, MageGrammar):
         for element in node.elements:
             proc(element)
     elif isinstance(node, MageRule):
@@ -1012,14 +956,14 @@ def flatten_choice(expr: MageExpr) -> Generator[MageExpr, None, None]:
     else:
         yield expr
 
-def get_enclosing_module(node: MageRule | MageExpr | MageModule) -> MageModule | MageGrammar:
+def get_grammar(node: MageRule | MageExpr) -> MageGrammar:
     while True:
-        if isinstance(node.parent, MageModule) or isinstance(node.parent, MageGrammar):
+        if isinstance(node.parent, MageGrammar):
             return node.parent
         node = nonnull(node.parent)
 
 def lookup_ref(expr: MageRefExpr) -> MageRule | None:
-    mod = get_enclosing_module(expr)
+    mod = get_grammar(expr)
     while True:
         rule = mod.lookup(expr.name)
         if rule is not None:
