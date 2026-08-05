@@ -333,25 +333,10 @@ class Parser:
                 return t0
             i += 1
 
-    def parse_module(self) -> MageModule:
-        t0 = self._peek_token()
-        flags = 0
-        if t0.type == TT_PUB:
-            self._get_token()
-            flags |= PUBLIC
-        self._expect_token(TT_MOD)
-        name = cast(str, self._expect_token(TT_IDENT).value)
-        self._expect_token(TT_LBRACE)
-        elements = self._parse_elements()
-        t4 = self._expect_token(TT_RBRACE)
-        return MageModule(name=name, elements=elements, span=Span(t0.span.start, t4.span.end))
-
     def parse_element(self) -> MageGrammarElement:
         t0 = self._peek_token_after_modifiers()
-        if t0.type == TT_MOD:
-            return self.parse_module()
-        else:
-            return self.parse_rule()
+        # TODO add import declaration etc
+        return self.parse_rule()
 
     def _parse_elements(self) -> list[MageGrammarElement]:
         elements = []

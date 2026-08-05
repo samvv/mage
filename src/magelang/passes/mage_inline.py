@@ -29,10 +29,7 @@ def mage_inline(grammar: MageGrammar) -> MageGrammar:
                 new_element = element.derive(expr=new_expr)
                 return new_element
             return element
-        elif isinstance(element, MageModule):
-            return rewrite_grammar(element, rewrite_element)
-        else:
-            assert_never(element)
+        return element
 
     return rewrite_grammar(grammar, rewrite_element)
 

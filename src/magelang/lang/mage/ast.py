@@ -588,7 +588,7 @@ class MageRule(MageNodeBase):
     flags: int
     type_name: str
     mode: int
-    parent: 'MageModule | MageGrammar | None'
+    parent: 'MageGrammar | None'
 
     def __init__(
         self,
@@ -599,7 +599,7 @@ class MageRule(MageNodeBase):
         flags: int = 0,
         type_name: str = string_rule_type,
         mode: int = 0,
-        parent: 'MageModule | MageGrammar | None' = None,
+        parent: 'MageGrammar | None' = None,
         span: Span | None = None
     ) -> None:
         super().__init__(span)
