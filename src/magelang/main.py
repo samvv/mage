@@ -1,11 +1,10 @@
-
 from pathlib import Path
 from pprint import pprint
 from typing import Unpack
 
 from magelang import GenerateConfig, TargetLanguage, generate_files, load_grammar, mage_check, write_files
 from magelang.constants import SEED_FILENAME_PREFIX
-from magelang.eval import NO_MATCH, RECMAX, Error, evaluate
+from magelang.eval import NO_MATCH, RECMAX, RULE_NOT_FOUND, Error, evaluate
 from magelang.fuzz import fuzz_all, fuzz_grammar, generate_and_load_parser, random_grammar
 from magelang.helpers import collect_tests
 from magelang.lang.mage.ast import *
@@ -17,9 +16,28 @@ from magelang.lang.python.cst import PyModule
 from magelang.lang.python.emitter import emit as py_emit
 from magelang.lang.revolv.ast import Program
 from magelang.logging import error, info, warn
-from magelang.machine import call_machine_method, link_machine, mage_to_machine
+from magelang.machine import call_machine_function, link_machine
+from magelang.passes import mage_to_machine, mage_extract_literals
 from magelang.manager import Context, apply, compose, get_pass_by_name, identity
 from magelang.util import Files, Progress, load_py_file
+
+@dataclass
+class EvalMode:
+    pass
+
+@dataclass
+class MachineMode:
+    pass
+
+@dataclass
+class CodegenMode:
+    dest_dir: Path
+
+type Mode = (
+    EvalMode
+    | MachineMode
+    | CodegenMode
+)
 
 
 def _grammar_from_file_or_seed(filename: str) -> MageGrammar:
@@ -32,43 +50,68 @@ def _grammar_from_file_or_seed(filename: str) -> MageGrammar:
     return load_grammar(filename)
 
 
-def eval(filename: str, value: str, /, *, generate: bool = False, rule: str | None = None, machine: bool = False) -> int:
-    cache_dir = Path.home() / '.cache' / 'magelang'
+def _run_parse_rule(config: Mode, grammar: MageGrammar, rule_name: str, input: str) -> Any | Error:
+    if isinstance(config, EvalMode):
+        entry = grammar.lookup(rule_name)
+        if entry is None:
+            return RULE_NOT_FOUND
+        return evaluate(entry, input)
+    elif isinstance(config, CodegenMode):
+        parser = generate_and_load_parser(grammar, config.dest_dir)
+        parse = getattr(parser, f'parse_{rule_name}')
+        try:
+            return parse(input)
+        except parser.ParseError:
+            return NO_MATCH
+    elif isinstance(config, MachineMode):
+        grammar = mage_extract_literals(grammar)
+        m = mage_to_machine(grammar)
+        m.dump()
+        link_machine(m)
+        return call_machine_function(m, rule_name,  input)
+
+def _get_cache_dir() -> Path:
+    return Path.home() / '.cache' / 'magelang'
+
+def eval(filename: str, input: str, /, *, rule: str | None = None, generate: bool = False, machine: bool = False) -> int:
+
+    cache_dir = _get_cache_dir()
+
     grammar = _grammar_from_file_or_seed(filename)
+
     if rule is None:
         if grammar.start_rule is None:
             error("Grammar has no rules")
             return 1
         rule = grammar.start_rule.name
+
     dest_dir = cache_dir / 'last-eval'
     # hash = hash_grammar(grammar)
     # dest_dir = cache_dir / f'{hash:010d}'
     dest_dir.mkdir(parents=True, exist_ok=True)
+
     if generate:
-        parser = generate_and_load_parser(grammar, dest_dir=dest_dir)
-        parse = getattr(parser, f'parse_{rule}')
-        result = parse(value)
+        mode = CodegenMode(dest_dir)
     elif machine:
-        m = mage_to_machine(grammar)
-        link_machine(m)
-        result = call_machine_method(m, rule,  value)
+        mode = MachineMode()
     else:
-        entry = grammar.lookup(rule)
-        if entry is None:
-            error(f"Rule '{rule}' was not found in the grammar")
-            return 1
-        result = evaluate(entry, value)
-        if result == NO_MATCH:
-            error("Failed to parse sentence");
-            return 1
-        if result == RECMAX:
-            error("Maximum recursion depth exceeded. Your grammar probably contains loops that consume nothing.")
-            return 1
+        mode = EvalMode()
+
+    result = _run_parse_rule(mode, grammar, rule, input)
+    if result is RULE_NOT_FOUND:
+        error(f"Rule '{rule}' was not found in the grammar")
+        return 1
+    if result is RECMAX:
+        error("Maximum recursion depth exceeded. Your grammar probably contains loops that consume nothing.")
+        return 1
+    if result is NO_MATCH:
+        error("Failed to parse sentence.");
+        return 1
     print(result)
     return 0
 
 
-def generate(
+def generate_for_lang(
     lang: TargetLanguage,
     filename: str,
     /,
@@ -129,31 +172,13 @@ def magedown_emit(element: MagedownNode | str) -> str:
 #                 buffer += magedown_emit(child)
 #             yield buffer
 
-def _test_external(filename: str) -> tuple[int, int]:
-    import pytest
-    with TemporaryDirectory(prefix='mage-test-') as test_dir:
-        generate(
-            'python',
-            filename,
-            enable_parser=True,
-            enable_emitter=False,
-            enable_ast=False,
-            enable_lexer_tests=True,
-            enable_parser_tests=True,
-            out_dir=Path(test_dir)
-        )
-        if pytest.main([ test_dir ]) == 0:
-            return 1, 0
-        else:
-            return 0, 1
-
-def _test_internal(filename: Path | str) -> tuple[int, int]:
+def _run_test(filename: str, mode: Mode) -> tuple[int, int]:
     grammar = load_grammar(filename)
     tests = collect_tests(grammar)
     succeeded = set()
     failed = set()
     for test in tests:
-        result = evaluate(test.rule, test.text)
+        result = _run_parse_rule(mode, grammar, rule_name=test.rule.name, input=test.text)
         if result == RECMAX:
             warn(f"recursion depth reached while trying to evaluate a test.")
         elif test.should_fail == isinstance(result, Error):
@@ -163,14 +188,39 @@ def _test_internal(filename: Path | str) -> tuple[int, int]:
             failed.add(test)
     return len(succeeded), len(failed)
 
-def test(*filenames: str, generate: bool = False) -> int:
+def test(*filenames: str, generate: bool = False, machine: bool = False, dest_dir: str | None = None) -> int:
     """
     Test the examples inside the documentation of a grammar
     """
+    cache_dir = _get_cache_dir()
+
+    # Codegen needs to be handled separately
+    if generate:
+        dest_dir_path = cache_dir / 'last-test' if dest_dir is None else Path(dest_dir)
+        import pytest
+        fail = 0
+        for filename in filenames:
+            generate_for_lang(
+                'python',
+                filename,
+                enable_parser=True,
+                enable_emitter=False,
+                enable_ast=False,
+                enable_lexer_tests=True,
+                enable_parser_tests=True,
+                out_dir=dest_dir_path,
+            )
+            if pytest.main([ str(dest_dir) ]) != 0:
+                fail += 1
+            return int(fail > 0)
+
+    if machine:
+        mode = MachineMode()
+    else:
+        mode = EvalMode()
     code = 0
     for filename in filenames:
-        proc = _test_external if generate else _test_internal
-        succ, fail = proc(filename)
+        succ, fail = _run_test(filename, mode)
         print(f'Test {filename}: {succ} tests succeeded, {fail} failed')
         if fail:
             code = 1
