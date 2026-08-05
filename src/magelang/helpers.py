@@ -1,7 +1,10 @@
 
 from functools import cache
 from typing import Generator, Iterator, Iterable, Sequence
+import json
+from pathlib import Path
 
+from magelang.constants import DEFAULT_MAX_NAMED_CHARS
 from magelang.lang.magedown.cst import MagedownAccepts, MagedownDocument, MagedownRejects
 from magelang.runtime.lex import CharStream
 from magelang.lang.python.emitter import emit
@@ -78,9 +81,63 @@ def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
 
     return normalize_type(visit(expr))
 
-def get_field_name(expr: MageExpr) -> str | None:
+@cache
+def get_char_names() -> dict[str, str]:
+    """
+    Get a mapping from Unicode characters to longer (snake cased) names. 
+    """
+    with open(Path(__file__).parent / 'names.json', 'r') as f:
+        return json.load(f)
+
+class RuleNameGenerator(NameGenerator):
+
+    def __init__(self, grammar: MageGrammar) -> None:
+        self.grammar = grammar
+
+    def is_free(self, name: str) -> bool:
+        return self.grammar.lookup(name) is not None
+
+# FIXME we want to be able to invalidate the cache for grammars that are no longer in the program
+@cache
+def _get_token_name_generator(grammar: MageGrammar) -> NameGenerator:
+    return RuleNameGenerator(grammar)
+
+
+def lit_to_name(text: str, grammar: MageGrammar, max_named_chars = DEFAULT_MAX_NAMED_CHARS) -> tuple[bool, str]:
+
+    names = get_char_names()
+    generate_field_name = _get_token_name_generator(grammar)
+
+    from magelang.eval import accepts, SUCCESS
+
+    # If it's a single letter
+    if len(text) == 1 and text.isalpha():
+        # Letters such as 'i' and 'D' are not really keywords
+        # They are represented with the lower_ or upper_ prefix
+        return False, f'lower_{text}' if text.islower() else f'upper_{text.lower()}'
+
+    # If the evaluation engine matches it as a keyword
+    keyword_rule = grammar.keyword_rule
+    if keyword_rule is not None and keyword_rule.expr is not None and accepts(keyword_rule, text) == SUCCESS:
+        name = f'{text}_keyword'
+        return True, name
+
+    if len(text) <= max_named_chars:
+        # First try to name the entire word
+        if text in names:
+            return False, names[text]
+        # Fall back to naming the individual characters
+        return False, '_'.join(names[ch] for ch in text)
+
+    # It's something unknown, non-printable characters
+    return False, generate_field_name(prefix='token')
+
+
+def get_field_name(expr: MageExpr, max_named_chars = DEFAULT_MAX_NAMED_CHARS) -> str | None:
     if expr.label is not None:
         return expr.label
+    if isinstance(expr, MageLitExpr):
+        return lit_to_name(expr.text, grammar=expr.grammar, max_named_chars=max_named_chars)[1]
     if isinstance(expr, MageRefExpr):
         return expr.name
     if isinstance(expr, MageRepeatExpr):
@@ -118,9 +175,10 @@ def get_fields(
         if isinstance(expr, MageLookaheadExpr):
             return
 
-        if isinstance(expr, MageLitExpr):
-            yield expr, None
-            return
+        # A static literal expression is presumably no field becase there is no data to hold
+        # if isinstance(expr, MageLitExpr):
+        #     yield expr, None
+        #     return
 
         elif isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)

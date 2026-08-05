@@ -164,32 +164,49 @@ class IndentWriter:
 
 class NameGenerator:
 
-    def __init__(self, namespace: str | None = None, default_prefix: str | None= 'tmp', hide_first: bool = False) -> None:
+    def __init__(
+        self,
+        namespace: str | None = None,
+        default_prefix: str | None= 'tmp',
+        hide_first: bool = False
+    ) -> None:
         self._counts: dict[str, int] = {}
         self.namespace = namespace
         self._hide_first = hide_first
         self._default_prefix = default_prefix
 
-    def __call__(self, prefix: str | None = None, hide: bool = False) -> str:
+    def is_free(self, name: str) -> bool:
+        return True
+
+    def __call__(
+        self,
+        prefix: str | None = None,
+        suffix: str | None = None,
+        hide: bool = False,
+        hide_first: bool | None = None
+    ) -> str:
         if prefix is None:
             prefix = self._default_prefix
-        name = ''
-        if hide:
-            name += '_'
-        if self.namespace is not None:
-            if name and not name.endswith('_'):
-                name += '_'
-            name += self.namespace
-        if prefix is not None:
-            if name and not name.endswith('_'):
-                name += '_'
-            name += prefix
-        assert(len(name) > 0)
-        count = self._counts.get(name, 0)
-        self._counts[name] = count + 1
-        if count > 0 or not self._hide_first:
-            name += '_' + str(count)
-        return name
+        if hide_first is None:
+            hide_first = self._hide_first
+        while True:
+            chunks = []
+            if self.namespace is not None:
+                chunks.append(self.namespace)
+            if prefix is not None:
+                chunks.append(prefix)
+            if suffix is not None:
+                chunks.append(suffix)
+            assert(len(chunks) > 0)
+            name = '_'.join(chunks)
+            count = self._counts.get(name, 0)
+            self._counts[name] = count + 1
+            if count > 0 or not hide_first:
+                name += '_' + str(count)
+            if hide:
+                name = '_' + name
+            if self.is_free(name):
+                return name
 
     def reset(self) -> None:
         self._counts = {}

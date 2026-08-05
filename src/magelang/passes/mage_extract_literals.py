@@ -1,90 +1,48 @@
+from magelang.constants import DEFAULT_MAX_NAMED_CHARS
+from magelang.helpers import lit_to_name
 from pathlib import Path
 import json
 from typing import TypeVar, cast
 
-from magelang.eval import SUCCESS, accepts
 from magelang.lang.mage.ast import *
 from magelang.manager import declare_pass
-
-T = TypeVar('T', bound=MageGrammar | MageModule)
 
 @declare_pass()
 def mage_extract_literals(
     grammar: MageGrammar,
-    max_named_chars: int = 4,
+    max_named_chars: int = DEFAULT_MAX_NAMED_CHARS,
     enable_lexer: bool = False
 ) -> MageGrammar:
 
-    def rewrite_module(node: T) -> T:
+    new_rules = []
+    new_literal_rules = []
 
-        new_rules = []
-        new_literal_rules = []
+    literal_to_rule_name = dict[str, str]()
+    keyword_rule_names = set[str]()
 
-        with open(Path(__file__).parent.parent / 'names.json', 'r') as f:
-            names = json.load(f)
+    def rewrite_expr(expr: MageExpr) -> MageExpr:
+        if isinstance(expr, MageLitExpr):
+            is_keyword, name = lit_to_name(expr.text, grammar, max_named_chars=max_named_chars)
+            if is_keyword:
+                keyword_rule_names.add(name)
+            if expr.text not in literal_to_rule_name:
+                literal_to_rule_name[expr.text] = name
+            return MageRefExpr(name, parent=expr.parent, span=expr.span, decorators=expr.decorators)
+        return rewrite_each_child_expr(expr, rewrite_expr)
 
-        literal_to_name: dict[str, str] = {}
-        keywords = set[str]()
+    for element in grammar.elements:
+        if isinstance(element, MageRule) and element.is_parse:
+            assert(element.expr is not None)
+            new_rules.append(element.derive(expr=rewrite_expr(element.expr)))
+            continue
+        new_rules.append(element)
 
-        token_counter = 0
-        def generate_token_name() -> str:
-            nonlocal token_counter
-            name = f'token_{token_counter}'
-            token_counter += 1
-            return name
+    for literal in reversed(sorted(literal_to_rule_name.keys())):
+        name = literal_to_rule_name[literal]
+        flags = PUBLIC | FORCE_TOKEN
+        if name in keyword_rule_names:
+            flags |= FORCE_KEYWORD
+        new_literal_rules.append(MageRule(flags=flags, name=name, expr=MageLitExpr(literal), type_name=string_rule_type))
 
-        def str_to_name(text: str) -> str | None:
-            # If it's a single letter
-            if len(text) == 1 and text.isalpha():
-                # Letters such as 'i' and 'D' are not really keywords
-                # They are represented with the lower_ or upper_ prefix
-                return f'lower_{text}' if text.islower() else f'upper_{text.lower()}'
-            # If the evaluation engine matches it as a keyword
-            # FIXME Keyword detection should work with the @keyword decorator
-            keyword_rule = node.keyword_rule
-            if keyword_rule is not None and keyword_rule.expr is not None and accepts(keyword_rule, text) == SUCCESS:
-                name = f'{text}_keyword'
-                keywords.add(name)
-                return name
-            if not text:
-                # Empty literals cannot be named by this function
-                return
-            if len(text) <= max_named_chars:
-                # First try to name the entire word
-                if text in names:
-                    return names[text]
-                # Fall back to naming the individual characters
-                return '_'.join(names[ch] for ch in text)
+    return grammar.derive(elements=new_literal_rules + new_rules)
 
-        def rewrite_expr(expr: MageExpr) -> MageExpr:
-            if isinstance(expr, MageLitExpr):
-                name = str_to_name(expr.text)
-                if name is None:
-                    name = generate_token_name()
-                if expr.text not in literal_to_name:
-                    literal_to_name[expr.text] = name
-                return MageRefExpr(name, parent=expr.parent, span=expr.span)
-            return rewrite_each_child_expr(expr, rewrite_expr)
-
-        for element in node.elements:
-            if isinstance(element, MageRule):
-                if element.is_parse:
-                    assert(element.expr is not None)
-                    new_rules.append(element.derive(expr=rewrite_expr(element.expr)))
-                else:
-                    new_rules.append(element)
-            elif isinstance(element, MageModule):
-                new_rules.append(rewrite_module(element))
-            else:
-                assert_never(element)
-
-        for literal in reversed(sorted(literal_to_name.keys())):
-            name = literal_to_name[literal]
-            flags = PUBLIC | FORCE_TOKEN
-            if name in keywords:
-                flags |= FORCE_KEYWORD
-            new_literal_rules.append(MageRule(flags=flags, name=name, expr=MageLitExpr(literal), type_name=string_rule_type))
-
-        return cast(T, node.derive(elements=new_literal_rules + new_rules))
-
-    return rewrite_module(grammar)
