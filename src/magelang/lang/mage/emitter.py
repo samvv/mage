@@ -1,4 +1,5 @@
 
+from collections.abc import Sequence
 from io import StringIO
 
 from magelang.util import IndentWriter
@@ -25,6 +26,16 @@ def emit(node: MageSyntax) -> str:
                 return is_wide(expr.elements[0])
             return True
         return False
+
+    def visit_decorators(decorators: Sequence[Decorator]) -> None:
+        for decorator in decorators:
+            out.write('@')
+            out.write(decorator.name)
+            if decorator.args:
+                out.write('{')
+                out.write(', '.join(str(arg) for arg in decorator.args))
+                out.write('}')
+            out.write(' ')
 
     def visit(node: MageSyntax) -> None:
 
@@ -79,10 +90,12 @@ def emit(node: MageSyntax) -> str:
             return
 
         if isinstance(node, MageRefExpr):
+            visit_decorators(node.decorators)
             out.write(node.name)
             return
 
         if isinstance(node, MageCharSetExpr):
+            visit_decorators(node.decorators)
             out.write('[')
             for element in node.elements:
                 if isinstance(element, str):
@@ -96,10 +109,12 @@ def emit(node: MageSyntax) -> str:
             return
 
         if isinstance(node, MageLitExpr):
+            visit_decorators(node.decorators)
             out.write(repr(node.text))
             return
 
         if isinstance(node, MageSeqExpr):
+            visit_decorators(node.decorators)
             first = True
             for element in node.elements:
                 if first: first = False
@@ -108,6 +123,7 @@ def emit(node: MageSyntax) -> str:
             return
 
         if isinstance(node, MageChoiceExpr):
+            visit_decorators(node.decorators)
             out.write('(')
             first = True
             for element in node.elements:
@@ -118,6 +134,7 @@ def emit(node: MageSyntax) -> str:
             return
 
         if isinstance(node, MageListExpr):
+            visit_decorators(node.decorators)
             out.write('(')
             visit(node.element)
             out.write(' %')
@@ -129,6 +146,7 @@ def emit(node: MageSyntax) -> str:
             return
 
         if isinstance(node, MageHideExpr):
+            visit_decorators(node.decorators)
             out.write('\\')
             wide = is_wide(node)
             if wide:
@@ -139,6 +157,7 @@ def emit(node: MageSyntax) -> str:
             return
 
         if isinstance(node, MageLookaheadExpr):
+            visit_decorators(node.decorators)
             out.write('!' if node.is_negated else '&')
             wide = is_wide(node)
             if wide:
@@ -149,6 +168,7 @@ def emit(node: MageSyntax) -> str:
             return
 
         if isinstance(node, MageRepeatExpr):
+            visit_decorators(node.decorators)
             if node.min == 0 and node.max == 1:
                 wide = is_wide(node.expr)
                 if wide:
