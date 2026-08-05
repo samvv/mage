@@ -30,7 +30,7 @@ Prefixes = dict[Edge, Prefix];
 def mage_extract_prefixes(grammar: MageGrammar) -> MageGrammar:
 
     global_prefixes = Prefixes()
-    other = list[MageModuleElement]()
+    other = list[MageGrammarElement]()
 
     def populate(rule: MageRule) -> None:
         prefixes = global_prefixes

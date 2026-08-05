@@ -12,7 +12,7 @@ def mage_flatten_grammars(grammar: MageGrammar) -> MageGrammar:
 
     mode = 1
 
-    new_elements = list[MageModuleElement]()
+    new_elements = list[MageGrammarElement]()
 
     def visit_module(node: MageModule) -> None:
         nonlocal mode

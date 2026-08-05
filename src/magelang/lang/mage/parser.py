@@ -346,14 +346,14 @@ class Parser:
         t4 = self._expect_token(TT_RBRACE)
         return MageModule(name=name, elements=elements, span=Span(t0.span.start, t4.span.end))
 
-    def parse_element(self) -> MageModuleElement:
+    def parse_element(self) -> MageGrammarElement:
         t0 = self._peek_token_after_modifiers()
         if t0.type == TT_MOD:
             return self.parse_module()
         else:
             return self.parse_rule()
 
-    def _parse_elements(self) -> list[MageModuleElement]:
+    def _parse_elements(self) -> list[MageGrammarElement]:
         elements = []
         while True:
             t0 = self._peek_token()

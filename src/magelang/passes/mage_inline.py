@@ -18,7 +18,7 @@ def mage_inline(grammar: MageGrammar) -> MageGrammar:
             return rewrite_expr(new_expr)
         return rewrite_each_child_expr(expr, rewrite_expr)
 
-    def rewrite_element(element: MageModuleElement) -> MageModuleElement:
+    def rewrite_element(element: MageGrammarElement) -> MageGrammarElement:
         if isinstance(element, MageRule):
             if element.is_extern:
                 return element
@@ -30,9 +30,9 @@ def mage_inline(grammar: MageGrammar) -> MageGrammar:
                 return new_element
             return element
         elif isinstance(element, MageModule):
-            return rewrite_module(element, rewrite_element)
+            return rewrite_grammar(element, rewrite_element)
         else:
             assert_never(element)
 
-    return rewrite_module(grammar, rewrite_element)
+    return rewrite_grammar(grammar, rewrite_element)
 
