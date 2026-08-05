@@ -188,7 +188,7 @@ This is useful in conjunction with a choice expression.
 
 **Example Usage**
 ```mage
-pub keywordOrIdentifier
+pub keyword_or_identifier
   = try "class"
   | try "struct"
   | identifier
