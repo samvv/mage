@@ -5,8 +5,10 @@ from typing import assert_never
 
 from magelang.graph import DGraph, graph_reachable, toposort, graph_roots
 from magelang.lang.mage.ast import ASSOC_RIGHT, MAGE_REPEAT_INFINITY
+from magelang.lang.treespec.helpers import is_unit_type
 from magelang.machine import (
     BuildToken,
+    BuildTuple,
     Dump,
     Flip,
     FuncBuilder,
@@ -31,13 +33,13 @@ from magelang.machine import (
     Set,
     Tell,
 )
-from magelang.helpers import get_fields
+from magelang.helpers import get_fields, infer_type, lit_to_name
 from magelang.manager import declare_pass
 from magelang.util import NameGenerator, nonnull, unreachable
 from magelang import (
     MageRule,
     MageGrammar,
-    MageModuleElement,
+    MageGrammarElement,
     MageExpr,
     MageLitExpr,
     MageHideExpr,
@@ -72,7 +74,7 @@ class Pratt:
         yield from self.prefix
         yield from self.suffix
 
-def split_pratt(grammar: MageGrammar) -> tuple[list[MageModuleElement], list[Pratt]]:
+def split_pratt(grammar: MageGrammar) -> tuple[list[MageGrammarElement], list[Pratt]]:
 
     # TODO require that all rules are inlined
     # TODO require that all SeqExpr are normalized
@@ -105,7 +107,7 @@ def split_pratt(grammar: MageGrammar) -> tuple[list[MageModuleElement], list[Pra
 
     sccs = list(toposort(g))
 
-    rest   = list[MageModuleElement]()
+    rest   = list[MageGrammarElement]()
     pratts = list[Pratt]()
 
     for scc in sccs:
@@ -161,35 +163,48 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
 
     builder = MachineBuilder()
 
-    generate_label_name = NameGenerator()
+    generate_label_name = NameGenerator(hide_first=False)
     generate_function_name = NameGenerator(hide_first=True)
 
     elements, pratts = split_pratt(grammar)
 
-    def compile_repeat(builder: FuncBuilder, count: int, expr: MageExpr, hidden: bool, in_token: bool) -> None:
+    def compile_repeat(builder: FuncBuilder, count: int, expr: MageExpr, hidden: bool, in_token: bool, generate_token_name) -> None:
         if count == 0:
             return
         repeat_label_name = generate_label_name(prefix='repeat_main')
         builder.append(Push(count))
         builder.label(repeat_label_name)
-        compile_expr(builder, expr, hidden, in_token)
+        compile_expr(builder, expr, hidden, in_token, generate_token_name)
         builder.append(Dec())
         builder.append(Dup())
         builder.append(JumpNZ(target=repeat_label_name))
         builder.append(Pop())
 
-    def compile_expr(builder: FuncBuilder, expr: MageExpr, hidden: bool = False, in_token: bool = False) -> None:
+    def compile_expr(builder: FuncBuilder, expr: MageExpr, hidden: bool = False, in_token: bool = False, generate_token_name: NameGenerator | None = None) -> None:
+
+        if generate_token_name is None:
+            generate_token_name = NameGenerator()
 
         if isinstance(expr, MageRefExpr):
             builder.append(Call(expr.name))
             return
 
         if isinstance(expr, MageLitExpr):
+            if not hidden:
+                builder.append(Tell())
             for ch in expr.text:
                 builder.append(Sat((ch, ch)))
+            if not hidden:
+                builder.append(Tell())
+                name = expr.label
+                if name is None:
+                    _is_keyword, name = lit_to_name(expr.text, grammar=grammar)
+                builder.append(BuildToken(name))
             return
 
         if isinstance(expr, MageCharSetExpr):
+            if not hidden:
+                builder.append(Tell())
             success = generate_label_name('charset_success')
             for rng in expr.elements:
                 if isinstance(rng, str):
@@ -205,6 +220,9 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             builder.append(Fail(f"doesn't satisfy {expr.label or ' | '.join(repr(el) for el in expr.elements)}"))
             builder.label(success)
             builder.append(Commit())
+            if not hidden:
+                builder.append(Tell())
+                builder.append(BuildToken(expr.label or generate_token_name()))
             return
 
         if isinstance(expr, MageChoiceExpr):
@@ -214,7 +232,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             for i, element in enumerate(expr.elements):
                 builder.label(label_names[i])
                 builder.append(Catch(target=label_names[i+1]))
-                compile_expr(builder, element, hidden, in_token)
+                compile_expr(builder, element, hidden, in_token, generate_token_name)
                 builder.append(Jump(target=success_label_name))
             builder.label(label_names[n])
             builder.append(Fail())
@@ -228,7 +246,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             if expr.is_negated:
                 builder.append(Tell())
                 builder.append(Catch(target=failure_label_name))
-                compile_expr(builder, expr.expr, True, in_token)
+                compile_expr(builder, expr.expr, True, in_token, generate_token_name)
                 builder.append(Commit())
                 builder.append(Seek())
                 builder.append(Fail())
@@ -237,7 +255,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             else:
                 builder.append(Tell())
                 builder.append(Catch(target=failure_label_name))
-                compile_expr(builder, expr.expr, True, in_token)
+                compile_expr(builder, expr.expr, True, in_token, generate_token_name)
                 builder.append(Commit())
                 builder.append(Seek())
                 builder.append(Jump(target=finish_label_name))
@@ -248,27 +266,30 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             return
 
         if isinstance(expr, MageHideExpr):
-            compile_expr(builder, expr.expr, True, in_token)
+            compile_expr(builder, expr.expr, True, in_token, generate_token_name)
             return
 
         if isinstance(expr, MageSeqExpr):
-            for element in expr.elements:
-                compile_expr(builder, element, hidden, in_token)
+            ty = infer_type(expr, grammar=grammar)
+            for el in expr.elements:
+                compile_expr(builder, el, hidden, in_token, generate_token_name)
+            if not hidden and not is_unit_type(ty):
+                builder.append(BuildTuple(sum(0 if is_unit_type(infer_type(child, grammar=grammar)) else 1 for child in expr.elements)))
             return
 
         if isinstance(expr, MageRepeatExpr):
             if expr.min > 0:
-                compile_repeat(builder, expr.min, expr.expr, hidden, in_token)
+                compile_repeat(builder, expr.min, expr.expr, hidden, in_token, generate_token_name)
             if expr.max == MAGE_REPEAT_INFINITY:
                 repeat_label_name = generate_label_name(prefix='repeat_inf')
                 done_label_name = generate_label_name(prefix='repeat_end')
                 builder.append(Catch(target=done_label_name))
                 builder.label(repeat_label_name)
-                compile_expr(builder, expr.expr, hidden, in_token)
+                compile_expr(builder, expr.expr, hidden, in_token, generate_token_name)
                 builder.append(Jump(target=repeat_label_name))
                 builder.label(done_label_name)
             else:
-                compile_repeat(builder, expr.max - expr.min, expr.expr, hidden, in_token)
+                compile_repeat(builder, expr.max - expr.min, expr.expr, hidden, in_token, generate_token_name)
             return
 
         if isinstance(expr, MageListExpr):
@@ -277,24 +298,24 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
             min_loop_start = generate_label_name('min_loop_start')
             loop_start = generate_label_name('loop_start')
             builder.append(Catch(target=first_fail))
-            compile_expr(builder, expr.element, hidden, in_token)
+            compile_expr(builder, expr.element, hidden, in_token, generate_token_name)
             builder.append(Commit())
             if expr.min_count > 0:
                 builder.append(Push(expr.min_count))
                 builder.append(Set('i'))
                 builder.label(min_loop_start)
                 builder.append(Catch(target=finish_label_name))
-                compile_expr(builder, expr.separator, hidden, in_token)
+                compile_expr(builder, expr.separator, hidden, in_token, generate_token_name)
                 builder.append(Commit())
-                compile_expr(builder, expr.element, hidden, in_token)
+                compile_expr(builder, expr.element, hidden, in_token, generate_token_name)
                 builder.append(Get('i'))
                 builder.append(Dec())
                 builder.append(JumpNZ(target=min_loop_start))
             builder.label(loop_start)
             builder.append(Catch(target=finish_label_name))
-            compile_expr(builder, expr.separator, hidden, in_token)
+            compile_expr(builder, expr.separator, hidden, in_token, generate_token_name)
             builder.append(Commit())
-            compile_expr(builder, expr.element, hidden, in_token)
+            compile_expr(builder, expr.element, hidden, in_token, generate_token_name)
             builder.append(Jump(target=loop_start))
             builder.label(first_fail)
             if expr.min_count > 0:
@@ -307,21 +328,22 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
     for rule in elements:
         if not isinstance(rule, MageRule) or rule.expr is None:
             continue
+        generate_field = NameGenerator('field', hide_first=False)
         func = builder.func(rule.name)
         func.retval('node_or_token')
         field_names = list[str]()
         if rule.is_lex:
             func.append(Tell())
-            compile_expr(func, rule.expr, in_token=True)
+            compile_expr(func, rule.expr, in_token=True, generate_token_name=generate_field)
             func.append(Tell())
             func.append(BuildToken(rule.name))
         else:
             for expr, field in get_fields(rule.expr, grammar, include_hidden=True):
                 if field is not None:
-                    compile_expr(func, expr, False)
+                    compile_expr(func, expr, False, generate_token_name=generate_field)
                     field_names.append(field.name)
                 else:
-                    compile_expr(func, expr, True)
+                    compile_expr(func, expr, True, generate_token_name=generate_field)
             func.append(Build(rule.name, field_names))
         func.append(Ret())
         func.finish()
@@ -427,6 +449,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
 
         # Generate parse_prefix_operator
         prefix = builder.func(parse_prefix_name)
+        prefix.retval('op')
         prefix.retval('precedence')
         prefix.retval('kind')
         for rule in pratt.prefix:
@@ -446,6 +469,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
 
         # Generate parse_postfix_operator
         postfix = builder.func(parse_postfix_name)
+        prefix.retval('op')
         postfix.retval('precedence')
         postfix.retval('kind')
         for rule in pratt.suffix:
@@ -465,6 +489,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
 
         # Generate parse_infix_operator
         infix = builder.func(parse_infix_name)
+        infix.retval('op')
         infix.retval('r_bp')
         infix.retval('l_bp')
         infix.retval('kind')
