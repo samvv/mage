@@ -44,7 +44,7 @@ class MageNodeBase:
             curr = curr.parent # type: ignore
         raise RuntimeError(f'Could not get the grammmar of a node. Are the parent pointers correctly set?')
 
-    def get_fields(self) -> dict:
+    def get_fields(self) -> dict[str, Any]:
         out = {}
         for cls in self.__class__.__mro__:
             for name in typing.get_type_hints(cls):
