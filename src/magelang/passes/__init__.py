@@ -5,7 +5,6 @@ from .mage_check_undefined import mage_check_undefined
 from .mage_distill import mage_distill
 from .mage_extract_literals import mage_extract_literals
 from .mage_extract_prefixes import mage_extract_prefixes
-from .mage_flatten_grammars import mage_flatten_grammars
 from .mage_hide_lookaheads import mage_hide_lookaheads
 from .mage_inline import mage_inline
 from .mage_insert_magic_rules import mage_insert_magic_rules
