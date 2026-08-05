@@ -122,7 +122,7 @@ sequence expression, which has a higher precedence than the choice expression.
 
 Therefore, the following would be equal:
 
- - `try foo bar` as `(try foo) bar`)
+ - `try foo bar` as `(try foo) bar`
  - `foo bar | bax` as `(foo bar) | bax`
  - `!foo+` as `!(foo+)`.
  - `name:foo?` as `name:(foo?)`
