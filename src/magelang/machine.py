@@ -115,7 +115,7 @@ class Build(OpBase):
 @dataclass
 class BuildToken(OpBase):
     """
-    Build a token from the offsets that are on the stack.
+    Build a token from the start and end offsets that are on the stack.
     """
     name: str
     label: str | None = None
