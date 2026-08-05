@@ -1,5 +1,5 @@
 
-# Should be part of standard library
+# The rules below should be part of standard library
 
 any_byte = [\x00-\xFF]
 
