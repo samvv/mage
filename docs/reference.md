@@ -251,12 +251,12 @@ body = stmt+
 
 ### `<expr1> % <expr2>`
 
-Denotes a list-expression, where a repitition of `<expr1>` is interspersed with
+Denotes a list-expression, where a repetition of `<expr1>` is interspersed with
 `<expr2>`.
 
 Repeating the `%` symbol will result in the list requiring at least the amount
 of `%` being typed minus one of occurrences of `<expr1>`. For instance, `'foo'
-%%% '.'` parses `foo.foo` (two repititions) but not `foo` (one repitition).
+%%% '.'` parses `foo.foo` (two repetitions) but not `foo` (one repetition).
 
 **Example Usage**
 ```mage
