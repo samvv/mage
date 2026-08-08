@@ -436,7 +436,6 @@ def parse_expr_bp(p: Parser, min_bp: int) -> CompletedMarker:
             continue
 
         res = peek_infix_operator(p)
-        print(res)
         if res is not None:
             infix_kind, l_bp, r_bp = res
             if l_bp < min_bp:
