@@ -3,9 +3,11 @@ from functools import cache
 from typing import Generator, Iterator, Iterable, Sequence
 import json
 from pathlib import Path
+from dataclasses import field, dataclass
 
 from magelang.constants import DEFAULT_MAX_NAMED_CHARS
 from magelang.lang.magedown.cst import MagedownAccepts, MagedownDocument, MagedownRejects
+from magelang.graph import DGraph, toposort, graph_roots, graph_reachable
 from magelang.runtime.lex import CharStream
 from magelang.lang.python.emitter import emit
 from magelang.lang.treespec import *
@@ -14,7 +16,7 @@ from magelang.lang.python.cst import *
 from magelang.lang.mage.constants import integer_rule_type, string_rule_type
 from magelang.lang.treespec.helpers import do_types_shallow_overlap, flatten_union_types, is_optional_type, is_static_type, make_optional_type, mangle_type
 from magelang.logging import warn
-from magelang.util import to_camel_case, is_iterator, NameGenerator, plural
+from magelang.util import to_camel_case, is_iterator, NameGenerator, plural, unreachable
 
 
 def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
@@ -676,4 +678,106 @@ def collect_tests(grammar: MageGrammar) -> list[Test]:
                 elif isinstance(element, MagedownRejects):
                     tests.append(Test(rule, element.text.strip(), True))
     return tests
+
+
+NONE   = 0
+PREFIX = 1
+INFIX  = 2
+SUFFIX = 3
+
+@dataclass
+class Pratt:
+    name: str
+    infix: list[MageRule]
+    prefix: list[MageRule]
+    suffix: list[MageRule]
+    atoms: list[MageRule] = field(default_factory=list)
+
+    def all(self) -> Iterable[MageRule]:
+        yield from self.infix
+        yield from self.prefix
+        yield from self.suffix
+
+def split_pratt(grammar: MageGrammar) -> tuple[list[MageGrammarElement], list[Pratt]]:
+
+    # TODO require that all rules are inlined
+    # TODO require that all SeqExpr are normalized
+    # TODO require that 1-ary ChoiceExpr are elminated
+    # TODO find the root variant rule through some clever mechanism
+
+    def populate(g: DGraph[MageRule, None], expr: MageExpr, src: MageRule) -> None:
+        if isinstance(expr, MageRefExpr):
+            dst = lookup_ref(expr)
+            if dst is None:
+                return
+            g.add_edge(src, dst, None)
+            return
+        for_each_direct_child_expr(expr, lambda child: populate(g, child, src))
+
+    def get_roots(rules: Sequence[MageRule]) -> Iterable[MageRule]:
+        g = DGraph[MageRule, None]()
+        for rule in rules:
+            if rule.expr is not None:
+                populate(g, rule.expr, rule)
+        for root in graph_roots(g):
+            if root in rules:
+                yield root
+
+    g = DGraph[MageRule, None]()
+
+    for rule in grammar.rules:
+        if rule.expr is not None:
+            populate(g, rule.expr, rule)
+
+    sccs = list(toposort(g))
+
+    rest   = list[MageGrammarElement]()
+    pratts = list[Pratt]()
+
+    for scc in sccs:
+        if len(scc) == 1: # optimisation
+            rest.append(next(iter(scc)))
+            continue
+        infix      = list[MageRule]()
+        prefix     = list[MageRule]()
+        suffix     = list[MageRule]()
+        candidates = list[MageRule]()
+        for rule in scc:
+            if isinstance(rule.expr, MageChoiceExpr):
+                candidates.append(rule)
+            elif isinstance(rule.expr, MageSeqExpr) and len(rule.expr.elements) > 1:
+                has_left = False
+                has_right = False
+                if isinstance(rule.expr.elements[0], MageRefExpr):
+                    left = lookup_ref(rule.expr.elements[0])
+                    has_left = left in scc
+                if isinstance(rule.expr.elements[-1], MageRefExpr):
+                    right = lookup_ref(rule.expr.elements[-1])
+                    has_right = right in scc
+                if has_left and has_right:
+                    infix.append(rule)
+                elif has_left:
+                    suffix.append(rule)
+                elif has_right:
+                    prefix.append(rule)
+                else:
+                    unreachable()
+        # We require at least two Pratt expressions. When less, there is no
+        # need at all for a Pratt parser.
+        if len(candidates) > 0 and len(infix) + len(prefix) + len(suffix) >= 2:
+            roots = list(get_roots(candidates))
+            assert(len(roots) == 1)
+            pratts.append(Pratt(nonnull(roots[0]).name, infix, prefix, suffix))
+        else:
+            rest.extend(scc)
+
+    for rule in rest:
+        if isinstance(rule, MageRule) and rule.is_parse:
+            for pratt in pratts:
+                for pratt_rule in pratt.all():
+                    if graph_reachable(g, pratt_rule, rule):
+                        pratt.atoms.append(rule)
+                        break
+
+    return rest, pratts
 
