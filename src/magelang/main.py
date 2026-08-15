@@ -111,7 +111,7 @@ def eval(filename: str, input: str, /, *, rule: str | None = None, generate: boo
     return 0
 
 
-def generate_for_lang(
+def generate(
     lang: TargetLanguage,
     filename: str,
     /,
@@ -200,7 +200,7 @@ def test(*filenames: str, generate: bool = False, machine: bool = False, dest_di
         import pytest
         fail = 0
         for filename in filenames:
-            generate_for_lang(
+            generate(
                 'python',
                 filename,
                 enable_parser=True,
