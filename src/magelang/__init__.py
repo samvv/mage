@@ -38,11 +38,6 @@ def load_grammar(filename: Path | str) -> MageGrammar:
     set_parents(grammar)
     return grammar
 
-class Engine(StrEnum):
-    NEW = 'new'
-    OLD = 'old'
-    _default = OLD
-
 type TargetLanguage = Literal['python', 'rust']
 
 def _is_functional(lang: str) -> bool:
@@ -66,13 +61,7 @@ class YesNoAuto(StrEnum):
         return YesNoAuto.YES if enable else YesNoAuto.NO
 
 class GenerateConfig(TypedDict, total=False):
-    engine: Engine
-    """
-    What internal generator to use.
 
-    new - The future engine (experimental)
-    old - An engine that is guaranteed to work
-    """
     prefix: str
     """
     Prepend this name to all classes and functions.
@@ -170,7 +159,6 @@ class GenerateConfig(TypedDict, total=False):
 def default_config(lang: TargetLanguage, is_debug: bool) -> GenerateConfig:
     return GenerateConfig(
         prefix='',
-        engine=Engine.OLD,
         skip_checks=False,
         emit_single_file=False,
         silent=False,
@@ -225,7 +213,6 @@ def generate_files(
     if nonnull(config.get('enable_lexer')) == YesNoAuto.AUTO:
         config['enable_lexer'] = YesNoAuto.from_bool(can_lexer_be_enabled)
 
-    engine = nonnull(config.get('engine'))
     enable_cst = nonnull(config.get('enable_cst'))
     enable_ast = nonnull(config.get('enable_ast'))
     enable_emitter = nonnull(config.get('enable_emitter'))
@@ -234,7 +221,7 @@ def generate_files(
     emit_single_file = nonnull(config.get('emit_single_file'))
     skip_checks = nonnull(config.get('skip_checks'))
     silent = nonnull(config.get('silent'))
-    enable_lexer = bool(nonnull(config.get('enable_lexer')))
+    enable_lexer = nonnull(config.get('enable_lexer'))
     enable_lexer_tests = nonnull(config.get('enable_lexer_tests'))
 
     if enable_lexer and not can_lexer_be_enabled:
@@ -247,46 +234,30 @@ def generate_files(
     #if enable_opt:
     #    pass_ = pipeline(pass_, extract_prefixes, simplify)
 
-    if engine == Engine.OLD:
-        files = dict[str, Pass[MageGrammar, PyModule]]()
-        trees = dict[str, Pass[Specs, PyModule]]()
-        if enable_cst:
-            # TODO add local `enable_cst_parent_pointers`
-            trees[fname_cst] = treespec_to_python
-            trees[fname_cst_defs] = treespec_to_python_interfaces
-        if enable_ast:
-            # TODO add local `enable_ast_parent_pointers`
-            trees[fname_ast] = pipeline(treespec_cst_to_ast, treespec_to_python)
-            trees[fname_ast_defs] = pipeline(treespec_cst_to_ast, treespec_to_python_interfaces)
-        if enable_emitter:
-            files[fname_emitter] = pipeline(mage_prepare_grammar, mage_to_python_emitter)
-        if enable_lexer:
-            files[fname_lexer] = pipeline(mage_inline, mage_prepare_grammar, mage_flatten_grammars, mage_to_python_lexer)
-            if enable_lexer_tests:
-                files[fname_test_lexer] = mage_to_python_lexer_tests
-        if enable_parser:
-            files[fname_parser] = pipeline(mage_inline, mage_prepare_grammar, mage_to_python_parser)
-            if enable_parser_tests:
-                files[fname_test_parser] = pipeline(mage_to_python_parser_tests)
-        mage_to_target = compose(
-            merge(distribute(files), pipeline(mage_inline, mage_prepare_grammar, mage_to_treespec, distribute(trees))),
-            each_value(pipeline(python_optimise, python_to_text)),
-        )
-    elif engine == Engine.NEW:
-        if lang == 'python':
-            revolv_to_target = each_value(pipeline(revolv_lift_assign_expr, revolv_to_python, python_to_text))
-        elif lang == 'rust':
-            revolv_to_target = each_value(pipeline(revolv_to_rust, rust_to_text))
-        else:
-            panic(f"Unrecognised language '{lang}'")
-        mage_to_target = pipeline(
-            distribute({
-                'cst.rev': MageToRevolvSyntaxTree(),
-            }),
-            revolv_to_target
-        )
-    else:
-        panic("Unrecognised engine requested")
+    files = dict[str, Pass[MageGrammar, PyModule]]()
+    trees = dict[str, Pass[Specs, PyModule]]()
+    if enable_cst:
+        # TODO add local `enable_cst_parent_pointers`
+        trees[fname_cst] = treespec_to_python
+        trees[fname_cst_defs] = treespec_to_python_interfaces
+    if enable_ast:
+        # TODO add local `enable_ast_parent_pointers`
+        trees[fname_ast] = pipeline(treespec_cst_to_ast, treespec_to_python)
+        trees[fname_ast_defs] = pipeline(treespec_cst_to_ast, treespec_to_python_interfaces)
+    if enable_emitter:
+        files[fname_emitter] = pipeline(mage_prepare_grammar, mage_to_python_emitter)
+    if enable_lexer:
+        files[fname_lexer] = pipeline(mage_inline, mage_prepare_grammar, mage_flatten_grammars, mage_to_python_lexer)
+        if enable_lexer_tests:
+            files[fname_test_lexer] = mage_to_python_lexer_tests
+    if enable_parser:
+        files[fname_parser] = pipeline(mage_inline, mage_prepare_grammar, mage_to_python_parser)
+        if enable_parser_tests:
+            files[fname_test_parser] = pipeline(mage_to_python_parser_tests)
+    mage_to_target = compose(
+        merge(distribute(files), pipeline(mage_inline, mage_prepare_grammar, mage_to_treespec, distribute(trees))),
+        each_value(pipeline(python_optimise, python_to_text)),
+    )
 
     files = apply(ctx, grammar, pipeline(
         mage_insert_magic_rules,
