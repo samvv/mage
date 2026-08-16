@@ -189,7 +189,7 @@ def generate_files(
 
     for k, v in default_config(lang, debug).items():
         if k not in config:
-            config[k] = v
+            config[k] = v # type: ignore
 
     if not isinstance(grammar, MageGrammar):
         grammar = load_grammar(grammar)
