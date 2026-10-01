@@ -94,10 +94,11 @@ def get_char_names() -> dict[str, str]:
 class RuleNameGenerator(NameGenerator):
 
     def __init__(self, grammar: MageGrammar) -> None:
+        super().__init__()
         self.grammar = grammar
 
     def is_free(self, name: str) -> bool:
-        return self.grammar.lookup(name) is not None
+        return self.grammar.lookup(name) is None
 
 # FIXME we want to be able to invalidate the cache for grammars that are no longer in the program
 @cache
