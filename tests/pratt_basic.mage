@@ -1,0 +1,100 @@
+
+## A simple identifier.
+##
+## {accept}
+## foo
+## {/accept}
+##
+## {accept}
+## foobar
+## {/accept}
+##
+## {accept}
+## __private1234
+## {/accept}
+pub token name
+  = [a-z_]i [a-z0-9]i*
+
+pub token integer
+  = [0-9]+
+
+@skip
+__ = [\n\r\t ]+
+
+## An operator.
+##
+## {accept}
+## not in
+## {/accept}
+pub op
+  = '+' | '-' | '*' | '/' | 'not' 'in'
+
+pub ref_expr
+  = name
+
+pub int_expr
+  = integer
+
+pub pos_expr
+  = @prec{5} '+' expr
+
+pub neg_expr
+  = @prec{5} '-' expr
+
+pub add_expr
+  = left:expr @prec{5} operator:'+' right:expr
+
+pub sub_expr
+  = left:expr @prec{5} operator:'-' right:expr
+
+pub mul_expr
+  = left:expr @prec{7} operator:'*' right:expr
+
+pub pow_expr
+  = left:expr @prec_right{21} operator:'**' right:expr
+
+pub try_expr
+  = expr @prec{11} '?'
+
+pub fac_expr
+  = expr @prec{11} '!'
+
+pub call_expr
+  = operator:expr @prec{22} ( '(' args:(expr % ',') ')' )
+
+##
+## {accept}
+## foo
+## {/accept}
+##
+## {accept}
+## 12345
+## {/accept}
+##
+## {accept}
+## 1 + 2
+## {/accept}
+##
+## {accept}
+## 1 + 2 + 3
+## {/accept}
+##
+## {accept}
+## 1 + 2 * 3
+## {/accept}
+##
+## {accept}
+## 1 + 2 * 3
+## {/accept}
+pub expr
+  = ref_expr
+  | pos_expr
+  | fac_expr
+  | try_expr
+  | neg_expr
+  | add_expr
+  | sub_expr
+  | pow_expr
+  | call_expr
+  | int_expr
+  | mul_expr

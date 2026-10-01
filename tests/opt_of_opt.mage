@@ -1,0 +1,48 @@
+
+## {accept}
+## foobax
+## {/accept}
+##
+## {accept}
+## foobarbax
+## {/accept}
+##
+## {accept}
+## foobarbazbax
+## {/accept}
+##
+## {reject}
+## foo
+## {/reject}
+##
+## {reject}
+## bax
+## {/reject}
+##
+## {reject}
+## fooblabax
+## {/reject}
+##
+## {reject}
+## foobazbax
+## {/reject}
+##
+## {reject}
+## alpha
+## {/reject}
+pub opt_of_opt_of_opt
+  = ('foo' ('bar' 'baz'?)? 'bax')?
+
+## {accept}
+## baxbaz
+## {/accept}
+##
+## {accept}
+## baxfoobaz
+## {/accept}
+##
+## {accept}
+## baxbarbaz
+## {/accept}
+pub opt_choice
+  = 'bax' ('foo' | 'bar')? 'baz'

@@ -1,0 +1,28 @@
+
+pub number
+  = [0-9]+
+
+pub expr
+  = foo
+  | bar
+  | number
+
+pub foo
+  = foo1
+  | foo2
+
+pub bar
+  = bar1
+  | bar2
+
+pub foo1
+  = expr '+' expr
+
+pub foo2
+  = expr @prec{2} '-' expr
+
+pub bar1
+  = expr @prec{5} '*' expr
+
+pub bar2
+  = expr @prec{10} '/' expr

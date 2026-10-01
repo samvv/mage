@@ -1,0 +1,35 @@
+
+## {accept}
+## foo@baxbar
+## {/accept}
+##
+## {accept}
+## foobar
+## {/accept}
+##
+## {reject}
+## foo
+## {/reject}
+##
+## {reject}
+## bax
+## {/reject}
+##
+## {reject}
+## bar
+## {/reject}
+##
+## {reject}
+## foo@bax
+## {/reject}
+##
+## {reject}
+## abla
+## {/reject}
+##
+## {reject}
+## bliblablu
+## {/reject}
+pub entry
+  = 'foo' opt:('@' 'bax')? 'bar'
+
