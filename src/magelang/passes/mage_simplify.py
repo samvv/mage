@@ -15,7 +15,8 @@ def mage_simplify(grammar: MageGrammar) -> MageGrammar:
         return isinstance(expr, MageChoiceExpr) and expr.elements == 0
 
     def is_empty(expr: MageExpr) -> bool:
-        return isinstance(expr, MageSeqExpr) and expr.elements == 0
+        return isinstance(expr, MageLitExpr) and not expr.text \
+            or isinstance(expr, MageSeqExpr) and not expr.elements
 
     def flatten_choice(elements: list[MageExpr]) -> Generator[MageExpr, None, None]:
         for expr in elements:
