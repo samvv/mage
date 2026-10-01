@@ -423,7 +423,7 @@ def reference_graph(grammar: MageGrammar) -> DGraph[MageRule, None]:
     return graph
 
 
-def get_recursive(grammar: MageGrammar) -> list[list[MageRule]]:
+def get_recursive(grammar: MageGrammar) -> list[set[MageRule]]:
     """
     Get all the recursive rules in the grammar.
 
