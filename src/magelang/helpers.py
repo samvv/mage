@@ -100,6 +100,7 @@ class RuleNameGenerator(NameGenerator):
     def is_free(self, name: str) -> bool:
         return self.grammar.lookup(name) is None
 
+
 # FIXME we want to be able to invalidate the cache for grammars that are no longer in the program
 @cache
 def _get_token_name_generator(grammar: MageGrammar) -> NameGenerator:
@@ -157,10 +158,12 @@ def get_field_name(expr: MageExpr, max_named_chars = DEFAULT_MAX_NAMED_CHARS) ->
         return None
     return None
 
+
 def get_fields(
     expr: MageExpr,
     grammar: MageGrammar,
-    include_hidden: bool = False
+    include_hidden: bool = False,
+    max_named_chars = DEFAULT_MAX_NAMED_CHARS
 ) -> Generator[tuple[MageExpr, Field | None]]:
     """
     Split an expression into all possible fields, also returning the
@@ -178,10 +181,11 @@ def get_fields(
         if isinstance(expr, MageLookaheadExpr):
             return
 
-        # A static literal expression is presumably no field becase there is no data to hold
-        # if isinstance(expr, MageLitExpr):
-        #     yield expr, None
-        #     return
+        if isinstance(expr, MageLitExpr):
+            _, name = lit_to_name(expr.text, grammar=grammar, max_named_chars=max_named_chars)
+            label = expr.label or name
+            yield expr, Field(label, SpecType(name))
+            return
 
         elif isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
