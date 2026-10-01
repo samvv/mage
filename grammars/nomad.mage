@@ -135,7 +135,7 @@ pub tuple_patt
   = '(' elements:(patt % ',') ')'
 
 pub variant_patt
-  = name '(' members:(type_expr % ',') ')'
+  = name '(' members:(patt % ',') ')'
 
 pub patt
   = named_patt
