@@ -121,6 +121,9 @@ pub token integer
 pub token string
   = '"' (!'"' any_char)* '"'
 
+pub token operator
+  = [+\-*/!?&^|%$<>=]+
+
 # Shared parse rules
 
 block
@@ -182,6 +185,9 @@ pub match_expr
 pub path_expr
   = name
 
+pub bin_expr
+  = expr operator expr
+
 ## {accept}
 ## &foo
 ## {/accept}
@@ -197,6 +203,7 @@ pub ret_expr
 
 pub expr
   = assign_expr
+  | bin_expr
   | block_expr
   | break_expr
   | call_expr
