@@ -139,6 +139,7 @@ pub variant_patt
 
 pub patt
   = named_patt
+  | tuple_patt
   | variant_patt
 
 # Expressions
