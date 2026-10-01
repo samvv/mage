@@ -13,7 +13,7 @@ def test_grammar(grammar: MageGrammar):
     for test in collect_tests(grammar):
         result = evaluate(test.rule, test.text)
         if result == RECMAX:
-            raise RuntimeError(f"recursion depth reached while trying to evaluate {test.rule.name} with {repr(test.text)}.")
+            raise RuntimeError(f"maximum recursion depth reached while trying to evaluate {test.rule.name} with {repr(test.text)}.")
         elif test.should_fail != isinstance(result, Error):
             raise RuntimeError(f"Test for rule {test.rule.name} and {repr(test.text)} failed.")
 
