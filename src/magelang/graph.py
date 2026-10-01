@@ -106,6 +106,15 @@ class DGraph[V, L]:
         self._vertices.clear()
         self._edge_count = 0
 
+    def __repr__(self) -> str:
+        out = '{'
+        if self._src_to_dst:
+            for v, (w, _) in self._src_to_dst.items():
+                out += f' {v} -> {w};'
+            out += ' '
+        out += '}'
+        return out
+
 @dataclass
 class ToposortVertexData:
     index: int | None = None
