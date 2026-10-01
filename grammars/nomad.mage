@@ -162,6 +162,7 @@ pub cond_case
 pub cond_expr
   = 'cond' '{' cases:cond_case+ '}'
 
+@wrap
 pub lit_expr
   = literal:(string | integer | boolean)
 
