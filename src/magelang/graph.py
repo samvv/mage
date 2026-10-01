@@ -1,5 +1,4 @@
 
-
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Generator, Iterator
@@ -181,3 +180,17 @@ def graph_reachable[V, L](g: DGraph[V, L], src: V, dst: V) -> bool:
         for w in g.outgoing_vertices(v):
             stack.append(w)
     return False
+
+
+def graph_dfs[V, L](g: DGraph[V, L], start: V) -> Iterable[V]:
+    stack = [ start ]
+    visited = set[V]()
+    while stack:
+        v = stack.pop()
+        if v in visited:
+            continue
+        visited.add(v)
+        for w in g.outgoing_vertices(v):
+            stack.append(w)
+        yield v
+
