@@ -561,7 +561,7 @@ class MachineBuilder:
     def __init__(self) -> None:
         self.funcs = dict[str, FuncDef]()
 
-    def func(self, name: str) -> FuncBuilder:
+    def func(self, name: str) -> 'FuncBuilder':
         return FuncBuilder(self, name)
 
     def finish(self) -> Machine:
