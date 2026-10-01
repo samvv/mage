@@ -401,9 +401,10 @@ def get_lexer_modes(grammar: MageGrammar) -> dict[str, int]:
     return modes
 
 
-@lru_cache
-def reference_graph(grammar: MageGrammar) -> DGraph[MageRule, None]:
-
+def reference_graph(rules: Iterable[MageRule]) -> DGraph[MageRule, None]:
+    """
+    Constructs a directed graph that represents which rule refers to which other rule.
+    """
     graph = DGraph[MageRule, None]()
 
     def visit_rule(src: MageRule) -> None:
@@ -412,12 +413,13 @@ def reference_graph(grammar: MageGrammar) -> DGraph[MageRule, None]:
                 dst = lookup_ref(expr)
                 if dst is not None:
                     graph.add_edge(src, dst, None)
-            else:
-                for_each_direct_child_expr(expr, visit)
+                return
+            for_each_direct_child_expr(expr, visit)
         if src.expr is not None:
             visit(src.expr)
 
-    for rule in grammar.get_parse_rules():
+    for rule in rules:
+        graph.add_vertex(rule)
         visit_rule(rule)
 
     return graph
