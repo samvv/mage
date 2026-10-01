@@ -210,6 +210,7 @@ pub expr
   | cond_expr
   | lit_expr
   | loop_expr
+  | new_expr
   | path_expr
   | ref_expr
   | ret_expr
