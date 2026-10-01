@@ -48,13 +48,13 @@ class MageNodeBase:
         out = {}
         for cls in self.__class__.__mro__:
             for name in typing.get_type_hints(cls):
-                out[name] = getattr(self, name) # type: ignore
+                out[name] = getattr(self, name)
         return out
 
     def derive(self, **kwargs) -> Self:
         fields = self.get_fields()
         fields.update(kwargs)
-        return self.__class__(**fields) # type: ignore
+        return self.__class__(**fields)
 
 @dataclass
 class ReturnAction:
