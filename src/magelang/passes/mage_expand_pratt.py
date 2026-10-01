@@ -51,9 +51,8 @@ def mage_expand_pratt(grammar: MageGrammar) -> MageGrammar:
 
     for pratt in pratts:
 
-        prim_rule_name = f'{pratt.name}_prim'
-        wrap_rule_name = f'{pratt.name}_wrap'
-        new_elements.extend(pratt.atoms)
+        prim_rule_name = f'{pratt.root.name}_prim'
+        wrap_rule_name = f'{pratt.root.name}_wrap'
         new_elements.append(MageRule(prim_rule_name, MageChoiceExpr(list(MageRefExpr(atom.name) for atom in pratt.atoms)), flags=PUBLIC))
 
         new_elements.append(MageRule(wrap_rule_name, MageSeqExpr([
@@ -64,11 +63,12 @@ def mage_expand_pratt(grammar: MageGrammar) -> MageGrammar:
 
         next = wrap_rule_name
 
+        # FIXME explore descending from a global precedence for infix, prefix and suffix
         for rule in pratt.infix:
-            new_elements.append(substitute(rule, pratt.name, next))
+            new_elements.append(substitute(rule, pratt.root.name, next))
             next = rule.name
 
-        new_elements.append(MageRule(pratt.name, MageRefExpr(next), flags=PUBLIC))
+        new_elements.append(pratt.root.derive(expr=MageRefExpr(next), flags=PUBLIC))
 
     return grammar.derive(elements=new_elements)
 
