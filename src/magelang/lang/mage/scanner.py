@@ -106,6 +106,7 @@ _keyword_to_token_type = {
 
 _ascii_escape_chars = {
     '\'': '\'',
+    '\"': '\"',
     '\\': '\\',
     'a': '\a',
     'b': '\b',
