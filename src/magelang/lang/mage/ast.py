@@ -5,6 +5,7 @@ Also defines some visitors over Mage expressions and other useful procedures to
 make handling the AST a bit easier.
 """
 
+from collections.abc import Iterator
 from typing import NewType, Self, TypedDict, Unpack
 from dataclasses import dataclass
 import sys
@@ -742,6 +743,9 @@ class MageGrammar(MageNodeBase):
     @property
     def rules(self) -> Iterable[MageRule]:
         return self._rules_by_name.values()
+
+    def __iter__(self) -> Iterator[MageRule]:
+        return iter(self.rules)
 
     @property
     @lru_cache
