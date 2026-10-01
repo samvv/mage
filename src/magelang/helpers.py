@@ -685,6 +685,18 @@ def collect_tests(grammar: MageGrammar) -> list[Test]:
     return tests
 
 
+def _get_precedence(rule: MageRule) -> tuple[int, Assoc]:
+    prec = None
+    def visit(expr: MageExpr) -> None:
+        nonlocal prec
+        if expr.precedence is not None:
+            prec = expr.precedence
+            return
+        for_each_direct_child_expr(expr, visit)
+    visit(nonnull(rule.expr))
+    return prec if prec is not None else (0, ASSOC_LEFT)
+
+
 NONE   = 0
 PREFIX = 1
 INFIX  = 2
@@ -773,6 +785,9 @@ def split_pratt(grammar: MageGrammar) -> tuple[list[MageGrammarElement], list[Pr
         if len(candidates) > 0 and len(infix) + len(prefix) + len(suffix) >= 2:
             roots = list(get_roots(candidates))
             assert(len(roots) == 1)
+            prefix.sort(key=lambda r: _get_precedence(r))
+            infix.sort(key=lambda r: _get_precedence(r))
+            suffix.sort(key=lambda r: _get_precedence(r))
             pratts.append(Pratt(nonnull(roots[0]).name, infix, prefix, suffix))
         else:
             rest.extend(scc)
