@@ -726,6 +726,7 @@ def split_pratt(grammar: MageGrammar) -> tuple[list[MageGrammarElement], list[Pr
     g = DGraph[MageRule, None]()
 
     for rule in grammar.rules:
+        g.add_vertex(rule)
         if rule.expr is not None:
             populate(g, rule.expr, rule)
 
