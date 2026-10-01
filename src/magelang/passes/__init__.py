@@ -4,6 +4,7 @@ from .mage_check_overlapping_charset_intervals import mage_check_overlapping_cha
 from .mage_check_token_no_parse import mage_check_token_no_parse
 from .mage_check_undefined import mage_check_undefined
 from .mage_distill import mage_distill
+from .mage_expand_pratt import mage_expand_pratt
 from .mage_extract_literals import mage_extract_literals
 from .mage_extract_prefixes import mage_extract_prefixes
 from .mage_hide_lookaheads import mage_hide_lookaheads
