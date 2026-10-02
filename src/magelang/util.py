@@ -9,10 +9,6 @@ from typing import Any, Callable, Generic, Iterator, Never, Protocol, Sequence, 
 import re
 
 
-_T = TypeVar('_T')
-_R = TypeVar('_R')
-
-
 def plural(name: str) -> str:
     return name if name.endswith('s') else f'{name}s'
 
@@ -20,8 +16,8 @@ def plural(name: str) -> str:
 type Files = dict[str, str]
 
 
-def constant(value: _T) -> Callable[..., _T]:
-    def func(*args, **kwargs) -> _T:
+def constant[T](value: T) -> Callable[..., T]:
+    def func(*args, **kwargs) -> T:
         return value
     return func
 
@@ -67,43 +63,50 @@ class Nothing:
     """
     pass
 
-class Something(Generic[_T]):
 
-    def __init__(self, value: _T) -> None:
+class Something[T]:
+
+    def __init__(self, value: T) -> None:
         super().__init__()
         self.value = value
 
-    def to_maybe_none(self) -> _T | None:
+    def to_maybe_none(self) -> T | None:
         return self.value
 
-type Option[_T] = Something[_T] | Nothing
+
+type Option[T] = Something[T] | Nothing
+
 
 def is_nothing(opt: Option[Any]) -> TypeIs[Nothing]:
     return isinstance(opt, Nothing)
 
+
 def is_something(opt: Option[Any]) -> TypeIs[Something]:
     return isinstance(opt, Something)
 
-def to_maybe_none(value: Option[_T]) -> _T | None:
+
+def to_maybe_none[T](value: Option[T]) -> T | None:
     return value.value if isinstance(value, Something) else None
 
-def nonnull(value: _T | None) -> _T:
+
+def nonnull[T](value: T | None) -> T:
     assert(value is not None)
     return value
+
 
 class Eq(Protocol):
     def __eq__(self, value: object, /) -> bool: ...
 
-class MiniSeq(Protocol[_T]):
+
+class MiniSeq[T](Protocol):
     def __len__(self) -> int: ...
     @overload
-    def __getitem__(self, i: SupportsIndex, /) -> _T: ...
+    def __getitem__(self, i: SupportsIndex, /) -> T: ...
     @overload
-    def __getitem__(self, s: slice, /) -> list[_T]: ...
+    def __getitem__(self, s: slice, /) -> list[T]: ...
 
-_Comparable = TypeVar('_Comparable', bound=Eq)
 
-def get_common_suffix(names: Sequence[MiniSeq[_Comparable]]) -> MiniSeq[_Comparable]:
+def get_common_suffix[T: Eq](names: Sequence[MiniSeq[T]]) -> MiniSeq[T]:
     i = 0
     name = names[0]
     while True:
@@ -211,11 +214,12 @@ class NameGenerator:
     def reset(self) -> None:
         self._counts = {}
 
+
 # Proxies for sequences
 
-class MapProxy(Sequence[_R], Generic[_T, _R]):
+class MapProxy[T, R](Sequence[R]):
 
-    def __init__(self, elements: Sequence[_T], proc: Callable[[_T], _R]) -> None:
+    def __init__(self, elements: Sequence[T], proc: Callable[[T], R]) -> None:
         super().__init__()
         self._elements = elements
         self._proc = proc
@@ -223,29 +227,30 @@ class MapProxy(Sequence[_R], Generic[_T, _R]):
     def __len__(self) -> int:
         return len(self._elements)
 
-    def __iter__(self) -> Iterator[_R]:
+    def __iter__(self) -> Iterator[R]:
         for element in self._elements:
             yield self._proc(element)
 
-    def __reversed__(self) -> Iterator[_R]:
+    def __reversed__(self) -> Iterator[R]:
         for element in reversed(self._elements):
             yield self._proc(element)
 
     @overload
-    def __getitem__(self, key: int) -> _R: ...
+    def __getitem__(self, key: int) -> R: ...
 
     @overload
-    def __getitem__(self, key: slice) -> Sequence[_R]: ...
+    def __getitem__(self, key: slice) -> Sequence[R]: ...
 
-    def __getitem__(self, key: int | slice) -> _R | Sequence[_R]:
+    def __getitem__(self, key: int | slice) -> R | Sequence[R]:
         if isinstance(key, slice):
             return list(self._proc(element) for element in self._elements[key])
         else:
             return self._proc(self._elements[key])
 
-class DropProxy(Sequence[_T]):
 
-    def __init__(self, elements: 'Sequence[_T]', count: int) -> None:
+class DropProxy[T](Sequence[T]):
+
+    def __init__(self, elements: 'Sequence[T]', count: int) -> None:
         assert(count <= len(elements))
         self._elements = elements
         self._to_drop = count
@@ -253,23 +258,23 @@ class DropProxy(Sequence[_T]):
     def __len__(self) -> int:
         return len(self._elements)-self._to_drop
 
-    def __iter__(self) -> Iterator[_T]:
+    def __iter__(self) -> Iterator[T]:
         n = len(self._elements)
         for i in range(0, n-self._to_drop):
             yield self._elements[i]
 
-    def __reversed__(self) -> Iterator[_T]:
+    def __reversed__(self) -> Iterator[T]:
         n = len(self._elements)
         for i in range(0, n-self._to_drop):
             yield self._elements[n-i-1]
 
     @overload
-    def __getitem__(self, key: int) -> _T: ...
+    def __getitem__(self, key: int) -> T: ...
 
     @overload
-    def __getitem__(self, key: slice) -> Sequence[_T]: ...
+    def __getitem__(self, key: slice) -> Sequence[T]: ...
 
-    def __getitem__(self, key: int | slice) -> _T | Sequence[_T]:
+    def __getitem__(self, key: int | slice) -> T | Sequence[T]:
         max_index = len(self._elements)-self._to_drop
         if isinstance(key, slice):
             start = min(key.start, max_index)
@@ -282,6 +287,9 @@ class DropProxy(Sequence[_T]):
 
 
 class SeqSet[T]:
+    """
+    Like a set, but the order in which the elements are inserted is preserved.
+    """
 
     def __init__(self, iter: Iterable[T] | None = None) -> None:
         if iter is None:
@@ -309,6 +317,7 @@ class SeqSet[T]:
     def __getitem__(self, key: int | slice) -> T | list[T]:
         return self._list[key]
 
+
 def load_py_file(path: Path, /) -> ModuleType:
     module_name = f'{path.parent.name}.{path.stem}'
     spec = importlib.util.spec_from_file_location(module_name, path)
@@ -323,6 +332,7 @@ def load_py_file(path: Path, /) -> ModuleType:
     spec.loader.exec_module(module)
     return module
 
+
 def load_py_source(source: str) -> ModuleType:
     spec = importlib.util.spec_from_loader('magelang.dynamic.module', loader=None)
     assert(spec is not None)
@@ -330,7 +340,9 @@ def load_py_source(source: str) -> ModuleType:
     exec(source, module.__dict__)
     return module
 
+
 ANSI_CLEAR_LINE = '\33[2K\r'
+
 
 class Progress:
 
@@ -371,6 +383,7 @@ class Progress:
         self.replace_last_line(message)
         self.out.write('\n')
 
+
 class DynamicNode:
 
     def __init__(self, name: str, fields: Sequence[tuple[str, Any]]) -> None:
@@ -399,6 +412,7 @@ class DynamicNode:
 
     def __repr__(self) -> str:
         return f'{self.name}({', '.join(f'{k}={repr(v)}' for k, v in self.fields)})'
+
 
 class DynamicToken:
 
