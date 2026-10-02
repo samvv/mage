@@ -247,13 +247,13 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
     # all special types should be handled by now
     # assert(inspect.isclass(origin))
 
-    # construct a token from its single field
-    if inspect.isclass(origin) and issubclass(origin, BaseToken):
+    # construct a node or token from its single field
+    if inspect.isclass(origin) and (issubclass(origin, BaseToken) or issubclass(origin, BaseNode)):
         hints = typing.get_type_hints(origin)
-        defs = get_default_values(origin)
+        defaults = get_default_values(origin)
         required = {}
         for field_name, field_ty in hints.items():
-            if field_name not in defs:
+            if field_name not in defaults:
                 required[field_name] = field_ty
         if len(required) == 1:
             field_name, field_ty = next(iter(required.items()))

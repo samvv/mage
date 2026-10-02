@@ -2,7 +2,7 @@ from typing import Iterable, assert_never
 
 from magelang.manager import declare_pass
 from magelang.passes.mage_insert_magic_rules import any_node_rule_name, any_token_rule_name, any_syntax_rule_name
-from magelang.helpers import make_py_cond, make_py_or, make_py_union, quote_py_type, treespec_type_to_deep_py_test, treespec_type_to_py_type, treespec_type_to_shallow_py_test, namespaced, extern_type_to_py_type, to_py_class_name, make_py_isinstance, PyCondCase, lookup_spec
+from magelang.helpers import make_py_cond, make_py_or, make_py_union, quote_py_type, treespec_type_to_deep_py_test, treespec_type_to_py_type, treespec_type_to_shallow_py_test, namespaced, extern_type_to_py_type, to_py_class_name, make_py_isinstance, PyCondCase, lookup_spec, is_py_default_constructible, make_py_default_constructor
 from magelang.lang.treespec.helpers import contains_type, expand_variant_types, is_self_referential, is_type_assignable, resolve_type_references, spec_to_type
 from magelang.lang.mage.ast import *
 from magelang.lang.treespec.ast import *
@@ -133,8 +133,15 @@ def treespec_to_python(
         init_params: list[PyParam] = []
         init_body: list[PyStmt] = []
 
+
         for field in spec.fields:
-            class_body.append(PyAssignStmt(PyNamedPattern(field.name), annotation=quote_py_type(treespec_type_to_py_type(field.ty, prefix=prefix))))
+            default = None
+            if is_py_default_constructible(field.ty, specs=specs):
+                default = make_py_default_constructor(field.ty, specs=specs, prefix=prefix)
+            class_body.append(PyAssignStmt(
+                PyNamedPattern(field.name),
+                annotation=quote_py_type(treespec_type_to_py_type(field.ty, prefix=prefix)),
+                value=default))
 
         stmts.append(PyClassDef(name=this_class_name, bases=[ PyClassBaseArg(base_node_class_name) ], body=class_body))
 
