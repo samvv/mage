@@ -265,7 +265,18 @@ def generate_files(
         mage_to_target # Actual compilation
     ))
 
-    files[fname_init] = ''
+    init = ''
+    if enable_cst:
+        init += 'from .cst import *\n'
+    if enable_ast:
+        init += 'from .ast import *\n'
+    if enable_parser:
+        init += 'from .parser import *\n'
+    if enable_lexer:
+        init += 'from .lexer import *\n'
+    if enable_emitter:
+        init += 'from .emitter import *\n'
+    files[fname_init] = init
 
     if not emit_single_file:
         return files
