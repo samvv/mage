@@ -9,7 +9,7 @@ from magelang.util import DynamicNode, DynamicToken, NameGenerator, to_snake_cas
 EOF = '\uFFFF'
 
 type Op = (
-    Build
+    BuildNode
     | BuildToken
     | BuildTuple
     | Call
@@ -103,7 +103,7 @@ class Fail(OpBase):
     comment: str | None = None
 
 @dataclass
-class Build(OpBase):
+class BuildNode(OpBase):
     """
     Build a node from the fields that are on the stack.
     """
@@ -412,7 +412,7 @@ class Execution:
             elif isinstance(op, Pop):
                 self.stack.pop()
                 self.frame.op_index += 1
-            elif isinstance(op, Build):
+            elif isinstance(op, BuildNode):
                 fields = list[tuple[str, Any]]()
                 for name in reversed(op.field_names):
                     value = self.stack.pop()

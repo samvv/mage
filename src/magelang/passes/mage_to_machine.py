@@ -15,7 +15,7 @@ from magelang.machine import (
     Get,
     Machine,
     MachineBuilder,
-    Build,
+    BuildNode,
     Call,
     Catch,
     Commit,
@@ -242,7 +242,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                     field_names.append(field.name)
                 else:
                     compile_expr(func, expr, True, generate_token_name=generate_field)
-            func.append(Build(rule.name, field_names))
+            func.append(BuildNode(rule.name, field_names))
         func.append(Ret())
         func.finish()
 
@@ -274,7 +274,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         expr_bp.append(Commit())
         # parse_expr will be called with the precedence from parse_prefix_name
         expr_bp.append(Call(name=parse_with_bp_name))
-        expr_bp.append(Build(f'{pratt.root.name}_prefix', ['expr']))
+        expr_bp.append(BuildNode(f'{pratt.root.name}_prefix', ['expr']))
         expr_bp.append(Set('lhs'))
         expr_bp.append(Jump(target=loop_start))
 
@@ -306,7 +306,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         expr_bp.append(Lt()) # l_bp < min_prec
         expr_bp.append(JumpNZ(target=loop_end))
         expr_bp.append(Get('lhs'))
-        expr_bp.append(Build(f'{pratt.root.name}_postfix', ['expr']))
+        expr_bp.append(BuildNode(f'{pratt.root.name}_postfix', ['expr']))
         expr_bp.append(Set('lhs'))
         expr_bp.append(Jump(target=loop_start))
 
@@ -326,7 +326,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         expr_bp.append(Call(name=parse_with_bp_name)) # should be called with r_bp from parse_infix
         expr_bp.append(Get('lhs'))
         # expr_bp.append(Flip())
-        expr_bp.append(Build(f'{pratt.root.name}_infix', ['lhs', 'rhs']))
+        expr_bp.append(BuildNode(f'{pratt.root.name}_infix', ['lhs', 'rhs']))
         expr_bp.append(Set('lhs'))
         expr_bp.append(Jump(target=loop_start))
 
