@@ -219,7 +219,7 @@ pub try_expr
 # Rules
 
 pub rule
-  = decorator* 'pub'? 'extern'? 'token'? name:ident '=' expr
+  = decorator* 'pub'? 'extern'? 'token'? name '=' expr
 
 pub grammar
   = rule*
