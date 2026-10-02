@@ -135,6 +135,9 @@ def generate(
     write_files(files, out_dir, force)
     return 0
 
+# Alias used when --generate flag is defined
+_generate = generate
+
 def check(filename: Path | str, /) -> int:
     """
     Check the given grammar for common mistakes
@@ -200,7 +203,7 @@ def test(*filenames: str, generate: bool = False, machine: bool = False, dest_di
         import pytest
         fail = 0
         for filename in filenames:
-            generate(
+            _generate(
                 'python',
                 filename,
                 enable_parser=True,
@@ -208,9 +211,10 @@ def test(*filenames: str, generate: bool = False, machine: bool = False, dest_di
                 enable_ast=False,
                 enable_lexer_tests=True,
                 enable_parser_tests=True,
+                force=True,
                 out_dir=dest_dir_path,
             )
-            if pytest.main([ str(dest_dir) ]) != 0:
+            if pytest.main([ str(dest_dir_path), "--import-mode=importlib" ]) != 0:
                 fail += 1
             return int(fail > 0)
 
