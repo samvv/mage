@@ -20,7 +20,7 @@ type Type = Any
 class CoerceError(RuntimeError):
 
     def __init__(self, value: Any, ty: Type) -> None:
-        super().__init__(f"failed to coerce {value} to {ty}")
+        super().__init__(f"failed to coerce {repr(value)} to {ty}")
 
 def get_default_values(cls) -> dict[str, Any]:
     boring = dir(type('dummy', (object,), {}))
