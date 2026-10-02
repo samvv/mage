@@ -323,13 +323,14 @@ def load_py_file(path: Path, /) -> ModuleType:
     spec = importlib.util.spec_from_file_location(module_name, path)
     assert(spec is not None)
     module = importlib.util.module_from_spec(spec)
-    dir = str(path.parent.parent)
-    if dir not in sys.path:
-        print('Appending to PYTHONPATH')
-        sys.path.append(dir)
-    sys.modules[module_name] = module
-    assert(spec.loader is not None)
-    spec.loader.exec_module(module)
+    package_dir = str(path.parent.parent)
+    sys.path.insert(0, package_dir)
+    try:
+        sys.modules[module_name] = module
+        assert(spec.loader is not None)
+        spec.loader.exec_module(module)
+    finally:
+        del sys.path[0]
     return module
 
 
