@@ -248,11 +248,11 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
 
     for pratt in pratts:
 
-        parse_with_bp_name = generate_function_name(f'{pratt.name}_with_bp')
-        parse_atom_name = generate_function_name(f'{pratt.name}_atom')
-        parse_prefix_name = generate_function_name(f'{pratt.name}_prefix_operator')
-        parse_postfix_name = generate_function_name(f'{pratt.name}_postfix_operator')
-        parse_infix_name = generate_function_name(f'{pratt.name}_infix_operator')
+        parse_with_bp_name = generate_function_name(f'{pratt.root.name}_with_bp')
+        parse_atom_name = generate_function_name(f'{pratt.root.name}_atom')
+        parse_prefix_name = generate_function_name(f'{pratt.root.name}_prefix_operator')
+        parse_postfix_name = generate_function_name(f'{pratt.root.name}_postfix_operator')
+        parse_infix_name = generate_function_name(f'{pratt.root.name}_infix_operator')
 
         # Generate parse_expr_bp
         expr_bp = builder.func(parse_with_bp_name)
@@ -274,7 +274,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         expr_bp.append(Commit())
         # parse_expr will be called with the precedence from parse_prefix_name
         expr_bp.append(Call(name=parse_with_bp_name))
-        expr_bp.append(Build(f'{pratt.name}_prefix', ['expr']))
+        expr_bp.append(Build(f'{pratt.root.name}_prefix', ['expr']))
         expr_bp.append(Set('lhs'))
         expr_bp.append(Jump(target=loop_start))
 
@@ -306,7 +306,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         expr_bp.append(Lt()) # l_bp < min_prec
         expr_bp.append(JumpNZ(target=loop_end))
         expr_bp.append(Get('lhs'))
-        expr_bp.append(Build(f'{pratt.name}_postfix', ['expr']))
+        expr_bp.append(Build(f'{pratt.root.name}_postfix', ['expr']))
         expr_bp.append(Set('lhs'))
         expr_bp.append(Jump(target=loop_start))
 
@@ -326,7 +326,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         expr_bp.append(Call(name=parse_with_bp_name)) # should be called with r_bp from parse_infix
         expr_bp.append(Get('lhs'))
         # expr_bp.append(Flip())
-        expr_bp.append(Build(f'{pratt.name}_infix', ['lhs', 'rhs']))
+        expr_bp.append(Build(f'{pratt.root.name}_infix', ['lhs', 'rhs']))
         expr_bp.append(Set('lhs'))
         expr_bp.append(Jump(target=loop_start))
 
@@ -408,7 +408,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
         infix.append(Fail('expected an infix operator'))
         infix.finish()
 
-        main = builder.func(pratt.name)
+        main = builder.func(pratt.root.name)
         main.retval('node')
         main.append(Push(0))
         main.append(Call(name=parse_with_bp_name))
