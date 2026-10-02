@@ -1,4 +1,3 @@
-
 from typing import Iterable, assert_never
 
 from magelang.manager import declare_pass
@@ -702,8 +701,13 @@ def treespec_to_python(
                     ]
                 )
 
-                yield from gen_rewrite_type(ty.element_type, PyAttrExpr(input, 'last'), new_last_var_name, total=True)
-                yield PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(output), 'append_final'), args=[ PyNamedExpr(new_last_var_name) ]))
+                yield PyIfStmt(first=PyIfCase(
+                    test=PyInfixExpr(PyAttrExpr(input, 'last'), (PyIsKeyword(), PyNotKeyword()), PyNamedExpr('None')),
+                    body=[
+                        *gen_rewrite_type(ty.element_type, PyAttrExpr(input, 'last'), new_last_var_name, total=True),
+                        PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(output), 'append_final'), args=[ PyNamedExpr(new_last_var_name) ])),
+                    ]
+                ))
 
                 return
 
