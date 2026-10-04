@@ -255,14 +255,14 @@ def coerce(value: Any, ty: Type) -> Any:
     if type(ty) is TypeAliasType:
         return coerce(value, ty.__value__)
 
-    origin = typing.get_origin(ty) or ty
-
     # process annotated types
-    if origin is Annotated:
-        args= typing.get_args(ty)
-        for arg in args:
-            if isinstance(arg, Metadata) and arg.isinstance_check is not None and arg.isinstance_check(value):
+    if typing.get_origin(ty) is Annotated:
+        ty, *annotations= typing.get_args(ty)
+        for annotation in annotations:
+            if isinstance(annotation, Metadata) and annotation.isinstance_check is not None and annotation.isinstance_check(value):
                 return value
+
+    origin = typing.get_origin(ty) or ty
 
     # try all element types in a union type
     if origin is typing.Union or origin is UnionType:
