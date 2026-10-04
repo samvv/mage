@@ -1,8 +1,9 @@
 
+from dataclasses import dataclass
 from collections.abc import Callable, Iterable, Sequence
 from types import UnionType, NoneType
 import typing
-from typing import Any, Literal, Self, TypeAliasType
+from typing import Any, Literal, Self, TypeAliasType, Annotated, Callable
 import inspect
 from functools import cached_property
 
@@ -13,6 +14,7 @@ __all__ = [
     'BaseSyntax',
     'BaseNode',
     'BaseToken',
+    'Metadata',
 ]
 
 type Type = Any
@@ -216,6 +218,10 @@ def preorder_with_paths(root: Any, expand: ExpandFn = expand, path: list[Any] | 
         for (key, value) in expand(node):
             stack.append((path + [ key ], value))
 
+@dataclass
+class Metadata:
+    isinstance_check: Callable[[Any], bool] | None = None
+
 def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
 
     # short-circuit on the case where value is already a ty
@@ -229,10 +235,19 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
     if type(ty) is TypeAliasType:
         return coerce(value, ty.__value__)
 
-    # try all element types in a union type
     origin = typing.get_origin(ty) or ty
+
+    # process annotated types
+    if origin is Annotated:
+        args= typing.get_args(ty)
+        for arg in args:
+            if isinstance(arg, Metadata) and arg.isinstance_check is not None and arg.isinstance_check(value):
+                return value
+
+    # try all element types in a union type
     if origin is typing.Union or origin is UnionType:
-        for arg in typing.get_args(ty):
+        args = typing.get_args(ty)
+        for arg in args:
             try:
                 return coerce(value, arg, True)
             except CoerceError:

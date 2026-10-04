@@ -45,6 +45,7 @@ def treespec_to_python(
             'Callable',
             'assert_never',
             'no_type_check',
+            'Annotated',
         ]),
         PyImportFromStmt(PyAbsolutePath(PyQualName(modules=[ 'magelang' ], name='runtime')), aliases=[
             'BaseNode',
@@ -52,6 +53,7 @@ def treespec_to_python(
             'Punctuated',
             'ImmutablePunct',
             'Span',
+            'Metadata',
         ]),
         # PyClassDef(base_syntax_class_name, bases=[ PyClassBaseArg('BaseSyntax') ], body=[
         #     PyPassStmt(),
@@ -161,20 +163,30 @@ def treespec_to_python(
             continue
 
         type_name = to_py_class_name(spec.name, prefix)
+        pred_name = f'is_{namespaced(spec.name, prefix)}'
 
-        stmts.append(PyTypeAliasStmt(type_name, make_py_union(treespec_type_to_py_type(member.ty, prefix) for member in spec.members)))
-
+        # Add a predicate `is_foo`
         pred_params: Sequence[PyParam] = [
             PyNamedParam(pattern=PyNamedPattern('value'), annotation=PyNamedExpr('Any'))
         ]
         pred_expr = make_py_or(treespec_type_to_deep_py_test(member.ty, PyNamedExpr('value'), prefix=prefix, specs=specs) for member in spec.members)
-
-
         stmts.append(PyFuncDef(
-            name=f'is_{namespaced(spec.name, prefix)}',
+            name=pred_name,
             params=pred_params,
             return_type=PySubscriptExpr(expr=PyNamedExpr('TypeIs'), slices=[ PyNamedExpr(type_name) ]),
             body=[ PyRetStmt(expr=pred_expr) ],
+        ))
+
+        # Add `type Foo = Annotated[..., Metadata(is_foo)]`
+        stmts.append(PyTypeAliasStmt(
+            type_name,
+            PySubscriptExpr(
+                PyNamedExpr('Annotated'),
+                [
+                    make_py_union(treespec_type_to_py_type(member.ty, prefix) for member in spec.members),
+                    PyCallExpr(PyNamedExpr('Metadata'), args=[ PyNamedExpr(pred_name) ])
+                ]
+            )
         ))
 
     # Generate constant enumerations
