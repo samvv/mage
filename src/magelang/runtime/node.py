@@ -495,7 +495,9 @@ class BaseNode(BaseSyntax):
 
 class BaseToken(BaseSyntax):
 
-    span: Span | None = None
+    def __init__(self, *args, span: Span | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.span = span
 
     @cached_property
     def next_token(self) -> 'BaseToken | None':
