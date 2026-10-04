@@ -21,8 +21,8 @@ type Type = Any
 
 class CoerceError(RuntimeError):
 
-    def __init__(self, value: Any, ty: Type) -> None:
-        super().__init__(f"failed to coerce {repr(value)} to {ty}")
+    def __init__(self, value: Any, ty: Type, message: str | None) -> None:
+        super().__init__(f"failed to coerce {repr(value)} to {ty}: {message}")
 
 def get_default_values(cls) -> dict[str, Any]:
     boring = dir(type('dummy', (object,), {}))
@@ -39,11 +39,20 @@ def _is_default_constructible(ty: Type) -> bool:
     cls = typing.get_origin(ty) or ty
     if not inspect.isclass(cls):
         return False
-    if issubclass(cls, BaseToken):
-        ann = typing.get_type_hints(cls)
-        defs = get_default_values(cls)
-        return not bool(ann.keys() - defs.keys())
-    return cls in [ list, Punctuated ]
+    if issubclass(cls, BaseSyntax):
+        for field_ty in typing.get_type_hints(cls).values():
+            if not _is_default_constructible(field_ty):
+                return False
+        return True
+    if issubclass(cls, tuple):
+        args = typing.get_args(ty)
+        for arg in args:
+            if not _is_default_constructible(arg):
+                return False
+        return True
+    if issubclass(cls, list) or issubclass(cls, Punctuated):
+        return True
+    return False
 
 def _construct_default(ty: Type) -> Any:
     return None if _is_optional(ty) else ty()
@@ -222,7 +231,7 @@ def preorder_with_paths(root: Any, expand: ExpandFn = expand, path: list[Any] | 
 class Metadata:
     isinstance_check: Callable[[Any], bool] | None = None
 
-def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
+def coerce(value: Any, ty: Type) -> Any:
 
     # short-circuit on the case where value is already a ty
     if inspect.isclass(ty) and isinstance(value, ty):
@@ -232,6 +241,15 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
     if ty is Any:
         return value
 
+    # cover the cases where the value is `None`
+    if value is None:
+        if _is_optional(ty):
+            return None
+        if _is_default_constructible(ty):
+            return _construct_default(ty)
+        raise CoerceError(value, ty, "type does not allow None and is also not default-constructible")
+
+    # resolve type aliases
     if type(ty) is TypeAliasType:
         return coerce(value, ty.__value__)
 
@@ -249,15 +267,10 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
         args = typing.get_args(ty)
         for arg in args:
             try:
-                return coerce(value, arg, True)
+                return coerce(value, arg)
             except CoerceError:
                 pass
-        raise CoerceError(value, ty)
-
-    # if `value` is None and the type is not explicitly None, we attempt to
-    # construct a default value
-    if value is None and not forbid_default and _is_default_constructible(ty):
-        return _construct_default(ty)
+        raise CoerceError(value, ty, "could not coerce to any of the union elements")
 
     # all special types should be handled by now
     # assert(inspect.isclass(origin))
@@ -281,19 +294,28 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
         args = typing.get_args(ty)
         new_elements = []
         for i, element in enumerate(value):
-            new_elements.append(coerce(element, args[i], False))
+            new_elements.append(coerce(element, args[i]))
         return tuple(new_elements)
 
-    # construct a tuple when the main type is given
+    # construct a tuple when there is only one required type
     if origin is tuple:
         args = typing.get_args(ty)
-        required = [ (i, arg) for i, arg in enumerate(args) if not _is_optional(arg) and not _is_default_constructible(arg) ]
-        if len(required) == 1:
-            k, main_ty = required[0]
-            new_elements = []
-            for i, arg in enumerate(args):
-                new_elements.append(coerce(value, main_ty, True) if i == k else _construct_default(arg))
-            return tuple(new_elements)
+        elements = []
+        has_main = False
+        for arg in args:
+            try:
+                elements.append(coerce(value, arg))
+            except CoerceError:
+                if not _is_default_constructible(arg):
+                    raise CoerceError(value, arg, f"the element {arg} of the tuple should be default-constructible")
+                elements.append(_construct_default(arg))
+                continue
+            if has_main:
+                raise CoerceError(value, ty, "tuple has more than one candidate into which the given value fits")
+            has_main = True
+        if not has_main:
+            raise CoerceError(value, ty, "could not coerce value to any of the tuple elements")
+        return tuple(elements)
 
     # repeat a punctuated type
     if isinstance(value, int) and origin is Punctuated:
@@ -315,7 +337,7 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
         sep_ty = _get(args, 1, Any)
         out = Punctuated()
         for element in value:
-            new_el, new_sep = coerce(element, tuple[el_ty, sep_ty | None], True)
+            new_el, new_sep = coerce(element, tuple[el_ty, sep_ty | None])
             if new_sep is not None:
                 out.append(new_el, new_sep)
             else:
@@ -329,9 +351,9 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
         sep_ty = _get(args, 1, Any)
         out = Punctuated()
         for element, separator in value:
-            new_element = coerce(element, el_ty, True)
+            new_element = coerce(element, el_ty)
             if separator is not None:
-                new_separator = coerce(separator, sep_ty, True)
+                new_separator = coerce(separator, sep_ty)
                 out.append(new_element, new_separator)
             else:
                 out.append_final(new_element)
@@ -347,9 +369,9 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
     if type(value) is list and origin is list:
         args = typing.get_args(ty)
         el_ty = _get(args, 0, Any)
-        return [ coerce(element, el_ty, True) for element in value ]
+        return [ coerce(element, el_ty) for element in value ]
 
-    raise CoerceError(value, ty)
+    raise CoerceError(value, ty, "no rules were able to coerce the given value into the given type")
 
 class BaseSyntax:
 
