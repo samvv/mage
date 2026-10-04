@@ -381,17 +381,48 @@ class BaseSyntax:
         self.parent: BaseSyntax | None = None
         self._prev_sibling: BaseSyntax | Literal[False] | None = False
         self._next_sibling: BaseSyntax | Literal[False] | None = False
+
         hints = typing.get_type_hints(self.__class__)
-        to_visit = list(hints)
+
+        # parse keyword arguments first
         for name, value in kwargs.items():
+            if name not in hints:
+                raise TypeError(f"keyword argument '{name}' does not name a field in {self.__class__.__name__}")
             setattr(self, name, coerce(value, hints[name]))
-            to_visit.remove(name)
-        for arg in args:
-            name = to_visit[0]
+
+        opt = []
+
+        k = 0
+        for name in hints:
+            if name in kwargs:
+                continue
+            ty = hints[name]
+            if _is_default_constructible(ty):
+                # defer optional arguments till after required arguments are parsed
+                opt.append(name)
+            else:
+                # parse a positional required arg
+                if k >= len(args):
+                    raise TypeError(f"expected a value for required argument '{name}' in {self.__class__.__name__}")
+                arg = args[k]
+                k += 1
+                setattr(self, name, coerce(arg, hints[name]))
+
+        l = 0
+        while k < len(args):
+            if l >= len(opt):
+                raise TypeError(f"excess positional arguments provided to {self.__class__.__name__}: {', '.join(args[k:])}")
+            name = opt[l]
+            l += 1
+            arg = args[k]
+            k += 1
             setattr(self, name, coerce(arg, hints[name]))
-            to_visit.remove(name)
-        for name in to_visit:
-            setattr(self, name, coerce(None, hints[name]))
+
+        # initialize omitted arguments with their defaults
+        while l < len(opt):
+            name = opt[l]
+            l += 1
+            setattr(self, name, _construct_default(hints[name]))
 
     def derive(self, **kwargs) -> Self:
         fields = self.get_fields()

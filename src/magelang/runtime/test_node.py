@@ -33,6 +33,16 @@ def test_construct_kwarg_before_arg():
     assert(f.bar == 'blabla')
     assert(f.bax is True)
 
+def test_construct_required_before_optional():
+
+    class Foo(BaseNode):
+        opt: int | None
+        req: str
+
+    foo = Foo('req')
+    assert(foo.opt is None)
+    assert(foo.req == 'req')
+
 def test_construct_optional_none():
 
     class Foo(BaseNode):
