@@ -133,15 +133,16 @@ def treespec_to_python(
         init_params: list[PyParam] = []
         init_body: list[PyStmt] = []
 
-
         for field in spec.fields:
-            default = None
-            if is_py_default_constructible(field.ty, specs=specs):
-                default = make_py_default_constructor(field.ty, specs=specs, prefix=prefix)
+            # default = None
+            # if is_py_default_constructible(field.ty, specs=specs):
+            #     # FIXME
+            #     default = PyCallExpr(PyNamedExpr('Field'), args=[ PyKeywordArg('default_factory', PyNamedExpr(f'lambda: {emit(make_py_default_constructor(field.ty, specs=specs, prefix=prefix))}')) ])
             class_body.append(PyAssignStmt(
                 PyNamedPattern(field.name),
                 annotation=quote_py_type(treespec_type_to_py_type(field.ty, prefix=prefix)),
-                value=default))
+                # value=default,
+            ))
 
         stmts.append(PyClassDef(name=this_class_name, bases=[ PyClassBaseArg(base_node_class_name) ], body=class_body))
 

@@ -250,13 +250,12 @@ def coerce(value: Any, ty: Type, forbid_default: bool = False) -> Any:
     # construct a node or token from its single field
     if inspect.isclass(origin) and (issubclass(origin, BaseToken) or issubclass(origin, BaseNode)):
         hints = typing.get_type_hints(origin)
-        defaults = get_default_values(origin)
-        required = {}
+        required = []
         for field_name, field_ty in hints.items():
-            if field_name not in defaults:
-                required[field_name] = field_ty
+            if not _is_default_constructible(field_ty):
+                required.append((field_name, field_ty))
         if len(required) == 1:
-            field_name, field_ty = next(iter(required.items()))
+            field_name, field_ty = required.pop()
             kwargs = {
                 field_name: coerce(value, field_ty),
             }
