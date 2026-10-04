@@ -15,6 +15,7 @@ __all__ = [
     'BaseNode',
     'BaseToken',
     'Metadata',
+    'Required',
 ]
 
 type Type = Any
@@ -39,6 +40,12 @@ def _is_default_constructible(ty: Type) -> bool:
     if _is_optional(ty):
         return True
     cls = typing.get_origin(ty) or ty
+    if cls is Annotated:
+        real_ty, *anns = typing.get_args(ty)
+        for ann in anns:
+            if isinstance(ann, Required):
+                return False
+        return _is_default_constructible(real_ty)
     if not inspect.isclass(cls):
         return False
     if issubclass(cls, BaseSyntax):
@@ -233,6 +240,10 @@ def preorder_with_paths(root: Any, expand: ExpandFn = expand, path: list[Any] | 
 class Metadata:
     isinstance_check: Callable[[Any], bool] | None = None
 
+@dataclass
+class Required:
+    pass
+
 def coerce(value: Any, ty: Type) -> Any:
 
     # short-circuit on the case where value is already a ty
@@ -382,7 +393,7 @@ class BaseSyntax:
         self._prev_sibling: BaseSyntax | Literal[False] | None = False
         self._next_sibling: BaseSyntax | Literal[False] | None = False
 
-        hints = typing.get_type_hints(self.__class__)
+        hints = typing.get_type_hints(self.__class__, include_extras=True)
 
         # parse keyword arguments first
         for name, value in kwargs.items():

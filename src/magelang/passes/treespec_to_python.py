@@ -54,6 +54,7 @@ def treespec_to_python(
             'ImmutablePunct',
             'Span',
             'Metadata',
+            'Required',
         ]),
         # PyClassDef(base_syntax_class_name, bases=[ PyClassBaseArg('BaseSyntax') ], body=[
         #     PyPassStmt(),
@@ -123,6 +124,12 @@ def treespec_to_python(
 
     # Generate node classes
 
+    def gen_py_field_type(field: Field) -> PyExpr:
+        out = quote_py_type(treespec_type_to_py_type(field.ty, prefix=prefix))
+        if (isinstance(field.ty, ListType) or isinstance(field.ty, PunctType)) and field.ty.required:
+            out = PySubscriptExpr(PyNamedExpr('Annotated'), [ out, PyCallExpr(PyNamedExpr('Required')) ])
+        return out
+
     for spec in specs.elements:
 
         if not isinstance(spec, NodeSpec):
@@ -142,7 +149,7 @@ def treespec_to_python(
             #     default = PyCallExpr(PyNamedExpr('Field'), args=[ PyKeywordArg('default_factory', PyNamedExpr(f'lambda: {emit(make_py_default_constructor(field.ty, specs=specs, prefix=prefix))}')) ])
             class_body.append(PyAssignStmt(
                 PyNamedPattern(field.name),
-                annotation=quote_py_type(treespec_type_to_py_type(field.ty, prefix=prefix)),
+                annotation=gen_py_field_type(field),
                 # value=default,
             ))
 
