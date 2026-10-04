@@ -36,6 +36,8 @@ def _get[T](seq: Sequence[T], index: int, default: T) -> T:
     return default if index >= len(seq) or index < 0 else seq[index]
 
 def _is_default_constructible(ty: Type) -> bool:
+    if _is_optional(ty):
+        return True
     cls = typing.get_origin(ty) or ty
     if not inspect.isclass(cls):
         return False
