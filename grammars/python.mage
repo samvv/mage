@@ -166,6 +166,7 @@ pub expr
   | generator_expr
   | if_expr
   | infix_expr
+  | lambda_expr
   | list_expr
   | named_expr
   | nest_expr
@@ -223,6 +224,9 @@ pub keyword_arg
 
 pub call_expr
   = operator:expr '(' args:(arg % ',')  ')'
+
+pub lambda_expr
+  = 'lambda' params:(pattern % ',') ':' expr
 
 pub prefix_op
   = 'not'
