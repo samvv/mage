@@ -5,7 +5,7 @@ from types import UnionType, NoneType
 import typing
 from typing import Any, Literal, Self, TypeAliasType, Annotated, Callable
 import inspect
-from functools import cached_property
+from functools import cached_property, lru_cache
 
 from magelang.runtime.collections import Punctuated
 from magelang.runtime.text import Span
@@ -25,46 +25,79 @@ class CoerceError(RuntimeError):
     def __init__(self, value: Any, ty: Type, message: str | None) -> None:
         super().__init__(f"failed to coerce {repr(value)} to {ty}: {message}")
 
-def get_default_values(cls) -> dict[str, Any]:
-    boring = dir(type('dummy', (object,), {}))
-    d = {}
-    for name, value in inspect.getmembers(cls):
-        if not name.startswith('_') and not callable(value) and name not in boring and not isinstance(value, property):
-            d[name] = value
-    return d
+# def get_default_values(cls) -> dict[str, Any]:
+#     boring = dir(type('dummy', (object,), {}))
+#     d = {}
+#     for name, value in inspect.getmembers(cls):
+#         if not name.startswith('_') and not callable(value) and name not in boring and not isinstance(value, property):
+#             d[name] = value
+#     return d
 
 def _get[T](seq: Sequence[T], index: int, default: T) -> T:
     return default if index >= len(seq) or index < 0 else seq[index]
 
+@lru_cache
 def _is_default_constructible(ty: Type) -> bool:
-    if _is_optional(ty):
+    if ty is None or ty is NoneType:
         return True
-    cls = typing.get_origin(ty) or ty
-    if cls is Annotated:
-        real_ty, *anns = typing.get_args(ty)
-        for ann in anns:
-            if isinstance(ann, Required):
+    origin = typing.get_origin(ty) or ty
+    if origin is Annotated:
+        real_ty, *annotations = typing.get_args(ty)
+        for annotation in annotations:
+            if isinstance(annotation, Required):
                 return False
         return _is_default_constructible(real_ty)
-    if not inspect.isclass(cls):
+    if origin is UnionType or origin is typing.Union:
+        args = typing.get_args(ty)
+        for arg in reversed(args):
+            if _is_default_constructible(arg):
+                return True
         return False
-    if issubclass(cls, BaseSyntax):
-        for field_ty in typing.get_type_hints(cls).values():
+    if not inspect.isclass(origin):
+        return False
+    if issubclass(origin, BaseSyntax):
+        for field_ty in typing.get_type_hints(origin).values():
             if not _is_default_constructible(field_ty):
                 return False
         return True
-    if issubclass(cls, tuple):
+    if issubclass(origin, tuple):
         args = typing.get_args(ty)
         for arg in args:
             if not _is_default_constructible(arg):
                 return False
         return True
-    if issubclass(cls, list) or issubclass(cls, Punctuated):
+    if issubclass(origin, list) or issubclass(origin, Punctuated):
         return True
     return False
 
+class ConstructError(RuntimeError):
+    pass
+
 def _construct_default(ty: Type) -> Any:
-    return None if _is_optional(ty) else ty()
+    """
+    Construct the default value for a given type.
+
+    For union types, this method will attempt to try each member type from left to right.
+    """
+    if ty is None or ty is NoneType:
+        return None
+    origin = typing.get_origin(ty) or ty
+    if origin is UnionType or origin is typing.Union:
+        args = typing.get_args(ty)
+        for arg in reversed(args):
+            if _is_default_constructible(arg):
+                return _construct_default(arg)
+        raise ConstructError()
+    if type(ty) is TypeAliasType:
+        return _construct_default(ty.__value__)
+    assert(inspect.isclass(origin))
+    if issubclass(origin, BaseSyntax):
+        return origin()
+    classes = [ list, Punctuated ]
+    for cls in classes:
+        if issubclass(origin, cls):
+            return ty()
+    raise ConstructError()
 
 def _is_optional(ty: Type) -> bool:
     if ty is NoneType:
@@ -236,155 +269,263 @@ def preorder_with_paths(root: Any, expand: ExpandFn = expand, path: list[Any] | 
         for (key, value) in expand(node):
             stack.append((path + [ key ], value))
 
-@dataclass
+@dataclass(frozen=True)
 class Metadata:
     isinstance_check: Callable[[Any], bool] | None = None
 
-@dataclass
+@dataclass(frozen=True)
 class Required:
     pass
 
+def ident[T](x: T) -> T: return x
+
+def const[T](x: T) -> Callable[..., T]:
+    def proc(*args, **kwargs):
+        return x
+    return proc
+
 def coerce(value: Any, ty: Type) -> Any:
+    proc = coercer(type(value), ty)
+    return proc(value)
 
-    # short-circuit on the case where value is already a ty
-    if inspect.isclass(ty) and isinstance(value, ty):
-        return value
+@lru_cache
+def coercer(src: Type, dst: Type) -> Callable[[Any], Any]:
+    """
+    Compile a function that can coerce a value of a source type to a destination type.
 
-    # coercing to any always succeeds
-    if ty is Any:
-        return value
+    Special annotations may modifiy the behavior of this function.
 
-    # cover the cases where the value is `None`
-    if value is None:
-        if _is_optional(ty):
-            return None
-        if _is_default_constructible(ty):
-            return _construct_default(ty)
-        raise CoerceError(value, ty, "type does not allow None and is also not default-constructible")
+    In the absence of type hints, this function will compile a dynamic function
+    that inspects the type at runtime. This should be considered an implementation detail.
+    """
 
-    # resolve type aliases
-    if type(ty) is TypeAliasType:
-        return coerce(value, ty.__value__)
+    visited = set()
 
-    # process annotated types
-    if typing.get_origin(ty) is Annotated:
-        ty, *annotations= typing.get_args(ty)
-        for annotation in annotations:
-            if isinstance(annotation, Metadata) and annotation.isinstance_check is not None and annotation.isinstance_check(value):
-                return value
+    def proc(src: Type, dst: Type) -> Callable[[Any], Any]:
 
-    origin = typing.get_origin(ty) or ty
+        key = (src, dst)
+        if key in visited:
+            raise CoerceError(src, dst, "infinite recursion")
+        visited.add((src, dst))
 
-    # try all element types in a union type
-    if origin is typing.Union or origin is UnionType:
-        args = typing.get_args(ty)
-        for arg in args:
-            try:
-                return coerce(value, arg)
-            except CoerceError:
-                pass
-        raise CoerceError(value, ty, "could not coerce to any of the union elements")
+        # process annotated types
+        if typing.get_origin(src) is Annotated:
+            src, *annotations= typing.get_args(src)
+        if typing.get_origin(dst) is Annotated:
+            dst, *annotations= typing.get_args(dst)
 
-    # all special types should be handled by now
-    # assert(inspect.isclass(origin))
+        # short-circuit on the case where src is already a dst
+        if inspect.isclass(dst) and issubclass(src, dst):
+            return ident
 
-    # construct a node or token from its single field
-    if inspect.isclass(origin) and (issubclass(origin, BaseToken) or issubclass(origin, BaseNode)):
-        hints = typing.get_type_hints(origin)
-        required = []
-        for field_name, field_ty in hints.items():
-            if not _is_default_constructible(field_ty):
-                required.append((field_name, field_ty))
-        if len(required) == 1:
-            field_name, field_ty = required.pop()
-            kwargs = {
-                field_name: coerce(value, field_ty),
-            }
-            return origin(**kwargs)
+        # coercing to any always succeeds
+        if dst is Any:
+            return ident
 
-    # map coercion over a tuple type
-    if type(value) is tuple and origin is tuple:
-        args = typing.get_args(ty)
-        new_elements = []
-        for i, element in enumerate(value):
-            new_elements.append(coerce(element, args[i]))
-        return tuple(new_elements)
+        # cover the cases where the value is `None`
+        if src is None or src is NoneType:
+            if _is_optional(dst):
+                return const(None)
+            if _is_default_constructible(dst):
+                return lambda _: _construct_default(dst)
+            raise CoerceError(src, dst, "type does not allow None and is also not default-constructible")
 
-    # construct a tuple when there is only one required type
-    if origin is tuple:
-        args = typing.get_args(ty)
-        elements = []
-        has_main = False
-        for arg in args:
-            try:
-                elements.append(coerce(value, arg))
-            except CoerceError:
-                if not _is_default_constructible(arg):
-                    raise CoerceError(value, arg, f"the element {arg} of the tuple should be default-constructible")
-                elements.append(_construct_default(arg))
-                continue
-            if has_main:
-                raise CoerceError(value, ty, "tuple has more than one candidate into which the given value fits")
-            has_main = True
-        if not has_main:
-            raise CoerceError(value, ty, "could not coerce value to any of the tuple elements")
-        return tuple(elements)
+        if dst is None:
+            raise CoerceError(src, dst, "cannot coerce non-null source type to None")
 
-    # repeat a punctuated type
-    if isinstance(value, int) and origin is Punctuated:
-        p = Punctuated()
-        args = typing.get_args(ty)
-        el_ty = _get(args, 0, Any)
-        sep_ty = _get(args, 1, Any)
-        for _ in range(value-1):
-            p.append(
-                _construct_default(el_ty),
-                _construct_default(sep_ty)
-            )
-        p.append_final(_construct_default(el_ty))
+        # resolve type aliases
+        if type(dst) is TypeAliasType:
+            return proc(src, dst.__value__)
 
-    # coerce list to a punctuated type
-    if type(value) is list and origin is Punctuated:
-        args = typing.get_args(ty)
-        el_ty = _get(args, 0, Any)
-        sep_ty = _get(args, 1, Any)
-        out = Punctuated()
-        for element in value:
-            new_el, new_sep = coerce(element, tuple[el_ty, sep_ty | None])
-            if new_sep is not None:
-                out.append(new_el, new_sep)
-            else:
-                out.append_final(new_el)
-        return out
+        src_origin = typing.get_origin(src) or src
+        dst_origin = typing.get_origin(dst) or dst
 
-    # map coercion over a punctuated type
-    if type(value) is Punctuated and origin is Punctuated:
-        args = typing.get_args(ty)
-        el_ty = _get(args, 0, Any)
-        sep_ty = _get(args, 1, Any)
-        out = Punctuated()
-        for element, separator in value:
-            new_element = coerce(element, el_ty)
-            if separator is not None:
-                new_separator = coerce(separator, sep_ty)
-                out.append(new_element, new_separator)
-            else:
-                out.append_final(new_element)
-        return out
+        # try all element types in a union type
+        if dst_origin is typing.Union or dst_origin is UnionType:
+            args = typing.get_args(dst)
+            for arg in args:
+                try:
+                    return proc(src, arg)
+                except CoerceError:
+                    pass
+            raise CoerceError(src, dst, f"could not coerce {src} to any of the union elements in {dst}")
 
-    # repeat a list type
-    if isinstance(value, int) and origin is list:
-        args = typing.get_args(ty)
-        el_ty = _get(args, 0, Any)
-        return [ _construct_default(el_ty) for _ in range(value) ]
+        # all special types should be handled by now
+        assert(inspect.isclass(dst_origin))
 
-    # map coercion over a list
-    if type(value) is list and origin is list:
-        args = typing.get_args(ty)
-        el_ty = _get(args, 0, Any)
-        return [ coerce(element, el_ty) for element in value ]
+        # construct a node or token from its single field
+        if issubclass(dst_origin, BaseSyntax):
+            hints = typing.get_type_hints(dst_origin)
+            required = []
+            for field_name, field_ty in hints.items():
+                print(field_name, field_ty, _is_default_constructible(field_ty))
+                if not _is_default_constructible(field_ty):
+                    required.append((field_name, field_ty))
+            print(dst_origin, required)
+            if len(required) == 1:
+                field_name, field_ty = required[0]
+                coerce_field = proc(src, field_ty)
+                def apply(value):
+                    return dst_origin(**{
+                        field_name: coerce_field(value),
+                    })
+                return apply
 
-    raise CoerceError(value, ty, "no rules were able to coerce the given value into the given type")
+        # map coercion over a tuple type
+        if src_origin is tuple and dst_origin is tuple:
+            src_args = typing.get_args(src)
+            dst_args = typing.get_args(dst)
+            if len(dst_args) == 0:
+                return ident
+            if len(src_args) == 0:
+                def apply(value):
+                    assert(len(value) == len(dst_args))
+                    return tuple(coerce(element, ty) for element, ty in zip(value, dst_args))
+                return apply
+            if len(src_args) != len(dst_args):
+                raise CoerceError(src, dst, f"tuple types are not of equal size")
+            el_coercers = [ proc(arg_1, arg_2) for arg_1, arg_2 in zip(src_args, dst_args) ]
+            def apply(value):
+                assert(len(value) == len(el_coercers))
+                return tuple(el_coercers[i](value[i]) for i in range(len(el_coercers)))
+            return apply
+
+        # construct a tuple when there is only one required element
+        if dst_origin is tuple:
+            args = typing.get_args(dst)
+            k = None
+            for i, arg in enumerate(args):
+                try:
+                    print(src, arg)
+                    coerce_main = proc(src, arg)
+                except CoerceError:
+                    if not _is_default_constructible(arg):
+                        raise CoerceError(src, arg, f"the element {arg} of the tuple should be default-constructible")
+                    continue
+                if k:
+                    raise CoerceError(src, dst, "tuple has more than one candidate into which the given value fits")
+                k = i
+            if k is not None:
+                def apply(value):
+                    return tuple(coerce_main(value) if i == k else _construct_default(args[i]) for i in range(len(args)))
+                return apply
+            # raise CoerceError(src, dst, "could not coerce value to any of the tuple elements")
+
+        # repeat a punctuated type
+        if issubclass(src_origin, int) and dst_origin is Punctuated:
+            args = typing.get_args(dst)
+            item_ty = _get(args, 0, Any)
+            sep_ty = _get(args, 1, Any)
+            def apply(value):
+                out = Punctuated()
+                for _ in range(value-1):
+                    out.append(
+                        _construct_default(item_ty),
+                        _construct_default(sep_ty)
+                    )
+                out.append_final(_construct_default(item_ty))
+                return out
+            return apply
+
+        # coerce list to a punctuated type
+        if issubclass(src_origin, list) and dst_origin is Punctuated:
+            src_args = typing.get_args(src)
+            dst_args = typing.get_args(dst)
+            src_el_ty = _get(src_args, 0, Any)
+            dst_item_ty = _get(dst_args, 0, Any)
+            dst_sep_ty = _get(dst_args, 1, Any)
+            if len(src_args) == 0:
+                def apply(value):
+                    out = Punctuated()
+                    last = len(value)-1
+                    for i, element in enumerate(value):
+                        if i == last:
+                            new_item, _new_sep = coerce(element, tuple[dst_item_ty, None])
+                            out.append_final(new_item)
+                        else:
+                            new_item, new_sep = coerce(element, tuple[dst_item_ty, dst_sep_ty])
+                            out.append(new_item, new_sep)
+                    return out
+                return apply
+            coerce_mid = proc(src_el_ty, tuple[dst_item_ty, dst_sep_ty])
+            coerce_final = proc(src_el_ty, tuple[dst_item_ty, None])
+            def apply(value):
+                out = Punctuated()
+                last = len(value)-1
+                for i, element in enumerate(value):
+                    if i == last:
+                        new_item = coerce_final(element)
+                        out.append_final(new_item)
+                    else:
+                        new_item, new_sep = coerce_mid(element)
+                        out.append(new_item, new_sep)
+                return out
+            return apply
+
+        # map coercion over a punctuated type
+        if issubclass(src_origin, Punctuated) and dst_origin is Punctuated:
+            src_args = typing.get_args(src)
+            dst_args = typing.get_args(dst)
+            src_el_ty = _get(src_args, 0, Any)
+            src_sep_ty = _get(src_args, 1, Any)
+            dst_item_ty = _get(dst_args, 0, Any)
+            dst_sep_ty = _get(dst_args, 1, Any)
+            if len(dst_args) == 0:
+                return ident
+            if len(src_args) == 0:
+                def apply(value):
+                    out = Punctuated()
+                    for item, separator in value:
+                        new_item = coerce(item, dst_item_ty)
+                        if separator is not None:
+                            new_separator = coerce(separator, dst_sep_ty)
+                            out.append(new_item, new_separator)
+                        else:
+                            out.append_final(new_item)
+                    return out
+                return apply
+            coerce_item = proc(src_el_ty, dst_item_ty)
+            coerce_separator = proc(src_sep_ty, dst_sep_ty)
+            def apply(value):
+                out = Punctuated()
+                for item, separator in value:
+                    new_item = coerce_item(item)
+                    if separator is not None:
+                        new_separator = coerce_separator(separator)
+                        out.append(new_item, new_separator)
+                    else:
+                        out.append_final(new_item)
+                return out
+            return apply
+
+        # repeat a list type
+        if issubclass(src_origin, int) and dst_origin is list:
+            args = typing.get_args(dst)
+            el_ty = _get(args, 0, Any)
+            def apply(value):
+                return [ _construct_default(el_ty) for _ in range(value) ]
+            return apply
+
+        # map coercion over a list
+        if issubclass(src_origin, list) and dst_origin is list:
+            src_args = typing.get_args(src)
+            dst_args = typing.get_args(dst)
+            src_el_ty = _get(src_args, 0, Any)
+            dst_el_ty = _get(dst_args, 0, Any)
+            if len(dst_args) == 0:
+                return ident
+            if len(src_args) == 0:
+                def apply(value):
+                    return [ coerce(element, dst_el_ty) for element in value ]
+                return apply
+            coerce_element = proc(src_el_ty, dst_el_ty)
+            def apply(value):
+                return [ coerce_element(element) for element in value ]
+            return apply
+
+        raise CoerceError(src, dst, f"no rules were able to coerce into the target type")
+
+    return proc(src, dst)
 
 class BaseSyntax:
 
