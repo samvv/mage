@@ -356,17 +356,20 @@ def coercer(src: Type, dst: Type) -> Callable[[Any], Any]:
         # construct a node or token from its single field
         if issubclass(dst_origin, BaseSyntax):
             hints = typing.get_type_hints(dst_origin)
-            required = []
+            main_field_name = None
             for field_name, field_ty in hints.items():
-                if not _is_default_constructible(field_ty):
-                    required.append((field_name, field_ty))
-            if len(required) == 1:
-                field_name, field_ty = required[0]
-                coerce_field = proc(src, field_ty)
+                try:
+                    coerce_main = proc(src, field_ty)
+                except CoerceError:
+                    if not _is_default_constructible(field_ty):
+                        raise CoerceError(src, field_ty, f"the field '{field_name}' of the syntax object should be default-constructible")
+                    continue
+                if main_field_name is not None:
+                    raise CoerceError(src, dst, "syntax object has more than one field into which the given value fits")
+                main_field_name = field_name
+            if main_field_name is not None:
                 def apply(value):
-                    return dst_origin(**{
-                        field_name: coerce_field(value),
-                    })
+                    return dst_origin(**{ main_field_name: coerce_main(value) })
                 return apply
 
         # map coercion over a tuple type
@@ -391,21 +394,24 @@ def coercer(src: Type, dst: Type) -> Callable[[Any], Any]:
         # construct a tuple when there is only one required element
         if dst_origin is tuple:
             args = typing.get_args(dst)
-            k = None
+            main_index = None
             for i, arg in enumerate(args):
                 try:
-                    print(src, arg)
                     coerce_main = proc(src, arg)
                 except CoerceError:
                     if not _is_default_constructible(arg):
-                        raise CoerceError(src, arg, f"the element {arg} of the tuple should be default-constructible")
+                        main_index = None
+                        break
+                        # raise CoerceError(src, dst, f"the element {arg} of the tuple should be default-constructible")
                     continue
-                if k:
-                    raise CoerceError(src, dst, "tuple has more than one candidate into which the given value fits")
-                k = i
-            if k is not None:
+                if main_index is not None:
+                    main_index = None
+                    break
+                    # raise CoerceError(src, dst, "tuple has more than one candidate into which the given value fits")
+                main_index = i
+            if main_index is not None:
                 def apply(value):
-                    return tuple(coerce_main(value) if i == k else _construct_default(args[i]) for i in range(len(args)))
+                    return tuple(coerce_main(value) if i == main_index else _construct_default(args[i]) for i in range(len(args)))
                 return apply
             # raise CoerceError(src, dst, "could not coerce value to any of the tuple elements")
 
