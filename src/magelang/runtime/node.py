@@ -358,10 +358,8 @@ def coercer(src: Type, dst: Type) -> Callable[[Any], Any]:
             hints = typing.get_type_hints(dst_origin)
             required = []
             for field_name, field_ty in hints.items():
-                print(field_name, field_ty, _is_default_constructible(field_ty))
                 if not _is_default_constructible(field_ty):
                     required.append((field_name, field_ty))
-            print(dst_origin, required)
             if len(required) == 1:
                 field_name, field_ty = required[0]
                 coerce_field = proc(src, field_ty)
