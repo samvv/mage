@@ -11,7 +11,7 @@ any_token_rule_name = 'token'
 def mage_insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
 
     new_elements = list(grammar.elements)
-    syntax_rules = []
+    syntax_rules = list[MageExpr]()
 
     keyword_rules = list[MageExpr](MageRefExpr(rule.name) for rule in grammar.rules if rule.is_keyword)
     if keyword_rules:
