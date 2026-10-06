@@ -153,9 +153,6 @@ def emit_token(node: PyToken) -> str:
     if isinstance(node, PyImportKeyword):
         return 'import'
 
-    if isinstance(node, PyHashtag):
-        return '#'
-
     if isinstance(node, PyVerticalBar):
         return '|'
 
@@ -212,9 +209,6 @@ def emit_token(node: PyToken) -> str:
 
     if isinstance(node, PyEqualsEquals):
         return '=='
-
-    if isinstance(node, PySemicolon):
-        return ';'
 
     if isinstance(node, PyNonlocalKeyword):
         return 'nonlocal'
