@@ -31,11 +31,14 @@ def mage_to_treespec(
                     visit(element)
                 return
             if isinstance(expr, MageSeqExpr):
-                names = []
-                types = list()
+                names = list[str]()
+                types = list[Type]()
                 for element in expr.elements:
+                    ty = infer_type(element, grammar)
+                    if is_unit_type(ty):
+                        continue
                     names.append(get_variant_name(element, len(out)))
-                    types.append(infer_type(element, grammar))
+                    types.append(ty)
                 out.append(Variant('_'.join(names), TupleType(types)))
                 return
             out.append(Variant(get_variant_name(expr, len(out)), infer_type(expr, grammar)))
