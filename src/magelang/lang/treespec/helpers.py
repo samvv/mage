@@ -200,6 +200,17 @@ def expand_variant_types(ty: Type, *, specs: Specs) -> Type:
         return rewrite_each_child_type(ty, rewriter)
     return rewriter(ty)
 
+def expand_variant_type(ty: Type, *, specs: Specs):
+    if not isinstance(ty, SpecType):
+        yield ty
+        return
+    spec = lookup_spec(specs, ty.name)
+    if not isinstance(spec, EnumSpec):
+        yield ty
+        return
+    for variant in spec.members:
+        yield variant.ty
+
 def resolve_type_references(ty: Type, *, specs: Specs) -> Type:
     if isinstance(ty, SpecType):
         spec = lookup_spec(specs, ty.name)
@@ -222,7 +233,20 @@ def is_type_assignable(left: Type, right: Type, *, specs: Specs) -> bool:
     if isinstance(left, ExternType) and isinstance(right, ExternType):
         return left.name == right.name
     if isinstance(left, SpecType) and isinstance(right, SpecType):
-        return left.name == right.name
+        if left.name == right.name:
+            return True
+        left_spec = lookup_spec(specs, left.name)
+        right_spec = lookup_spec(specs, right.name)
+        has_enum = False
+        if isinstance(left_spec, EnumSpec):
+            left = UnionType(list(expand_variant_type(left, specs=specs)))
+            has_enum = True
+        if isinstance(right_spec, EnumSpec):
+            right = UnionType(list(expand_variant_type(right, specs=specs)))
+            has_enum = True
+        if has_enum:
+            return is_type_assignable(left, right, specs=specs)
+        return False
     if isinstance(left, ListType) and isinstance(right, ListType):
         return is_type_assignable(left.element_type, right.element_type, specs=specs)
     if isinstance(left, PunctType) and isinstance(right, ListType):
@@ -242,7 +266,10 @@ def is_type_assignable(left: Type, right: Type, *, specs: Specs) -> bool:
     return False
 
 
-def expand_type(ty: Type):
+def get_child_types(ty: Type):
+    """
+    Get the all the types that are direct children of the given type.
+    """
     if isinstance(ty, ListType):
         yield ty.element_type
     elif isinstance(ty, PunctType):
@@ -258,12 +285,12 @@ def expand_type(ty: Type):
 
 def contains_type(ty: Type, target: Type, *, specs: Specs) -> bool:
     """
-    Check whether any part `ty` is assignable to `target`.
+    Check whether any part of `ty` is assignable to `target`.
     """
     if is_type_assignable(target, ty, specs=specs):
         return True
-    for ty_2 in expand_type(ty):
-        if contains_type(ty_2, target, specs=specs):
+    for child in get_child_types(ty):
+        if contains_type(child, target, specs=specs):
             return True
     return False
 
@@ -311,7 +338,7 @@ def is_self_referential(name: str, *, specs: Specs, default: bool = False) -> bo
                 return any(check(member.ty) for member in spec.members)
             assert_never(spec)
 
-        for ty_2 in expand_type(ty):
+        for ty_2 in get_child_types(ty):
             if check(ty_2):
                 return True
 

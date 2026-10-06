@@ -239,11 +239,11 @@ def generate_files(
     if enable_cst:
         # TODO add local `enable_cst_parent_pointers`
         trees[fname_cst] = treespec_to_python
-        trees[fname_cst_defs] = treespec_to_python_interfaces
+        # trees[fname_cst_defs] = treespec_to_python_interfaces
     if enable_ast:
         # TODO add local `enable_ast_parent_pointers`
         trees[fname_ast] = pipeline(treespec_cst_to_ast, treespec_to_python)
-        trees[fname_ast_defs] = pipeline(treespec_cst_to_ast, treespec_to_python_interfaces)
+        # trees[fname_ast_defs] = pipeline(treespec_cst_to_ast, treespec_to_python_interfaces)
     if enable_emitter:
         files[fname_emitter] = pipeline(mage_prepare_grammar, mage_to_python_emitter)
     if enable_lexer:

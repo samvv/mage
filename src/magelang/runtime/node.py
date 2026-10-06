@@ -14,8 +14,6 @@ __all__ = [
     'BaseSyntax',
     'BaseNode',
     'BaseToken',
-    'Metadata',
-    'Required',
 ]
 
 type Type = Any
@@ -35,78 +33,6 @@ class CoerceError(RuntimeError):
 
 def _get[T](seq: Sequence[T], index: int, default: T) -> T:
     return default if index >= len(seq) or index < 0 else seq[index]
-
-@lru_cache
-def _is_default_constructible(ty: Type) -> bool:
-    if ty is None or ty is NoneType:
-        return True
-    origin = typing.get_origin(ty) or ty
-    if origin is Annotated:
-        real_ty, *annotations = typing.get_args(ty)
-        for annotation in annotations:
-            if isinstance(annotation, Required):
-                return False
-        return _is_default_constructible(real_ty)
-    if origin is UnionType or origin is typing.Union:
-        args = typing.get_args(ty)
-        for arg in reversed(args):
-            if _is_default_constructible(arg):
-                return True
-        return False
-    if not inspect.isclass(origin):
-        return False
-    if issubclass(origin, BaseSyntax):
-        for field_ty in typing.get_type_hints(origin).values():
-            if not _is_default_constructible(field_ty):
-                return False
-        return True
-    if issubclass(origin, tuple):
-        args = typing.get_args(ty)
-        for arg in args:
-            if not _is_default_constructible(arg):
-                return False
-        return True
-    if issubclass(origin, list) or issubclass(origin, Punctuated):
-        return True
-    return False
-
-class ConstructError(RuntimeError):
-    pass
-
-def _construct_default(ty: Type) -> Any:
-    """
-    Construct the default value for a given type.
-
-    For union types, this method will attempt to try each member type from left to right.
-    """
-    if ty is None or ty is NoneType:
-        return None
-    origin = typing.get_origin(ty) or ty
-    if origin is UnionType or origin is typing.Union:
-        args = typing.get_args(ty)
-        for arg in reversed(args):
-            if _is_default_constructible(arg):
-                return _construct_default(arg)
-        raise ConstructError()
-    if type(ty) is TypeAliasType:
-        return _construct_default(ty.__value__)
-    assert(inspect.isclass(origin))
-    if issubclass(origin, BaseSyntax):
-        return origin()
-    classes = [ list, Punctuated ]
-    for cls in classes:
-        if issubclass(origin, cls):
-            return ty()
-    raise ConstructError()
-
-def _is_optional(ty: Type) -> bool:
-    if ty is NoneType:
-        return True
-    origin = typing.get_origin(ty)
-    if origin is typing.Union or origin is UnionType:
-        args = typing.get_args(ty)
-        return any(_is_optional(arg) for arg in args)
-    return False
 
 def hasmethod(value: Any, name: str) -> bool:
     return hasattr(value, name) \
@@ -269,316 +195,14 @@ def preorder_with_paths(root: Any, expand: ExpandFn = expand, path: list[Any] | 
         for (key, value) in expand(node):
             stack.append((path + [ key ], value))
 
-@dataclass(frozen=True)
-class Metadata:
-    isinstance_check: Callable[[Any], bool] | None = None
-
-@dataclass(frozen=True)
-class Required:
-    pass
-
-def ident[T](x: T) -> T: return x
-
-def const[T](x: T) -> Callable[..., T]:
-    def proc(*args, **kwargs):
-        return x
-    return proc
-
-def coerce(value: Any, ty: Type) -> Any:
-    proc = coercer(type(value), ty)
-    return proc(value)
-
-@lru_cache
-def coercer(src: Type, dst: Type) -> Callable[[Any], Any]:
-    """
-    Compile a function that can coerce a value of a source type to a destination type.
-
-    Special annotations may modifiy the behavior of this function.
-
-    In the absence of type hints, this function will compile a dynamic function
-    that inspects the type at runtime. This should be considered an implementation detail.
-    """
-
-    visited = set()
-
-    def proc(src: Type, dst: Type) -> Callable[[Any], Any]:
-
-        key = (src, dst)
-        if key in visited:
-            raise CoerceError(src, dst, "infinite recursion")
-        visited.add((src, dst))
-
-        # process annotated types
-        if typing.get_origin(src) is Annotated:
-            src, *annotations= typing.get_args(src)
-        if typing.get_origin(dst) is Annotated:
-            dst, *annotations= typing.get_args(dst)
-
-        # short-circuit on the case where src is already a dst
-        if inspect.isclass(dst) and issubclass(src, dst):
-            return ident
-
-        # coercing to any always succeeds
-        if dst is Any:
-            return ident
-
-        # cover the cases where the value is `None`
-        if src is None or src is NoneType:
-            if _is_optional(dst):
-                return const(None)
-            if _is_default_constructible(dst):
-                return lambda _: _construct_default(dst)
-            raise CoerceError(src, dst, "type does not allow None and is also not default-constructible")
-
-        if dst is None:
-            raise CoerceError(src, dst, "cannot coerce non-null source type to None")
-
-        # resolve type aliases
-        if type(dst) is TypeAliasType:
-            return proc(src, dst.__value__)
-
-        src_origin = typing.get_origin(src) or src
-        dst_origin = typing.get_origin(dst) or dst
-
-        # try all element types in a union type
-        if dst_origin is typing.Union or dst_origin is UnionType:
-            args = typing.get_args(dst)
-            for arg in args:
-                try:
-                    return proc(src, arg)
-                except CoerceError:
-                    pass
-            raise CoerceError(src, dst, f"could not coerce {src} to any of the union elements in {dst}")
-
-        # all special types should be handled by now
-        assert(inspect.isclass(dst_origin))
-
-        # construct a node or token from its single field
-        if issubclass(dst_origin, BaseSyntax):
-            hints = typing.get_type_hints(dst_origin)
-            main_field_name = None
-            for field_name, field_ty in hints.items():
-                try:
-                    coerce_main = proc(src, field_ty)
-                except CoerceError:
-                    if not _is_default_constructible(field_ty):
-                        raise CoerceError(src, field_ty, f"the field '{field_name}' of the syntax object should be default-constructible")
-                    continue
-                if main_field_name is not None:
-                    raise CoerceError(src, dst, "syntax object has more than one field into which the given value fits")
-                main_field_name = field_name
-            if main_field_name is not None:
-                def apply(value):
-                    return dst_origin(**{ main_field_name: coerce_main(value) })
-                return apply
-
-        # map coercion over a tuple type
-        if src_origin is tuple and dst_origin is tuple:
-            src_args = typing.get_args(src)
-            dst_args = typing.get_args(dst)
-            if len(dst_args) == 0:
-                return ident
-            if len(src_args) == 0:
-                def apply(value):
-                    assert(len(value) == len(dst_args))
-                    return tuple(coerce(element, ty) for element, ty in zip(value, dst_args))
-                return apply
-            if len(src_args) != len(dst_args):
-                raise CoerceError(src, dst, f"tuple types are not of equal size")
-            el_coercers = [ proc(arg_1, arg_2) for arg_1, arg_2 in zip(src_args, dst_args) ]
-            def apply(value):
-                assert(len(value) == len(el_coercers))
-                return tuple(el_coercers[i](value[i]) for i in range(len(el_coercers)))
-            return apply
-
-        # construct a tuple when there is only one required element
-        if dst_origin is tuple:
-            args = typing.get_args(dst)
-            main_index = None
-            for i, arg in enumerate(args):
-                try:
-                    coerce_main = proc(src, arg)
-                except CoerceError:
-                    if not _is_default_constructible(arg):
-                        main_index = None
-                        break
-                        # raise CoerceError(src, dst, f"the element {arg} of the tuple should be default-constructible")
-                    continue
-                if main_index is not None:
-                    main_index = None
-                    break
-                    # raise CoerceError(src, dst, "tuple has more than one candidate into which the given value fits")
-                main_index = i
-            if main_index is not None:
-                def apply(value):
-                    return tuple(coerce_main(value) if i == main_index else _construct_default(args[i]) for i in range(len(args)))
-                return apply
-            # raise CoerceError(src, dst, "could not coerce value to any of the tuple elements")
-
-        # repeat a punctuated type
-        if issubclass(src_origin, int) and dst_origin is Punctuated:
-            args = typing.get_args(dst)
-            item_ty = _get(args, 0, Any)
-            sep_ty = _get(args, 1, Any)
-            def apply(value):
-                out = Punctuated()
-                for _ in range(value-1):
-                    out.append(
-                        _construct_default(item_ty),
-                        _construct_default(sep_ty)
-                    )
-                out.append_final(_construct_default(item_ty))
-                return out
-            return apply
-
-        # coerce list to a punctuated type
-        if issubclass(src_origin, list) and dst_origin is Punctuated:
-            src_args = typing.get_args(src)
-            dst_args = typing.get_args(dst)
-            src_el_ty = _get(src_args, 0, Any)
-            dst_item_ty = _get(dst_args, 0, Any)
-            dst_sep_ty = _get(dst_args, 1, Any)
-            if len(src_args) == 0:
-                def apply(value):
-                    out = Punctuated()
-                    last = len(value)-1
-                    for i, element in enumerate(value):
-                        if i == last:
-                            new_item, _new_sep = coerce(element, tuple[dst_item_ty, None])
-                            out.append_final(new_item)
-                        else:
-                            new_item, new_sep = coerce(element, tuple[dst_item_ty, dst_sep_ty])
-                            out.append(new_item, new_sep)
-                    return out
-                return apply
-            coerce_mid = proc(src_el_ty, tuple[dst_item_ty, dst_sep_ty])
-            coerce_final = proc(src_el_ty, tuple[dst_item_ty, None])
-            def apply(value):
-                out = Punctuated()
-                last = len(value)-1
-                for i, element in enumerate(value):
-                    if i == last:
-                        new_item = coerce_final(element)
-                        out.append_final(new_item)
-                    else:
-                        new_item, new_sep = coerce_mid(element)
-                        out.append(new_item, new_sep)
-                return out
-            return apply
-
-        # map coercion over a punctuated type
-        if issubclass(src_origin, Punctuated) and dst_origin is Punctuated:
-            src_args = typing.get_args(src)
-            dst_args = typing.get_args(dst)
-            src_el_ty = _get(src_args, 0, Any)
-            src_sep_ty = _get(src_args, 1, Any)
-            dst_item_ty = _get(dst_args, 0, Any)
-            dst_sep_ty = _get(dst_args, 1, Any)
-            if len(dst_args) == 0:
-                return ident
-            if len(src_args) == 0:
-                def apply(value):
-                    out = Punctuated()
-                    for item, separator in value:
-                        new_item = coerce(item, dst_item_ty)
-                        if separator is not None:
-                            new_separator = coerce(separator, dst_sep_ty)
-                            out.append(new_item, new_separator)
-                        else:
-                            out.append_final(new_item)
-                    return out
-                return apply
-            coerce_item = proc(src_el_ty, dst_item_ty)
-            coerce_separator = proc(src_sep_ty, dst_sep_ty)
-            def apply(value):
-                out = Punctuated()
-                for item, separator in value:
-                    new_item = coerce_item(item)
-                    if separator is not None:
-                        new_separator = coerce_separator(separator)
-                        out.append(new_item, new_separator)
-                    else:
-                        out.append_final(new_item)
-                return out
-            return apply
-
-        # repeat a list type
-        if issubclass(src_origin, int) and dst_origin is list:
-            args = typing.get_args(dst)
-            el_ty = _get(args, 0, Any)
-            def apply(value):
-                return [ _construct_default(el_ty) for _ in range(value) ]
-            return apply
-
-        # map coercion over a list
-        if issubclass(src_origin, list) and dst_origin is list:
-            src_args = typing.get_args(src)
-            dst_args = typing.get_args(dst)
-            src_el_ty = _get(src_args, 0, Any)
-            dst_el_ty = _get(dst_args, 0, Any)
-            if len(dst_args) == 0:
-                return ident
-            if len(src_args) == 0:
-                def apply(value):
-                    return [ coerce(element, dst_el_ty) for element in value ]
-                return apply
-            coerce_element = proc(src_el_ty, dst_el_ty)
-            def apply(value):
-                return [ coerce_element(element) for element in value ]
-            return apply
-
-        raise CoerceError(src, dst, f"no rules were able to coerce into the target type")
-
-    return proc(src, dst)
-
 class BaseSyntax:
 
+    _fields_: tuple[str, ...]
+
     def __init__(self, *args, **kwargs) -> None:
-        self.parent: BaseSyntax | None = None
+        self._parent: BaseSyntax | None = None
         self._prev_sibling: BaseSyntax | Literal[False] | None = False
         self._next_sibling: BaseSyntax | Literal[False] | None = False
-
-        hints = typing.get_type_hints(self.__class__, include_extras=True)
-
-        # parse keyword arguments first
-        for name, value in kwargs.items():
-            if name not in hints:
-                raise TypeError(f"keyword argument '{name}' does not name a field in {self.__class__.__name__}")
-            setattr(self, name, coerce(value, hints[name]))
-
-        opt = []
-
-        k = 0
-        for name in hints:
-            if name in kwargs:
-                continue
-            ty = hints[name]
-            if _is_default_constructible(ty):
-                # defer optional arguments till after required arguments are parsed
-                opt.append(name)
-            else:
-                # parse a positional required arg
-                if k >= len(args):
-                    raise TypeError(f"expected a value for required argument '{name}' in {self.__class__.__name__}")
-                arg = args[k]
-                k += 1
-                setattr(self, name, coerce(arg, hints[name]))
-
-        l = 0
-        while k < len(args):
-            if l >= len(opt):
-                raise TypeError(f"excess positional arguments provided to {self.__class__.__name__}: {', '.join(args[k:])}")
-            name = opt[l]
-            l += 1
-            arg = args[k]
-            k += 1
-            setattr(self, name, coerce(arg, hints[name]))
-
-        # initialize omitted arguments with their defaults
-        while l < len(opt):
-            name = opt[l]
-            l += 1
-            setattr(self, name, _construct_default(hints[name]))
 
     def derive(self, **kwargs) -> Self:
         fields = self.get_fields()
@@ -586,29 +210,33 @@ class BaseSyntax:
         return self.__class__(**fields)
 
     def get_fields(self) -> dict[str, Any]:
-        # TODO probably can be made faster
-        d = {}
-        for name in typing.get_type_hints(type(self)):
-            d[name] = getattr(self, name)
-        return d
+        out = {}
+        for name in self.keys():
+            out[name] = getattr(self, name)
+        return out
 
     def __getitem__(self, key: str) -> Any:
+        assert(key in self.keys())
         return getattr(self, key)
 
     def keys(self) -> Iterable[str]:
-        # TODO probably can be made faster
-        return self.get_fields().keys()
+        return self.__class__._fields_
+
+    def values(self) -> Iterable[Any]:
+        for name in self.keys():
+            yield getattr(self, name)
 
     def _expand(self) -> Iterable[tuple[str, Any]]:
-        return self.get_fields().items()
+        for name in self.keys():
+            yield name, getattr(self, name)
 
     def has_parent(self) -> bool:
-        return self.parent is not None
+        return self._parent is not None
 
     @cached_property
     def parent_path(self) -> list[int | str]:
-        assert(self.parent is not None)
-        for name, value in self.parent.get_fields().items():
+        assert(self._parent is not None)
+        for name, value in self._parent._expand():
             for path, node in preorder_with_paths(value, expand=_expand_no_syntax, path=[ name ]):
                 if node is self:
                     return path
@@ -620,7 +248,7 @@ class BaseSyntax:
         while True:
             assert(node.parent_path is not None)
             path.extend(reversed(node.parent_path))
-            node = node.parent
+            node = node._parent
             if node is None:
                 break
         path.reverse()
@@ -628,11 +256,11 @@ class BaseSyntax:
 
     def set_parents(self) -> None:
         for child in self.get_child_nodes():
-            child.parent = self
+            child._parent = self
             child.set_parents()
 
     def get_child_nodes(self) -> Iterable['BaseSyntax']:
-        for field_value in self.get_fields().values():
+        for field_value in self.values():
             for child in preorder(field_value, expand=_expand_no_syntax):
                 if isinstance(child, BaseSyntax):
                     yield child
@@ -655,11 +283,11 @@ class BaseSyntax:
             return self._prev_sibling
         path = self.parent_path
         while True:
-            path = decrement_key(self.parent, path, expand=_expand_no_syntax)
+            path = decrement_key(self._parent, path, expand=_expand_no_syntax)
             # `path` may be `None`, but also `[]`
             if not path:
                 return None
-            value = resolve(self.parent, path)
+            value = resolve(self._parent, path)
             if isinstance(value, BaseSyntax):
                 node = value
                 # while node.last_child:
@@ -677,7 +305,7 @@ class BaseSyntax:
         """
         if self._next_sibling != False:
             return self._next_sibling
-        node = self.parent
+        node = self._parent
         path = self.parent_path
         while True:
             if node is None:
@@ -712,7 +340,7 @@ class BaseToken(BaseSyntax):
 
     @cached_property
     def next_token(self) -> 'BaseToken | None':
-        curr = self.parent
+        curr = self._parent
         if curr is None:
             return
         path = self.parent_path
@@ -728,7 +356,7 @@ class BaseToken(BaseSyntax):
                     key, value = next(iter(expand(value)))
                     path.append(key)
                 continue
-            if curr.parent is None:
+            if curr._parent is None:
                 return
             path = curr.parent_path
-            curr = curr.parent
+            curr = curr._parent

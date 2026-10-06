@@ -213,7 +213,18 @@ pub list_expr
   = '[' elements:(expr % ',') ']'
 
 pub tuple_expr
-  = '(' elements:(expr % ',') ')'
+  = tuple_zero
+  | tuple_one
+  | tuple_many
+
+pub tuple_zero
+  = '(' ')'
+
+pub tuple_one
+  = '(' expr ',' ')'
+
+pub tuple_many
+  = '(' elements:(expr %%% ',') ')'
 
 pub arg
   = keyword_arg
