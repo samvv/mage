@@ -231,7 +231,7 @@ class Parser:
                 break
             i += 2
             t1 = self._peek_token(i)
-            if t1 == TT_LBRACE:
+            if t1.type == TT_LBRACE:
                 while True:
                     i += 1
                     t2 = self._peek_token()
