@@ -8,7 +8,6 @@ from magelang.manager import declare_pass
 @declare_pass()
 def mage_to_treespec(
     grammar: MageGrammar,
-    strong_enums: bool = False,
     include_hidden: bool = False
 ) -> Specs:
 
@@ -21,7 +20,7 @@ def mage_to_treespec(
 
     def get_variant_name(expr: MageExpr, i: int) -> str:
         name = get_field_name(expr)
-        return f'member_{i}'  if name is None else name
+        return f'member_{i}' if name is None else name
 
     def get_variants(expr: MageExpr) -> list[Variant]:
         out: list[Variant] = []
@@ -46,7 +45,7 @@ def mage_to_treespec(
         return out
 
     def get_field_members(expr: MageExpr) -> Iterable[Field]:
-        for expr, field in get_fields(expr, grammar, include_hidden=include_hidden):
+        for _expr, field in get_fields(expr, grammar, include_hidden=include_hidden):
             if field is not None:
                 yield field
 
