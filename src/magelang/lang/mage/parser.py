@@ -80,7 +80,7 @@ class Parser:
                 break
             self._get_token()
             name = self._expect_token(TT_IDENT)
-            args = []
+            args = list[str | int]()
             t2 = self._peek_token()
             if t2.type == TT_LBRACE:
                 self._get_token()
@@ -90,7 +90,7 @@ class Parser:
                         t3 = self._get_token()
                         if t3.type not in [ TT_IDENT, TT_INT ]:
                             raise ParseError(self.file, t3, [ TT_IDENT, TT_INT ])
-                        args.append(t3.value)
+                        args.append(cast(str | int, t3.value))
                         t4 = self._get_token()
                         if t4.type == TT_COMMA:
                             self._get_token()
