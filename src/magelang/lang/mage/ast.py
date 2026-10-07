@@ -538,14 +538,14 @@ class MageRepeatExpr(MageExprBase):
 
 class DecoratorDeriveArgs(TypedDict, total=False):
     name: str
-    args: list[str | int]
+    args: list[str | int] | None
     span: Span | None
 
 
 class Decorator(MageNodeBase):
 
     name: str
-    args: list[str | int]
+    args: list[str | int] | None
 
     def __init__(
         self,
