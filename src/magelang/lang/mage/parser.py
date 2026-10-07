@@ -98,7 +98,6 @@ class Parser:
                             break
                         else:
                             raise ParseError(self.file, t4, [ TT_COMMA, TT_RBRACE ])
-                        args.append(t3.value)
             decorators.append(Decorator(cast(str, name.value), args))
         t1 = self._peek_token(1)
         if t1.type == TT_COLON:
