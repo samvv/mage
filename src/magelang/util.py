@@ -202,14 +202,13 @@ class NameGenerator:
                 chunks.append(suffix)
             assert(len(chunks) > 0)
             name = '_'.join(chunks)
-            count = self._counts.get(name, 0)
-            if count > 0 or not hide_first:
-                name += '_' + str(count)
             if hide:
                 name = '_' + name
-            if self.is_free(name):
+            count = self._counts.get(name, 0)
+            out = f'{name}_{count}' if count > 0 or not hide_first else name
+            if self.is_free(out):
                 self._counts[name] = count + 1
-                return name
+                return out
 
     def reset(self) -> None:
         self._counts = {}
