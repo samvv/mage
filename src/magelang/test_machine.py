@@ -97,7 +97,7 @@ def test_compile_lit():
     root = call_machine_function(m, 'one', 'foobar')
     assert(root.name == 'one')
     assert(len(root.fields) == 1)
-    tok = root.get_field('token_0')
+    tok = root.get_field('field')
     assert(tok.start == 0)
     assert(tok.end == 6)
 
@@ -115,7 +115,10 @@ def test_compile_ref():
     root = call_machine_function(m, 'two', 'foobar')
     assert(root.name == 'two')
     assert(len(root.fields) == 1)
-    tok = root.get_field('token_0')
+    one = root.get_field('one')
+    assert(one.name == 'one')
+    assert(len(one.fields) == 1)
+    tok = one.get_field('field')
     assert(tok.start == 0)
     assert(tok.end == 6)
 
@@ -156,7 +159,7 @@ def test_compile_neg_lookahead():
     root = call_machine_function(m, 'one', 'defghi')
     assert(root.name == 'one')
     assert(len(root.fields) == 1)
-    tok = root.get_field('token_0')
+    tok = root.get_field('field')
     assert(tok.start == 0)
     assert(tok.end == 6)
 
@@ -173,7 +176,7 @@ def test_compile_pos_lookahead():
         call_machine_function(m, 'one', 'def')
     assert(root.name == 'one')
     assert(len(root.fields) == 1)
-    tok = root.get_field('token_0')
+    tok = root.get_field('field')
     assert(tok.start ==  0)
     assert(tok.end == 6)
 

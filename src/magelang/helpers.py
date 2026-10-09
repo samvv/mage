@@ -6,7 +6,7 @@ from pathlib import Path
 from dataclasses import field, dataclass
 
 from magelang.analysis import reference_graph
-from magelang.constants import DEFAULT_MAX_NAMED_CHARS
+from magelang.constants import DEFAULT_MAX_NAMED_CHARS, ANONYMOUS_FIELD_NAME
 from magelang.lang.magedown.cst import MagedownAccepts, MagedownDocument, MagedownRejects
 from magelang.graph import DGraph, toposort, graph_roots, graph_reachable
 from magelang.runtime.lex import CharStream
@@ -137,16 +137,14 @@ class RuleNameGenerator(NameGenerator):
         return self.grammar.lookup(name) is None
 
 
-# FIXME we want to be able to invalidate the cache for grammars that are no longer in the program
-@cache
-def _get_token_name_generator(grammar: MageGrammar) -> NameGenerator:
-    return RuleNameGenerator(grammar)
+def lit_to_name(text: str, grammar: MageGrammar, max_named_chars = DEFAULT_MAX_NAMED_CHARS) -> tuple[bool, str | None]:
+    """
+    Find a suitable name for a given string literal, also returning whether the string literal is a pure keyword.
 
-
-def lit_to_name(text: str, grammar: MageGrammar, max_named_chars = DEFAULT_MAX_NAMED_CHARS) -> tuple[bool, str]:
+    This function will return `None` in its second element if no suitable name was found.
+    """
 
     names = get_char_names()
-    generate_field_name = _get_token_name_generator(grammar)
 
     from magelang.eval import accepts, SUCCESS
 
@@ -162,6 +160,7 @@ def lit_to_name(text: str, grammar: MageGrammar, max_named_chars = DEFAULT_MAX_N
         name = f'{text}_keyword'
         return True, name
 
+    # If it's a special symbol
     if len(text) <= max_named_chars:
         # First try to name the entire word
         if text in names:
@@ -169,8 +168,8 @@ def lit_to_name(text: str, grammar: MageGrammar, max_named_chars = DEFAULT_MAX_N
         # Fall back to naming the individual characters
         return False, '_'.join(names[ch] for ch in text)
 
-    # It's something unknown, non-printable characters
-    return False, generate_field_name(prefix='token')
+    # It's something long or consists of non-printable characters
+    return False, None
 
 
 def get_field_name(expr: MageExpr, max_named_chars = DEFAULT_MAX_NAMED_CHARS) -> str | None:
@@ -214,10 +213,11 @@ def get_fields(
             return
 
         if isinstance(expr, MageLitExpr):
-            _, name = lit_to_name(expr.text, grammar=grammar, max_named_chars=max_named_chars)
-            label = expr.label or name
-            yield expr, Field(label, SpecType(name))
-            return
+            name = lit_to_name(expr.text, grammar=grammar, max_named_chars=max_named_chars)[1]
+            if name is not None:
+                label = expr.label or name
+                yield expr, Field(label, SpecType(name))
+                return
 
         elif isinstance(expr, MageRefExpr):
             rule = grammar.lookup(expr.name)
@@ -237,7 +237,7 @@ def get_fields(
                 yield from visit(element, rule_name)
             return
 
-        field_name = rule_name or get_field_name(expr) or 'field'
+        field_name = rule_name or get_field_name(expr) or ANONYMOUS_FIELD_NAME
         count = taken.get(field_name, 0)
         taken[field_name] = count + 1
         if count > 0:

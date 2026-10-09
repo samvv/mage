@@ -3,6 +3,7 @@ from collections.abc import Sequence, Iterable
 from dataclasses import dataclass, field
 from typing import assert_never
 
+from magelang.constants import ANONYMOUS_FIELD_NAME
 from magelang.graph import DGraph, graph_reachable, toposort, graph_roots
 from magelang.lang.mage.ast import ASSOC_RIGHT, MAGE_REPEAT_INFINITY
 from magelang.lang.treespec.helpers import is_unit_type
@@ -81,7 +82,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
     def compile_expr(builder: FuncBuilder, expr: MageExpr, hidden: bool = False, in_token: bool = False, generate_token_name: NameGenerator | None = None) -> None:
 
         if generate_token_name is None:
-            generate_token_name = NameGenerator()
+            generate_token_name = NameGenerator(ANONYMOUS_FIELD_NAME, hide_first=False)
 
         if isinstance(expr, MageRefExpr):
             builder.append(Call(expr.name))
@@ -96,7 +97,9 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                 builder.append(Tell())
                 name = expr.label
                 if name is None:
-                    _is_keyword, name = lit_to_name(expr.text, grammar=grammar)
+                    name = lit_to_name(expr.text, grammar=grammar)[1]
+                    if name is None:
+                        name = generate_token_name()
                 builder.append(BuildToken(name))
             return
 
@@ -226,7 +229,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
     for rule in elements:
         if not isinstance(rule, MageRule) or rule.expr is None:
             continue
-        generate_field = NameGenerator('field', hide_first=False)
+        generate_field = NameGenerator(ANONYMOUS_FIELD_NAME, hide_first=False)
         func = builder.func(rule.name)
         func.retval('node_or_token')
         field_names = list[str]()

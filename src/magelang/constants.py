@@ -1,6 +1,10 @@
 
 from pathlib import Path
 
+ANONYMOUS_FIELD_NAME = 'field'
+"""
+The name to use for a Mage expression of which no label can be derived.
+"""
 
 SEED_FILENAME_PREFIX = 'seed:'
 
