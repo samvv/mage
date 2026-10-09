@@ -352,7 +352,19 @@ def emit(node: PyNode) -> str:
             visit_token(node.literal)
             return
 
-        if isinstance(node, PyTupleExpr):
+        if isinstance(node, PyTupleZero):
+            visit_token(node.open_paren)
+            visit_token(node.close_paren)
+            return
+
+        if isinstance(node, PyTupleOne):
+            visit_token(node.open_paren)
+            visit_expr(node.expr)
+            visit_token(node.comma)
+            visit_token(node.close_paren)
+            return
+
+        if isinstance(node, PyTupleMany):
             visit_token(node.open_paren)
             for element, comma in node.elements:
                 visit_expr(element)
