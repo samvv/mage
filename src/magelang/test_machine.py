@@ -84,7 +84,7 @@ def test_jumpnz():
 
 def test_compile_lit():
     m = mage_to_machine(MageGrammar([
-        MageRule('one', MageLitExpr('foobar')),
+        MageRule('one', MageLitExpr('foobar'), flags=PUBLIC),
     ]))
     with pytest.raises(ParseError):
         call_machine_function(m, 'one', 'blabla')
@@ -103,8 +103,8 @@ def test_compile_lit():
 
 def test_compile_ref():
     m = mage_to_machine(MageGrammar([
-        MageRule('one', MageLitExpr('foobar')),
-        MageRule('two', MageRefExpr('one')),
+        MageRule('one', MageLitExpr('foobar'), flags=PUBLIC),
+        MageRule('two', MageRefExpr('one'), flags=PUBLIC),
     ]))
     with pytest.raises(ParseError):
         call_machine_function(m, 'two', 'blabla')
@@ -124,7 +124,7 @@ def test_compile_seq():
         MageRule(name='one', expr=MageSeqExpr([
             MageLitExpr('a'),
             MageLitExpr('b'),
-        ])),
+        ]), flags=PUBLIC),
     ]))
     with pytest.raises(ParseError):
         call_machine_function(m, 'one', 'cc')
@@ -149,7 +149,7 @@ def test_compile_neg_lookahead():
         MageRule('one', MageSeqExpr([
             MageLookaheadExpr(MageLitExpr('abc'), True),
             MageLitExpr('defghi')
-        ]))
+        ]), flags=PUBLIC)
     ]))
     with pytest.raises(ParseError):
         call_machine_function(m, 'one', 'abcdef')
@@ -165,7 +165,7 @@ def test_compile_pos_lookahead():
         MageRule('one', MageSeqExpr([
             MageLookaheadExpr(MageLitExpr('abc'), True),
             MageLitExpr('abcdef')
-        ]))
+        ]), flags=PUBLIC)
     ]))
     root = call_machine_function(m, 'one', 'abcdef')
     assert(root.name == 'one')
