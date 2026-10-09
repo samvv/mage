@@ -206,11 +206,7 @@ def get_fields(
     expressions that go in between the fields.
     """
 
-    generator = NameGenerator()
     taken = dict[str, int]()
-
-    def generate_field_name() -> str:
-        return generator(prefix='field')
 
     def visit(expr: MageExpr, rule_name: str | None) -> Generator[tuple[MageExpr, Field | None]]:
 
@@ -241,7 +237,7 @@ def get_fields(
                 yield from visit(element, rule_name)
             return
 
-        field_name = rule_name or get_field_name(expr) or generate_field_name()
+        field_name = rule_name or get_field_name(expr) or 'field'
         count = taken.get(field_name, 0)
         taken[field_name] = count + 1
         if count > 0:
