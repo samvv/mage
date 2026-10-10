@@ -1,10 +1,11 @@
+from magelang.logging import warn
 
 from typing import Iterable, assert_never
 
 from magelang.manager import declare_pass
 from magelang.passes.mage_insert_magic_rules import any_node_rule_name, any_token_rule_name, any_syntax_rule_name
-from magelang.helpers import make_py_cond, make_py_or, make_py_union, treespec_type_to_deep_py_test, make_py_coercions, treespec_type_to_py_type, treespec_type_to_shallow_py_test, namespaced, extern_type_to_py_type, to_py_class_name, quote_py_type, make_py_isinstance, PyCondCase, lookup_spec, make_py_tuple
-from magelang.lang.treespec.helpers import contains_type, expand_variant_types, is_self_referential, is_optional_type, is_type_assignable, resolve_type_references, spec_to_type
+from magelang.helpers import make_py_cond, make_py_or, make_py_union, treespec_type_to_deep_py_test, make_py_coercions, treespec_type_to_py_type, treespec_type_to_shallow_py_test, namespaced, extern_type_to_py_type, to_py_class_name, quote_py_type, make_py_isinstance, PyCondCase, lookup_spec, make_py_tuple, resolve_type_aliases
+from magelang.lang.treespec.helpers import contains_type, is_recursive, is_optional_type, is_type_assignable, expand_type, spec_to_type, expand_type
 from magelang.lang.mage.ast import *
 from magelang.lang.treespec.ast import *
 from magelang.lang.python.cst import *
@@ -39,10 +40,11 @@ def treespec_to_python(
         return UnionType(list(SpecType(name) for name in sorted(parent_nodes[name])))
 
     def add_to_parent_nodes(name: str, ty: Type) -> None:
-        ty = resolve_type_references(ty, specs=specs)
         if isinstance(ty, SpecType):
             spec = lookup_spec(specs, ty.name)
-            assert(not isinstance(spec, TypeSpec))
+            if isinstance(spec, TypeSpec):
+                add_to_parent_nodes(name, spec.ty)
+                return
             if spec is None or isinstance(spec, ConstEnumSpec):
                 return
             if isinstance(spec, EnumSpec):
@@ -394,63 +396,22 @@ def treespec_to_python(
 
     stmts.extend(defs.values())
 
-    # Generate visitors
+    # Generate visitor functions
 
     proc_param_name = 'proc'
     node_param_name = 'node'
 
-    def is_type_reachable(src: Type, dest: Type) -> bool:
-        visited = set()
-        def visit(src: Type) -> bool:
-            src = resolve_type_references(src, specs=specs)
-            if is_type_assignable(dest, src, specs=specs):
-                return True
-            if src in visited:
-                return False
-            visited.add(src)
-            if isinstance(src, SpecType):
-                spec = lookup_spec(specs, src.name)
-                assert(not isinstance(spec, TypeSpec))
-                if spec is None or isinstance(spec, ConstEnumSpec) or isinstance(spec, TokenSpec):
-                    return False
-                if isinstance(spec, NodeSpec):
-                    for field in spec.fields:
-                        if visit(field.ty):
-                            return True
-                    return False
-                if isinstance(spec, EnumSpec):
-                    for member in spec.members:
-                        if visit(member.ty):
-                            return True
-                    return False
-                assert_never(spec)
-            if isinstance(src, NeverType) or isinstance(src, ExternType) or isinstance(src, NoneType):
-                return False
-            if isinstance(src, AnyType):
-                return True
-            if isinstance(src, TupleType):
-                return any(visit(el_ty) for el_ty in src.element_types)
-            if isinstance(src, PunctType):
-                return visit(src.element_type) or visit(src.element_type)
-            if isinstance(src, ListType):
-                return visit(src.element_type)
-            if isinstance(src, UnionType):
-                return any(visit(ty_2) for ty_2 in src.types)
-            assert_never(src)
-        return visit(src)
-
     def gen_visitor(main_spec: Spec) -> PyFuncDef:
 
         generate_temporary = NameGenerator()
-        inner_visit_fn_name = 'visit'
-        main_type = expand_variant_types(spec_to_type(main_spec), specs=specs)
+        main_type = spec_to_type(main_spec)
         visited = set[str]()
 
         inner_body: list[PyStmt] = []
 
         def gen_visit_fields(spec: NodeSpec, input: PyExpr) -> Generator[PyStmt]:
             for field in spec.fields:
-                if is_type_reachable(field.ty, main_type):
+                if contains_type(field.ty, main_type, specs=specs):
                     yield from gen_visit_type(field.ty, PyAttrExpr(expr=input, name=field.name))
 
         def gen_visit_union(input: PyExpr, types: Iterable[Type]) -> Generator[PyStmt]:
@@ -465,8 +426,7 @@ def treespec_to_python(
             yield from make_py_cond(cases)
 
         def gen_visit_type(ty: Type, input: PyExpr) -> Generator[PyStmt]:
-            ty = resolve_type_references(ty, specs=specs)
-            if is_type_assignable(main_type, expand_variant_types(ty, specs=specs), specs=specs):
+            if is_type_assignable(main_type, ty, specs=specs):
                 yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ input ]))
                 return
             if isinstance(ty, NoneType):
@@ -479,8 +439,11 @@ def treespec_to_python(
                 if spec is None or isinstance(spec, TokenSpec) or isinstance(spec, ConstEnumSpec):
                     return
                 if spec.name in visited:
-                    # If we've already reached this spec before, we can recurse
-                    yield PyExprStmt(PyCallExpr(PyNamedExpr(inner_visit_fn_name), args=[ input ]))
+                    # If we've already reached this spec before during our
+                    # inspection of main_type, we have recursion and should
+                    # call `proc`. The value is guaranteed to be a subtype of
+                    # main_type.
+                    yield PyExprStmt(PyCallExpr(PyNamedExpr(proc_param_name), args=[ input ]))
                     return
                 visited.add(spec.name)
                 if isinstance(spec, EnumSpec):
@@ -526,7 +489,7 @@ def treespec_to_python(
 
         for spec in specs.elements:
 
-            if not is_type_assignable(main_type, expand_variant_types(spec_to_type(spec), specs=specs), specs=specs):
+            if not is_type_assignable(main_type, spec_to_type(spec), specs=specs):
                 continue
 
             if isinstance(spec, NodeSpec):
@@ -564,7 +527,7 @@ def treespec_to_python(
 
         return PyFuncDef(
             decorators=decorators,
-            name=f'for_each_{namespaced(main_spec.name, prefix)}',
+            name=f'for_each_child_{namespaced(main_spec.name, prefix)}',
             params=[
                 PyNamedParam(
                     PyNamedPattern(node_param_name),
@@ -575,30 +538,18 @@ def treespec_to_python(
                     annotation=PySubscriptExpr(expr=PyNamedExpr('Callable'), slices=[ PyListExpr(elements=[ PyNamedExpr(to_py_class_name(main_spec.name, prefix)) ]), PyNamedExpr('None') ])
                 ),
             ],
-            body=[
-                PyFuncDef(
-                    name=inner_visit_fn_name,
-                    params=[
-                        PyNamedParam(
-                            PyNamedPattern(node_param_name),
-                            annotation=PyNamedExpr(to_py_class_name(any_syntax_rule_name, prefix))
-                        ),
-                    ],
-                    return_type=PyNamedExpr('None'),
-                    body=inner_body
-                ),
-                PyExprStmt(PyCallExpr(PyNamedExpr(inner_visit_fn_name), args=[ PyNamedExpr(node_param_name) ])),
-            ],
+            return_type=PyNamedExpr('None'),
+            body=inner_body,
         )
 
-    stmts.extend(gen_visitor(spec) for spec in specs.elements if isinstance(spec, EnumSpec) and is_self_referential(spec.name, specs=specs))
+    stmts.extend(gen_visitor(spec) for spec in specs.elements if isinstance(spec, EnumSpec) and is_recursive(SpecType(spec.name), specs=specs))
 
     def gen_member_visitor(main_spec: Spec, visit_spec: Spec) -> PyFuncDef:
 
         generate_temporary = NameGenerator()
 
-        main_type = expand_variant_types(spec_to_type(main_spec), specs=specs)
-        visit_type = expand_variant_types(spec_to_type(visit_spec), specs=specs)
+        main_type = spec_to_type(main_spec)
+        visit_type = spec_to_type(visit_spec)
 
         fn_name = f'for_each_{namespaced(visit_spec.name, prefix)}'
 
@@ -606,7 +557,7 @@ def treespec_to_python(
 
         def gen_visit_fields(spec: NodeSpec, input: PyExpr) -> Generator[PyStmt]:
             for field in spec.fields:
-                if contains_type(expand_variant_types(field.ty, specs=specs), main_type, specs=specs):
+                if contains_type(field.ty, main_type, specs=specs):
                     yield from gen_visit_type(field.ty, PyAttrExpr(expr=input, name=field.name))
 
         def gen_visit_union(input: PyExpr, types: Iterable[Type]) -> Generator[PyStmt]:
@@ -621,11 +572,11 @@ def treespec_to_python(
             yield from make_py_cond(cases)
 
         def gen_visit_type(ty: Type, input: PyExpr) -> Generator[PyStmt]:
-            ty = resolve_type_references(ty, specs=specs)
-            if is_type_assignable(visit_type, expand_variant_types(ty, specs=specs), specs=specs):
+            ty = expand_type(ty, specs=specs)
+            if is_type_assignable(visit_type, ty, specs=specs):
                 yield PyExprStmt(PyCallExpr(PyNamedExpr(proc_param_name), args=[ input ]))
                 return
-            if is_type_assignable(main_type, expand_variant_types(ty, specs=specs), specs=specs):
+            if is_type_assignable(main_type, ty, specs=specs):
                 yield PyExprStmt(PyCallExpr(PyNamedExpr(fn_name), args=[ input, PyNamedExpr(proc_param_name) ]))
                 return
             if isinstance(ty, NoneType):
@@ -634,11 +585,9 @@ def treespec_to_python(
                 return
             if isinstance(ty, SpecType):
                 spec = lookup_spec(specs, ty.name)
-                assert(not isinstance(spec, TypeSpec))
+                assert(not isinstance(spec, TypeSpec)) # expand_type handled this one
+                assert(not isinstance(spec, EnumSpec)) # expand_type handled this one
                 if spec is None or isinstance(spec, TokenSpec) or isinstance(spec, ConstEnumSpec):
-                    return
-                if isinstance(spec, EnumSpec):
-                    yield from gen_visit_union(input, (member.ty for member in spec.members))
                     return
                 if isinstance(spec, NodeSpec):
                     yield from gen_visit_fields(spec, input)
@@ -746,224 +695,251 @@ def treespec_to_python(
 
     proc_param_name = 'proc'
     node_param_name = 'node'
+    root_output_name = 'rewritten'
 
-    def gen_rewriter(main_spec: Spec) -> PyFuncDef:
 
-        generate_temporary = NameGenerator()
+    def gen_rewriter(main_spec: Spec, total: bool = True) -> PyFuncDef:
+        """
+        Generate Python code for rewriting the node referred to by `main_spec`.
 
-        main_type = expand_variant_types(spec_to_type(main_spec), specs=specs)
+        The `total` parameter determines whether all arguments (including those that are not rewritten) will be generated.
+        """
+        generate_temporary = NameGenerator(hide_first=True)
 
-        changed_var_name = f'changed'
+        # TOOD generate the `changed` variable to avoid conflicts
+
+        main_type = spec_to_type(main_spec)
+
         rewriter_fn_name = f'rewrite_each_{namespaced(main_spec.name, prefix)}'
 
         body: list[PyStmt] = []
 
-        def gen_rewrite_fields(spec: NodeSpec, input: PyExpr, assign: Callable[[PyExpr], PyStmt], total: bool) -> Iterable[PyStmt]:
+        def gen_rewrite_type(ty: Type, input: PyExpr, output: str, depth: int) -> Iterable[PyStmt]:
 
-            body = []
-            new_args = []
+            # This set is used to detect sub-cycles in the Spec reference
+            # graph, which need to be broken
+            visited = set[str]()
 
-            can_be_rewritten = False
+            def visit_fields(spec: NodeSpec, input: PyExpr, output: str, changed_var_name: str, depth: int) -> Iterable[PyStmt]:
 
-            body.append(PyAssignStmt(PyNamedPattern(changed_var_name), value=PyNamedExpr('False')))
+                body = []
+                new_args = []
+                new_changed_var_name = generate_temporary('changed')
 
-            for field in spec.fields:
-                if contains_type(field.ty, main_type, specs=specs):
-                    can_be_rewritten = True
-                    new_field_name = generate_temporary(f'new_{field.name}')
-                    new_args.append(PyKeywordArg(field.name, PyNamedExpr(new_field_name)))
-                    body.extend(gen_rewrite_type(field.ty, PyAttrExpr(input, name=field.name), new_field_name, total)) # FIXME
-                else:
-                    new_args.append(PyKeywordArg(field.name, PyAttrExpr(input, field.name)))
+                can_be_rewritten = False
 
-            if not can_be_rewritten:
-                return [ assign(input) ]
+                body.append(PyAssignStmt(PyNamedPattern(new_changed_var_name), value=PyNamedExpr('False')))
 
-            # Generates:
-            # if changed:
-            #     out = Node(**new_args)
-            # else:
-            #     out = input
-            body.extend(make_py_cond([
-                (PyNamedExpr(changed_var_name), [ assign(PyCallExpr(PyNamedExpr(to_py_class_name(spec.name, prefix=prefix)), args=new_args)) ]),
-                (None, [ assign(input) ])
-            ]))
+                for field in spec.fields:
+                    if contains_type(field.ty, main_type, specs=specs):
+                        can_be_rewritten = True
+                        new_field_name = generate_temporary(f'new_{field.name}')
+                        new_args.append(PyKeywordArg(field.name, PyNamedExpr(new_field_name)))
+                        body.extend(visit(field.ty, PyAttrExpr(input, name=field.name), new_field_name, new_changed_var_name, depth-1)) # FIXME
+                    else:
+                        new_args.append(PyKeywordArg(field.name, PyAttrExpr(input, field.name)))
 
-            return body
+                if not can_be_rewritten:
+                    return [ PyAssignStmt(PyNamedPattern(output), value=input) ]
 
-        def gen_rewrite_union(types: Iterable[Type], input: PyExpr, output: str, total: bool) -> Generator[PyStmt]:
-            cases: list[PyCondCase] = []
-            for element_type in types:
-                body = list(gen_rewrite_type(element_type, input, output, total))
-                if not body:
-                    body.append(PyPassStmt())
-                cases.append((
-                    treespec_type_to_shallow_py_test(element_type, input, prefix=prefix, specs=specs),
-                    body
-                ))
-            if cases:
-                cases.append((None, [ PyExprStmt(PyCallExpr(PyNamedExpr('assert_never'), args=[ input ])) ]))
-            yield from make_py_cond(cases)
+                body.extend(make_py_cond([
+                    (
+                        # if field_changed:
+                        PyNamedExpr(new_changed_var_name),
+                        [
+                            # output = Node(args)
+                            PyAssignStmt(
+                                PyNamedPattern(output),
+                                value=PyCallExpr(PyNamedExpr(to_py_class_name(spec.name, prefix=prefix)), args=new_args)
+                            ),
+                            # changed = True
+                            PyAssignStmt(PyNamedPattern(changed_var_name), value=PyNamedExpr('True')),
+                        ]
+                    ),
+                    # else: output = input
+                    (None, [ PyAssignStmt(PyNamedPattern(output), value=input) ])
+                ]))
 
-        def gen_rewrite_type(ty: Type, input: PyExpr, output: str, total: bool) -> Generator[PyStmt]:
+                return body
 
-            ty = resolve_type_references(ty, specs=specs)
+            def visit_union_types(types: Iterable[Type], input: PyExpr, output: str, changed_var_name: str, depth: int) -> Generator[PyStmt]:
+                cases: list[PyCondCase] = []
+                types = list(types)
+                for element_type in types:
+                    body = list(visit(element_type, input, output, changed_var_name, depth-1))
+                    if not body:
+                        body.append(PyPassStmt())
+                    cases.append((
+                        treespec_type_to_shallow_py_test(element_type, input, prefix=prefix, specs=specs),
+                        body
+                    ))
+                if cases:
+                    cases.append((None, [ PyExprStmt(PyCallExpr(PyNamedExpr('assert_never'), args=[ input ])) ]))
+                yield from make_py_cond(cases)
 
-            if is_type_assignable(main_type, expand_variant_types(ty, specs=specs),  specs=specs):
-                yield PyAssignStmt(PyNamedPattern(output), value=PyCallExpr(PyNamedExpr(proc_param_name), args=[ input ]))
-                yield PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ treespec_type_to_shallow_py_test(ty, PyNamedExpr(output), prefix=prefix, specs=specs) ] ))
-                yield PyIfStmt(first=PyIfCase(
-                    PyInfixExpr(PyNamedExpr(output), (PyIsKeyword(), PyNotKeyword()), input),
-                    [ PyAssignStmt(PyNamedPattern(changed_var_name), value=PyNamedExpr('True')) ]
-                ))
-                return
+            def visit(ty: Type, input: PyExpr, output: str, changed_var_name: str, depth: int) -> Generator[PyStmt]:
 
-            if isinstance(ty, NoneType) or isinstance(ty, ExternType):
-                if total:
-                    yield PyAssignStmt(PyNamedPattern(output), value=input)
-                return
+                def gen_apply_proc():
+                    yield PyAssignStmt(PyNamedPattern(output), value=PyCallExpr(PyNamedExpr(proc_param_name), args=[ input ]))
+                    yield PyExprStmt(PyCallExpr(PyNamedExpr('assert'), args=[ treespec_type_to_shallow_py_test(ty, PyNamedExpr(output), prefix=prefix, specs=specs) ] ))
+                    yield PyIfStmt(first=PyIfCase(
+                        PyInfixExpr(PyNamedExpr(output), (PyIsKeyword(), PyNotKeyword()), input),
+                        [ PyAssignStmt(PyNamedPattern(changed_var_name), value=PyNamedExpr('True')) ]
+                    ))
 
-            if isinstance(ty, SpecType):
 
-                spec = lookup_spec(specs, ty.name)
+                ty = resolve_type_aliases(ty, specs=specs)
 
-                assert(not isinstance(spec, TypeSpec))
+                if depth <= 0 and is_type_assignable(main_type, ty,  specs=specs):
+                    yield from gen_apply_proc()
+                    return
 
-                if spec is None or isinstance(spec, TokenSpec) or isinstance(spec, ConstEnumSpec):
+                if isinstance(ty, NoneType) or isinstance(ty, ExternType):
                     if total:
                         yield PyAssignStmt(PyNamedPattern(output), value=input)
                     return
 
-                if isinstance(spec, EnumSpec):
-                    yield from gen_rewrite_union((member.ty for member in spec.members), input, output, total)
-                    return
+                if isinstance(ty, SpecType):
 
-                if isinstance(spec, NodeSpec):
-                    def assign(expr: PyExpr) -> PyStmt:
-                        return PyAssignStmt(PyNamedPattern(output), value=expr)
-                    yield from gen_rewrite_fields(spec, input, assign, total)
-                    return
+                    spec = lookup_spec(specs, ty.name)
 
-                assert_never(spec)
+                    assert(not isinstance(spec, TypeSpec)) # resolve_type_aliases handled this one
 
-            if isinstance(ty, TupleType):
+                    if spec is None:
+                        # Error recovery: simply copy the existing value to the new value
+                        yield PyAssignStmt(PyNamedPattern(output), value=input)
+                        return
 
-                new_elements_var_name = generate_temporary('new_elements')
+                    # If this Spec is a sub-cycle in the graph, then we just
+                    # invoke `proc` on the value. Since proc accepts more than
+                    # just this value, this should always be correct.
+                    if spec.name in visited:
+                        yield from gen_apply_proc()
+                        return
+                    visited.add(spec.name)
 
-                yield PyAssignStmt(PyNamedPattern(new_elements_var_name), value=PyListExpr())
+                    if isinstance(spec, TokenSpec) or isinstance(spec, ConstEnumSpec):
+                        if total:
+                            yield PyAssignStmt(PyNamedPattern(output), value=input)
+                        return
 
-                for i, element_type in enumerate(ty.element_types):
+                    if isinstance(spec, EnumSpec):
+                        yield from visit_union_types((var.ty for var in spec.members), input, output, changed_var_name, depth)
+                        return
 
-                    old_element_var_name = generate_temporary(f'element_{i}')
-                    new_element_var_name = generate_temporary(f'new_element_{i}')
+                    if isinstance(spec, NodeSpec):
+                        yield from visit_fields(spec, input, output, changed_var_name, depth)
+                        return
+
+                    assert_never(spec)
+
+                if isinstance(ty, TupleType):
+
+                    new_elements_var_name = generate_temporary('new_elements')
+
+                    yield PyAssignStmt(PyNamedPattern(new_elements_var_name), value=PyListExpr())
+
+                    for i, element_type in enumerate(ty.element_types):
+
+                        old_element_var_name = generate_temporary(f'element_{i}')
+                        new_element_var_name = generate_temporary(f'new_element_{i}')
+
+                        yield PyAssignStmt(
+                            PyNamedPattern(old_element_var_name),
+                            value=PySubscriptExpr(expr=input, slices=[ PyConstExpr(literal=i) ])
+                        )
+
+                        yield from visit(element_type, PyNamedExpr(old_element_var_name), new_element_var_name, changed_var_name, depth-1)
+
+                        yield PyExprStmt(PyCallExpr(
+                            PyAttrExpr(PyNamedExpr(new_elements_var_name), 'append'),
+                            args=[ PyNamedExpr(new_element_var_name) ]
+                        ))
 
                     yield PyAssignStmt(
-                        PyNamedPattern(old_element_var_name),
-                        value=PySubscriptExpr(expr=input, slices=[ PyConstExpr(literal=i) ])
+                        PyNamedPattern(output),
+                        value=PyIfExpr(
+                            PyCallExpr(PyNamedExpr('tuple'), args=[ PyNamedExpr(new_elements_var_name) ]),
+                            PyNamedExpr(changed_var_name),
+                            input
+                        )
                     )
 
-                    yield from gen_rewrite_type(element_type, PyNamedExpr(old_element_var_name), new_element_var_name, total=True)
+                    return
 
-                    yield PyExprStmt(PyCallExpr(
-                        PyAttrExpr(PyNamedExpr(new_elements_var_name), 'append'),
-                        args=[ PyNamedExpr(new_element_var_name) ]
-                    ))
+                if isinstance(ty, ListType):
 
-                yield PyAssignStmt(PyNamedPattern(output), value=PyIfExpr(PyCallExpr(PyNamedExpr('tuple'), args=[ PyNamedExpr(new_elements_var_name) ]), PyNamedExpr(changed_var_name), input))
+                    element_name = generate_temporary('element')
+                    new_elements_var_name = generate_temporary('new_elements')
+                    new_element_var_name = generate_temporary('new_element')
 
-                return
+                    yield PyAssignStmt(PyNamedPattern(output), value=PyListExpr())
 
-            if isinstance(ty, ListType):
-
-                element_name = generate_temporary('element')
-                new_element_var_name = generate_temporary('new_element')
-
-                yield PyAssignStmt(PyNamedPattern(output), value=PyListExpr())
-
-                yield PyForStmt(
-                    pattern=PyNamedPattern(element_name),
-                    expr=input,
-                    body=list(gen_rewrite_type(ty.element_type, PyNamedExpr(element_name), new_element_var_name, total=True))
-                )
-
-                return
-
-            if isinstance(ty, PunctType):
-
-                element_name = generate_temporary('element')
-                separator_name = generate_temporary('separator')
-                new_last_var_name = generate_temporary('new_last')
-                new_element_var_name = generate_temporary('new_element')
-                new_separator_var_name = generate_temporary('new_separator')
-
-                yield PyAssignStmt(
-                    PyNamedPattern(output),
-                    value=PyCallExpr(PyNamedExpr('Punctuated'))
-                )
-
-                yield PyForStmt(
-                    pattern=PyTuplePattern(
-                        elements=[
-                            PyNamedPattern(element_name),
-                            PyNamedPattern(separator_name)
-                        ],
-                    ),
-                    expr=PyAttrExpr(input, 'delimited'),
-                    body=[
-                        *gen_rewrite_type(ty.element_type, PyNamedExpr(element_name), new_element_var_name, total=True),
-                        *gen_rewrite_type(ty.separator_type, PyNamedExpr(separator_name), new_separator_var_name, total=True),
-                        PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(output), 'append'), args=[
-                            PyNamedExpr(new_element_var_name),
-                            PyNamedExpr(new_separator_var_name),
-                        ]))
-                    ]
-                )
-
-                yield from gen_rewrite_type(ty.element_type, PyAttrExpr(input, 'last'), new_last_var_name, total=True)
-                yield PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(output), 'append_final'), args=[ PyNamedExpr(new_last_var_name) ]))
-
-                return
-
-            if isinstance(ty, UnionType):
-                yield from gen_rewrite_union(ty.types, input, output, total)
-                return
-
-            raise RuntimeError(f'unexpected {ty}')
-
-        for spec in specs.elements:
-
-            if not is_type_assignable(main_type, expand_variant_types(spec_to_type(spec), specs=specs), specs=specs):
-                continue
-
-            if isinstance(spec, NodeSpec):
-
-                body.append(PyIfStmt(first=PyIfCase(
-                    test=PyCallExpr(
-                        operator=PyNamedExpr('isinstance'),
-                        args=[
-                            PyNamedExpr(node_param_name),
-                            PyNamedExpr(to_py_class_name(spec.name, prefix))
+                    yield PyForStmt(
+                        pattern=PyNamedPattern(element_name),
+                        expr=input,
+                        body=[
+                            *visit(ty.element_type, PyNamedExpr(element_name), new_element_var_name, changed_var_name, depth-1),
+                            PyExprStmt(PyCallExpr(
+                                PyAttrExpr(PyNamedExpr(new_elements_var_name), 'append'),
+                                args=[ PyNamedExpr(new_element_var_name) ]
+                            ))
                         ]
-                    ),
-                    body=list(gen_rewrite_fields(spec, PyNamedExpr(node_param_name), make_py_return, True))
-                )))
+                    )
 
-            elif isinstance(spec, TokenSpec):
+                    return
 
-                # body.append(PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ PyNamedExpr(node_param_name) ])))
-                body.append(PyIfStmt(first=PyIfCase(
-                    test=make_py_isinstance(
-                        PyNamedExpr(node_param_name),
-                        PyNamedExpr(to_py_class_name(spec.name, prefix))
-                    ),
-                    body=[
-                        PyRetStmt(),
-                    ],
-                )))
+                if isinstance(ty, PunctType):
+
+                    element_name = generate_temporary('element')
+                    separator_name = generate_temporary('separator')
+                    new_last_var_name = generate_temporary('new_last')
+                    new_element_var_name = generate_temporary('new_element')
+                    new_separator_var_name = generate_temporary('new_separator')
+
+                    yield PyAssignStmt(
+                        PyNamedPattern(output),
+                        value=PyCallExpr(PyNamedExpr('Punctuated'))
+                    )
+
+                    yield PyForStmt(
+                        pattern=PyTuplePattern(
+                            elements=[
+                                PyNamedPattern(element_name),
+                                PyNamedPattern(separator_name)
+                            ],
+                        ),
+                        expr=PyAttrExpr(input, 'delimited'),
+                        body=[
+                            *visit(ty.element_type, PyNamedExpr(element_name), new_element_var_name, changed_var_name, depth-1),
+                            *visit(ty.separator_type, PyNamedExpr(separator_name), new_separator_var_name, changed_var_name, depth-1),
+                            PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(output), 'append'), args=[
+                                PyNamedExpr(new_element_var_name),
+                                PyNamedExpr(new_separator_var_name),
+                            ]))
+                        ]
+                    )
+
+                    yield from visit(ty.element_type, PyAttrExpr(input, 'last'), new_last_var_name, changed_var_name, depth-1)
+                    yield PyExprStmt(PyCallExpr(PyAttrExpr(PyNamedExpr(output), 'append_final'), args=[ PyNamedExpr(new_last_var_name) ]))
+
+                    return
+
+                if isinstance(ty, UnionType):
+                    yield from visit_union_types(ty.types, input, output, changed_var_name, depth)
+                    return
+
+                raise RuntimeError(f'unexpected {ty}')
+
+            return visit(ty, input, output, generate_temporary('changed'), depth)
+
+        candidates: list[Type] = [ SpecType(spec.name) for spec in specs.elements if isinstance(spec, NodeSpec) and is_type_assignable(main_type, spec_to_type(spec), specs=specs) ]
+        body.extend(gen_rewrite_type(UnionType(candidates), PyNamedExpr(node_param_name), root_output_name, 2))
+        body.append(PyRetStmt(expr=PyNamedExpr(root_output_name)))
 
         decorators = []
         if not enable_asserts:
-            # We add `@typing.no_type_check` to drastically improve the performance of the type checker.
+            # We add `@typing.no_type_check` to drastically improve the performance of the type Pyright checker.
             decorators.append(PyDecorator(PyNamedExpr('no_type_check')))
 
         return PyFuncDef(
@@ -983,7 +959,9 @@ def treespec_to_python(
             body=body,
         )
 
-    stmts.extend(gen_rewriter(spec) for spec in specs.elements if isinstance(spec, EnumSpec) and is_self_referential(spec.name, specs=specs))
+    for spec in specs.elements:
+        if isinstance(spec, EnumSpec) and is_recursive(SpecType(spec.name), specs=specs):
+            stmts.append(gen_rewriter(spec))
 
     return PyModule(stmts=stmts)
 

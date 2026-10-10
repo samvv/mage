@@ -1,9 +1,12 @@
-
+from warnings import deprecated
+from collections.abc import Iterable
 from functools import lru_cache
-from typing import Generator, assert_never
-from magelang.util import to_snake_case
+from typing import Generator, assert_never, Union
+
+from magelang.util import to_snake_case, todo
 from .ast import *
 from magelang.lang.mage.constants import string_rule_type
+
 
 @lru_cache
 def _get_spec_mapping(specs: Specs) -> dict[str, Spec]:
@@ -55,7 +58,7 @@ def is_unit_type(ty: Type) -> bool:
 def is_static_type(ty: Type, specs: Specs) -> bool:
     visited = set[str]()
     def visit(ty: Type) -> bool:
-        ty = resolve_type_references(ty, specs=specs)
+        ty = expand_type(ty, specs=specs)
         if isinstance(ty, ExternType):
             return False
         if isinstance(ty, NeverType):
@@ -98,6 +101,7 @@ def is_static_type(ty: Type, specs: Specs) -> bool:
 
 def mangle_type(ty: Type) -> str:
     if isinstance(ty, SpecType):
+        # FIXME what about a SpecType named 'foo_decl'?
         return f'decl_{ty.name}'
     if isinstance(ty, TupleType):
         out = f'tuple_{len(ty.element_types)}'
@@ -183,168 +187,232 @@ def do_types_shallow_overlap(a: Type, b: Type) -> bool:
     return False
 
 
-def expand_variant_types(ty: Type, *, specs: Specs) -> Type:
-    visited = set[str]()
-    def rewriter(ty: Type) -> Type:
+@deprecated('This function is an anti-patern and should not be used.')
+def expand_type(ty: Type, *, specs: Specs) -> Type:
+    """
+    Expand some special forms of a Type such as EnumSpec and TypeSpec.
+
+    Using this function may simplify the implementation of some other functions.
+
+    This function will return the never type when infinite recursion is detected.
+    """
+    cycle = False
+    visited = set[Type]()
+    def visit(ty: Type) -> Iterable[Type]:
+        nonlocal cycle
+        if ty in visited: # cycle detected
+            cycle = True
+            return
+        visited.add(ty)
         if isinstance(ty, SpecType):
             spec = lookup_spec(specs, ty.name)
-            if isinstance(spec, EnumSpec):
-                if spec.name in visited:
-                    return ty
-                visited.add(spec.name)
-                types = list()
-                assert(isinstance(spec, EnumSpec))
-                for member in spec.members:
-                    types.append(rewriter(member.ty))
-                return UnionType(types)
-        return rewrite_each_child_type(ty, rewriter)
-    return rewriter(ty)
-
-def expand_variant_type(ty: Type, *, specs: Specs):
-    if not isinstance(ty, SpecType):
+            if isinstance(spec, TypeSpec):
+                yield from visit(spec.ty)
+                return
+            elif isinstance(spec, EnumSpec):
+                for var in spec.members:
+                    yield from visit(var.ty)
+                return
         yield ty
-        return
-    spec = lookup_spec(specs, ty.name)
-    if not isinstance(spec, EnumSpec):
-        yield ty
-        return
-    for variant in spec.members:
-        yield variant.ty
+    types = list(visit(ty))
+    if cycle:
+        # expanding a cyclic type leads to infinity
+        # we prevent this by making the type invalid
+        return NeverType()
+    if len(types) == 1:
+        return types[0]
+    return UnionType(types)
 
-def resolve_type_references(ty: Type, *, specs: Specs) -> Type:
-    if isinstance(ty, SpecType):
-        spec = lookup_spec(specs, ty.name)
-        if isinstance(spec, TypeSpec):
-            return resolve_type_references(spec.ty, specs=specs)
-    return ty
 
+@lru_cache
+def are_types_equal(left: Type, right: Type, *, specs: Specs) -> bool:
+    """
+    Check whether the two given types are syntactically equivalent.
+    """
+    def visit(left: Type, right: Type) -> bool:
+        if isinstance(left, NeverType) or isinstance(right, NeverType):
+            return True
+        if isinstance(left, AnyType) or isinstance(right, AnyType):
+            return True
+        if isinstance(left, NoneType) and isinstance(right, NoneType):
+            return True
+        if isinstance(left, ExternType) and isinstance(right, ExternType):
+            return left.name == right.name
+        if isinstance(left, SpecType) and isinstance(right, SpecType):
+            return left.name == right.name
+        if isinstance(left, ListType) and isinstance(right, ListType):
+            return visit(left.element_type, right.element_type)
+        if isinstance(left, PunctType) and isinstance(right, ListType):
+            return visit(left.element_type, right.element_type) \
+               and visit(left.element_type, right.element_type)
+        if isinstance(left, TupleType) and isinstance(right, TupleType):
+            if len(left.element_types) != len(right.element_types):
+                return False
+            for a, b in zip(left.element_types, right.element_types):
+                if not visit(a, b):
+                    return False
+            return True
+        # FIXME this needs to be fixe like in is_type_assignable()
+        left = expand_type(left, specs=specs)
+        right = expand_type(right, specs=specs)
+        if isinstance(left, UnionType) and isinstance(right, UnionType):
+            if len(left.types) != len(right.types):
+                return False
+            left.types.sort()
+            right.types.sort()
+            for l, r in zip(left.types, right.types):
+                if not visit(l, r):
+                    return False
+            return True
+        return False
+    return visit(left, right)
+
+
+@lru_cache
 def is_type_assignable(left: Type, right: Type, *, specs: Specs) -> bool:
     """
     Check whether `right` is assignable to `left`, as in the Python expression `left = right`.
     """
-    left = resolve_type_references(left, specs=specs)
-    right = resolve_type_references(right, specs=specs)
-    if isinstance(left, NeverType) or isinstance(right, NeverType):
-        return False
-    if isinstance(left, AnyType) or isinstance(right, AnyType):
-        return True
-    if isinstance(left, NoneType) and isinstance(right, NoneType):
-        return True
-    if isinstance(left, ExternType) and isinstance(right, ExternType):
-        return left.name == right.name
-    if isinstance(left, SpecType) and isinstance(right, SpecType):
-        if left.name == right.name:
-            return True
-        left_spec = lookup_spec(specs, left.name)
-        right_spec = lookup_spec(specs, right.name)
-        has_enum = False
-        if isinstance(left_spec, EnumSpec):
-            left = UnionType(list(expand_variant_type(left, specs=specs)))
-            has_enum = True
-        if isinstance(right_spec, EnumSpec):
-            right = UnionType(list(expand_variant_type(right, specs=specs)))
-            has_enum = True
-        if has_enum:
-            return is_type_assignable(left, right, specs=specs)
-        return False
-    if isinstance(left, ListType) and isinstance(right, ListType):
-        return is_type_assignable(left.element_type, right.element_type, specs=specs)
-    if isinstance(left, PunctType) and isinstance(right, ListType):
-        return is_type_assignable(left.element_type, right.element_type, specs=specs) \
-           and is_type_assignable(left.element_type, right.element_type, specs=specs)
-    if isinstance(right, UnionType):
-        return all(is_type_assignable(left, ty, specs=specs) for ty in right.types)
-    if isinstance(left, UnionType):
-        return any(is_type_assignable(ty, right, specs=specs) for ty in left.types)
-    if isinstance(left, TupleType) and isinstance(right, TupleType):
-        if len(left.element_types) != len(right.element_types):
+    visited_left = set[str]()
+    visited_right = set[str]()
+    def visit(left: Type, right: Type) -> bool:
+        left = resolve_type_aliases(left, specs=specs)
+        right = resolve_type_aliases(right, specs=specs)
+        if isinstance(left, NeverType) or isinstance(right, NeverType):
             return False
-        for a, b in zip(left.element_types, right.element_types):
-            if not is_type_assignable(a, b, specs=specs):
+        if isinstance(left, AnyType) or isinstance(right, AnyType):
+            return True
+        if isinstance(left, NoneType) and isinstance(right, NoneType):
+            return True
+        if isinstance(left, ExternType) and isinstance(right, ExternType):
+            return left.name == right.name
+        if isinstance(left, SpecType) and isinstance(right, SpecType):
+            if left.name == right.name:
+                return True
+            if left.name in visited_left or right.name in visited_right: # cycle detected
+                return False # infinite types are never assignable
+            visited_left.add(left.name)
+            visited_right.add(right.name)
+            left_spec = lookup_spec(specs, left.name)
+            right_spec = lookup_spec(specs, right.name)
+            has_enum = False
+            if isinstance(left_spec, EnumSpec):
+                left = UnionType(list(var.ty for var in left_spec.members))
+                has_enum = True
+            if isinstance(right_spec, EnumSpec):
+                right = UnionType(list(var.ty for var in right_spec.members))
+                has_enum = True
+            if has_enum:
+                return visit(left, right)
+            return False
+        if isinstance(left, TupleType) and isinstance(right, TupleType):
+            if len(left.element_types) != len(right.element_types):
                 return False
-        return True
-    return False
+            for a, b in zip(left.element_types, right.element_types):
+                if not visit(a, b):
+                    return False
+            return True
+        if isinstance(left, ListType) and isinstance(right, ListType):
+            return visit(left.element_type, right.element_type)
+        if isinstance(left, PunctType) and isinstance(right, ListType):
+            return visit(left.element_type, right.element_type) \
+               and visit(left.element_type, right.element_type)
+        if isinstance(left, UnionType) or isinstance(right, UnionType):
+            left_els = list(left.types if isinstance(left, UnionType) else [ left ])
+            right_els = list(right.types if isinstance(right, UnionType) else [ right ])
+            for r in right_els:
+                found = False
+                for l in left_els:
+                    if visit(l, r):
+                        found = True
+                        break
+                if not found:
+                    return False
+            return True
+        return False
+    return visit(left, right)
 
 
-def get_child_types(ty: Type):
+def resolve_type_aliases(ty: Type, *, specs: Specs) -> Type:
+    while isinstance(ty, SpecType):
+        spec = lookup_spec(specs, ty.name)
+        if not isinstance(spec, TypeSpec):
+            break
+        ty = spec.ty
+    return ty
+
+
+def get_child_types(ty: Type, *, specs: Specs) -> Iterable[Type]:
     """
-    Get the all the types that are direct children of the given type.
+    Get the all the types that are structurally direct children of the given type.
+
+    This method will also expand types holding an EnumSpec, TypeSpec and a
+    NodeSpec. In the first case, the types of the individual variants will be
+    further inspected. In the second case the types of the node's fields will
+    be returned.
     """
-    if isinstance(ty, ListType):
-        yield ty.element_type
-    elif isinstance(ty, PunctType):
-        yield ty.element_type
-        yield ty.separator_type
-    elif isinstance(ty, TupleType):
-        for element_type in ty.element_types:
-            yield element_type
-    elif isinstance(ty, UnionType):
-        for ty_2 in ty.types:
-            yield ty_2
+    visited = set[Type]()
+    def visit(ty: Type) -> Iterable[Type]:
+        # FIXME this will make types unique
+        if ty in visited: # cycle detected
+            return
+        visited.add(ty)
+        if isinstance(ty, ListType):
+            yield ty.element_type
+        elif isinstance(ty, PunctType):
+            yield ty.element_type
+            yield ty.separator_type
+        elif isinstance(ty, TupleType):
+            for element_type in ty.element_types:
+                yield element_type
+        elif isinstance(ty, UnionType):
+            for ty_2 in ty.types:
+                yield ty_2
+        elif isinstance(ty, SpecType):
+            spec = lookup_spec(specs, ty.name)
+            if isinstance(spec, EnumSpec):
+                for variant in spec.members:
+                    yield from visit(variant.ty)
+            elif isinstance(spec, NodeSpec):
+                for field in spec.fields:
+                    yield field.ty
+            elif isinstance(spec, TypeSpec):
+                yield from visit(spec.ty)
+    return visit(ty)
 
-
-def contains_type(ty: Type, target: Type, *, specs: Specs) -> bool:
+@lru_cache
+def contains_type(ty: Type, needle: Type, *, specs: Specs) -> bool:
     """
     Check whether any part of `ty` is assignable to `target`.
     """
-    if is_type_assignable(target, ty, specs=specs):
-        return True
-    for child in get_child_types(ty):
-        if contains_type(child, target, specs=specs):
+    visited = set[Type]()
+    def visit(ty: Type) -> bool:
+        if ty in visited: # cycle or duplicate detected
+            return False
+        visited.add(ty)
+        # We check whether needle is assignable to ty and not the reverse
+        # because ty may contain types other than needle. A narrower union type
+        # may be assigned to a wider union type, but not the reverse.
+        if is_type_assignable(ty, needle, specs=specs):
             return True
-    return False
+        for child in get_child_types(ty, specs=specs):
+            if visit(child):
+                return True
+        return False
+    return visit(ty)
 
 
-def is_self_referential(name: str, *, specs: Specs, default: bool = False) -> bool:
+@lru_cache
+def is_recursive(ty: Type, *, specs: Specs) -> bool:
     """
     Determine whether a declaration references itself eventually though one of its members.
+
+    This is also known in functional programming literature as a recursive datatype.
     """
-
-    visited = set[str]()
-
-    main_type = SpecType(name)
-
-    def check(ty: Type) -> bool:
-
-        ty = resolve_type_references(ty, specs=specs)
-
-        # If the type is assignable to our original type, that means we have
-        # detected a cycle.
-        if is_type_assignable(main_type, ty, specs=specs):
+    for child in get_child_types(ty, specs=specs):
+        if contains_type(child, ty, specs=specs):
             return True
-
-        return check_each_child(ty)
-
-    def check_each_child(ty: Type) -> bool:
-
-        if isinstance(ty, SpecType):
-
-            # We encountered this type before. This means that there is a
-            # cycle, but it's not the cycle we are interested in.
-            if ty.name in visited:
-                return False
-
-            visited.add(ty.name)
-
-            spec = lookup_spec(specs, ty.name)
-            assert(not isinstance(spec, TypeSpec))
-            if spec is None:
-                return default
-            if isinstance(spec, ConstEnumSpec) or isinstance(spec, TokenSpec):
-                return False
-            if isinstance(spec, NodeSpec):
-                return any(check(field.ty) for field in spec.fields)
-            if isinstance(spec, EnumSpec):
-                return any(check(member.ty) for member in spec.members)
-            assert_never(spec)
-
-        for ty_2 in get_child_types(ty):
-            if check(ty_2):
-                return True
-
-        return False
-
-    return check_each_child(main_type)
+    return False
 
 
 def normalize_type(ty: Type) -> Type:
@@ -387,7 +455,7 @@ def merge_similar_types(ty: Type) -> Type:
 
     Note that this is semantically incorrect, but some (mostly dynamic)
     programming languages can use this to write less intensive checks for a
-    value that has this type.
+    value of this type.
     """
 
     # The resulting types that will be part of the output union type
@@ -462,5 +530,5 @@ def merge_similar_types(ty: Type) -> Type:
         types.append(TupleType(new_tuple_elements))
 
     # Some elements might be duplicated by the previous procedure, therefore we
-    # call `simplify_type`.
+    # must call `simplify_type`.
     return normalize_type(UnionType(types))
