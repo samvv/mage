@@ -252,9 +252,6 @@ def are_types_equal(left: Type, right: Type, *, specs: Specs) -> bool:
                 if not visit(a, b):
                     return False
             return True
-        # FIXME this needs to be fixe like in is_type_assignable()
-        left = expand_type(left, specs=specs)
-        right = expand_type(right, specs=specs)
         if isinstance(left, UnionType) and isinstance(right, UnionType):
             if len(left.types) != len(right.types):
                 return False
