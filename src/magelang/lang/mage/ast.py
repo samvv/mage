@@ -909,8 +909,10 @@ def for_each_direct_child_expr(node: MageExpr, proc: Callable[[MageExpr], None])
     assert_never(node)
 
 def for_each_expr(node: MageExpr, proc: Callable[[MageExpr], None]) -> None:
-    proc(node)
-    for_each_direct_child_expr(node, proc)
+    def visit(expr: MageExpr) -> None:
+        proc(expr)
+        for_each_direct_child_expr(expr, visit)
+    visit(node)
 
 def for_each_rule(grammar: MageGrammar, proc: Callable[[MageRule], None]) -> None:
     for element in grammar.elements:
