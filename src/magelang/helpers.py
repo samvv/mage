@@ -136,6 +136,7 @@ class RuleNameGenerator(NameGenerator):
     def is_free(self, name: str) -> bool:
         return self.grammar.lookup(name) is None
 
+
 @lru_cache
 def is_keyword(text: str, *, grammar: MageGrammar) -> bool:
     from magelang.eval import accepts, SUCCESS
@@ -153,7 +154,6 @@ def get_keywords(grammar: MageGrammar) -> list[MageExpr]:
         if isinstance(expr, MageLitExpr):
             if is_keyword(expr.text, grammar=grammar):
                 out.append(expr)
-            return
     for rule in grammar.rules:
         if rule.expr is not None:
             for_each_expr(rule.expr, visit)
