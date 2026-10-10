@@ -1,5 +1,6 @@
 
 from magelang.lang.mage.ast import MAGE_REPEAT_INFINITY, PUBLIC, Decorator, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr
+from magelang.helpers import get_keywords
 from magelang.manager import declare_pass
 
 any_syntax_rule_name = 'syntax'
@@ -13,11 +14,12 @@ def mage_insert_magic_rules(grammar: MageGrammar) -> MageGrammar:
     new_elements = list(grammar.elements)
     syntax_rules = list[MageExpr]()
 
-    keyword_rules = list[MageExpr](MageRefExpr(rule.name) for rule in grammar.rules if rule.is_keyword)
-    if keyword_rules:
+    keyword_exprs = get_keywords(grammar)
+    if keyword_exprs:
         new_elements.append(MageRule(
             name=any_keyword_rule_name,
-            expr=MageChoiceExpr(keyword_rules),
+            # FIXME might need to make this rule references
+            expr=MageChoiceExpr(keyword_exprs),
             flags=PUBLIC
         ))
 

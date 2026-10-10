@@ -136,8 +136,31 @@ class RuleNameGenerator(NameGenerator):
     def is_free(self, name: str) -> bool:
         return self.grammar.lookup(name) is None
 
+@lru_cache
+def is_keyword(text: str, *, grammar: MageGrammar) -> bool:
+    from magelang.eval import accepts, SUCCESS
+    if len(text) <= 1:
+        return False # single letters are not allowed
+    kw = grammar.keyword_rule
+    # TODO fall back to a default keyword rule
+    return kw is not None and kw.expr is not None and accepts(kw, text) == SUCCESS
 
-def lit_to_name(text: str, grammar: MageGrammar, max_named_chars = DEFAULT_MAX_NAMED_CHARS) -> tuple[bool, str | None]:
+
+@lru_cache
+def get_keywords(grammar: MageGrammar) -> list[MageExpr]:
+    out = []
+    def visit(expr: MageExpr) -> None:
+        if isinstance(expr, MageLitExpr):
+            if is_keyword(expr.text, grammar=grammar):
+                out.append(expr)
+            return
+    for rule in grammar.rules:
+        if rule.expr is not None:
+            for_each_expr(rule.expr, visit)
+    return out
+
+
+def lit_to_name(text: str, *, grammar: MageGrammar, max_named_chars = DEFAULT_MAX_NAMED_CHARS) -> str | None:
     """
     Find a suitable name for a given string literal, also returning whether the string literal is a pure keyword.
 
@@ -146,48 +169,44 @@ def lit_to_name(text: str, grammar: MageGrammar, max_named_chars = DEFAULT_MAX_N
 
     names = get_char_names()
 
-    from magelang.eval import accepts, SUCCESS
-
     # If it's a single letter
     if len(text) == 1 and text.isalpha():
         # Letters such as 'i' and 'D' are not really keywords
         # They are represented with the lower_ or upper_ prefix
-        return False, f'lower_{text}' if text.islower() else f'upper_{text.lower()}'
+        return f'lower_{text}' if text.islower() else f'upper_{text.lower()}'
 
     # If the evaluation engine matches it as a keyword
-    keyword_rule = grammar.keyword_rule
-    if keyword_rule is not None and keyword_rule.expr is not None and accepts(keyword_rule, text) == SUCCESS:
-        name = f'{text}_keyword'
-        return True, name
+    if is_keyword(text, grammar=grammar):
+        return f'{text}_keyword'
 
-    # If it's a special symbol
+    # If the entire word has a predefined name
+    if text in names:
+        return names[text]
+
+    # Fall back to naming the individual characters
     if len(text) <= max_named_chars:
-        # First try to name the entire word
-        if text in names:
-            return False, names[text]
-        # Fall back to naming the individual characters
-        return False, '_'.join(names[ch] for ch in text)
+        return '_'.join(names[ch] for ch in text)
 
     # It's something long or consists of non-printable characters
-    return False, None
+    return None
 
 
-def get_field_name(expr: MageExpr, max_named_chars = DEFAULT_MAX_NAMED_CHARS) -> str | None:
+def get_field_name(expr: MageExpr, *, grammar: MageGrammar, max_named_chars = DEFAULT_MAX_NAMED_CHARS) -> str | None:
     if expr.label is not None:
         return expr.label
     if isinstance(expr, MageLitExpr):
-        return lit_to_name(expr.text, grammar=expr.grammar, max_named_chars=max_named_chars)[1]
+        return lit_to_name(expr.text, grammar=grammar, max_named_chars=max_named_chars)
     if isinstance(expr, MageRefExpr):
         return expr.name
     if isinstance(expr, MageRepeatExpr):
-        element_label = get_field_name(expr.expr)
+        element_label = get_field_name(expr.expr, grammar=grammar, max_named_chars=max_named_chars)
         if element_label is not None:
             if expr.max > 1:
                 return plural(element_label)
             return element_label
         return None
     if isinstance(expr, MageListExpr):
-        element_label = get_field_name(expr.element)
+        element_label = get_field_name(expr.element, grammar=grammar, max_named_chars=max_named_chars)
         if element_label is not None:
             return plural(element_label)
         return None
@@ -213,7 +232,7 @@ def get_fields(
             return
 
         if isinstance(expr, MageLitExpr):
-            name = lit_to_name(expr.text, grammar=grammar, max_named_chars=max_named_chars)[1]
+            name = lit_to_name(expr.text, grammar=grammar, max_named_chars=max_named_chars)
             if name is not None:
                 label = expr.label or name
                 yield expr, Field(label, SpecType(name))
@@ -237,7 +256,7 @@ def get_fields(
                 yield from visit(element, rule_name)
             return
 
-        field_name = rule_name or get_field_name(expr) or ANONYMOUS_FIELD_NAME
+        field_name = rule_name or get_field_name(expr, grammar=grammar, max_named_chars=max_named_chars) or ANONYMOUS_FIELD_NAME
         count = taken.get(field_name, 0)
         taken[field_name] = count + 1
         if count > 0:
