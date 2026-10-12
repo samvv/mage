@@ -460,9 +460,9 @@ def treespec_type_to_deep_py_test(ty: Type, target: PyExpr, *, prefix: str, spec
 
 
 def is_py_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences: bool = True) -> bool:
-    visited = set()
+    visited = set[str]()
     def visit(ty: Type, allow_empty_sequences: bool) -> bool:
-        ty = resolve_type_references(ty, specs=specs)
+        ty = resolve_type_aliases(ty, specs=specs)
         if isinstance(ty, ExternType):
             return False
         if isinstance(ty, NeverType):
@@ -477,11 +477,9 @@ def is_py_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences
             return True
         if isinstance(ty, SpecType):
             spec = lookup_spec(specs, ty.name)
-            assert(not isinstance(spec, TypeSpec))
+            assert(not isinstance(spec, TypeSpec)) # resolve_type_aliases handled this one
             if spec is None:
                 return False
-            if isinstance(spec, EnumSpec):
-                return len(spec.members) < 2
             if isinstance(spec, ConstEnumSpec):
                 return True
             if isinstance(spec, NodeSpec):
@@ -489,6 +487,8 @@ def is_py_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences
                     return False
                 visited.add(ty.name)
                 return all(visit(field.ty, allow_empty_sequences) for field in spec.fields)
+            if isinstance(spec, EnumSpec):
+                return len(spec.members) == 1 and visit(spec.members[0].ty, allow_empty_sequences)
             if isinstance(spec, TokenSpec):
                 if spec.name in visited:
                     return False
@@ -498,10 +498,13 @@ def is_py_default_constructible(ty: Type, *, specs: Specs, allow_empty_sequences
         if isinstance(ty, TupleType):
             return all(visit(element, False) for element in ty.element_types)
         if isinstance(ty, UnionType):
-            # We assume the type has been simplified, such that singleton
-            # union types do not occur. Otherwise, we did have to recurse
-            # on the single union type member.
-            return False
+            # if the union type contained no elements, the union type is
+            # equivalent to NeverType and is not default-constructible
+            # if the union contained two or more elements, we can not always be
+            # sure which one to construct
+            # if the union type holds only one element, that element must be
+            # default-construtible
+            return len(ty.types) == 1 and visit(ty.types[0], allow_empty_sequences)
         assert_never(ty)
     return visit(ty, allow_empty_sequences)
 
