@@ -3,7 +3,7 @@ from collections.abc import Sequence, Iterable
 from dataclasses import dataclass, field
 from typing import assert_never
 
-from magelang.constants import ANONYMOUS_FIELD_NAME
+from magelang.constants import ANONYMOUS_FIELD_NAME, DEFAULT_MAX_NAMED_CHARS
 from magelang.graph import DGraph, graph_reachable, toposort, graph_roots
 from magelang.lang.mage.ast import ASSOC_RIGHT, MAGE_REPEAT_INFINITY
 from magelang.lang.treespec.helpers import is_unit_type
@@ -58,7 +58,10 @@ from magelang import (
 EOF = '\uFFFF'
 
 @declare_pass()
-def mage_to_machine(grammar: MageGrammar) -> Machine:
+def mage_to_machine(
+    grammar: MageGrammar,
+    max_named_chars: int = DEFAULT_MAX_NAMED_CHARS,
+) -> Machine:
 
     builder = MachineBuilder()
 
@@ -97,7 +100,7 @@ def mage_to_machine(grammar: MageGrammar) -> Machine:
                 builder.append(Tell())
                 name = expr.label
                 if name is None:
-                    name = lit_to_name(expr.text, grammar=grammar)[1]
+                    name = lit_to_name(expr.text, grammar=grammar, max_named_chars=max_named_chars)
                     if name is None:
                         name = generate_token_name()
                 builder.append(BuildToken(name))
