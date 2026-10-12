@@ -19,7 +19,7 @@ def mage_to_treespec(
         return name
 
     def get_variant_name(expr: MageExpr, i: int) -> str:
-        name = get_field_name(expr)
+        name = get_field_name(expr, grammar=grammar)
         return f'member_{i}' if name is None else name
 
     def get_variants(expr: MageExpr) -> list[Variant]:
