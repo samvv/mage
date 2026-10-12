@@ -15,7 +15,7 @@ from magelang.lang.treespec import *
 from magelang.lang.mage.ast import *
 from magelang.lang.python.cst import *
 from magelang.lang.mage.constants import integer_rule_type, string_rule_type
-from magelang.lang.treespec.helpers import do_types_shallow_overlap, flatten_union_types, is_optional_type, is_static_type, make_optional_type, mangle_type
+from magelang.lang.treespec.helpers import do_types_shallow_overlap, flatten_union_types, is_optional_type, is_static_type, make_optional_type
 from magelang.logging import warn
 from magelang.util import to_camel_case, is_iterator, NameGenerator, plural, unreachable
 
@@ -711,7 +711,7 @@ def get_coercions(field_type: Type, *, specs: Specs) -> Type:
     return gen_coerce_type(field_type, False)
 
 
-def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict[str, PyFuncDef]) -> tuple[Type, PyExpr]:
+def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, mapping: dict[tuple[Type, Type], PyFuncDef]) -> tuple[Type, PyExpr]:
 
     param_name = 'value'
     visited = set[str]()
@@ -727,35 +727,39 @@ def make_py_coercions(field_type: Type, *, specs: Specs, prefix: str, defs: dict
 
         coerced_type = normalize_type(UnionType(types))
 
-        id = f'{mangle_type(coerced_type)}_to_{mangle_type(ty)}'
+        key = (coerced_type, ty)
+        if key in mapping:
+            func = mapping[key]
+            return coerced_type, PyNamedExpr(func.name)
+
+        id = len(mapping)
         coerce_fn_name = f'_coerce_{id}'
 
-        if id not in defs:
-            py_param_type = treespec_type_to_py_type(coerced_type, prefix=prefix, immutable=True)
-            py_return_type = treespec_type_to_py_type(ty, prefix=prefix)
-            defs[id] = PyFuncDef(
-                decorators=[ PyNamedExpr('no_type_check') ],
-                name=coerce_fn_name,
-                params=[ PyNamedParam(PyNamedPattern(param_name), annotation=quote_py_type(py_param_type)) ],
-                return_type=quote_py_type(py_return_type),
-                # For very simple fields, there's no need to do any checks. We
-                # assume the type checker catches whatever error the user makes.
-                body=cases[0][1] if len(cases) == 1 else make_py_cond([
-                    *cases,
-                    (
-                        None,
-                        [
-                            PyRaiseStmt(
-                                expr=PyCallExpr(
-                                    operator=PyNamedExpr('ValueError'),
-                                    # TODO inerpolate with `in_name`
-                                    args=[ PyConstExpr(f"the coercion from {emit(py_param_type)} to {emit(py_return_type)} failed") ]
-                                )
+        py_param_type = treespec_type_to_py_type(coerced_type, prefix=prefix, immutable=True)
+        py_return_type = treespec_type_to_py_type(ty, prefix=prefix)
+        mapping[key] = PyFuncDef(
+            decorators=[ PyNamedExpr('no_type_check') ],
+            name=coerce_fn_name,
+            params=[ PyNamedParam(PyNamedPattern(param_name), annotation=quote_py_type(py_param_type)) ],
+            return_type=quote_py_type(py_return_type),
+            # For very simple fields, there's no need to do any checks. We
+            # assume the type checker catches whatever error the user makes.
+            body=cases[0][1] if len(cases) == 1 else make_py_cond([
+                *cases,
+                (
+                    None,
+                    [
+                        PyRaiseStmt(
+                            expr=PyCallExpr(
+                                operator=PyNamedExpr('ValueError'),
+                                # TODO inerpolate with `in_name`
+                                args=[ PyConstExpr(f"the coercion from {emit(py_param_type)} to {emit(py_return_type)} failed") ]
                             )
-                        ]
-                    )
-                ])
-            )
+                        )
+                    ]
+                )
+            ])
+        )
 
         return coerced_type, PyNamedExpr(coerce_fn_name)
 

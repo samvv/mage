@@ -5,7 +5,7 @@ from typing import Iterable, assert_never
 from magelang.manager import declare_pass
 from magelang.passes.mage_insert_magic_rules import any_node_rule_name, any_token_rule_name, any_syntax_rule_name
 from magelang.helpers import make_py_cond, make_py_or, make_py_union, treespec_type_to_deep_py_test, make_py_coercions, treespec_type_to_py_type, treespec_type_to_shallow_py_test, namespaced, extern_type_to_py_type, to_py_class_name, quote_py_type, make_py_isinstance, PyCondCase, lookup_spec, make_py_tuple, resolve_type_aliases
-from magelang.lang.treespec.helpers import contains_type, is_recursive, is_optional_type, is_type_assignable, expand_type, spec_to_type, expand_type
+from magelang.lang.treespec.helpers import contains_type, is_recursive, is_optional_type, is_type_assignable, spec_to_type
 from magelang.lang.mage.ast import *
 from magelang.lang.treespec.ast import *
 from magelang.lang.python.cst import *
@@ -117,7 +117,7 @@ def treespec_to_python(
         ]),
     ]
 
-    defs = {}
+    mapping = dict[tuple[Type, Type], PyFuncDef]()
 
     # Generate token classes
 
@@ -200,7 +200,7 @@ def treespec_to_python(
 
         for field in spec.fields:
 
-            type_with_coercions, coerce_fn = make_py_coercions(field.ty, defs=defs, specs=specs, prefix=prefix)
+            type_with_coercions, coerce_fn = make_py_coercions(field.ty, mapping=mapping, specs=specs, prefix=prefix)
             init_body.append(PyAssignStmt(
                 pattern=PyAttrPattern(
                     pattern=PyNamedPattern('self'),
@@ -394,14 +394,14 @@ def treespec_to_python(
 
     # Add coercers and other generated helpers
 
-    stmts.extend(defs.values())
+    stmts.extend(mapping.values())
 
     # Generate visitor functions
 
     proc_param_name = 'proc'
     node_param_name = 'node'
 
-    def gen_visitor(main_spec: Spec) -> PyFuncDef:
+    def gen_visitor_body(main_spec: Spec) -> PyFuncDef:
 
         generate_temporary = NameGenerator()
         main_type = spec_to_type(main_spec)
@@ -426,6 +426,7 @@ def treespec_to_python(
             yield from make_py_cond(cases)
 
         def gen_visit_type(ty: Type, input: PyExpr) -> Generator[PyStmt]:
+            ty = resolve_type_aliases(ty, specs=specs)
             if is_type_assignable(main_type, ty, specs=specs):
                 yield PyExprStmt(PyCallExpr(operator=PyNamedExpr(proc_param_name), args=[ input ]))
                 return
@@ -489,7 +490,7 @@ def treespec_to_python(
 
         for spec in specs.elements:
 
-            if not is_type_assignable(main_type, spec_to_type(spec), specs=specs):
+            if not contains_type(SpecType(spec.name), main_type, specs=specs):
                 continue
 
             if isinstance(spec, NodeSpec):
@@ -542,7 +543,7 @@ def treespec_to_python(
             body=inner_body,
         )
 
-    stmts.extend(gen_visitor(spec) for spec in specs.elements if isinstance(spec, EnumSpec) and is_recursive(SpecType(spec.name), specs=specs))
+    stmts.extend(gen_visitor_body(spec) for spec in specs.elements if isinstance(spec, EnumSpec) and is_recursive(SpecType(spec.name), specs=specs))
 
     def gen_member_visitor(main_spec: Spec, visit_spec: Spec) -> PyFuncDef:
 
@@ -572,7 +573,7 @@ def treespec_to_python(
             yield from make_py_cond(cases)
 
         def gen_visit_type(ty: Type, input: PyExpr) -> Generator[PyStmt]:
-            ty = expand_type(ty, specs=specs)
+            ty = resolve_type_aliases(ty, specs=specs)
             if is_type_assignable(visit_type, ty, specs=specs):
                 yield PyExprStmt(PyCallExpr(PyNamedExpr(proc_param_name), args=[ input ]))
                 return
@@ -586,11 +587,13 @@ def treespec_to_python(
             if isinstance(ty, SpecType):
                 spec = lookup_spec(specs, ty.name)
                 assert(not isinstance(spec, TypeSpec)) # expand_type handled this one
-                assert(not isinstance(spec, EnumSpec)) # expand_type handled this one
                 if spec is None or isinstance(spec, TokenSpec) or isinstance(spec, ConstEnumSpec):
                     return
                 if isinstance(spec, NodeSpec):
                     yield from gen_visit_fields(spec, input)
+                    return
+                if isinstance(spec, EnumSpec):
+                    yield from gen_visit_union(input, (member.ty for member in spec.members))
                     return
                 assert_never(spec)
             if isinstance(ty, TupleType):

@@ -99,41 +99,6 @@ def is_static_type(ty: Type, specs: Specs) -> bool:
     return visit(ty)
 
 
-def mangle_type(ty: Type) -> str:
-    if isinstance(ty, SpecType):
-        # FIXME what about a SpecType named 'foo_decl'?
-        return f'decl_{ty.name}'
-    if isinstance(ty, TupleType):
-        out = f'tuple_{len(ty.element_types)}'
-        for ty in ty.element_types:
-            out += '_' + mangle_type(ty)
-        return out
-    if isinstance(ty, ListType):
-        out = f'list_{mangle_type(ty.element_type)}'
-        if ty.required:
-            out += '_required'
-        return out
-    if isinstance(ty, ExternType):
-        return f'extern_{to_snake_case(ty.name)}'
-    if isinstance(ty, NeverType):
-        return 'never'
-    if isinstance(ty, NoneType):
-        return 'none'
-    if isinstance(ty, UnionType):
-        out = f'union_{len(ty.types)}'
-        for ty in ty.types:
-            out += '_' + mangle_type(ty)
-        return out
-    if isinstance(ty, PunctType):
-        out = f'punct_{mangle_type(ty.element_type)}_{mangle_type(ty.separator_type)}'
-        if ty.required:
-            out += '_required'
-        return out
-    if isinstance(ty, AnyType):
-        return 'any'
-    assert_never(ty)
-
-
 def flatten_union_types(ty: Type) -> Generator[Type, None, None]:
     if isinstance(ty, UnionType):
         for ty in ty.types:
