@@ -127,8 +127,8 @@ def test_get_child_types_infinite_variant_doesnt_crash():
 
 def test_is_self_referential_primitive():
     foo = NodeSpec('foo', [])
-    bar = TokenSpec('bar', 'String', False)
-    baz = TokenSpec('baz', 'String', True)
+    bar = TokenSpec('bar', [], None, False)
+    baz = TokenSpec('baz', [], None, True)
     baa = EnumSpec('baa', [])
     specs = Specs([ foo, bar, baz, baa ])
     assert(not is_recursive(spec_to_type(foo), specs=specs))
@@ -198,9 +198,9 @@ def test_is_self_referential_long_chain():
     assert(is_recursive(SpecType('n9'), specs=specs))
 
 def test_is_self_referential_real_world():
-    comma = TokenSpec('comma', 'String', True)
-    open_paren = TokenSpec('open_paren', 'String', True)
-    close_paren = TokenSpec('close_paren', 'String', True)
+    comma = TokenSpec('comma', [], None, True)
+    open_paren = TokenSpec('open_paren',  [],None, True)
+    close_paren = TokenSpec('close_paren', [], None, True)
     expr = EnumSpec('expr', [
         Variant('ref', SpecType('ref_expr')),
         Variant('call', SpecType('call_expr')),

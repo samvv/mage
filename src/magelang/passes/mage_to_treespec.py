@@ -57,7 +57,7 @@ def mage_to_treespec(
         # only Rule(is_extern=True) can have an empty expression
         assert(rule.expr is not None)
         if grammar.is_token_rule(rule):
-            toplevel.append(TokenSpec(rule.name, rule.type_name, grammar.is_static_token_rule(rule) if rule.expr is not None else False))
+            toplevel.append(TokenSpec(rule.name, [], rule.type_name, grammar.is_static_token_rule(rule) if rule.expr is not None else False))
             continue
         if grammar.is_variant_rule(rule):
             # if strong_enums:

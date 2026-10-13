@@ -278,8 +278,12 @@ class SpecBase:
     name: str
 
 @dataclass
-class TokenSpec(SpecBase):
-    field_type: str
+class SyntaxSpec(SpecBase):
+    fields: Sequence[Field]
+
+@dataclass
+class TokenSpec(SyntaxSpec):
+    field_type: str | None
     is_static: bool
 
 @dataclass
@@ -287,9 +291,8 @@ class TypeSpec(SpecBase):
     ty: Type
 
 @dataclass
-class NodeSpec(SpecBase):
-    name: str
-    fields: list[Field]
+class NodeSpec(SyntaxSpec):
+    pass
 
 @dataclass
 class EnumSpec(SpecBase):
