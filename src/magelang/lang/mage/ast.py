@@ -575,7 +575,7 @@ class MageRuleDeriveArgs(TypedDict, total=False):
     decorators: list[Decorator]
     flags: int
     name: str
-    type_name: str
+    type_name: str | None
     mode: int
     span: Span | None
 
@@ -587,7 +587,7 @@ class MageRule(MageNodeBase):
     comment: str | None
     decorators: list[Decorator]
     flags: int
-    type_name: str
+    type_name: str | None
     mode: int
     parent: 'MageGrammar | None'
 
@@ -598,7 +598,7 @@ class MageRule(MageNodeBase):
         comment: str | None = None,
         decorators: list[Decorator] | None = None,
         flags: int = 0,
-        type_name: str = string_rule_type,
+        type_name: str | None = None,
         mode: int = 0,
         parent: 'MageGrammar | None' = None,
         span: Span | None = None

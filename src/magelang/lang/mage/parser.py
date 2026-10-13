@@ -313,7 +313,7 @@ class Parser:
         end_offset = t1.span.end
         assert(isinstance(t1.value, str))
         t3 = self._peek_token()
-        type_name = string_rule_type
+        type_name = None
         if t3.type == TT_RARROW:
             self._get_token()
             end_offset = t3.span.end
