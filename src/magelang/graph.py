@@ -3,42 +3,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Generator, Iterator
 
-from magelang.util import nonnull
-
-
-class MultiDict[K, V]:
-
-    def __init__(self) -> None:
-        self._mapping = dict[K, list[V]]()
-        self._count = 0
-
-    def __len__(self) -> int:
-        return self._count
-
-    def add(self, k: K, v: V) -> None:
-        vs = self._mapping.get(k)
-        if vs is None:
-            vs = self._mapping[k] = []
-        vs.append(v)
-        self._count += 1
-
-    def __contains__(self, k: K) -> bool:
-        return k in self._mapping
-
-    def __getitem__(self, k: K) -> Sequence[V]:
-        return self._mapping.get(k, [])
-
-    def __iter__(self) -> Iterator[K]:
-        return iter(self._mapping)
-
-    def items(self) -> Iterator[tuple[K, V]]:
-        for k, vs in self._mapping.items():
-            for v in vs:
-                yield k, v
-
-    def clear(self) -> None:
-        self._count = 0
-        self._mapping.clear()
+from magelang.util import nonnull, MultiDict
 
 
 class DGraph[V, L]:
