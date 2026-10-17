@@ -227,8 +227,8 @@ class MageLookaheadExpr(MageExprBase):
 type CharSetElement = str | tuple[str, str]
 
 
-_LOWERCASE = Interval(97, 122+1)
-_UPPERCASE = Interval(65, 90+1)
+_lowercase = Interval(97, 122+1)
+_uppercase = Interval(65, 90+1)
 
 
 class MageCharSetExprDeriveArgs(TypedDict, total=False):
@@ -297,10 +297,10 @@ class MageCharSetExpr(MageExprBase):
         interval = Interval(ord(low), ord(high)+1)
         self._add_to_tree(interval)
         if self.ci:
-            lc_range = intersect_interval(interval, _LOWERCASE)
+            lc_range = intersect_interval(interval, _lowercase)
             if lc_range is not None:
                 self._add_to_tree(Interval(lc_range.begin-32, lc_range.end-32))
-            uc_range = intersect_interval(interval, _UPPERCASE)
+            uc_range = intersect_interval(interval, _uppercase)
             if uc_range is not None:
                 self._add_to_tree(Interval(uc_range.begin+32, uc_range.end+32))
 
