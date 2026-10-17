@@ -40,3 +40,6 @@ mage = "magelang:main"
 
 [tool.pyright]
 include = [ "src", "output/python" ]
+
+[tool.ty]
+include = [ "src", "output/python" ]
