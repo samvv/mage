@@ -660,13 +660,6 @@ class MageRule(MageNodeBase):
         """
         return not self.is_public
 
-    @property
-    def is_keyword(self) -> bool:
-        """
-        Check a virtual property that is used internally.
-        """
-        return (self.flags & FORCE_KEYWORD) > 0
-
     def has_decorator(self, name: str) -> bool:
         for decorator in self.decorators:
             if decorator.name == name:

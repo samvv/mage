@@ -5,7 +5,7 @@ from magelang.lang.python.cst import *
 from magelang.lang.mage.ast import *
 from magelang.manager import declare_pass
 from magelang.util import NameGenerator, constant, nonnull
-from magelang.helpers import make_py_cond, make_py_or, extern_type_to_py_type, to_py_class_name
+from magelang.helpers import make_py_cond, make_py_or, extern_type_to_py_type, to_py_class_name, is_keyword
 
 @declare_pass()
 def mage_to_python_lexer(
@@ -20,7 +20,7 @@ def mage_to_python_lexer(
 
     keywords = []
     for rule in grammar.rules:
-        if rule.is_keyword:
+        if is_keyword(rule):
             assert(isinstance(rule.expr, MageLitExpr))
             keywords.append((rule.name, rule.expr.text))
 
@@ -280,7 +280,7 @@ def mage_to_python_lexer(
 
     choices = []
     for rule in grammar.rules:
-        if not rule.is_lex or rule.expr is None or rule.is_keyword:
+        if not rule.is_lex or rule.expr is None or is_keyword(rule):
             continue
         rule.expr.actions.append(ReturnAction(rule))
         choices.append(rule.expr)
