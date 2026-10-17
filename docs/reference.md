@@ -111,6 +111,7 @@ For example, the following table is used when targeting Python:
 
 | Mage Type | Python Type | Python Code   |
 |-----------|-------------|---------------|
+| String    | `str`       | `text`        |
 | Integer   | `int`       | `int(text)`   |
 | Float     | `float`     | `float(text)` |
 
