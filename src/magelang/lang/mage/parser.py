@@ -11,7 +11,7 @@ class ParseError(RuntimeError):
     def __init__(self, file: TextFile, actual: Token, expected: Sequence[TokenType]) -> None:
         start_line = file.get_line(actual.span.start)
         start_column = file.get_column(actual.span.start)
-        super().__init__(f"{file.filename}:{start_line}:{start_column}: got {token_type_descriptions[actual.type]} but expected something else")
+        super().__init__(f"{file.filename}:{start_line}:{start_column}: got '{token_to_string(actual)}' but expected something else")
         self.actual = actual
         self.expected = expected
 
