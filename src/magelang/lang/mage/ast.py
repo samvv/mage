@@ -305,6 +305,9 @@ class MageCharSetExpr(MageExprBase):
                 self._add_to_tree(Interval(uc_range.begin+32, uc_range.end+32))
 
     def __len__(self) -> int:
+        """
+        Computes the total amount of characters that are in this set.
+        """
         return sum(interval.end - interval.begin for interval in self.tree)
 
     def contains_char(self, ch: str) -> bool:
