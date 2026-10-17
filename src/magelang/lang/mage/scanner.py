@@ -7,6 +7,7 @@ from magelang.runtime.text import Span, TextFile
 
 TokenType = NewType('TokenType', int)
 
+
 class TextPos:
 
     def __init__(self, offset = 0, line = 1, column = 1) -> None:
@@ -17,6 +18,7 @@ class TextPos:
     def clone(self) -> 'TextPos':
         return TextPos(self.offset, self.line, self.column)
 
+
 class Token:
 
     def __init__(self, ty: TokenType, span: Span, value: Any | None = None) -> None:
@@ -24,8 +26,10 @@ class Token:
         self.span = span
         self.value = value
 
+
 def _is_hex_digit(ch: str) -> bool:
     return ch in [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C' 'D', 'E', 'F', 'a', 'b', 'c', 'd', 'e', 'f' ]
+
 
 TT_EOF      = TokenType(1)
 TT_IDENT    = TokenType(2)
@@ -60,14 +64,18 @@ TT_COMMENT  = TokenType(30)
 TT_MOD      = TokenType(31)
 TT_DOT      = TokenType(32)
 
+
 EOF = '\uFFFF'
 
-def is_space(ch):
+
+def _is_space(ch):
     return ch == ' ' or ch == '\t' or ch == '\n' or ch == '\r'
 
+
 _operator_regex = re.compile(r'[<>~+\-*%&!?\\]')
-def is_operator_part(ch) -> bool:
+def _is_operator_part(ch) -> bool:
     return _operator_regex.match(ch) is not None
+
 
 _simple_tokens = {
     '(': TT_LPAREN,
@@ -85,6 +93,7 @@ _simple_tokens = {
     '.': TT_DOT,
     }
 
+
 _operator_to_token_type = {
     '+': TT_PLUS,
     '*': TT_STAR,
@@ -97,12 +106,14 @@ _operator_to_token_type = {
     '->': TT_RARROW,
     }
 
+
 _keyword_to_token_type = {
     'pub': TT_PUB,
     'token': TT_TOKEN,
     'extern': TT_EXTERN,
     'mod': TT_MOD,
     }
+
 
 _ascii_escape_chars = {
     '\'': '\'',
@@ -117,6 +128,7 @@ _ascii_escape_chars = {
     'v': '\v',
     '0': '\0',
     }
+
 
 token_type_descriptions = {
     TT_EOF: "end-of-file",
@@ -160,6 +172,7 @@ def token_to_string(token: Token) -> str:
         return 'token'
     raise NotImplementedError()
 
+
 class ScanError(RuntimeError):
 
     def __init__(self, file: TextFile, ch: str, offset: int, message: str | None = None) -> None:
@@ -176,6 +189,7 @@ class ScanError(RuntimeError):
         self.file = file
         self.ch = ch
         self.offset = offset
+
 
 class Scanner:
 
@@ -291,7 +305,7 @@ class Scanner:
                     if c2 == '\n' or c2 == EOF:
                         break
                 continue
-            if is_space(c0):
+            if _is_space(c0):
                 reset_doc_comment()
                 self._get_char()
                 continue
@@ -343,10 +357,10 @@ class Scanner:
             end_offset = self._text_offset
             return Token(TT_PERC, Span(start_offset, end_offset))
 
-        if is_operator_part(c0):
+        if _is_operator_part(c0):
             start_offset = self._text_offset
             self._get_char()
-            text = c0 + self._take_while(is_operator_part)
+            text = c0 + self._take_while(_is_operator_part)
             end_offset = self._text_offset
             if text not in _operator_to_token_type:
                 raise ScanError(self.file, text, start_offset)
