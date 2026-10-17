@@ -209,6 +209,11 @@ token_type_descriptions = {
     TT_DOT: '.',
     }
 
+
+def describe_token_type(tt: TokenType) -> str:
+    return token_type_descriptions[tt]
+
+
 def token_to_string(token: Token) -> str:
     if token.type == TT_IDENT:
         assert(isinstance(token.value, str))
