@@ -5,6 +5,13 @@ from io import StringIO
 from magelang.util import IndentWriter
 from .ast import *
 
+
+__all__ = [
+    'escape',
+    'emit',
+]
+
+
 def escape(ch: str) -> str:
     if ch.isprintable():
         return ch
@@ -12,6 +19,7 @@ def escape(ch: str) -> str:
     if code <= 0x7F:
         return f'\\x{code:02X}'
     return f'\\u{code:04x}'
+
 
 def emit(node: MageSyntax) -> str:
 

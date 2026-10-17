@@ -21,6 +21,37 @@ from magelang.util import nonnull
 
 from .constants import string_rule_type
 
+
+__all__ = [
+    'ASCII_MAX',
+    'ASCII_MIN',
+    'ASSOC_LEFT',
+    'ASSOC_RIGHT',
+    'Assoc',
+    'Decorator',
+    'EXTERN',
+    'MAGE_REPEAT_INFINITY',
+    'MageCharSetExpr',
+    'MageChoiceExpr',
+    'MageExpr',
+    'MageGrammar',
+    'MageGrammarElement',
+    'MageHideExpr',
+    'MageListExpr',
+    'MageLitExpr',
+    'MageLookaheadExpr',
+    'MageRefExpr',
+    'MageRepeatExpr',
+    'MageRule',
+    'MageSeqExpr',
+    'MageSyntax',
+    'PUBLIC',
+    'get_all_exprs',
+    'get_child_exprs',
+    'is_expr',
+]
+
+
 ASCII_MIN = 0x00
 ASCII_MAX = 0x7F
 

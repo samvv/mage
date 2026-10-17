@@ -5,6 +5,51 @@ from typing import Any, NewType
 
 from magelang.runtime.text import Span, TextFile
 
+
+__all__ = [
+    'describe_token_type',
+    'EOF',
+    'ScanError',
+    'Scanner',
+    'TT_AMP',
+    'TT_AT',
+    'TT_CHARSET',
+    'TT_COLON',
+    'TT_COMMA',
+    'TT_COMMENT',
+    'TT_DOT',
+    'TT_EOF',
+    'TT_EQUAL',
+    'TT_EXCL',
+    'TT_EXTERN',
+    'TT_IDENT',
+    'TT_INT',
+    'TT_LBRACE',
+    'TT_LBRACKET',
+    'TT_LPAREN',
+    'TT_MOD',
+    'TT_PERC',
+    'TT_PLUS',
+    'TT_PUB',
+    'TT_QUEST',
+    'TT_RARROW',
+    'TT_RBRACE',
+    'TT_RBRACKET',
+    'TT_RPAREN',
+    'TT_SEMI',
+    'TT_SLASH',
+    'TT_STAR',
+    'TT_STR',
+    'TT_TILDE',
+    'TT_TOKEN',
+    'TT_VBAR',
+    'TextPos',
+    'Token',
+    'TokenType',
+    'token_to_string',
+]
+
+
 TokenType = NewType('TokenType', int)
 
 
