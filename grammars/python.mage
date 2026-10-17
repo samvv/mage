@@ -4,7 +4,7 @@ any_byte = [\x00-\xFF]
 
 any_char = [\x00-\x7F]
 
-pub extern token eof
+pub token eof = !any_byte
 
 pub extern token indent
 
