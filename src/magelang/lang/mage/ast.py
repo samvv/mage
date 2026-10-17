@@ -5,6 +5,7 @@ Also defines some visitors over Mage expressions and other useful procedures to
 make handling the AST a bit easier.
 """
 
+from warnings import deprecated
 from collections.abc import Iterator
 from typing import NewType, Self, TypedDict, Unpack
 from dataclasses import dataclass
@@ -887,27 +888,49 @@ def rewrite_grammar(grammar: MageGrammar, proc: Callable[[MageGrammarElement], M
         return grammar
     return grammar.derive(elements=new_elements)
 
+def get_child_exprs(node: MageExpr) -> Iterable[MageExpr]:
+    """
+    Return an iterable that walks through all direct child expressions of the
+    given node.
+    """
+    if isinstance(node, MageLitExpr) or isinstance(node, MageCharSetExpr) or isinstance(node, MageRefExpr):
+        return
+    if isinstance(node, MageRepeatExpr) or isinstance(node, MageLookaheadExpr) or isinstance(node, MageHideExpr):
+        yield node.expr
+        return
+    if isinstance(node, MageListExpr):
+        yield node.element
+        yield node.separator
+        return
+    if isinstance(node, MageChoiceExpr) or isinstance(node, MageSeqExpr):
+        for element in node.elements:
+            yield element
+        return
+    assert_never(node)
+
+def get_all_exprs(node: MageExpr) -> Iterable[MageExpr]:
+    """
+    Create an iterator that walks through all child expressions of the given
+    expressions, direct or indirect.
+
+    Note that rule references are NOT resolved. Instead, the reference itself
+    is yielded.
+    """
+    yield node
+    for child in get_child_exprs(node):
+        yield from get_all_exprs(child)
+
+@deprecated("try to use get_child_exprs() instead")
 def for_each_direct_child_expr(node: MageExpr, proc: Callable[[MageExpr], None]) -> None:
     """
     Visit each direct child of a given expression exactly once.
 
     In the case that an expression does not have direct children, this function does nothing.
     """
-    if isinstance(node, MageLitExpr) or isinstance(node, MageCharSetExpr) or isinstance(node, MageRefExpr):
-        return
-    if isinstance(node, MageRepeatExpr) or isinstance(node, MageLookaheadExpr) or isinstance(node, MageHideExpr):
-        proc(node.expr)
-        return
-    if isinstance(node, MageListExpr):
-        proc(node.element)
-        proc(node.separator)
-        return
-    if isinstance(node, MageChoiceExpr) or isinstance(node, MageSeqExpr):
-        for element in node.elements:
-            proc(element)
-        return
-    assert_never(node)
+    for child in get_child_exprs(node):
+        proc(child)
 
+@deprecated("try to use get_all_child_exprs() instead")
 def for_each_expr(node: MageExpr, proc: Callable[[MageExpr], None]) -> None:
     def visit(expr: MageExpr) -> None:
         proc(expr)
@@ -922,160 +945,26 @@ def for_each_rule(grammar: MageGrammar, proc: Callable[[MageRule], None]) -> Non
 def is_expr(node: MageSyntax) -> TypeIs[MageExpr]:
     return isinstance(node, MageExprBase)
 
-def for_each_direct_child_node(node: MageSyntax, proc: Callable[[MageSyntax], None]) -> None:
+def get_child_nodes(node: MageSyntax) -> Iterable[MageSyntax]:
     if isinstance(node, MageGrammar):
         for element in node.elements:
-            proc(element)
+            yield element
     elif isinstance(node, MageRule):
         if node.expr is not None:
-            proc(node.expr)
+            yield node.expr
     elif is_expr(node):
-        for_each_direct_child_expr(node, proc)
+        yield from get_child_exprs(node)
     else:
         assert_never(node)
 
+def get_all_rules(grammar: MageGrammar) -> Iterable[MageRule]:
+    for element in grammar.elements:
+        if isinstance(element, MageRule):
+            yield element
+
 def set_parents(node: MageSyntax, parent: 'MageSyntax | None' = None) -> None:
     node.parent = parent # type: ignore
-    for_each_direct_child_node(node, lambda child: set_parents(child, node))
+    for child in get_child_nodes(node):
+        set_parents(child, node)
 
-def static_expr_to_str(expr: MageExpr) -> str:
-    if isinstance(expr, MageLitExpr):
-        return expr.text
-    if isinstance(expr, MageSeqExpr):
-        out = ''
-        for element in expr.elements:
-            out += static_expr_to_str(element)
-        return out
-    raise RuntimeError(f'could not extract text from {expr}: expression is non-static or not normalised')
-
-def flatten_sequence(expr: MageExpr) -> Generator[MageExpr, None, None]:
-    if isinstance(expr, MageSeqExpr):
-        for element in expr.elements:
-            yield from flatten_sequence(element)
-    else:
-        yield expr
-
-def flatten_choice(expr: MageExpr) -> Generator[MageExpr, None, None]:
-    if isinstance(expr, MageChoiceExpr):
-        for element in expr.elements:
-            yield from flatten_choice(element)
-    else:
-        yield expr
-
-def get_grammar(node: MageRule | MageExpr) -> MageGrammar:
-    while True:
-        if isinstance(node.parent, MageGrammar):
-            return node.parent
-        node = nonnull(node.parent)
-
-def lookup_ref(expr: MageRefExpr) -> MageRule | None:
-    mod = get_grammar(expr)
-    while True:
-        rule = mod.lookup(expr.name)
-        if rule is not None:
-            return rule
-        if isinstance(mod, MageGrammar):
-            break
-        mod = nonnull(mod.parent)
-
-def referenced(expr: MageExpr) -> list[MageRule]:
-    out = []
-    def visit(expr: MageExpr) -> None:
-        if isinstance(expr, MageRefExpr):
-            rule = lookup_ref(expr)
-            if rule is not None:
-                out.append(rule)
-            return
-        for_each_direct_child_expr(expr, visit)
-    visit(expr)
-    return out
-
-def is_static(expr: MageExpr, visited: set[MageRule] | None = None) -> bool:
-    if visited is None:
-        visited = set[MageRule]()
-    if isinstance(expr, MageRefExpr):
-        rule = expr.grammar.lookup(expr.name)
-        if rule is None or rule.expr is None or rule in visited:
-            return False
-        visited.add(rule)
-        return is_static(rule.expr, visited)
-    if isinstance(expr, MageLitExpr):
-        return True
-    if isinstance(expr, MageCharSetExpr):
-        return len(expr) == 1
-    if isinstance(expr, MageSeqExpr):
-        return all(is_static(element, visited) for element in expr.elements)
-    if isinstance(expr, MageChoiceExpr):
-        # FIXME should I check whether the choices are actually different?
-        return False
-    if isinstance(expr, MageRepeatExpr):
-        # Only return true if we're dealing with a fixed width repition
-        return expr.min == expr.max and is_static(expr.expr, visited)
-    if isinstance(expr, MageListExpr):
-        # List expressions always repeat an unpredictable amount of times
-        return False
-    if isinstance(expr, MageLookaheadExpr):
-        # Lookahead has no effect on what (non-)static characters are generated
-        return True
-    if isinstance(expr, MageHideExpr):
-        return is_static(expr.expr, visited)
-    assert_never(expr)
-
-
-def is_token(rule: MageRule, visited: set[MageRule] | None = None) -> bool:
-    if visited is None:
-        visited = set[MageRule]()
-    if rule.is_lex:
-        # A rule that was explicitly declared a token is always a token
-        return True
-    if rule.expr is None:
-        # If it was not explicitly declared a lexer token, a rule with no
-        # expression can never be a token
-        return False
-    return is_static(rule.expr, visited) and not any(is_token(rule, visited) for rule in referenced(rule.expr))
-
-
-def make_list_expr(element: MageExpr, separator: MageExpr, min_count = 0) -> MageExpr:
-    out = MageSeqExpr([
-        element,
-        MageRepeatExpr(
-            min=max(0, min_count-1),
-            max=MAGE_REPEAT_INFINITY,
-            expr=MageSeqExpr([
-                separator,
-                element,
-            ])
-        )
-    ])
-    if min_count > 0:
-        return out
-    return MageChoiceExpr([ out, MageLitExpr('') ])
-
-
-def match_list_expr(expr: MageExpr) -> tuple[MageExpr, MageExpr, int] | None:
-    """
-    Try to detect a compiled list expression.
-
-    List expressions used to be part of the grammar but are now composed out of
-    other constructs.
-
-    This function assumes that the expression has been simplified before this
-    function was called. For example, `(a* | a) | ''` will not be detected,
-    while `a* | a | ''` will be.
-    """
-    min_count = 1
-    if isinstance(expr, MageChoiceExpr):
-        if len(expr.elements) != 2 or not isinstance(expr.elements[1], MageLitExpr) or expr.elements[1].text != '':
-            return
-        expr = expr.elements[0]
-        min_count = 0
-    if not (isinstance(expr, MageSeqExpr)
-            and len(expr.elements) == 2
-            and isinstance(expr.elements[1], MageRepeatExpr)
-            and isinstance(expr.elements[1].expr, MageSeqExpr)):
-        return
-    min_count += expr.elements[1].min
-    element = expr.elements[1].expr.elements[1]
-    separator = expr.elements[1].expr.elements[0]
-    return element, separator, min_count
 

@@ -1,8 +1,6 @@
 
 from functools import cache
 from typing import Generator, Iterator, Iterable, Sequence
-import json
-from pathlib import Path
 from dataclasses import field, dataclass
 
 from magelang.analysis import reference_graph
@@ -12,7 +10,7 @@ from magelang.graph import DGraph, toposort, graph_roots, graph_reachable
 from magelang.runtime.lex import CharStream
 from magelang.lang.python.emitter import emit
 from magelang.lang.treespec import *
-from magelang.lang.mage.ast import *
+from magelang.lang.mage import *
 from magelang.lang.python.cst import *
 from magelang.lang.mage.constants import integer_rule_type, string_rule_type
 from magelang.lang.treespec.helpers import do_types_shallow_overlap, flatten_union_types, is_optional_type, is_static_type, make_optional_type
@@ -119,13 +117,6 @@ def infer_type(expr: MageExpr, grammar: MageGrammar) -> Type:
 
     return normalize_type(visit(expr))
 
-@cache
-def get_char_names() -> dict[str, str]:
-    """
-    Get a mapping from Unicode characters to longer (snake cased) names. 
-    """
-    with open(Path(__file__).parent / 'names.json', 'r') as f:
-        return json.load(f)
 
 class RuleNameGenerator(NameGenerator):
 
@@ -135,60 +126,6 @@ class RuleNameGenerator(NameGenerator):
 
     def is_free(self, name: str) -> bool:
         return self.grammar.lookup(name) is None
-
-
-@lru_cache
-def is_keyword(text: str, *, grammar: MageGrammar) -> bool:
-    from magelang.eval import accepts, SUCCESS
-    if len(text) <= 1:
-        return False # single letters are not allowed
-    kw = grammar.keyword_rule
-    # TODO fall back to a default keyword rule
-    return kw is not None and kw.expr is not None and accepts(kw, text) == SUCCESS
-
-
-@lru_cache
-def get_keywords(grammar: MageGrammar) -> list[MageExpr]:
-    out = []
-    def visit(expr: MageExpr) -> None:
-        if isinstance(expr, MageLitExpr):
-            if is_keyword(expr.text, grammar=grammar):
-                out.append(expr)
-    for rule in grammar.rules:
-        if rule.expr is not None:
-            for_each_expr(rule.expr, visit)
-    return out
-
-
-def lit_to_name(text: str, *, grammar: MageGrammar, max_named_chars = DEFAULT_MAX_NAMED_CHARS) -> str | None:
-    """
-    Find a suitable name for a given string literal, also returning whether the string literal is a pure keyword.
-
-    This function will return `None` in its second element if no suitable name was found.
-    """
-
-    names = get_char_names()
-
-    # If it's a single letter
-    if len(text) == 1 and text.isalpha():
-        # Letters such as 'i' and 'D' are not really keywords
-        # They are represented with the lower_ or upper_ prefix
-        return f'lower_{text}' if text.islower() else f'upper_{text.lower()}'
-
-    # If the evaluation engine matches it as a keyword
-    if is_keyword(text, grammar=grammar):
-        return f'{text}_keyword'
-
-    # If the entire word has a predefined name
-    if text in names:
-        return names[text]
-
-    # Fall back to naming the individual characters
-    if len(text) <= max_named_chars:
-        return '_'.join(names[ch] for ch in text)
-
-    # It's something long or consists of non-printable characters
-    return None
 
 
 def get_field_name(expr: MageExpr, *, grammar: MageGrammar, max_named_chars = DEFAULT_MAX_NAMED_CHARS) -> str | None:
