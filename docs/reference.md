@@ -315,8 +315,7 @@ Parse the expression at least `n` times and at most `m` times.
 `n` may be omitted. In this case, `n` defaults to 0. Likewise, if `m` is
 omitted it defaults to infinity.
 
-`,` may be omitted, in which case `n` will be equal to `m`. The value must be
-supplied by the user.
+`,` may be omitted, in which case `n` is required and `m` will be equal to it.
 
 **Example Usage**
 ```mage
