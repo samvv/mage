@@ -1,12 +1,23 @@
 
-from magelang.lang.mage.ast import MAGE_REPEAT_INFINITY, PUBLIC, Decorator, MageCharSetExpr, MageChoiceExpr, MageExpr, MageGrammar, MageRefExpr, MageRepeatExpr, MageRule, MageSeqExpr
-from magelang.helpers import get_keywords
-from magelang.manager import declare_pass
-
-any_syntax_rule_name = 'syntax'
-any_keyword_rule_name = 'keyword'
-any_node_rule_name = 'node'
-any_token_rule_name = 'token'
+from magelang import declare_pass
+from magelang.lang.mage import (
+    MAGE_REPEAT_INFINITY,
+    PUBLIC,
+    Decorator,
+    MageCharSetExpr,
+    MageChoiceExpr,
+    MageExpr,
+    MageGrammar,
+    MageRefExpr,
+    MageRepeatExpr,
+    MageRule,
+    MageSeqExpr,
+    get_keywords,
+    any_keyword_rule_name,
+    any_token_rule_name,
+    any_node_rule_name,
+    any_syntax_rule_name,
+)
 
 @declare_pass()
 def mage_insert_magic_rules(grammar: MageGrammar) -> MageGrammar:

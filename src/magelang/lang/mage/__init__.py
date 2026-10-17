@@ -1,3 +1,4 @@
+from .constants import *
 from .scanner import *
 from .parser import *
 from .ast import *

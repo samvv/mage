@@ -9,3 +9,7 @@ builtin_types = {
     integer_rule_type,
 }
 
+any_syntax_rule_name = 'syntax'
+any_keyword_rule_name = 'keyword'
+any_node_rule_name = 'node'
+any_token_rule_name = 'token'
