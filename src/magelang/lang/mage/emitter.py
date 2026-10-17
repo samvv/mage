@@ -184,9 +184,9 @@ def emit(node: MageSyntax) -> str:
                 out.write('+')
             else:
                 wide = is_wide(node.expr)
-                if is_wide: out.write('(')
+                if wide: out.write('(')
                 visit(node.expr)
-                if is_wide: out.write(')')
+                if wide: out.write(')')
                 out.write('{')
                 out.write(str(node.min))
                 if node.max == node.min:
