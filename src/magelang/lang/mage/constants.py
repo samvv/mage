@@ -1,5 +1,5 @@
 
-unit_rule_name = 'void'
+unit_rule_name = 'Void'
 string_rule_type = 'String'
 integer_rule_type = 'Integer'
 
